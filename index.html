@@ -1893,7 +1893,7 @@
         
         <header>
             <h1>📊 EOS Traction Tool</h1>
-            <div class="header-subtitle">Intelligent Investing LLC</div>
+            <div class="header-subtitle">Intelligent Investing LLC <span id="versionBadge" style="font-size: 0.7rem; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 10px; margin-left: 8px; cursor: pointer;" onclick="showVersionInfo()" title="Click for version info">v2.4.0</span></div>
             <div class="header-controls">
                 <div class="version-selector">
                     <label>Year:</label>
@@ -2659,6 +2659,21 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Version Info -->
+                    <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--gray-200);">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <span style="font-weight: 600; color: var(--gray-700);">📊 EOS Traction Tool</span>
+                                <span id="settingsVersion" style="font-size: 0.8rem; color: var(--gray-500); margin-left: 8px;">v2.4.0</span>
+                            </div>
+                            <button class="btn btn-secondary" onclick="showVersionInfo()" style="padding: 4px 10px; font-size: 0.75rem;">📋 Changelog</button>
+                        </div>
+                        <p style="font-size: 0.7rem; color: var(--gray-400); margin: 4px 0 0 0;">
+                            Build: <span id="settingsBuildDate">2025-12-15</span> • 
+                            <a href="https://github.com" target="_blank" style="color: var(--primary);">Report Issue</a>
+                        </p>
+                    </div>
                 </div>
             </div>
             
@@ -2989,6 +3004,10 @@ Outsource fixing banisters., Call the Johnson family., Review quarterly report."
             return false;
         };
         
+        // ==================== VERSION ====================
+        const EOS_VERSION = '2.4.0';
+        const EOS_BUILD_DATE = '2025-12-15';
+        
         // ==================== DATA STRUCTURE ====================
         let currentYear = '2026';
         let currentQuarter = 'Q1';
@@ -3090,6 +3109,9 @@ Outsource fixing banisters., Call the Johnson family., Review quarterly report."
         
         // ==================== INITIALIZATION ====================
         document.addEventListener('DOMContentLoaded', function() {
+            // Initialize version displays
+            initVersionDisplay();
+            
             addLogEntry('EOS Traction Tool initialized');
             initRatingButtons();
             loadOrSeedData();
@@ -3100,8 +3122,21 @@ Outsource fixing banisters., Call the Johnson family., Review quarterly report."
             // Check if backup reminder is needed (after a short delay to let page load)
             setTimeout(checkBackupReminder, 1000);
             
-            console.log('EOS Traction Tool: Ready');
+            console.log(`EOS Traction Tool v${EOS_VERSION} (${EOS_BUILD_DATE}): Ready`);
         });
+        
+        function initVersionDisplay() {
+            // Update header badge
+            const badge = document.getElementById('versionBadge');
+            if (badge) badge.textContent = `v${EOS_VERSION}`;
+            
+            // Update settings version
+            const settingsVer = document.getElementById('settingsVersion');
+            if (settingsVer) settingsVer.textContent = `v${EOS_VERSION}`;
+            
+            const settingsBuild = document.getElementById('settingsBuildDate');
+            if (settingsBuild) settingsBuild.textContent = EOS_BUILD_DATE;
+        }
         
         function loadOrSeedData() {
             const stored = localStorage.getItem('eos_traction_data');
@@ -3136,6 +3171,45 @@ Outsource fixing banisters., Call the Johnson family., Review quarterly report."
             for (let i = 1; i <= 10; i++) {
                 container.innerHTML += `<button class="rating-btn" onclick="setRating(${i})">${i}</button>`;
             }
+        }
+        
+        // ==================== VERSION INFO ====================
+        function showVersionInfo() {
+            const changelog = `
+📊 EOS Traction Tool v${EOS_VERSION}
+Build Date: ${EOS_BUILD_DATE}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📝 Version 2.4.0 Changes:
+• Due date sync - Changes push back to Google Tasks
+• "Both" tasks now push to ALL team members
+• Combined Google Apps Script (Tasks + Otter.ai)
+• Otter.ai filters for "Traction" meetings (no Zapier Pro needed)
+• Task action buttons (Archive/Uncheck/Delete)
+• Rock completion flow from Daily Plan
+• Combined print package (single PDF)
+• Version tracking added
+
+📝 Version 2.3.0 Changes:
+• Task duplication prevention
+• Persistent Pomodoro timers
+• Rock deletion from Quarterly tab
+• Rule of 3 completion tracking
+• Backup reminder improvements
+• Google Task list names in Daily Plan
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 Tip: Keep this version number handy when 
+   reporting issues or requesting features!
+            `.trim();
+            
+            alert(changelog);
+        }
+        
+        function getVersionString() {
+            return `v${EOS_VERSION} (${EOS_BUILD_DATE})`;
         }
         
         // ==================== NAVIGATION ====================
