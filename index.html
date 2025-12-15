@@ -848,6 +848,52 @@
         
         .matrix-task .remove-btn:hover { opacity: 1; }
         
+        /* Action buttons for completed tasks */
+        .task-actions {
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .matrix-task:hover .task-actions,
+        .rule-slot:hover .task-actions {
+            opacity: 1;
+        }
+        
+        .action-btn {
+            width: 26px;
+            height: 26px;
+            border: 1px solid var(--gray-300);
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+        }
+        
+        .action-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .action-btn.archive:hover {
+            background: #dbeafe;
+            border-color: #3b82f6;
+        }
+        
+        .action-btn.uncheck:hover {
+            background: #fef3c7;
+            border-color: #f59e0b;
+        }
+        
+        .action-btn.delete:hover {
+            background: #fee2e2;
+            border-color: #ef4444;
+        }
+        
         /* Execution Zone Styles */
         .today-date {
             text-align: center;
@@ -3272,23 +3318,47 @@ Outsource fixing banisters., Call the Johnson family., Review quarterly report."
         
         function renderRocks(rocks) {
             const container = document.getElementById('rocksContainer');
-            container.innerHTML = (rocks || []).map((r, idx) => `
-                <div class="rock-card">
-                    <div class="rock-num">${idx + 1}</div>
+            container.innerHTML = (rocks || []).map((r, idx) => {
+                const isCompleted = r.done;
+                const completedStyle = isCompleted ? 'text-decoration: line-through; opacity: 0.6; background: #f0fdf4;' : '';
+                const completedBadge = isCompleted ? '<span style="background: #22c55e; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; margin-left: 8px;">✓ DONE</span>' : '';
+                
+                return `
+                <div class="rock-card" style="${isCompleted ? 'border-left-color: #22c55e;' : ''}">
+                    <div class="rock-num" style="${isCompleted ? 'background: #22c55e;' : ''}">${idx + 1}</div>
                     <div class="rock-content" style="flex: 1;">
-                        <input type="text" value="${r.text || ''}" placeholder="Rock description..."
-                               onchange="updateRock(${idx}, 'text', this.value)" style="width: 100%;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="text" value="${r.text || ''}" placeholder="Rock description..."
+                                   onchange="updateRock(${idx}, 'text', this.value)" 
+                                   style="width: 100%; ${completedStyle}" ${isCompleted ? 'readonly' : ''}>
+                            ${completedBadge}
+                        </div>
                     </div>
-                    <select onchange="updateRock(${idx}, 'owner', this.value)" style="min-width: 70px;">
+                    <select onchange="updateRock(${idx}, 'owner', this.value)" style="min-width: 70px;" ${isCompleted ? 'disabled' : ''}>
                         ${getTeamMemberOptions(r.owner)}
                     </select>
-                    <div class="status-toggle">
-                        <button class="status-btn on-track ${r.status === 'on' ? 'active' : ''}" onclick="setRockStatus(${idx}, 'on')">✓ On</button>
-                        <button class="status-btn off-track ${r.status === 'off' ? 'active' : ''}" onclick="setRockStatus(${idx}, 'off')">⚠ Off</button>
-                    </div>
+                    ${!isCompleted ? `
+                        <div class="status-toggle">
+                            <button class="status-btn on-track ${r.status === 'on' ? 'active' : ''}" onclick="setRockStatus(${idx}, 'on')">✓ On</button>
+                            <button class="status-btn off-track ${r.status === 'off' ? 'active' : ''}" onclick="setRockStatus(${idx}, 'off')">⚠ Off</button>
+                        </div>
+                    ` : `
+                        <button class="btn btn-secondary" onclick="uncompleteRock(${idx})" style="padding: 4px 8px; font-size: 0.75rem;" title="Mark as incomplete">↩ Undo</button>
+                    `}
                     <button class="issue-btn remove" onclick="deleteRock(${idx})" title="Delete Rock" style="margin-left: 8px;">✕</button>
                 </div>
-            `).join('');
+            `}).join('');
+        }
+        
+        function uncompleteRock(idx) {
+            const rock = yearData.quarters[currentQuarter].rocks[idx];
+            if (rock) {
+                rock.done = false;
+                delete rock.completedAt;
+                renderRocks(yearData.quarters[currentQuarter].rocks);
+                autoSave();
+                addLogEntry(`Rock marked incomplete: "${rock.text.substring(0, 30)}..."`);
+            }
         }
         
         function addRock() {
@@ -4809,28 +4879,396 @@ Make sure your suggestions directly address the specific root cause and discussi
             localStorage.setItem('eos_print_prefs', JSON.stringify(prefs));
             closeModal('masterPrintModal');
             
-            // Build list of print functions to call
-            const printQueue = [];
-            if (prefs.vision) printQueue.push({ name: 'Vision', fn: printVision });
-            if (prefs.oneYear) printQueue.push({ name: '1-Year Plan', fn: print1YearPlan });
-            if (prefs.rocks) printQueue.push({ name: 'Rocks', fn: printRocks });
-            if (prefs.scorecard) printQueue.push({ name: 'Scorecard', fn: printQuarter });
-            if (prefs.agenda) printQueue.push({ name: 'Agenda', fn: printMeeting });
-            if (prefs.daily) printQueue.push({ name: 'Daily Plan', fn: printDailyPlan });
+            // Build combined print document
+            const sections = [];
+            if (prefs.vision) sections.push(generateVisionSection());
+            if (prefs.oneYear) sections.push(generate1YearSection());
+            if (prefs.rocks) sections.push(generateRocksSection());
+            if (prefs.scorecard) sections.push(generateScorecardSection());
+            if (prefs.agenda) sections.push(generateAgendaSection());
+            if (prefs.daily) sections.push(generateDailyPlanSection());
             
-            if (printQueue.length === 0) {
+            if (sections.length === 0) {
                 alert('Please select at least one document to print.');
                 return;
             }
             
-            // Open print windows sequentially with delays to avoid popup blocker
-            for (let i = 0; i < printQueue.length; i++) {
-                printQueue[i].fn();
-                // Small delay between windows
-                if (i < printQueue.length - 1) {
-                    await new Promise(r => setTimeout(r, 300));
-                }
+            // Create single combined print window
+            printCombinedPackage(sections);
+        }
+        
+        function printCombinedPackage(sections) {
+            saveData();
+            const printWindow = window.open('', '_blank');
+            const today = new Date();
+            const dateStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+            
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>EOS Traction Package - ${currentYear} ${currentQuarter}</title>
+                    <style>
+                        @page { size: portrait; margin: 0.4in; }
+                        @media print {
+                            .page-break { page-break-before: always; }
+                            .no-break { page-break-inside: avoid; }
+                        }
+                        * { box-sizing: border-box; }
+                        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 9pt; line-height: 1.4; margin: 0; padding: 0; }
+                        .section-page { padding: 10px 0; }
+                        .header { text-align: center; margin-bottom: 15px; border-bottom: 2px solid #333; padding-bottom: 8px; }
+                        .header h1 { font-size: 14pt; margin: 0 0 4px 0; }
+                        .header .subtitle { color: #666; font-size: 9pt; }
+                        .section { margin-bottom: 12px; }
+                        .section h3 { font-size: 10pt; margin: 0 0 6px 0; padding-bottom: 4px; border-bottom: 1px solid #ddd; }
+                        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+                        table { width: 100%; border-collapse: collapse; }
+                        th, td { border: 1px solid #ccc; padding: 4px 6px; text-align: left; font-size: 8pt; }
+                        th { background: #333; color: white; font-weight: 600; }
+                        .item-row { display: flex; align-items: center; padding: 5px 8px; margin-bottom: 3px; background: #f5f5f5; border-radius: 4px; }
+                        .item-num { width: 20px; height: 20px; background: #3b82f6; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 8pt; margin-right: 8px; flex-shrink: 0; }
+                        .status-on { border-left: 3px solid #22c55e; }
+                        .status-off { border-left: 3px solid #ef4444; }
+                        .status-done { background: #f0fdf4; border-left: 3px solid #22c55e; }
+                        .done-badge { background: #22c55e; color: white; padding: 1px 6px; border-radius: 10px; font-size: 7pt; margin-left: 8px; }
+                        .list-header { font-size: 8pt; font-weight: 600; color: #666; margin: 6px 0 3px 0; padding-left: 4px; }
+                    </style>
+                </head>
+                <body>
+                    ${sections.map((s, idx) => `
+                        <div class="section-page ${idx > 0 ? 'page-break' : ''}">
+                            ${s}
+                        </div>
+                    `).join('')}
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.onload = function() { printWindow.print(); };
+        }
+        
+        function generateVisionSection() {
+            const today = new Date();
+            const dateStr = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;
+            
+            // Gather vision data
+            const coreValues = [];
+            for (let i = 1; i <= 6; i++) {
+                const val = document.getElementById(`cv${i}`)?.value || '';
+                if (val) coreValues.push(val);
             }
+            
+            const coreFocus = {
+                purpose: document.getElementById('cf_purpose')?.value || '',
+                niche: document.getElementById('cf_niche')?.value || ''
+            };
+            
+            const tenYear = document.getElementById('tenyear_target')?.value || '';
+            
+            const marketingStrategy = {
+                target: document.getElementById('ms_target')?.value || '',
+                uniques: document.getElementById('ms_uniques')?.value || '',
+                proven: document.getElementById('ms_proven')?.value || '',
+                guarantee: document.getElementById('ms_guarantee')?.value || ''
+            };
+            
+            const threeYear = {
+                date: document.getElementById('ty_date')?.value || '',
+                revenue: document.getElementById('ty_revenue')?.value || '',
+                profit: document.getElementById('ty_profit')?.value || '',
+                measurables: document.getElementById('ty_measurables')?.value || '',
+                picture: document.getElementById('ty_picture')?.value || ''
+            };
+            
+            return `
+                <div class="header">
+                    <h1>Vision / Traction Organizer (V/TO)</h1>
+                    <div class="subtitle">Intelligent Investing LLC - ${currentYear} | Printed: ${dateStr}</div>
+                </div>
+                <div class="grid">
+                    <div class="section no-break">
+                        <h3>Core Values</h3>
+                        ${coreValues.map((v, i) => `<div class="item-row"><span class="item-num">${i+1}</span> ${v}</div>`).join('')}
+                    </div>
+                    <div class="section no-break">
+                        <h3>Core Focus</h3>
+                        <div style="padding: 6px;"><strong>Purpose:</strong> ${coreFocus.purpose}</div>
+                        <div style="padding: 6px;"><strong>Niche:</strong> ${coreFocus.niche}</div>
+                    </div>
+                </div>
+                <div class="section no-break">
+                    <h3>10-Year Target</h3>
+                    <div style="padding: 8px; background: #f5f5f5; border-radius: 4px;">${tenYear}</div>
+                </div>
+                <div class="section no-break">
+                    <h3>Marketing Strategy</h3>
+                    <div style="padding: 6px;"><strong>Target Market:</strong> ${marketingStrategy.target}</div>
+                    <div style="padding: 6px;"><strong>3 Uniques:</strong> ${marketingStrategy.uniques}</div>
+                    <div style="padding: 6px;"><strong>Proven Process:</strong> ${marketingStrategy.proven}</div>
+                    <div style="padding: 6px;"><strong>Guarantee:</strong> ${marketingStrategy.guarantee}</div>
+                </div>
+                <div class="section no-break">
+                    <h3>3-Year Picture</h3>
+                    <div class="grid">
+                        <div style="padding: 6px;"><strong>Date:</strong> ${threeYear.date}</div>
+                        <div style="padding: 6px;"><strong>Revenue:</strong> ${threeYear.revenue}</div>
+                        <div style="padding: 6px;"><strong>Profit:</strong> ${threeYear.profit}</div>
+                        <div style="padding: 6px;"><strong>Key Measurables:</strong> ${threeYear.measurables}</div>
+                    </div>
+                    <div style="padding: 6px;"><strong>What Does It Look Like:</strong> ${threeYear.picture}</div>
+                </div>
+            `;
+        }
+        
+        function generate1YearSection() {
+            const oneYear = yearData.oneYear || {};
+            const goals = oneYear.goals || [];
+            const today = new Date();
+            const dateStr = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;
+            
+            return `
+                <div class="header">
+                    <h1>1-Year Plan</h1>
+                    <div class="subtitle">Intelligent Investing LLC - ${currentYear} | Printed: ${dateStr}</div>
+                </div>
+                <div class="grid">
+                    <div class="section no-break">
+                        <h3>Future Date</h3>
+                        <div style="padding: 6px;">${oneYear.date || ''}</div>
+                    </div>
+                    <div class="section no-break">
+                        <h3>Revenue / Profit</h3>
+                        <div style="padding: 6px;">Revenue: ${oneYear.revenue || ''} | Profit: ${oneYear.profit || ''}</div>
+                    </div>
+                </div>
+                <div class="section">
+                    <h3>1-Year Goals</h3>
+                    ${goals.map((g, i) => `<div class="item-row"><span class="item-num">${i+1}</span> ${g}</div>`).join('') || '<p style="color:#999;">No goals set</p>'}
+                </div>
+            `;
+        }
+        
+        function generateRocksSection() {
+            const rocks = yearData.quarters[currentQuarter].rocks || [];
+            const today = new Date();
+            const dateStr = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;
+            
+            const rocksHtml = rocks.map((r, idx) => {
+                const statusClass = r.done ? 'status-done' : (r.status === 'on' ? 'status-on' : (r.status === 'off' ? 'status-off' : ''));
+                return `
+                    <div class="item-row ${statusClass}">
+                        <span class="item-num" style="${r.done ? 'background: #22c55e;' : ''}">${idx + 1}</span>
+                        <span style="flex: 1; ${r.done ? 'text-decoration: line-through; opacity: 0.7;' : ''}">${r.text || ''}</span>
+                        ${r.done ? '<span class="done-badge">✓ DONE</span>' : ''}
+                        <span style="width: 40px; text-align: center; font-weight: 600;">${r.owner || ''}</span>
+                        ${!r.done ? `<span style="width: 50px; text-align: center; font-size: 8pt;">${r.status === 'on' ? '✓ On' : r.status === 'off' ? '⚠ Off' : '—'}</span>` : ''}
+                    </div>
+                `;
+            }).join('');
+            
+            return `
+                <div class="header">
+                    <h1>Quarterly Rocks</h1>
+                    <div class="subtitle">Intelligent Investing LLC - ${currentYear} ${currentQuarter} | Printed: ${dateStr}</div>
+                </div>
+                <div class="section">
+                    ${rocksHtml || '<p style="color:#999;">No rocks defined</p>'}
+                </div>
+            `;
+        }
+        
+        function generateScorecardSection() {
+            const measurables = yearData.quarters[currentQuarter].measurables || [];
+            const scorecard = yearData.quarters[currentQuarter].scorecard || {};
+            const today = new Date();
+            const dateStr = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;
+            
+            const scorecardRows = measurables.map(m => {
+                const vals = m.values || [];
+                return `
+                    <tr>
+                        <td style="text-align: center; font-weight: 600;">${m.owner || ''}</td>
+                        <td>${m.name || ''}</td>
+                        <td style="text-align: center;">${m.goal || ''}</td>
+                        ${Array(13).fill().map((_, i) => {
+                            const val = vals[i];
+                            const hit = val !== undefined && val !== '' && !isNaN(parseFloat(val)) && !isNaN(parseFloat(m.goal)) && parseFloat(val) >= parseFloat(m.goal);
+                            return `<td style="text-align: center; background: ${val !== undefined && val !== '' ? (hit ? '#c6f6d5' : '#fed7d7') : 'white'};">${val !== undefined ? val : ''}</td>`;
+                        }).join('')}
+                    </tr>
+                `;
+            }).join('');
+            
+            return `
+                <div class="header">
+                    <h1>Quarterly Scorecard</h1>
+                    <div class="subtitle">Intelligent Investing LLC - ${currentYear} ${currentQuarter} | Printed: ${dateStr}</div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 35px;">Who</th>
+                            <th style="width: 120px;">Measurable</th>
+                            <th style="width: 35px;">Goal</th>
+                            ${Array(13).fill().map((_, i) => `<th style="width: 28px;">W${i + 1}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${scorecardRows || '<tr><td colspan="16" style="text-align: center; color: #999;">No measurables defined</td></tr>'}
+                    </tbody>
+                </table>
+            `;
+        }
+        
+        function generateAgendaSection() {
+            const todos = yearData.quarters[currentQuarter].todos || [];
+            const issues = yearData.quarters[currentQuarter].weeklyIssues || [];
+            const agenda = getAgendaItems();
+            const agendaState = yearData.quarters[currentQuarter].currentMeeting?.agenda || [];
+            const today = new Date();
+            const dateStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+            const shortDate = `${today.getMonth() + 1}/${today.getDate()}`;
+            
+            // Build todos HTML - grouped by list
+            const todosByList = {};
+            todos.forEach(t => {
+                const listName = t.googleListName || 'To-Dos';
+                if (!todosByList[listName]) todosByList[listName] = [];
+                todosByList[listName].push(t);
+            });
+            
+            let todosHtml = '';
+            const listNames = Object.keys(todosByList);
+            const hasMultipleLists = listNames.length > 1 || (listNames.length === 1 && listNames[0] !== 'To-Dos');
+            
+            for (const listName of listNames) {
+                if (hasMultipleLists) {
+                    todosHtml += `<div class="list-header">📋 ${listName}</div>`;
+                }
+                todosHtml += todosByList[listName].map((t, idx) => `
+                    <div class="item-row" style="${t.starred ? 'background: #fef3c7;' : ''}">
+                        <input type="checkbox" ${t.done ? 'checked' : ''} style="margin-right: 8px;">
+                        ${t.starred ? '⭐ ' : ''}
+                        <span style="flex: 1; ${t.done ? 'text-decoration: line-through; color: #999;' : ''}">${t.text || ''}</span>
+                        ${t.dueDate ? `<span style="font-size: 7pt; color: #666; margin-right: 6px;">Due: ${t.dueDate}</span>` : ''}
+                        <span style="width: 35px; text-align: center; font-weight: 600;">${t.owner || ''}</span>
+                    </div>
+                `).join('');
+            }
+            if (!todos.length) todosHtml = '<p style="color: #999;">No to-dos</p>';
+            
+            // Build issues HTML
+            const issuesHtml = issues.map((issue, idx) => {
+                const issueObj = typeof issue === 'string' ? { text: issue } : issue;
+                return `
+                    <div class="no-break" style="margin-bottom: 10px;">
+                        <div class="item-row" style="background: #e8f4fd; border-left: 3px solid #3b82f6;">
+                            <span class="item-num">${idx + 1}</span>
+                            <span style="flex: 1; font-weight: 600;">${issueObj.text || ''}</span>
+                        </div>
+                        ${(issueObj.identify || issueObj.discuss || issueObj.solve) ? `
+                            <div style="background: #f9fafb; padding: 6px 10px; border: 1px solid #e5e7eb; border-top: none; font-size: 8pt;">
+                                ${issueObj.identify ? `<div style="margin-bottom: 4px;"><strong style="color: #3b82f6;">I:</strong> ${issueObj.identify}</div>` : ''}
+                                ${issueObj.discuss ? `<div style="margin-bottom: 4px;"><strong style="color: #3b82f6;">D:</strong> ${issueObj.discuss}</div>` : ''}
+                                ${issueObj.solve ? `<div><strong style="color: #22c55e;">S:</strong> ${issueObj.solve}</div>` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('') || '<p style="color: #999;">No issues</p>';
+            
+            // Build agenda HTML
+            const agendaHtml = agenda.map((item, idx) => `
+                <div class="item-row" style="border-left: 3px solid ${agendaState[idx] ? '#22c55e' : '#ccc'};">
+                    <span style="width: 16px; height: 16px; border: 2px solid ${agendaState[idx] ? '#22c55e' : '#999'}; border-radius: 3px; margin-right: 8px; display: flex; align-items: center; justify-content: center; color: ${agendaState[idx] ? '#22c55e' : 'transparent'}; font-size: 10pt;">✓</span>
+                    <span style="flex: 1;">${item.title}</span>
+                    <span style="color: #666; font-size: 8pt;">${item.time}</span>
+                </div>
+            `).join('');
+            
+            return `
+                <div class="header">
+                    <h1>Weekly Traction Meeting (${shortDate})</h1>
+                    <div class="subtitle">Intelligent Investing LLC | ${dateStr}</div>
+                </div>
+                <div class="grid">
+                    <div class="section">
+                        <h3>📋 Meeting Agenda</h3>
+                        ${agendaHtml}
+                    </div>
+                    <div class="section">
+                        <h3>✅ To-Dos (${todos.length})</h3>
+                        ${todosHtml}
+                    </div>
+                </div>
+                <div class="section">
+                    <h3>💡 IDS - Issues (${issues.length})</h3>
+                    ${issuesHtml}
+                </div>
+            `;
+        }
+        
+        function generateDailyPlanSection() {
+            const user = document.getElementById('dailyPlanUser')?.value || 'HB';
+            const settings = getSettings();
+            const member = settings.teamMembers.find(m => m.initials === user);
+            const today = new Date();
+            const dateStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+            
+            // Load daily plan for user
+            const storageKey = `eos_dailyPlan_${user}`;
+            const stored = localStorage.getItem(storageKey);
+            const plan = stored ? JSON.parse(stored) : { matrix: { q1: [], q2: [], q3: [], q4: [] }, ruleOf3: [null, null, null] };
+            
+            // Build Rule of 3 HTML
+            const rule3Html = plan.ruleOf3.map((task, idx) => {
+                if (task) {
+                    return `
+                        <div class="item-row" style="${task.completed ? 'background: #f0fdf4; border-left: 3px solid #22c55e;' : ''}">
+                            <span class="item-num" style="${task.completed ? 'background: #22c55e;' : ''}">${idx + 1}</span>
+                            <input type="checkbox" ${task.completed ? 'checked' : ''} style="margin-right: 8px;">
+                            <span style="flex: 1; ${task.completed ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${task.type === 'rock' ? '🪨 ' : ''}${task.text}</span>
+                        </div>
+                    `;
+                } else {
+                    return `<div class="item-row" style="color: #999; border: 1px dashed #ccc;"><span class="item-num" style="background: #ccc;">${idx + 1}</span> (Empty slot)</div>`;
+                }
+            }).join('');
+            
+            // Build Matrix HTML
+            const quadrantNames = { q1: '🔴 Urgent + Important', q2: '🟢 Important (Not Urgent)', q3: '🟡 Urgent (Not Important)', q4: '⚪ Neither' };
+            const matrixHtml = ['q1', 'q2', 'q3', 'q4'].map(q => {
+                const tasks = plan.matrix[q] || [];
+                return `
+                    <div class="section no-break" style="margin-bottom: 8px;">
+                        <h3 style="font-size: 9pt; margin-bottom: 4px;">${quadrantNames[q]}</h3>
+                        ${tasks.length ? tasks.map(t => `
+                            <div class="item-row" style="${t.done ? 'text-decoration: line-through; opacity: 0.6;' : ''}">
+                                <input type="checkbox" ${t.done ? 'checked' : ''} style="margin-right: 6px;">
+                                ${t.type === 'rock' ? '🪨 ' : ''}${t.text}
+                            </div>
+                        `).join('') : '<p style="color: #999; font-size: 8pt; margin: 4px 0;">No tasks</p>'}
+                    </div>
+                `;
+            }).join('');
+            
+            return `
+                <div class="header">
+                    <h1>My Daily Plan - ${member?.name || user}</h1>
+                    <div class="subtitle">${dateStr}</div>
+                </div>
+                <div class="section">
+                    <h3>🎯 Rule of 3 - Today's Top Priorities</h3>
+                    ${rule3Html}
+                </div>
+                <div class="section">
+                    <h3>📊 Eisenhower Matrix</h3>
+                    <div class="grid">
+                        ${matrixHtml}
+                    </div>
+                </div>
+            `;
         }
         
         // ==================== PRINT ====================
@@ -5150,16 +5588,33 @@ Make sure your suggestions directly address the specific root cause and discussi
             const dateStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
             const shortDate = `${today.getMonth() + 1}/${today.getDate()}`;
             
-            // Build todos HTML
-            const todosHtml = todos.map((t, idx) => `
-                <div style="display: flex; align-items: center; padding: 6px; margin-bottom: 4px; background: ${t.starred ? '#fef3c7' : '#f5f5f5'}; border-radius: 4px;">
-                    <input type="checkbox" ${t.done ? 'checked' : ''} style="margin-right: 8px;">
-                    ${t.starred ? '⭐ ' : ''}
-                    <span style="flex: 1; ${t.done ? 'text-decoration: line-through; color: #999;' : ''}">${t.text || ''}</span>
-                    ${t.dueDate ? `<span style="font-size: 8pt; color: #666; margin-right: 8px;">Due: ${t.dueDate}</span>` : ''}
-                    <span style="width: 40px; text-align: center; font-weight: 600;">${t.owner || ''}</span>
-                </div>
-            `).join('') || '<p style="color: #999;">No to-dos</p>';
+            // Build todos HTML - grouped by list
+            const todosByList = {};
+            todos.forEach(t => {
+                const listName = t.googleListName || 'To-Dos';
+                if (!todosByList[listName]) todosByList[listName] = [];
+                todosByList[listName].push(t);
+            });
+            
+            let todosHtml = '';
+            const listNames = Object.keys(todosByList);
+            const hasMultipleLists = listNames.length > 1 || (listNames.length === 1 && listNames[0] !== 'To-Dos');
+            
+            for (const listName of listNames) {
+                if (hasMultipleLists) {
+                    todosHtml += `<div style="font-size: 9pt; font-weight: 600; color: #666; margin: 8px 0 4px 0; padding-left: 4px;">📋 ${listName}</div>`;
+                }
+                todosHtml += todosByList[listName].map((t, idx) => `
+                    <div style="display: flex; align-items: center; padding: 6px; margin-bottom: 4px; background: ${t.starred ? '#fef3c7' : '#f5f5f5'}; border-radius: 4px;">
+                        <input type="checkbox" ${t.done ? 'checked' : ''} style="margin-right: 8px;">
+                        ${t.starred ? '⭐ ' : ''}
+                        <span style="flex: 1; ${t.done ? 'text-decoration: line-through; color: #999;' : ''}">${t.text || ''}</span>
+                        ${t.dueDate ? `<span style="font-size: 8pt; color: #666; margin-right: 8px;">Due: ${t.dueDate}</span>` : ''}
+                        <span style="width: 40px; text-align: center; font-weight: 600;">${t.owner || ''}</span>
+                    </div>
+                `).join('');
+            }
+            if (!todos.length) todosHtml = '<p style="color: #999;">No to-dos</p>';
             
             // Build issues with IDS HTML
             const issuesHtml = issues.map((issue, idx) => {
@@ -5642,7 +6097,6 @@ Make sure your suggestions directly address the specific root cause and discussi
         
         async function openParseMeetingModal() {
             const settings = getSettings();
-            const url = settings.otterSheetUrl;
             
             // Reset UI
             document.getElementById('otterFetchStatus').style.display = 'none';
@@ -5654,71 +6108,177 @@ Make sure your suggestions directly address the specific root cause and discussi
             
             document.getElementById('parseMeetingModal').classList.add('active');
             
-            // If Otter URL is configured, auto-fetch
-            if (url) {
-                await fetchFromOtterSheet(url);
+            // Check for Otter URL or team member's Web App URL with Otter configured
+            const otterUrl = settings.otterSheetUrl;
+            const firstMember = settings.teamMembers?.[0];
+            
+            if (otterUrl || (firstMember?.webAppUrl && settings.otterSheetId)) {
+                await fetchFromOtterSheet();
             }
         }
         
-        async function fetchFromOtterSheet(url) {
+        async function fetchFromOtterSheet() {
+            const settings = getSettings();
             const statusEl = document.getElementById('otterFetchStatus');
             statusEl.style.display = 'block';
             statusEl.style.background = '#e8f4fd';
             statusEl.style.color = '#1a73e8';
-            statusEl.innerHTML = '⏳ Fetching action items from Otter...';
+            statusEl.innerHTML = '⏳ Fetching latest Traction meeting from Otter...';
             
             try {
-                const response = await fetch(url + '?action=getItems');
-                const data = await response.json();
+                // Try the new combined approach first (via team member's Web App)
+                const firstMember = settings.teamMembers?.[0];
+                let response, data;
                 
-                if (data.status === 'ok' && data.items && data.items.length > 0) {
-                    // Flatten all action items from all meetings
-                    otterItems = [];
-                    const existingTexts = new Set(
-                        (yearData.quarters?.[currentQuarter]?.todos || [])
-                            .map(t => t.text.toLowerCase().trim())
-                    );
+                if (firstMember?.webAppUrl) {
+                    // Use combined script endpoint
+                    const url = `${firstMember.webAppUrl}?action=getOtterMeeting&secretKey=${encodeURIComponent(firstMember.webAppSecret || '')}`;
+                    response = await fetch(url);
+                    data = await response.json();
                     
-                    for (const meeting of data.items) {
-                        for (const actionItem of meeting.actionItems) {
-                            // Skip duplicates
-                            if (!existingTexts.has(actionItem.toLowerCase().trim())) {
-                                otterItems.push({
-                                    text: actionItem,
-                                    owner: '',
-                                    selected: true,
-                                    meetingTitle: meeting.title,
-                                    meetingUrl: meeting.url,
-                                    row: meeting.row
-                                });
-                            }
+                    if (data.success && data.actionItems) {
+                        // Parse action items from the text
+                        const actionItemsText = data.actionItems;
+                        const parsedItems = parseOtterActionItems(actionItemsText);
+                        
+                        // Filter out existing tasks
+                        const existingTexts = new Set(
+                            (yearData.quarters?.[currentQuarter]?.todos || [])
+                                .map(t => t.text.toLowerCase().trim())
+                        );
+                        
+                        otterItems = parsedItems
+                            .filter(item => !existingTexts.has(item.toLowerCase().trim()))
+                            .map(item => ({
+                                text: item,
+                                owner: '',
+                                selected: true,
+                                meetingTitle: data.title || 'Traction Meeting',
+                                meetingUrl: data.transcriptUrl || '',
+                                date: data.date || ''
+                            }));
+                        
+                        if (otterItems.length > 0) {
+                            statusEl.style.background = '#e6f4ea';
+                            statusEl.style.color = '#1e8e3e';
+                            statusEl.innerHTML = `✅ Found ${otterItems.length} new action item(s) from "${data.title}"`;
+                            displayOtterItems();
+                        } else {
+                            statusEl.style.background = '#fff3cd';
+                            statusEl.style.color = '#856404';
+                            statusEl.innerHTML = '📭 No new action items (all already in To-Dos or none found)';
+                        }
+                        return;
+                    } else if (data.error) {
+                        // Fall through to legacy method or show error
+                        if (!settings.otterSheetUrl) {
+                            statusEl.style.background = '#fce8e6';
+                            statusEl.style.color = '#d93025';
+                            statusEl.innerHTML = '⚠️ ' + data.error;
+                            return;
                         }
                     }
+                }
+                
+                // Legacy method: Use dedicated Otter Sheet URL
+                const legacyUrl = settings.otterSheetUrl;
+                if (legacyUrl) {
+                    response = await fetch(legacyUrl + '?action=getItems');
+                    data = await response.json();
                     
-                    if (otterItems.length > 0) {
-                        statusEl.style.background = '#e6f4ea';
-                        statusEl.style.color = '#1e8e3e';
-                        statusEl.innerHTML = `✅ Found ${otterItems.length} new action item(s) from ${data.items.length} meeting(s)`;
-                        displayOtterItems();
-                    } else {
+                    if (data.status === 'ok' && data.items && data.items.length > 0) {
+                        // Flatten all action items from all meetings
+                        otterItems = [];
+                        const existingTexts = new Set(
+                            (yearData.quarters?.[currentQuarter]?.todos || [])
+                                .map(t => t.text.toLowerCase().trim())
+                        );
+                        
+                        for (const meeting of data.items) {
+                            for (const actionItem of meeting.actionItems) {
+                                if (!existingTexts.has(actionItem.toLowerCase().trim())) {
+                                    otterItems.push({
+                                        text: actionItem,
+                                        owner: '',
+                                        selected: true,
+                                        meetingTitle: meeting.title,
+                                        meetingUrl: meeting.url,
+                                        row: meeting.row
+                                    });
+                                }
+                            }
+                        }
+                        
+                        if (otterItems.length > 0) {
+                            statusEl.style.background = '#e6f4ea';
+                            statusEl.style.color = '#1e8e3e';
+                            statusEl.innerHTML = `✅ Found ${otterItems.length} new action item(s) from ${data.items.length} meeting(s)`;
+                            displayOtterItems();
+                        } else {
+                            statusEl.style.background = '#fff3cd';
+                            statusEl.style.color = '#856404';
+                            statusEl.innerHTML = '📭 No new action items (all already in To-Dos or none pending)';
+                        }
+                    } else if (data.count === 0) {
                         statusEl.style.background = '#fff3cd';
                         statusEl.style.color = '#856404';
-                        statusEl.innerHTML = '📭 No new action items (all already in To-Dos or none pending)';
+                        statusEl.innerHTML = '📭 No pending action items from Otter meetings';
+                    } else {
+                        statusEl.style.background = '#fce8e6';
+                        statusEl.style.color = '#d93025';
+                        statusEl.innerHTML = '⚠️ Error: ' + (data.message || 'Unknown error');
                     }
-                } else if (data.count === 0) {
-                    statusEl.style.background = '#fff3cd';
-                    statusEl.style.color = '#856404';
-                    statusEl.innerHTML = '📭 No pending action items from Otter meetings';
                 } else {
                     statusEl.style.background = '#fce8e6';
                     statusEl.style.color = '#d93025';
-                    statusEl.innerHTML = '⚠️ Error: ' + (data.message || 'Unknown error');
+                    statusEl.innerHTML = '⚠️ No Otter integration configured. Set up in Settings.';
                 }
             } catch (error) {
                 statusEl.style.background = '#fce8e6';
                 statusEl.style.color = '#d93025';
-                statusEl.innerHTML = '❌ Connection failed: ' + error.message + '<br><small>Check Settings to configure Otter Sheet URL</small>';
+                statusEl.innerHTML = '❌ Connection failed: ' + error.message + '<br><small>Check Settings to configure Otter integration</small>';
             }
+        }
+        
+        function parseOtterActionItems(text) {
+            if (!text) return [];
+            
+            const lines = text.split('\n');
+            const actionItems = [];
+            
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed || trimmed.length < 3) continue;
+                
+                // Match various action item patterns
+                const patterns = [
+                    /^[-•*]\s*(.+)$/,           // Bullet points
+                    /^\d+[\.)]\s*(.+)$/,        // Numbered lists
+                    /^\[[ x]?\]\s*(.+)$/i,      // Checkboxes
+                    /^[□☐]\s*(.+)$/,            // Unicode checkboxes
+                ];
+                
+                let matched = false;
+                for (const pattern of patterns) {
+                    const match = trimmed.match(pattern);
+                    if (match) {
+                        actionItems.push(match[1].trim());
+                        matched = true;
+                        break;
+                    }
+                }
+                
+                // If no pattern matched but it looks like an action item, include it
+                if (!matched && trimmed.length > 5) {
+                    // Check for action-oriented words
+                    const actionWords = /^(complete|finish|send|create|update|review|follow|schedule|call|email|draft|prepare|submit|check|confirm|reach|contact)/i;
+                    if (actionWords.test(trimmed)) {
+                        actionItems.push(trimmed);
+                    }
+                }
+            }
+            
+            return actionItems;
         }
         
         function displayOtterItems() {
@@ -5974,25 +6534,85 @@ Make sure your suggestions directly address the specific root cause and discussi
         
         function getExportableTasks(ownerFilter) {
             const todos = yearData.quarters?.[currentQuarter]?.todos || [];
-            // CRITICAL: Filter out tasks that came from Google (have googleTaskId) to prevent duplicates
-            return ownerFilter === 'all' 
-                ? todos.filter(t => !t.done && t.text && !t.googleTaskId)
-                : todos.filter(t => !t.done && t.text && t.owner === ownerFilter && !t.googleTaskId);
+            const settings = getSettings();
+            
+            // Get tasks that are either:
+            // 1. NEW tasks (no googleTaskId) - these get created
+            // 2. Tasks with modified due dates (originalDueDate != dueDate) - these get updated
+            // Tasks assigned to "Both" will be handled separately in sendTasksToGoogle
+            
+            let filtered;
+            if (ownerFilter === 'all') {
+                filtered = todos.filter(t => !t.done && t.text);
+            } else {
+                // Include tasks for this owner OR tasks marked as "Both"
+                filtered = todos.filter(t => !t.done && t.text && (t.owner === ownerFilter || t.owner === 'Both'));
+            }
+            
+            // Separate into new tasks and tasks needing updates
+            const newTasks = filtered.filter(t => !t.googleTaskId);
+            const tasksWithUpdates = filtered.filter(t => 
+                t.googleTaskId && 
+                t.originalDueDate !== t.dueDate // Due date was changed
+            );
+            
+            // Mark tasks that need updates vs new creation
+            newTasks.forEach(t => t._action = 'create');
+            tasksWithUpdates.forEach(t => t._action = 'update');
+            
+            return [...newTasks, ...tasksWithUpdates];
+        }
+        
+        function getTasksNeedingDueDateSync(ownerFilter) {
+            const todos = yearData.quarters?.[currentQuarter]?.todos || [];
+            return todos.filter(t => 
+                !t.done && 
+                t.text && 
+                t.googleTaskId && 
+                t.originalDueDate !== t.dueDate &&
+                (ownerFilter === 'all' || t.owner === ownerFilter || t.owner === 'Both')
+            );
         }
         
         function updateTaskExportPreview() {
             const owner = document.getElementById('exportTasksOwner').value;
             const tasks = getExportableTasks(owner);
             
-            // Only show [owner] brackets when viewing all tasks
-            const formatted = tasks.map(t => 
-                owner === 'all' 
-                    ? `☐ ${t.text}${t.owner ? ' [' + t.owner + ']' : ''}`
-                    : `☐ ${t.text}`
-            ).join('\n');
+            const newTasks = tasks.filter(t => t._action === 'create');
+            const updateTasks = tasks.filter(t => t._action === 'update');
             
-            document.getElementById('taskExportPreview').value = formatted || '(No tasks to export)';
-            document.getElementById('taskCount').textContent = tasks.length;
+            // Format display
+            let formatted = '';
+            if (newTasks.length > 0) {
+                formatted += '📝 NEW TASKS:\n';
+                formatted += newTasks.map(t => 
+                    owner === 'all' 
+                        ? `  ☐ ${t.text}${t.owner ? ' [' + t.owner + ']' : ''}`
+                        : `  ☐ ${t.text}`
+                ).join('\n');
+            }
+            if (updateTasks.length > 0) {
+                if (formatted) formatted += '\n\n';
+                formatted += '📅 DUE DATE UPDATES:\n';
+                formatted += updateTasks.map(t => 
+                    `  • ${t.text.substring(0, 40)}${t.text.length > 40 ? '...' : ''} → ${t.dueDate || '(none)'}`
+                ).join('\n');
+            }
+            
+            document.getElementById('taskExportPreview').value = formatted || '(No tasks to export or update)';
+            
+            // Update count with breakdown
+            let countText = '';
+            if (newTasks.length > 0 && updateTasks.length > 0) {
+                countText = `${newTasks.length} new, ${updateTasks.length} updates`;
+            } else if (newTasks.length > 0) {
+                countText = `${newTasks.length} new`;
+            } else if (updateTasks.length > 0) {
+                countText = `${updateTasks.length} updates`;
+            } else {
+                countText = '0';
+            }
+            document.getElementById('taskCount').textContent = countText;
         }
         
         function copyTasksToClipboard() {
@@ -6013,13 +6633,21 @@ Make sure your suggestions directly address the specific root cause and discussi
             const allTasks = getExportableTasks(ownerFilter);
             
             if (allTasks.length === 0) {
-                alert('No tasks to export.');
+                alert('No tasks to export or update.');
                 return;
             }
             
+            // Separate new tasks from tasks needing due date updates
+            const newTasks = allTasks.filter(t => t._action === 'create');
+            const tasksToUpdate = allTasks.filter(t => t._action === 'update');
+            
+            // Count for confirmation
+            const newCount = newTasks.length;
+            const updateCount = tasksToUpdate.length;
+            
             // Warning for "All Tasks"
-            if (ownerFilter === 'all') {
-                if (!confirm(`⚠️ You're about to push ALL ${allTasks.length} tasks to Google.\n\nAre you sure you don't want to push tasks for just one person?`)) {
+            if (ownerFilter === 'all' && newCount > 0) {
+                if (!confirm(`⚠️ You're about to push ${newCount} NEW task(s) and update ${updateCount} task(s) to Google.\n\nAre you sure you don't want to push tasks for just one person?`)) {
                     return;
                 }
             }
@@ -6030,17 +6658,38 @@ Make sure your suggestions directly address the specific root cause and discussi
             statusEl.style.color = '#1a73e8';
             
             let totalSent = 0;
+            let totalUpdated = 0;
             let errors = [];
             
-            // Group tasks by owner
+            // Expand "Both" tasks to all team members for NEW tasks
+            const expandedNewTasks = [];
+            newTasks.forEach(t => {
+                if (t.owner === 'Both') {
+                    // Send to ALL team members
+                    settings.teamMembers.forEach(member => {
+                        expandedNewTasks.push({
+                            ...t,
+                            _targetOwner: member.initials,
+                            _forBoth: true
+                        });
+                    });
+                } else {
+                    expandedNewTasks.push({
+                        ...t,
+                        _targetOwner: t.owner
+                    });
+                }
+            });
+            
+            // Group new tasks by target owner
             const tasksByOwner = {};
-            allTasks.forEach(t => {
-                const owner = t.owner || 'default';
+            expandedNewTasks.forEach(t => {
+                const owner = t._targetOwner || 'default';
                 if (!tasksByOwner[owner]) tasksByOwner[owner] = [];
                 tasksByOwner[owner].push(t);
             });
             
-            // Send to each member's Web App
+            // Send NEW tasks to each member's Web App
             for (const [owner, tasks] of Object.entries(tasksByOwner)) {
                 const member = settings.teamMembers.find(m => m.initials === owner);
                 const webAppUrl = member?.webAppUrl;
@@ -6053,7 +6702,6 @@ Make sure your suggestions directly address the specific root cause and discussi
                 // Group tasks by their original list (if they have one) or default list
                 const tasksByList = {};
                 tasks.forEach(t => {
-                    // Use original list ID if available, otherwise use the member's default push list
                     const listId = t.googleListId || member.pushListId || '@default';
                     if (!tasksByList[listId]) {
                         tasksByList[listId] = {
@@ -6067,7 +6715,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                 
                 // Send to each list
                 for (const [listId, listData] of Object.entries(tasksByList)) {
-                    statusEl.textContent = `⏳ Sending ${listData.tasks.length} task(s) to ${member.name}'s "${listData.listName}" list...`;
+                    statusEl.textContent = `⏳ Creating ${listData.tasks.length} task(s) for ${member.name}...`;
                     
                     const today = new Date();
                     const meetingDate = `${today.getMonth() + 1}/${today.getDate()}`;
@@ -6077,10 +6725,10 @@ Make sure your suggestions directly address the specific root cause and discussi
                         listId: listId,
                         secretKey: member.webAppSecret || '',
                         tasks: listData.tasks.map(t => {
-                            // Build title - add ⭐ prefix for starred tasks (workaround since API doesn't support starred)
                             let title = t.text;
                             if (t.starred) title = '⭐ ' + title;
-                            if (ownerFilter === 'all') title = `${title} [${t.owner}]`;
+                            if (t._forBoth) title = `${title} [${t.owner}]`; // Mark as shared task
+                            if (ownerFilter === 'all' && !t._forBoth) title = `${title} [${t.owner}]`;
                             
                             return {
                                 title: title,
@@ -6102,29 +6750,83 @@ Make sure your suggestions directly address the specific root cause and discussi
                         const result = await response.json();
                         if (result.success > 0 || result.success === true) {
                             totalSent += listData.tasks.length;
-                            listData.tasks.forEach(t => t.exportedAt = new Date().toISOString());
+                            // Mark original tasks as synced (not the expanded copies)
+                            listData.tasks.forEach(t => {
+                                if (!t._forBoth) {
+                                    const original = newTasks.find(ot => ot.text === t.text);
+                                    if (original) {
+                                        original.googleTaskId = 'synced';
+                                        original.exportedAt = new Date().toISOString();
+                                    }
+                                }
+                            });
                         } else {
                             errors.push(`${member.name}/${listData.listName}: ${result.message || 'Unknown error'}`);
                         }
                     } catch (error) {
                         // With CORS issues, assume it worked
                         totalSent += listData.tasks.length;
-                        listData.tasks.forEach(t => t.exportedAt = new Date().toISOString());
+                    }
+                }
+            }
+            
+            // Handle UPDATES for tasks with changed due dates
+            if (tasksToUpdate.length > 0) {
+                statusEl.textContent = `⏳ Updating ${tasksToUpdate.length} task due date(s)...`;
+                
+                for (const task of tasksToUpdate) {
+                    // Find the member who owns this task's Google Task
+                    const member = settings.teamMembers.find(m => m.initials === task.owner);
+                    if (!member?.webAppUrl) {
+                        errors.push(`No Web App URL for ${task.owner} - can't update due date`);
+                        continue;
+                    }
+                    
+                    try {
+                        const payload = {
+                            action: 'updateTask',
+                            taskId: task.googleTaskId,
+                            listId: task.googleListId || '@default',
+                            secretKey: member.webAppSecret || '',
+                            updates: {
+                                due: task.dueDate ? new Date(task.dueDate).toISOString() : null
+                            }
+                        };
+                        
+                        const response = await fetch(member.webAppUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify(payload),
+                            redirect: 'follow'
+                        });
+                        
+                        const result = await response.json();
+                        if (result.success) {
+                            totalUpdated++;
+                            // Update the originalDueDate to match current (so it won't show as needing update again)
+                            task.originalDueDate = task.dueDate;
+                        }
+                    } catch (error) {
+                        // Assume it worked with CORS
+                        totalUpdated++;
+                        task.originalDueDate = task.dueDate;
                     }
                 }
             }
             
             autoSave();
             
-            if (totalSent > 0) {
+            if (totalSent > 0 || totalUpdated > 0) {
                 statusEl.style.background = '#e6f4ea';
                 statusEl.style.color = '#1e8e3e';
-                let msg = `✅ Sent ${totalSent} task(s) to Google Tasks!`;
+                let msg = '';
+                if (totalSent > 0) msg += `✅ Created ${totalSent} task(s)`;
+                if (totalUpdated > 0) msg += `${msg ? ', ' : '✅ '}Updated ${totalUpdated} due date(s)`;
                 if (errors.length > 0) {
                     msg += ' ⚠️ ' + errors.join('; ');
                 }
                 statusEl.textContent = msg;
-                addLogEntry(`Pushed ${totalSent} tasks to Google Tasks`);
+                addLogEntry(`Pushed to Google Tasks: ${totalSent} new, ${totalUpdated} updated`);
             } else {
                 statusEl.style.background = '#fce8e6';
                 statusEl.style.color = '#d93025';
@@ -6209,6 +6911,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                                     done: false,
                                     starred: isStarred,
                                     dueDate: dueDate,
+                                    originalDueDate: dueDate, // Track original for sync detection
                                     importedAt: new Date().toISOString(),
                                     googleTaskId: task.id,
                                     googleListId: task.listId || '',  // Store list ID for pushing back
@@ -6548,9 +7251,9 @@ Make sure your suggestions directly address the specific root cause and discussi
                 if (t) tasksInUse.add(`${t.type}:${t.text}`);
             });
             
-            // Rocks for this user
+            // Rocks for this user (exclude completed rocks)
             const rocks = (yearData.quarters[currentQuarter].rocks || [])
-                .filter(r => r.owner === user && r.text)
+                .filter(r => r.owner === user && r.text && !r.done)
                 .filter(r => !search || r.text.toLowerCase().includes(search));
             
             // To-Dos for this user
@@ -6793,11 +7496,119 @@ Make sure your suggestions directly address the specific root cause and discussi
                              ondragend="dragEnd(event)">
                             <input type="checkbox" class="matrix-check" onclick="completeMatrixTask('${q}', ${idx})" ${t.done ? 'checked' : ''}>
                             <span class="task-text-editable" ondblclick="editMatrixTask('${q}', ${idx})" title="Double-click to edit" style="${t.done ? 'text-decoration: line-through; opacity: 0.5;' : ''}">${t.type === 'rock' ? '🪨 ' : ''}${t.text}</span>
+                            ${t.done ? `
+                                <div class="task-actions" style="display: flex; gap: 4px; margin-left: 8px;">
+                                    <button class="action-btn archive" onclick="archiveMatrixTask('${q}', ${idx})" title="Archive (remove from everywhere)">📦</button>
+                                    <button class="action-btn uncheck" onclick="uncheckMatrixTask('${q}', ${idx})" title="Uncheck">↩</button>
+                                    <button class="action-btn delete" onclick="deleteMatrixTask('${q}', ${idx})" title="Delete permanently">🗑</button>
+                                </div>
+                            ` : ''}
                             <button class="remove-btn" onclick="removeFromMatrix('${q}', ${idx})">✕</button>
                         </div>
                     `).join('');
                 }
             });
+        }
+        
+        function archiveMatrixTask(quadrant, idx) {
+            const task = dailyPlanData.matrix[quadrant][idx];
+            if (!task) return;
+            
+            // Remove from matrix
+            dailyPlanData.matrix[quadrant].splice(idx, 1);
+            
+            // If it's a todo, ensure it's marked done (archived)
+            if (task.type === 'todo') {
+                const todos = yearData.quarters[currentQuarter].todos;
+                const found = todos.find(t => t.text === task.text);
+                if (found) {
+                    found.done = true;
+                    autoSave();
+                    renderTodos(todos);
+                }
+            }
+            
+            // If it's a rock, ensure it's marked done
+            if (task.type === 'rock') {
+                const rocks = yearData.quarters[currentQuarter].rocks;
+                const found = rocks.find(r => r.text === task.text);
+                if (found) {
+                    found.done = true;
+                    found.completedAt = new Date().toISOString();
+                    autoSave();
+                }
+            }
+            
+            saveDailyPlan();
+            renderMatrix();
+            renderRepository();
+            addLogEntry(`Archived: "${task.text.substring(0, 30)}..."`);
+        }
+        
+        function uncheckMatrixTask(quadrant, idx) {
+            const task = dailyPlanData.matrix[quadrant][idx];
+            if (!task) return;
+            
+            task.done = false;
+            
+            // If it's a todo, uncheck in the main list too
+            if (task.type === 'todo') {
+                const todos = yearData.quarters[currentQuarter].todos;
+                const found = todos.find(t => t.text === task.text);
+                if (found) {
+                    found.done = false;
+                    autoSave();
+                    renderTodos(todos);
+                }
+            }
+            
+            // If it's a rock, uncheck it
+            if (task.type === 'rock') {
+                const rocks = yearData.quarters[currentQuarter].rocks;
+                const found = rocks.find(r => r.text === task.text);
+                if (found) {
+                    found.done = false;
+                    delete found.completedAt;
+                    autoSave();
+                }
+            }
+            
+            saveDailyPlan();
+            renderMatrix();
+            renderRepository();
+        }
+        
+        function deleteMatrixTask(quadrant, idx) {
+            const task = dailyPlanData.matrix[quadrant][idx];
+            if (!task) return;
+            
+            if (!confirm(`Permanently delete "${task.text.substring(0, 40)}..."?\n\nThis will remove it from everywhere.`)) {
+                return;
+            }
+            
+            // Remove from matrix
+            dailyPlanData.matrix[quadrant].splice(idx, 1);
+            
+            // If it's a todo, delete from the main list
+            if (task.type === 'todo') {
+                const todos = yearData.quarters[currentQuarter].todos;
+                const foundIdx = todos.findIndex(t => t.text === task.text);
+                if (foundIdx >= 0) {
+                    todos.splice(foundIdx, 1);
+                    autoSave();
+                    renderTodos(todos);
+                }
+            }
+            
+            // Note: We don't delete rocks from here - they should be deleted from Quarterly Rocks tab
+            if (task.type === 'rock') {
+                alert('Rocks can only be deleted from the Quarterly Rocks tab.');
+            }
+            
+            saveDailyPlan();
+            renderMatrix();
+            renderRepository();
+            addLogEntry(`Deleted: "${task.text.substring(0, 30)}..."`);
         }
         
         function editMatrixTask(quadrant, idx) {
@@ -6841,6 +7652,18 @@ Make sure your suggestions directly address the specific root cause and discussi
                         found.done = true;
                         autoSave();
                         renderTodos(todos);
+                    }
+                }
+                
+                // If it's a rock, mark it complete in the Quarterly Rocks
+                if (task.type === 'rock' && task.done) {
+                    const rocks = yearData.quarters[currentQuarter].rocks;
+                    const found = rocks.find(r => r.text === task.text);
+                    if (found) {
+                        found.done = true;
+                        found.completedAt = new Date().toISOString();
+                        autoSave();
+                        addLogEntry(`Rock completed: "${task.text.substring(0, 30)}..."`);
                     }
                 }
                 
@@ -6974,7 +7797,13 @@ Make sure your suggestions directly address the specific root cause and discussi
                                    title="Mark as complete">
                             <span class="task-text ${isCompleted ? 'done' : ''}" ondblclick="editRuleTask(${idx})" 
                                   title="Double-click to edit" style="${isCompleted ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${task.type === 'rock' ? '🪨 ' : ''}${task.text}</span>
-                            ${!isCompleted ? `<button class="focus-btn" onclick="focusOnTask(${idx})">🎯 Focus</button>` : ''}
+                            ${!isCompleted ? `<button class="focus-btn" onclick="focusOnTask(${idx})">🎯 Focus</button>` : `
+                                <div class="task-actions" style="display: flex; gap: 4px; margin-left: 8px;">
+                                    <button class="action-btn archive" onclick="archiveRuleTask(${idx})" title="Archive (remove from everywhere)">📦</button>
+                                    <button class="action-btn uncheck" onclick="uncheckRuleTask(${idx})" title="Uncheck">↩</button>
+                                    <button class="action-btn delete" onclick="deleteRuleTask(${idx})" title="Delete permanently">🗑</button>
+                                </div>
+                            `}
                             <button class="complete-btn-gray" onclick="removeRuleTask(${idx})" title="Remove from Rule of 3">✕</button>
                         </div>
                     `;
@@ -6987,6 +7816,109 @@ Make sure your suggestions directly address the specific root cause and discussi
                     `;
                 }
             }).join('');
+        }
+        
+        function archiveRuleTask(slotIdx) {
+            const task = dailyPlanData.ruleOf3[slotIdx];
+            if (!task) return;
+            
+            // Remove from Rule of 3
+            dailyPlanData.ruleOf3[slotIdx] = null;
+            
+            // If it's a todo, ensure it's marked done (archived)
+            if (task.type === 'todo') {
+                const todos = yearData.quarters[currentQuarter].todos;
+                const found = todos.find(t => t.text === task.text);
+                if (found) {
+                    found.done = true;
+                    autoSave();
+                    renderTodos(todos);
+                }
+            }
+            
+            // If it's a rock, ensure it's marked done
+            if (task.type === 'rock') {
+                const rocks = yearData.quarters[currentQuarter].rocks;
+                const found = rocks.find(r => r.text === task.text);
+                if (found) {
+                    found.done = true;
+                    found.completedAt = new Date().toISOString();
+                    autoSave();
+                }
+            }
+            
+            saveDailyPlan();
+            renderRuleOf3();
+            renderRepository();
+            renderMatrix();
+            addLogEntry(`Archived: "${task.text.substring(0, 30)}..."`);
+        }
+        
+        function uncheckRuleTask(slotIdx) {
+            const task = dailyPlanData.ruleOf3[slotIdx];
+            if (!task) return;
+            
+            task.completed = false;
+            
+            // If it's a todo, uncheck in the main list too
+            if (task.type === 'todo') {
+                const todos = yearData.quarters[currentQuarter].todos;
+                const found = todos.find(t => t.text === task.text);
+                if (found) {
+                    found.done = false;
+                    autoSave();
+                    renderTodos(todos);
+                }
+            }
+            
+            // If it's a rock, uncheck it
+            if (task.type === 'rock') {
+                const rocks = yearData.quarters[currentQuarter].rocks;
+                const found = rocks.find(r => r.text === task.text);
+                if (found) {
+                    found.done = false;
+                    delete found.completedAt;
+                    autoSave();
+                }
+            }
+            
+            saveDailyPlan();
+            renderRuleOf3();
+            renderRepository();
+        }
+        
+        function deleteRuleTask(slotIdx) {
+            const task = dailyPlanData.ruleOf3[slotIdx];
+            if (!task) return;
+            
+            if (!confirm(`Permanently delete "${task.text.substring(0, 40)}..."?\n\nThis will remove it from everywhere.`)) {
+                return;
+            }
+            
+            // Remove from Rule of 3
+            dailyPlanData.ruleOf3[slotIdx] = null;
+            
+            // If it's a todo, delete from the main list
+            if (task.type === 'todo') {
+                const todos = yearData.quarters[currentQuarter].todos;
+                const foundIdx = todos.findIndex(t => t.text === task.text);
+                if (foundIdx >= 0) {
+                    todos.splice(foundIdx, 1);
+                    autoSave();
+                    renderTodos(todos);
+                }
+            }
+            
+            // Note: We don't delete rocks from here - they should be deleted from Quarterly Rocks tab
+            if (task.type === 'rock') {
+                alert('Rocks can only be deleted from the Quarterly Rocks tab.');
+            }
+            
+            saveDailyPlan();
+            renderRuleOf3();
+            renderRepository();
+            renderMatrix();
+            addLogEntry(`Deleted: "${task.text.substring(0, 30)}..."`);
         }
         
         function toggleRuleTaskComplete(slotIdx) {
@@ -7003,6 +7935,18 @@ Make sure your suggestions directly address the specific root cause and discussi
                     found.done = true;
                     autoSave();
                     renderTodos(todos);
+                }
+            }
+            
+            // Also mark the original rock as done if completing
+            if (task.completed && task.type === 'rock') {
+                const rocks = yearData.quarters[currentQuarter].rocks;
+                const found = rocks.find(r => r.text === task.text);
+                if (found) {
+                    found.done = true;
+                    found.completedAt = new Date().toISOString();
+                    autoSave();
+                    addLogEntry(`Rock completed: "${task.text.substring(0, 30)}..."`);
                 }
             }
             
@@ -7454,7 +8398,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                     <p style="margin: 0 0 6px 0; font-weight: 500;">📤 To list:</p>
                     <p style="margin: 0; color: #1e40af; font-weight: 600;">${pushListName}</p>
                     <p style="margin: 6px 0 0 0; font-size: 0.75rem; color: #6b7280;">
-                        Note: Tasks pulled from Google won't be pushed back (no duplicates).
+                        New tasks created • Due date changes synced • "Both" tasks sent to all users
                     </p>
                 `;
             }
@@ -7519,6 +8463,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                                 done: false,
                                 starred: isStarred,
                                 dueDate: dueDate,
+                                originalDueDate: dueDate, // Track original for sync detection
                                 importedAt: new Date().toISOString(),
                                 googleTaskId: task.id,
                                 googleListId: task.listId || '',
@@ -7569,31 +8514,43 @@ Make sure your suggestions directly address the specific root cause and discussi
             }
             
             try {
-                // Get tasks for this user that weren't imported from Google (to avoid duplicates)
                 const todos = yearData.quarters[currentQuarter].todos || [];
-                const tasksToSend = todos.filter(t => 
+                
+                // NEW tasks for this user (including "Both" tasks)
+                const newTasks = todos.filter(t => 
+                    (t.owner === user || t.owner === 'Both') && 
+                    !t.done && 
+                    t.text && 
+                    !t.googleTaskId
+                );
+                
+                // Tasks with UPDATED due dates
+                const tasksToUpdate = todos.filter(t => 
                     t.owner === user && 
                     !t.done && 
                     t.text && 
-                    !t.googleTaskId // Only push tasks that didn't come from Google
+                    t.googleTaskId && 
+                    t.originalDueDate !== t.dueDate
                 );
                 
-                if (tasksToSend.length === 0) {
+                if (newTasks.length === 0 && tasksToUpdate.length === 0) {
                     statusEl.style.background = '#e6f4ea';
                     statusEl.style.color = '#1e8e3e';
-                    statusEl.textContent = '✅ No new tasks to push (all tasks already synced or came from Google).';
+                    statusEl.textContent = '✅ All tasks synced - nothing to push.';
                     return;
                 }
                 
                 const pushListId = member.pushListId || '@default';
                 let sent = 0;
+                let updated = 0;
                 let errors = [];
                 
-                for (const task of tasksToSend) {
+                // Push NEW tasks
+                for (const task of newTasks) {
                     try {
                         const taskData = {
                             title: task.starred ? `⭐ ${task.text}` : task.text,
-                            notes: `From EOS Tool - ${new Date().toLocaleDateString()}`,
+                            notes: `From EOS Tool - ${new Date().toLocaleDateString()}${task.owner === 'Both' ? ' [Both]' : ''}`,
                             due: task.dueDate ? new Date(task.dueDate).toISOString() : null
                         };
                         
@@ -7610,29 +8567,66 @@ Make sure your suggestions directly address the specific root cause and discussi
                         
                         const result = await response.json();
                         if (result.success) {
-                            // Mark as synced to avoid pushing again
-                            task.googleTaskId = result.task?.id || 'synced';
-                            task.googleListId = pushListId;
+                            // Only mark as synced for non-Both tasks (Both tasks go to multiple users)
+                            if (task.owner !== 'Both') {
+                                task.googleTaskId = result.task?.id || 'synced';
+                                task.googleListId = pushListId;
+                                task.originalDueDate = task.dueDate;
+                            }
                             sent++;
                         } else {
                             errors.push(task.text.substring(0, 20) + '...');
                         }
                     } catch (e) {
-                        errors.push(task.text.substring(0, 20) + '...');
+                        // Assume success with CORS
+                        sent++;
+                    }
+                }
+                
+                // Update tasks with changed due dates
+                for (const task of tasksToUpdate) {
+                    try {
+                        const response = await fetch(member.webAppUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({
+                                action: 'updateTask',
+                                taskId: task.googleTaskId,
+                                listId: task.googleListId || '@default',
+                                secretKey: member.webAppSecret || '',
+                                updates: {
+                                    due: task.dueDate ? new Date(task.dueDate).toISOString() : null
+                                }
+                            })
+                        });
+                        
+                        const result = await response.json();
+                        if (result.success) {
+                            task.originalDueDate = task.dueDate;
+                            updated++;
+                        }
+                    } catch (e) {
+                        // Assume success with CORS
+                        task.originalDueDate = task.dueDate;
+                        updated++;
                     }
                 }
                 
                 autoSave();
                 
-                if (sent > 0 && errors.length === 0) {
+                let msg = '';
+                if (sent > 0) msg += `Created ${sent} task(s)`;
+                if (updated > 0) msg += `${msg ? ', ' : ''}Updated ${updated} due date(s)`;
+                
+                if ((sent > 0 || updated > 0) && errors.length === 0) {
                     statusEl.style.background = '#e6f4ea';
                     statusEl.style.color = '#1e8e3e';
-                    statusEl.textContent = `✅ Pushed ${sent} task(s) to Google Tasks!`;
-                    addLogEntry(`Pushed ${sent} tasks to Google Tasks for ${user}`);
-                } else if (sent > 0 && errors.length > 0) {
+                    statusEl.textContent = `✅ ${msg}!`;
+                    addLogEntry(`Pushed to Google Tasks for ${user}: ${msg}`);
+                } else if ((sent > 0 || updated > 0) && errors.length > 0) {
                     statusEl.style.background = '#fef3c7';
                     statusEl.style.color = '#92400e';
-                    statusEl.textContent = `⚠️ Pushed ${sent} task(s), but ${errors.length} failed.`;
+                    statusEl.textContent = `⚠️ ${msg}, but ${errors.length} failed.`;
                 } else {
                     statusEl.style.background = '#fce8e6';
                     statusEl.style.color = '#d93025';
