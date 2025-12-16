@@ -1893,7 +1893,7 @@
         
         <header>
             <h1>📊 EOS Traction Tool</h1>
-            <div class="header-subtitle">Intelligent Investing LLC <span id="versionBadge" style="font-size: 0.7rem; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 10px; margin-left: 8px; cursor: pointer;" onclick="showVersionInfo()" title="Click for version info">v2.4.0</span></div>
+            <div class="header-subtitle">Intelligent Investing LLC <span id="versionBadge" style="font-size: 0.7rem; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 10px; margin-left: 8px; cursor: pointer;" onclick="showVersionInfo()" title="Click for version info">v2.5.0</span></div>
             <div class="header-controls">
                 <div class="version-selector">
                     <label>Year:</label>
@@ -2295,7 +2295,10 @@
                             <span id="localToggle">▼</span>
                         </div>
                         <div id="repoLocal" class="repo-items"></div>
-                        <button class="add-btn" onclick="addLocalTask()" style="width: 100%; margin-top: 8px;">+ Add Local Task</button>
+                        <div style="display: flex; gap: 6px; margin-top: 8px;">
+                            <button class="add-btn" onclick="addLocalTask()" style="flex: 1;">+ Local</button>
+                            <button class="add-btn" onclick="addTaskWithCategory()" style="flex: 1; background: var(--primary); color: white;">+ To-Do</button>
+                        </div>
                     </div>
                 </div>
                 
@@ -2665,7 +2668,7 @@
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <div>
                                 <span style="font-weight: 600; color: var(--gray-700);">📊 EOS Traction Tool</span>
-                                <span id="settingsVersion" style="font-size: 0.8rem; color: var(--gray-500); margin-left: 8px;">v2.4.0</span>
+                                <span id="settingsVersion" style="font-size: 0.8rem; color: var(--gray-500); margin-left: 8px;">v2.5.0</span>
                             </div>
                             <button class="btn btn-secondary" onclick="showVersionInfo()" style="padding: 4px 10px; font-size: 0.75rem;">📋 Changelog</button>
                         </div>
@@ -3005,8 +3008,8 @@ Outsource fixing banisters., Call the Johnson family., Review quarterly report."
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '2.4.0';
-        const EOS_BUILD_DATE = '2025-12-15';
+        const EOS_VERSION = '2.5.0';
+        const EOS_BUILD_DATE = '2025-12-16';
         
         // ==================== DATA STRUCTURE ====================
         let currentYear = '2026';
@@ -3142,8 +3145,21 @@ Outsource fixing banisters., Call the Johnson family., Review quarterly report."
             const stored = localStorage.getItem('eos_traction_data');
             if (stored) {
                 const parsed = JSON.parse(stored);
-                // Merge seeded with stored, preferring stored
-                Object.assign(seededData, parsed);
+                // Deep merge settings to preserve user's saved data (webAppUrl, etc.)
+                if (parsed._settings) {
+                    // Preserve user's team member configurations
+                    if (parsed._settings.teamMembers) {
+                        seededData._settings.teamMembers = parsed._settings.teamMembers;
+                    }
+                    // Merge other settings
+                    Object.assign(seededData._settings, parsed._settings);
+                }
+                // Merge year data (shallow is fine for years)
+                Object.keys(parsed).forEach(key => {
+                    if (key !== '_settings') {
+                        seededData[key] = parsed[key];
+                    }
+                });
             }
             // Save merged back
             localStorage.setItem('eos_traction_data', JSON.stringify(seededData));
@@ -3181,11 +3197,20 @@ Build Date: ${EOS_BUILD_DATE}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+📝 Version 2.5.0 Changes:
+• Settings preservation fix (won't lose API keys on update)
+• Double-click to edit tasks in Daily Plan repository
+• Add To-Do with category selection (+ To-Do button)
+• Promote local tasks to Weekly Meeting (⬆️ button)
+• Task text editing tracked for sync
+• Print shows Google Task list names
+• Print includes task repository summary
+
 📝 Version 2.4.0 Changes:
 • Due date sync - Changes push back to Google Tasks
 • "Both" tasks now push to ALL team members
 • Combined Google Apps Script (Tasks + Otter.ai)
-• Otter.ai filters for "Traction" meetings (no Zapier Pro needed)
+• Otter.ai filters for "Traction" meetings
 • Task action buttons (Archive/Uncheck/Delete)
 • Rock completion flow from Daily Plan
 • Combined print package (single PDF)
@@ -3197,7 +3222,6 @@ Build Date: ${EOS_BUILD_DATE}
 • Rock deletion from Quarterly tab
 • Rule of 3 completion tracking
 • Backup reminder improvements
-• Google Task list names in Daily Plan
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -5298,11 +5322,12 @@ Make sure your suggestions directly address the specific root cause and discussi
             // Build Rule of 3 HTML
             const rule3Html = plan.ruleOf3.map((task, idx) => {
                 if (task) {
+                    const listBadge = task.googleListName ? `<span style="font-size: 7pt; color: #666; margin-left: 8px;">[${task.googleListName}]</span>` : '';
                     return `
                         <div class="item-row" style="${task.completed ? 'background: #f0fdf4; border-left: 3px solid #22c55e;' : ''}">
                             <span class="item-num" style="${task.completed ? 'background: #22c55e;' : ''}">${idx + 1}</span>
                             <input type="checkbox" ${task.completed ? 'checked' : ''} style="margin-right: 8px;">
-                            <span style="flex: 1; ${task.completed ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${task.type === 'rock' ? '🪨 ' : ''}${task.text}</span>
+                            <span style="flex: 1; ${task.completed ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${task.type === 'rock' ? '🪨 ' : ''}${task.text}${listBadge}</span>
                         </div>
                     `;
                 } else {
@@ -5317,15 +5342,40 @@ Make sure your suggestions directly address the specific root cause and discussi
                 return `
                     <div class="section no-break" style="margin-bottom: 8px;">
                         <h3 style="font-size: 9pt; margin-bottom: 4px;">${quadrantNames[q]}</h3>
-                        ${tasks.length ? tasks.map(t => `
+                        ${tasks.length ? tasks.map(t => {
+                            const listBadge = t.googleListName ? `<span style="font-size: 7pt; color: #666; margin-left: 6px;">[${t.googleListName}]</span>` : '';
+                            return `
                             <div class="item-row" style="${t.done ? 'text-decoration: line-through; opacity: 0.6;' : ''}">
                                 <input type="checkbox" ${t.done ? 'checked' : ''} style="margin-right: 6px;">
-                                ${t.type === 'rock' ? '🪨 ' : ''}${t.text}
+                                ${t.type === 'rock' ? '🪨 ' : ''}${t.text}${listBadge}
                             </div>
-                        `).join('') : '<p style="color: #999; font-size: 8pt; margin: 4px 0;">No tasks</p>'}
+                        `}).join('') : '<p style="color: #999; font-size: 8pt; margin: 4px 0;">No tasks</p>'}
                     </div>
                 `;
             }).join('');
+            
+            // Get user's todos for a repository summary
+            const todos = (yearData.quarters[currentQuarter].todos || [])
+                .filter(t => t.owner === user && !t.done);
+            
+            // Group by list for print
+            const todosByList = {};
+            todos.forEach(t => {
+                const listName = t.googleListName || 'To-Dos';
+                if (!todosByList[listName]) todosByList[listName] = [];
+                todosByList[listName].push(t);
+            });
+            
+            let repoHtml = '';
+            for (const [listName, items] of Object.entries(todosByList)) {
+                repoHtml += `<div style="font-size: 8pt; font-weight: 600; color: #666; margin-top: 6px;">📋 ${listName} (${items.length})</div>`;
+                repoHtml += items.slice(0, 10).map(t => `
+                    <div style="font-size: 8pt; color: #333; margin-left: 12px;">• ${t.text}</div>
+                `).join('');
+                if (items.length > 10) {
+                    repoHtml += `<div style="font-size: 7pt; color: #999; margin-left: 12px;">...and ${items.length - 10} more</div>`;
+                }
+            }
             
             return `
                 <div class="header">
@@ -5342,6 +5392,12 @@ Make sure your suggestions directly address the specific root cause and discussi
                         ${matrixHtml}
                     </div>
                 </div>
+                ${repoHtml ? `
+                <div class="section" style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #ddd;">
+                    <h3>📋 Task Repository</h3>
+                    ${repoHtml}
+                </div>
+                ` : ''}
             `;
         }
         
@@ -7383,7 +7439,8 @@ Make sure your suggestions directly address the specific root cause and discussi
                                      ondragend="dragEnd(event)"
                                      data-type="todo" data-idx="${t.todoIdx}">
                                     <input type="checkbox" class="item-check" onclick="toggleTodoFromDaily(${t.todoIdx})" ${t.done ? 'checked' : ''}>
-                                    <span class="item-text" style="${t.done ? 'text-decoration: line-through; opacity: 0.5;' : ''}">${t.text}</span>
+                                    <span class="item-text" style="${t.done ? 'text-decoration: line-through; opacity: 0.5;' : ''}" 
+                                          ondblclick="editTodoFromDaily(${t.todoIdx})" title="Double-click to edit">${t.text}</span>
                                     ${inUse ? '<span class="in-use-badge">📍</span>' : ''}
                                 </div>
                             `;
@@ -7408,6 +7465,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                         <input type="checkbox" class="item-check" onclick="toggleLocalTask(${idx})" ${t.done ? 'checked' : ''}>
                         <span class="item-text" style="${t.done ? 'text-decoration: line-through; opacity: 0.5;' : ''}">${t.text}</span>
                         ${inUse ? '<span class="in-use-badge">📍</span>' : ''}
+                        <button onclick="promoteLocalToTodo(${idx})" title="Add to Weekly Meeting To-Dos" style="background: none; border: none; cursor: pointer; opacity: 0.5; font-size: 0.8rem;">⬆️</button>
                         <button onclick="removeLocalTask(${idx})" style="background: none; border: none; cursor: pointer; opacity: 0.5;">✕</button>
                     </div>
                 `}).join('') : '<p style="color: var(--gray-400); font-size: 0.8rem; padding: 8px;">Add personal tasks here</p>';
@@ -7437,6 +7495,105 @@ Make sure your suggestions directly address the specific root cause and discussi
             }
         }
         
+        function promoteLocalToTodo(idx) {
+            const task = dailyPlanData.localTasks[idx];
+            if (!task) return;
+            
+            const user = document.getElementById('dailyPlanUser')?.value;
+            const settings = getSettings();
+            const member = settings.teamMembers.find(m => m.initials === user);
+            const lists = member?.taskLists || [];
+            
+            // Build list options
+            let listPrompt = 'Choose a list (enter number):\n\n0. Default To-Dos (no category)\n';
+            lists.forEach((list, i) => {
+                listPrompt += `${i + 1}. ${list.title}\n`;
+            });
+            
+            const choice = prompt(listPrompt);
+            if (choice === null) return;
+            
+            const choiceNum = parseInt(choice);
+            let googleListId = '';
+            let googleListName = '';
+            
+            if (choiceNum > 0 && choiceNum <= lists.length) {
+                googleListId = lists[choiceNum - 1].id;
+                googleListName = lists[choiceNum - 1].title;
+            }
+            
+            // Add to Weekly Meeting todos
+            yearData.quarters[currentQuarter].todos = yearData.quarters[currentQuarter].todos || [];
+            yearData.quarters[currentQuarter].todos.push({
+                text: task.text,
+                owner: user,
+                done: false,
+                googleListId: googleListId,
+                googleListName: googleListName,
+                createdAt: new Date().toISOString()
+            });
+            
+            // Remove from local tasks
+            dailyPlanData.localTasks.splice(idx, 1);
+            
+            autoSave();
+            saveDailyPlan();
+            renderRepository();
+            renderTodos(yearData.quarters[currentQuarter].todos);
+            addLogEntry(`Promoted local task to To-Dos: "${task.text.substring(0, 30)}..."`);
+        }
+        
+        function addTaskWithCategory() {
+            const user = document.getElementById('dailyPlanUser')?.value;
+            const settings = getSettings();
+            const member = settings.teamMembers.find(m => m.initials === user);
+            const lists = member?.taskLists || [];
+            
+            const text = prompt('Enter task:');
+            if (!text || !text.trim()) return;
+            
+            // Build list options
+            let listPrompt = 'Choose a list (enter number):\n\n0. Local Task (Private - not synced)\n1. Default To-Dos\n';
+            lists.forEach((list, i) => {
+                listPrompt += `${i + 2}. ${list.title}\n`;
+            });
+            
+            const choice = prompt(listPrompt);
+            if (choice === null) return;
+            
+            const choiceNum = parseInt(choice);
+            
+            if (choiceNum === 0) {
+                // Add as local task
+                dailyPlanData.localTasks = dailyPlanData.localTasks || [];
+                dailyPlanData.localTasks.push({ text: text.trim(), done: false });
+                saveDailyPlan();
+            } else {
+                // Add to Weekly Meeting todos with optional category
+                let googleListId = '';
+                let googleListName = '';
+                
+                if (choiceNum >= 2 && choiceNum <= lists.length + 1) {
+                    googleListId = lists[choiceNum - 2].id;
+                    googleListName = lists[choiceNum - 2].title;
+                }
+                
+                yearData.quarters[currentQuarter].todos = yearData.quarters[currentQuarter].todos || [];
+                yearData.quarters[currentQuarter].todos.push({
+                    text: text.trim(),
+                    owner: user,
+                    done: false,
+                    googleListId: googleListId,
+                    googleListName: googleListName,
+                    createdAt: new Date().toISOString()
+                });
+                autoSave();
+                renderTodos(yearData.quarters[currentQuarter].todos);
+            }
+            
+            renderRepository();
+        }
+        
         function toggleLocalTask(idx) {
             if (dailyPlanData.localTasks[idx]) {
                 dailyPlanData.localTasks[idx].done = !dailyPlanData.localTasks[idx].done;
@@ -7462,6 +7619,32 @@ Make sure your suggestions directly address the specific root cause and discussi
                     autoSave();
                     renderRepository();
                     renderTodos(yearData.quarters[currentQuarter].todos);
+                }
+            }
+        }
+        
+        function editTodoFromDaily(idx) {
+            const user = document.getElementById('dailyPlanUser')?.value;
+            const todos = yearData.quarters[currentQuarter].todos.filter(t => t.owner === user && !t.done);
+            const todo = todos[idx];
+            if (!todo) return;
+            
+            const newText = prompt('Edit task:', todo.text);
+            if (newText && newText.trim() && newText.trim() !== todo.text) {
+                // Find actual index in main array
+                const actualIdx = yearData.quarters[currentQuarter].todos.indexOf(todo);
+                if (actualIdx >= 0) {
+                    const oldText = todo.text;
+                    // Track original text for sync purposes
+                    if (!todo.originalText) {
+                        todo.originalText = oldText;
+                    }
+                    yearData.quarters[currentQuarter].todos[actualIdx].text = newText.trim();
+                    yearData.quarters[currentQuarter].todos[actualIdx].textModified = true;
+                    autoSave();
+                    renderRepository();
+                    renderTodos(yearData.quarters[currentQuarter].todos);
+                    addLogEntry(`Task edited: "${oldText.substring(0, 25)}..." → "${newText.trim().substring(0, 25)}..."`);
                 }
             }
         }
