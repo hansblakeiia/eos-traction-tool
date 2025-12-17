@@ -1893,7 +1893,7 @@
         
         <header>
             <h1>📊 EOS Traction Tool</h1>
-            <div class="header-subtitle">Intelligent Investing LLC <span id="versionBadge" style="font-size: 0.7rem; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 10px; margin-left: 8px; cursor: pointer;" onclick="showVersionInfo()" title="Click for version info">v2.6.0</span></div>
+            <div class="header-subtitle">Intelligent Investing LLC <span id="versionBadge" style="font-size: 0.7rem; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 10px; margin-left: 8px; cursor: pointer;" onclick="showVersionInfo()" title="Click for version info">v2.6.1</span></div>
             <div class="header-controls">
                 <div class="version-selector">
                     <label>Year:</label>
@@ -2271,6 +2271,18 @@
                     </div>
                     <button onclick="dismissGoodMorning()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 10px; border-radius: 4px; cursor: pointer;">✕</button>
                 </div>
+            </div>
+            
+            <!-- Daily Habits Section -->
+            <div id="dailyHabitsSection" style="display: none; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid #86efac; padding: 15px 20px; border-radius: 10px; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <h3 style="margin: 0; color: #166534;">🌅 Daily Habits</h3>
+                        <span id="habitsWeekProgress" style="background: #22c55e; color: white; padding: 2px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600;"></span>
+                    </div>
+                    <span style="font-size: 0.8rem; color: #166534;">Complete these daily for consistency!</span>
+                </div>
+                <div id="dailyHabitsList" style="display: flex; flex-wrap: wrap; gap: 10px;"></div>
             </div>
             
             <div class="daily-plan-grid">
@@ -2977,6 +2989,32 @@ Outsource fixing banisters., Call the Johnson family., Review quarterly report."
                 </div>
             </details>
             
+            <!-- AI-Powered Notes Parsing -->
+            <details style="margin-bottom: 15px;">
+                <summary style="cursor: pointer; color: #7c3aed; font-size: 0.9rem; padding: 8px 0; font-weight: 500;">
+                    🤖 AI: Parse meeting notes/outline into tasks...
+                </summary>
+                <div style="margin-top: 10px; background: #f5f3ff; padding: 12px; border-radius: 8px; border: 1px solid #ddd6fe;">
+                    <p style="font-size: 0.8rem; color: #6b21a8; margin: 0 0 10px 0;">
+                        Paste any meeting summary, outline, or notes below. Gemini AI will extract actionable tasks.
+                    </p>
+                    <textarea id="aiNotesInput" rows="8" style="width: 100%; border: 1px solid #c4b5fd;" placeholder="Paste meeting summary, outline, or notes here...
+
+Example:
+* Features for Intelligent Integrations in 2026
+   * Hans Blake discusses enhancements needed
+   * Suggests mimicking Pontera with daily email alerts
+   * Proposes adding alerts for portfolio anomalies"></textarea>
+                    <div style="display: flex; gap: 8px; margin-top: 10px;">
+                        <button class="btn" onclick="parseNotesWithAI()" style="background: #7c3aed; color: white; flex: 1;">
+                            🤖 Extract Tasks with AI
+                        </button>
+                    </div>
+                    <div id="aiParseStatus" style="display: none; margin-top: 10px; padding: 10px; border-radius: 6px;"></div>
+                    <div id="aiParsedTasks" style="display: none; margin-top: 10px;"></div>
+                </div>
+            </details>
+            
             <div class="modal-actions">
                 <button class="btn btn-secondary" onclick="closeModal('parseMeetingModal')">Cancel</button>
                 <button class="btn btn-primary" onclick="refreshOtterFetch()">🔄 Refresh</button>
@@ -3041,7 +3079,7 @@ Outsource fixing banisters., Call the Johnson family., Review quarterly report."
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '2.6.0';
+        const EOS_VERSION = '2.6.1';
         const EOS_BUILD_DATE = '2025-12-17';
         
         // ==================== DATA STRUCTURE ====================
@@ -3229,6 +3267,13 @@ Outsource fixing banisters., Call the Johnson family., Review quarterly report."
 Build Date: ${EOS_BUILD_DATE}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📝 Version 2.6.1 Changes:
+• Daily Habits tracking - Set personal habits in Settings per user
+• Habits show weekly progress percentage
+• AI Meeting Parser - Paste any meeting notes, Gemini extracts tasks
+• Fixed Google Apps Script test response
+• Improved sync to prevent duplicate tasks
 
 📝 Version 2.6.0 Changes:
 • Smart Pull - Won't re-import deleted/archived tasks
@@ -6046,6 +6091,13 @@ Make sure your suggestions directly address the specific root cause and discussi
                                 onclick="fetchTaskLists(${idx})">🔄 Load Lists</button>
                     </div>
                     <div style="margin-top: 8px;">
+                        <label style="font-size: 0.8rem; color: var(--gray-600);">🌅 Daily Habits (comma-separated):</label>
+                        <input type="text" value="${m.dailyHabits || ''}" placeholder="e.g., Personal devotions, Exercise, Read 30 min" 
+                               style="width: 100%; margin: 4px 0 0 0; font-size: 0.85rem;" 
+                               onchange="updateTeamMember(${idx}, 'dailyHabits', this.value)">
+                        <p style="font-size: 0.7rem; color: var(--gray-400); margin: 2px 0 8px 0;">These appear as daily checkboxes in My Daily Plan and track weekly progress</p>
+                    </div>
+                    <div style="margin-top: 8px;">
                         <label style="font-size: 0.8rem; color: var(--gray-600);">Pull from lists:</label>
                         <div id="pullLists_${idx}" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px;">
                             ${(m.taskLists || []).length > 0 ? 
@@ -6651,6 +6703,163 @@ Make sure your suggestions directly address the specific root cause and discussi
                 document.getElementById('otterFetchStatus').style.display = 'none';
             } else {
                 alert('No new items found (may already exist in To-Dos).');
+            }
+        }
+        
+        async function parseNotesWithAI() {
+            const notes = document.getElementById('aiNotesInput').value;
+            if (!notes.trim()) {
+                alert('Please paste some meeting notes first.');
+                return;
+            }
+            
+            const settings = getSettings();
+            const apiKey = settings.geminiApiKey;
+            
+            if (!apiKey) {
+                alert('Please configure your Gemini API key in Settings (⚙️) under "AI Assistance".');
+                return;
+            }
+            
+            const statusEl = document.getElementById('aiParseStatus');
+            const tasksEl = document.getElementById('aiParsedTasks');
+            
+            statusEl.style.display = 'block';
+            statusEl.style.background = '#e0e7ff';
+            statusEl.style.color = '#3730a3';
+            statusEl.innerHTML = '⏳ Analyzing notes with Gemini AI...';
+            tasksEl.style.display = 'none';
+            
+            const prompt = `You are an expert at extracting actionable tasks from meeting notes.
+
+Analyze the following meeting notes/summary and extract clear, actionable tasks. Each task should:
+- Be a specific action someone can complete
+- Start with an action verb (Create, Review, Send, Schedule, etc.)
+- Be concise but clear (under 100 characters ideally)
+
+Return ONLY a JSON array of task strings, nothing else. Example format:
+["Create daily email alert system for portfolio monitoring", "Review quarterly report format", "Schedule meeting with compliance team"]
+
+Meeting Notes:
+${notes}
+
+Return ONLY the JSON array:`;
+
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        generationConfig: { temperature: 0.3 }
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error.message || 'API error');
+                }
+                
+                const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                
+                // Parse the JSON array from the response
+                let tasks = [];
+                try {
+                    // Try to extract JSON from response (it might have markdown code blocks)
+                    const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
+                    if (jsonMatch) {
+                        tasks = JSON.parse(jsonMatch[0]);
+                    }
+                } catch (parseError) {
+                    // If JSON parsing fails, try line-by-line
+                    tasks = aiResponse.split('\n')
+                        .map(line => line.replace(/^[\d\.\-\*\s]+/, '').trim())
+                        .filter(line => line.length > 5 && !line.startsWith('[') && !line.startsWith(']'));
+                }
+                
+                if (tasks.length === 0) {
+                    statusEl.style.background = '#fef3c7';
+                    statusEl.style.color = '#92400e';
+                    statusEl.innerHTML = '⚠️ Could not extract tasks. Try being more specific in the notes.';
+                    return;
+                }
+                
+                // Filter out existing tasks
+                const existingTexts = new Set(
+                    (yearData.quarters?.[currentQuarter]?.todos || [])
+                        .map(t => t.text.toLowerCase().trim())
+                );
+                
+                const newTasks = tasks.filter(t => !existingTexts.has(t.toLowerCase().trim()));
+                
+                statusEl.style.background = '#dcfce7';
+                statusEl.style.color = '#166534';
+                statusEl.innerHTML = `✅ Found ${tasks.length} task(s), ${newTasks.length} are new`;
+                
+                // Display the extracted tasks
+                tasksEl.style.display = 'block';
+                tasksEl.innerHTML = `
+                    <div style="font-size: 0.85rem; color: #6b7280; margin-bottom: 8px;">Select tasks to import:</div>
+                    ${newTasks.map((task, idx) => `
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; padding: 8px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                            <input type="checkbox" id="aiTask_${idx}" checked style="width: 18px; height: 18px;">
+                            <label for="aiTask_${idx}" style="flex: 1; cursor: pointer;">${task}</label>
+                            <select id="aiTaskOwner_${idx}" style="padding: 4px 8px; font-size: 0.85rem;">
+                                ${getTeamMemberOptions('', true)}
+                            </select>
+                        </div>
+                    `).join('')}
+                    <button class="btn btn-success" onclick="importAITasks()" style="margin-top: 10px; width: 100%;">
+                        ✓ Import Selected Tasks
+                    </button>
+                `;
+                
+                // Store tasks for import
+                window.aiExtractedTasks = newTasks;
+                
+            } catch (error) {
+                statusEl.style.background = '#fee2e2';
+                statusEl.style.color = '#dc2626';
+                statusEl.innerHTML = '❌ Error: ' + error.message;
+            }
+        }
+        
+        function importAITasks() {
+            const tasks = window.aiExtractedTasks || [];
+            const settings = getSettings();
+            let imported = 0;
+            
+            tasks.forEach((task, idx) => {
+                const checkbox = document.getElementById(`aiTask_${idx}`);
+                const ownerSelect = document.getElementById(`aiTaskOwner_${idx}`);
+                
+                if (checkbox?.checked) {
+                    yearData.quarters[currentQuarter].todos = yearData.quarters[currentQuarter].todos || [];
+                    yearData.quarters[currentQuarter].todos.push({
+                        text: task,
+                        owner: ownerSelect?.value || settings.teamMembers[0]?.initials || '',
+                        done: false,
+                        createdAt: new Date().toISOString(),
+                        source: 'AI-parsed'
+                    });
+                    imported++;
+                }
+            });
+            
+            if (imported > 0) {
+                autoSave();
+                renderTodos(yearData.quarters[currentQuarter].todos);
+                addLogEntry(`Imported ${imported} AI-extracted task(s)`);
+                
+                // Clear the AI section
+                document.getElementById('aiNotesInput').value = '';
+                document.getElementById('aiParsedTasks').style.display = 'none';
+                document.getElementById('aiParseStatus').innerHTML = `✅ Imported ${imported} task(s)!`;
+                
+                alert(`✅ Imported ${imported} task(s) to To-Dos!`);
+            } else {
+                alert('No tasks selected to import.');
             }
         }
         
@@ -7512,6 +7721,7 @@ Make sure your suggestions directly address the specific root cause and discussi
             renderRepository();
             renderMatrix();
             renderRuleOf3();
+            renderDailyHabits();
             document.getElementById('tomorrowNotes').value = dailyPlanData.tomorrowNotes || '';
             document.getElementById('pomoCount').textContent = dailyPlanData.pomoCount || 0;
             
@@ -7537,6 +7747,170 @@ Make sure your suggestions directly address the specific root cause and discussi
             dailyPlanData.notesShown = false;
             document.getElementById('tomorrowNotes').value = '';
             saveDailyPlan();
+        }
+        
+        // ==================== DAILY HABITS ====================
+        function renderDailyHabits() {
+            const user = document.getElementById('dailyPlanUser')?.value;
+            const settings = getSettings();
+            const member = settings.teamMembers.find(m => m.initials === user);
+            
+            const habitsSection = document.getElementById('dailyHabitsSection');
+            const habitsList = document.getElementById('dailyHabitsList');
+            
+            if (!member?.dailyHabits || !member.dailyHabits.trim()) {
+                habitsSection.style.display = 'none';
+                return;
+            }
+            
+            habitsSection.style.display = 'block';
+            
+            // Parse habits from comma-separated string
+            const habits = member.dailyHabits.split(',').map(h => h.trim()).filter(h => h);
+            
+            // Get today's date key
+            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+            
+            // Initialize habits tracking if needed
+            dailyPlanData.habits = dailyPlanData.habits || {};
+            dailyPlanData.habitsHistory = dailyPlanData.habitsHistory || {};
+            
+            // Check if we need to reset for a new day
+            if (dailyPlanData.habitsDate !== today) {
+                // Save yesterday's habits to history before resetting
+                if (dailyPlanData.habitsDate && dailyPlanData.habits) {
+                    dailyPlanData.habitsHistory[dailyPlanData.habitsDate] = {...dailyPlanData.habits};
+                }
+                // Reset for new day
+                dailyPlanData.habits = {};
+                dailyPlanData.habitsDate = today;
+                saveDailyPlan();
+            }
+            
+            // Render habits
+            habitsList.innerHTML = habits.map((habit, idx) => {
+                const isChecked = dailyPlanData.habits[habit] || false;
+                return `
+                    <label style="display: flex; align-items: center; gap: 8px; background: white; padding: 10px 16px; border-radius: 8px; cursor: pointer; border: 2px solid ${isChecked ? '#22c55e' : '#e5e7eb'}; transition: all 0.2s; ${isChecked ? 'opacity: 0.7;' : ''}">
+                        <input type="checkbox" ${isChecked ? 'checked' : ''} 
+                               onchange="toggleHabit('${habit.replace(/'/g, "\\'")}', this.checked)"
+                               style="width: 20px; height: 20px; accent-color: #22c55e;">
+                        <span style="font-weight: 500; ${isChecked ? 'text-decoration: line-through; color: #666;' : 'color: #166534;'}">${habit}</span>
+                        ${isChecked ? '<span style="color: #22c55e;">✓</span>' : ''}
+                    </label>
+                `;
+            }).join('');
+            
+            // Update weekly progress
+            updateHabitsWeekProgress(habits);
+        }
+        
+        function toggleHabit(habitName, isChecked) {
+            dailyPlanData.habits = dailyPlanData.habits || {};
+            dailyPlanData.habits[habitName] = isChecked;
+            saveDailyPlan();
+            renderDailyHabits();
+            
+            // Show encouragement if all habits done
+            const settings = getSettings();
+            const user = document.getElementById('dailyPlanUser')?.value;
+            const member = settings.teamMembers.find(m => m.initials === user);
+            const habits = (member?.dailyHabits || '').split(',').map(h => h.trim()).filter(h => h);
+            const allDone = habits.every(h => dailyPlanData.habits[h]);
+            
+            if (allDone && habits.length > 0) {
+                // Brief celebration
+                const habitsSection = document.getElementById('dailyHabitsSection');
+                habitsSection.style.background = 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)';
+                habitsSection.querySelector('h3').style.color = 'white';
+                habitsSection.querySelector('h3').textContent = '🎉 All Habits Complete!';
+                setTimeout(() => {
+                    habitsSection.style.background = 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)';
+                    habitsSection.querySelector('h3').style.color = '#166534';
+                    habitsSection.querySelector('h3').textContent = '🌅 Daily Habits';
+                }, 2000);
+            }
+        }
+        
+        function updateHabitsWeekProgress(habits) {
+            const progressEl = document.getElementById('habitsWeekProgress');
+            if (!progressEl || habits.length === 0) return;
+            
+            // Calculate this week's progress
+            const today = new Date();
+            const dayOfWeek = today.getDay(); // 0 = Sunday
+            const daysToCheck = dayOfWeek === 0 ? 7 : dayOfWeek; // If Sunday, check whole week
+            
+            let totalPossible = 0;
+            let totalCompleted = 0;
+            
+            for (let i = 0; i < daysToCheck; i++) {
+                const checkDate = new Date(today);
+                checkDate.setDate(checkDate.getDate() - i);
+                const dateKey = checkDate.toISOString().split('T')[0];
+                
+                // Today's habits
+                if (i === 0) {
+                    habits.forEach(h => {
+                        totalPossible++;
+                        if (dailyPlanData.habits?.[h]) totalCompleted++;
+                    });
+                } else {
+                    // Past days from history
+                    const dayHabits = dailyPlanData.habitsHistory?.[dateKey] || {};
+                    habits.forEach(h => {
+                        totalPossible++;
+                        if (dayHabits[h]) totalCompleted++;
+                    });
+                }
+            }
+            
+            const percentage = totalPossible > 0 ? Math.round((totalCompleted / totalPossible) * 100) : 0;
+            progressEl.textContent = `${percentage}% this week (${totalCompleted}/${totalPossible})`;
+            
+            // Color based on percentage
+            if (percentage >= 80) {
+                progressEl.style.background = '#22c55e'; // Green
+            } else if (percentage >= 50) {
+                progressEl.style.background = '#eab308'; // Yellow
+            } else {
+                progressEl.style.background = '#ef4444'; // Red
+            }
+        }
+        
+        function getHabitsWeekCount() {
+            // Returns count of completed habits this week (for scorecard integration)
+            const user = document.getElementById('dailyPlanUser')?.value;
+            const settings = getSettings();
+            const member = settings.teamMembers.find(m => m.initials === user);
+            const habits = (member?.dailyHabits || '').split(',').map(h => h.trim()).filter(h => h);
+            
+            if (habits.length === 0) return 0;
+            
+            const today = new Date();
+            const dayOfWeek = today.getDay();
+            const daysToCheck = dayOfWeek === 0 ? 7 : dayOfWeek;
+            
+            let totalCompleted = 0;
+            
+            for (let i = 0; i < daysToCheck; i++) {
+                const checkDate = new Date(today);
+                checkDate.setDate(checkDate.getDate() - i);
+                const dateKey = checkDate.toISOString().split('T')[0];
+                
+                if (i === 0) {
+                    habits.forEach(h => {
+                        if (dailyPlanData.habits?.[h]) totalCompleted++;
+                    });
+                } else {
+                    const dayHabits = dailyPlanData.habitsHistory?.[dateKey] || {};
+                    habits.forEach(h => {
+                        if (dayHabits[h]) totalCompleted++;
+                    });
+                }
+            }
+            
+            return totalCompleted;
         }
         
         function renderRepository() {
