@@ -6794,7 +6794,12 @@ Make sure your suggestions directly address the specific root cause and discussi
             const newTasks = filtered.filter(t => !t.googleTaskId);
             const tasksWithUpdates = filtered.filter(t => 
                 t.googleTaskId && 
-                t.originalDueDate !== t.dueDate // Due date was changed
+                t.googleTaskId !== 'synced' && // Has real Google Task ID
+                (
+                    t.originalDueDate !== t.dueDate || // Due date was changed
+                    t.originalStarred !== t.starred ||  // Starred status changed
+                    t.originalText !== t.text           // Text was edited
+                )
             );
             
             // Mark tasks that need updates vs new creation
@@ -6991,13 +6996,20 @@ Make sure your suggestions directly address the specific root cause and discussi
                         const result = await response.json();
                         if (result.success > 0 || result.success === true) {
                             totalSent += listData.tasks.length;
-                            // Mark original tasks as synced (not the expanded copies)
-                            listData.tasks.forEach(t => {
+                            // Mark original tasks as synced with ACTUAL Google Task IDs
+                            listData.tasks.forEach((t, idx) => {
                                 if (!t._forBoth) {
                                     const original = newTasks.find(ot => ot.text === t.text);
                                     if (original) {
-                                        original.googleTaskId = 'synced';
+                                        // Use the actual task ID from Google if available
+                                        if (result.results && result.results[idx] && result.results[idx].taskId) {
+                                            original.googleTaskId = result.results[idx].taskId;
+                                        } else {
+                                            original.googleTaskId = 'synced_' + Date.now();
+                                        }
+                                        original.googleListId = listId;
                                         original.exportedAt = new Date().toISOString();
+                                        original.originalDueDate = original.dueDate; // Track for future sync
                                     }
                                 }
                             });
@@ -7011,25 +7023,30 @@ Make sure your suggestions directly address the specific root cause and discussi
                 }
             }
             
-            // Handle UPDATES for tasks with changed due dates
+            // Handle UPDATES for tasks with changed properties
             if (tasksToUpdate.length > 0) {
-                statusEl.textContent = `⏳ Updating ${tasksToUpdate.length} task due date(s)...`;
+                statusEl.textContent = `⏳ Updating ${tasksToUpdate.length} task(s)...`;
                 
                 for (const task of tasksToUpdate) {
                     // Find the member who owns this task's Google Task
                     const member = settings.teamMembers.find(m => m.initials === task.owner);
                     if (!member?.webAppUrl) {
-                        errors.push(`No Web App URL for ${task.owner} - can't update due date`);
+                        errors.push(`No Web App URL for ${task.owner} - can't update task`);
                         continue;
                     }
                     
                     try {
+                        // Build title with starred prefix
+                        let title = task.text;
+                        if (task.starred) title = '⭐ ' + title;
+                        
                         const payload = {
                             action: 'updateTask',
                             taskId: task.googleTaskId,
                             listId: task.googleListId || '@default',
                             secretKey: member.webAppSecret || '',
                             updates: {
+                                title: title,
                                 due: task.dueDate ? new Date(task.dueDate).toISOString() : null
                             }
                         };
@@ -7044,13 +7061,17 @@ Make sure your suggestions directly address the specific root cause and discussi
                         const result = await response.json();
                         if (result.success) {
                             totalUpdated++;
-                            // Update the originalDueDate to match current (so it won't show as needing update again)
+                            // Update originals to match current (so it won't show as needing update again)
                             task.originalDueDate = task.dueDate;
+                            task.originalStarred = task.starred;
+                            task.originalText = task.text;
                         }
                     } catch (error) {
                         // Assume it worked with CORS
                         totalUpdated++;
                         task.originalDueDate = task.dueDate;
+                        task.originalStarred = task.starred;
+                        task.originalText = task.text;
                     }
                 }
             }
@@ -7180,6 +7201,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                                     dueDate: dueDate,
                                     originalDueDate: dueDate,
                                     originalStarred: isStarred,
+                                    originalText: taskTitle,
                                     importedAt: new Date().toISOString(),
                                     googleTaskId: task.id,
                                     googleListId: task.listId || '',
