@@ -2285,7 +2285,7 @@
                     <div class="repo-section">
                         <div class="repo-header" onclick="toggleRepoSection('rocks')">
                             <span>🪨 Rocks (90-Day Goals)</span>
-                            <span id="rocksToggle">â–¼</span>
+                            <span id="rocksToggle">▼</span>
                         </div>
                         <div id="repoRocks" class="repo-items"></div>
                     </div>
@@ -2293,7 +2293,7 @@
                     <div class="repo-section">
                         <div class="repo-header" onclick="toggleRepoSection('todos')">
                             <span>✅ To-Dos (7-Day Tasks)</span>
-                            <span id="todosToggle">â–¼</span>
+                            <span id="todosToggle">▼</span>
                         </div>
                         <div id="repoTodos" class="repo-items"></div>
                     </div>
@@ -2301,7 +2301,7 @@
                     <div class="repo-section">
                         <div class="repo-header" onclick="toggleRepoSection('local')">
                             <span>📝 Local Tasks (Private)</span>
-                            <span id="localToggle">â–¼</span>
+                            <span id="localToggle">▼</span>
                         </div>
                         <div id="repoLocal" class="repo-items"></div>
                         <div style="display: flex; gap: 6px; margin-top: 8px;">
@@ -5379,6 +5379,7 @@ Make sure your suggestions directly address the specific root cause and discussi
             const agendaHtml = agenda.map((item, idx) => `
                 <div class="item-row" style="border-left: 3px solid ${agendaState[idx] ? '#22c55e' : '#ccc'};">
                     <span style="width: 16px; height: 16px; border: 2px solid ${agendaState[idx] ? '#22c55e' : '#999'}; border-radius: 3px; margin-right: 8px; display: flex; align-items: center; justify-content: center; color: ${agendaState[idx] ? '#22c55e' : 'transparent'}; font-size: 10pt;">✓</span>
+                    <span style="width: 20px; font-weight: 600; color: #666;">${idx + 1}.</span>
                     <span style="flex: 1;">${item.title}</span>
                     <span style="color: #666; font-size: 8pt;">${item.time}</span>
                 </div>
@@ -5869,6 +5870,7 @@ Make sure your suggestions directly address the specific root cause and discussi
             const agendaHtml = agenda.map((item, idx) => `
                 <div style="display: flex; align-items: center; padding: 6px; margin-bottom: 4px; background: #f5f5f5; border-radius: 4px; border-left: 3px solid ${agendaState[idx] ? '#22c55e' : '#ccc'};">
                     <span style="width: 18px; height: 18px; border: 2px solid ${agendaState[idx] ? '#22c55e' : '#999'}; border-radius: 3px; margin-right: 10px; display: flex; align-items: center; justify-content: center; color: ${agendaState[idx] ? '#22c55e' : 'transparent'}; font-size: 12pt;">✓</span>
+                    <span style="width: 20px; font-weight: 600; color: #666;">${idx + 1}.</span>
                     <span style="flex: 1;">${item.title}</span>
                     <span style="color: #666; font-size: 9pt;">${item.time}</span>
                 </div>
@@ -5929,6 +5931,10 @@ Make sure your suggestions directly address the specific root cause and discussi
         }
         
         // ==================== UTILITIES ====================
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+        }
+        
         function closeModal(id) {
             document.getElementById(id).classList.remove('active');
         }
@@ -7624,7 +7630,7 @@ Make sure your suggestions directly address the specific root cause and discussi
             const toggleEl = document.getElementById(`${section}Toggle`);
             if (itemsEl && toggleEl) {
                 itemsEl.classList.toggle('collapsed');
-                toggleEl.textContent = itemsEl.classList.contains('collapsed') ? 'â–¶' : 'â–¼';
+                toggleEl.textContent = itemsEl.classList.contains('collapsed') ? 'â–¶' : '▼';
             }
         }
         
