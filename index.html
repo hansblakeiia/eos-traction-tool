@@ -1894,7 +1894,7 @@
         
         <header>
             <h1>📊 EOS Traction Tool</h1>
-            <div class="header-subtitle">Intelligent Investing LLC <span id="versionBadge" style="font-size: 0.7rem; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 10px; margin-left: 8px; cursor: pointer;" onclick="showVersionInfo()" title="Click for version info">v2.6.7</span></div>
+            <div class="header-subtitle">Intelligent Investing LLC <span id="versionBadge" style="font-size: 0.7rem; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 10px; margin-left: 8px; cursor: pointer;" onclick="showVersionInfo()" title="Click for version info">v2.8.0</span></div>
             <div class="header-controls">
                 <div class="version-selector">
                     <label>Year:</label>
@@ -1918,6 +1918,25 @@
             <button class="tab-btn daily-plan-tab" onclick="showPage('dailyPlan')">📅 My Daily Plan</button>
             <button class="tab-btn" onclick="showPage('history')">Compare Years</button>
         </div>
+        
+        <!-- Sync Status Bar -->
+        <div id="syncStatusBar" style="display: none; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-bottom: 1px solid #bae6fd; padding: 8px 20px; font-size: 0.85rem; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <span id="syncStatusIcon">🔄</span>
+                <span id="syncStatusText">Checking sync status...</span>
+                <span id="syncPendingBadge" style="display: none; background: #fbbf24; color: #78350f; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 600;">3 pending</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 0.8rem; color: #64748b;">
+                    <input type="checkbox" id="autoSyncEnabled" checked onchange="toggleAutoSync(this.checked)" style="width: 14px; height: 14px;">
+                    Auto-sync
+                </label>
+                <button onclick="manualSync()" style="background: #0ea5e9; color: white; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">↻ Sync Now</button>
+            </div>
+        </div>
+        
+        <!-- Toast Container -->
+        <div id="toastContainer" style="position: fixed; top: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px;"></div>
         
         <!-- VISION PAGE -->
         <div id="vision" class="page active">
@@ -3080,7 +3099,7 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '2.6.7';
+        const EOS_VERSION = '2.8.0';
         const EOS_BUILD_DATE = '2025-12-17';
         
         // ==================== DATA STRUCTURE ====================
@@ -3197,8 +3216,378 @@ Example:
             // Check if backup reminder is needed (after a short delay to let page load)
             setTimeout(checkBackupReminder, 1000);
             
+            // Initialize sync system
+            initAutoSync();
+            
             console.log(`EOS Traction Tool v${EOS_VERSION} (${EOS_BUILD_DATE}): Ready`);
         });
+        
+        // ==================== AUTO-SYNC SYSTEM ====================
+        let syncState = {
+            lastPull: null,
+            lastPush: null,
+            pendingChanges: 0,
+            isSyncing: false,
+            autoSyncEnabled: true
+        };
+        
+        function initAutoSync() {
+            // Load sync preferences
+            const savedAutoSync = localStorage.getItem('eos_autoSync');
+            syncState.autoSyncEnabled = savedAutoSync !== 'false';
+            
+            const checkbox = document.getElementById('autoSyncEnabled');
+            if (checkbox) checkbox.checked = syncState.autoSyncEnabled;
+            
+            // Show sync bar if user has Web App configured
+            const settings = getSettings();
+            const hasWebApp = settings.teamMembers?.some(m => m.webAppUrl);
+            
+            if (hasWebApp) {
+                document.getElementById('syncStatusBar').style.display = 'flex';
+                
+                // Auto-pull on load (with delay to not block UI)
+                if (syncState.autoSyncEnabled) {
+                    setTimeout(() => {
+                        autoPullFromGoogleTasks();
+                    }, 2000);
+                } else {
+                    updateSyncStatus('paused', 'Auto-sync disabled');
+                }
+            }
+            
+            // Listen for tab visibility changes
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+            
+            // Listen for beforeunload to push changes
+            window.addEventListener('beforeunload', handleBeforeUnload);
+        }
+        
+        function toggleAutoSync(enabled) {
+            syncState.autoSyncEnabled = enabled;
+            localStorage.setItem('eos_autoSync', enabled);
+            
+            if (enabled) {
+                updateSyncStatus('ready', 'Auto-sync enabled');
+                // Do an immediate sync check
+                setTimeout(autoPullFromGoogleTasks, 500);
+            } else {
+                updateSyncStatus('paused', 'Auto-sync disabled');
+            }
+        }
+        
+        function handleVisibilityChange() {
+            if (document.hidden) {
+                // Tab is being hidden - push any pending changes
+                if (syncState.autoSyncEnabled && syncState.pendingChanges > 0) {
+                    autoPushToGoogleTasks();
+                }
+            } else {
+                // Tab is becoming visible - check for new tasks
+                if (syncState.autoSyncEnabled) {
+                    const timeSinceLastPull = Date.now() - (syncState.lastPull || 0);
+                    // Only auto-pull if it's been more than 2 minutes
+                    if (timeSinceLastPull > 120000) {
+                        autoPullFromGoogleTasks();
+                    }
+                }
+            }
+        }
+        
+        function handleBeforeUnload(e) {
+            // Try to push pending changes when leaving
+            if (syncState.pendingChanges > 0) {
+                autoPushToGoogleTasks();
+            }
+        }
+        
+        function updateSyncStatus(status, message) {
+            const icon = document.getElementById('syncStatusIcon');
+            const text = document.getElementById('syncStatusText');
+            const badge = document.getElementById('syncPendingBadge');
+            const bar = document.getElementById('syncStatusBar');
+            
+            if (!icon || !text) return;
+            
+            switch (status) {
+                case 'syncing':
+                    icon.textContent = '⏳';
+                    bar.style.background = 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)';
+                    break;
+                case 'success':
+                    icon.textContent = '✅';
+                    bar.style.background = 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)';
+                    break;
+                case 'error':
+                    icon.textContent = '❌';
+                    bar.style.background = 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)';
+                    break;
+                case 'ready':
+                    icon.textContent = '🔄';
+                    bar.style.background = 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)';
+                    break;
+                case 'paused':
+                    icon.textContent = '⏸️';
+                    bar.style.background = 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)';
+                    break;
+            }
+            
+            text.textContent = message;
+            
+            // Update pending badge
+            if (syncState.pendingChanges > 0) {
+                badge.style.display = 'inline';
+                badge.textContent = `${syncState.pendingChanges} pending`;
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+        
+        function showToast(message, type = 'info', duration = 4000) {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+            
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                padding: 12px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                animation: slideIn 0.3s ease;
+                max-width: 350px;
+            `;
+            
+            switch (type) {
+                case 'success':
+                    toast.style.background = '#d1fae5';
+                    toast.style.color = '#065f46';
+                    toast.innerHTML = `✅ ${message}`;
+                    break;
+                case 'error':
+                    toast.style.background = '#fee2e2';
+                    toast.style.color = '#991b1b';
+                    toast.innerHTML = `❌ ${message}`;
+                    break;
+                case 'warning':
+                    toast.style.background = '#fef3c7';
+                    toast.style.color = '#92400e';
+                    toast.innerHTML = `⚠️ ${message}`;
+                    break;
+                default:
+                    toast.style.background = '#e0f2fe';
+                    toast.style.color = '#0369a1';
+                    toast.innerHTML = `ℹ️ ${message}`;
+            }
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+        
+        async function autoPullFromGoogleTasks() {
+            if (syncState.isSyncing) return;
+            
+            const settings = getSettings();
+            const currentUser = document.getElementById('dailyPlanUser')?.value || settings.teamMembers?.[0]?.initials;
+            const member = settings.teamMembers?.find(m => m.initials === currentUser);
+            
+            if (!member?.webAppUrl) {
+                updateSyncStatus('ready', 'No sync configured');
+                return;
+            }
+            
+            syncState.isSyncing = true;
+            updateSyncStatus('syncing', 'Pulling from Google Tasks...');
+            
+            try {
+                const listIds = member.pullListIds?.length > 0 ? member.pullListIds : ['@default'];
+                const url = `${member.webAppUrl}?action=getAllTasks&listIds=${listIds.join(',')}&secretKey=${encodeURIComponent(member.webAppSecret || '')}`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.status === 'ok' && data.tasks) {
+                    // Get existing task IDs to avoid duplicates
+                    const existingTasks = yearData.quarters[currentQuarter].todos || [];
+                    const existingIds = new Set(existingTasks.filter(t => t.googleTaskId).map(t => t.googleTaskId));
+                    const existingTexts = new Set(existingTasks.map(t => t.text?.toLowerCase().trim()));
+                    const ignoredIds = new Set(settings.ignoredGoogleTaskIds || []);
+                    
+                    // Filter for new tasks
+                    const newTasks = data.tasks.filter(task => 
+                        !existingIds.has(task.id) && 
+                        !ignoredIds.has(task.id) &&
+                        !existingTexts.has(task.title?.toLowerCase().trim())
+                    );
+                    
+                    if (newTasks.length > 0) {
+                        // Add new tasks
+                        newTasks.forEach(task => {
+                            existingTasks.push({
+                                text: task.title,
+                                owner: currentUser,
+                                done: false,
+                                googleTaskId: task.id,
+                                googleListId: task.listId,
+                                googleListName: task.listName,
+                                dueDate: task.due ? task.due.split('T')[0] : '',
+                                pulledAt: new Date().toISOString()
+                            });
+                        });
+                        
+                        yearData.quarters[currentQuarter].todos = existingTasks;
+                        autoSave();
+                        renderTodos(existingTasks);
+                        
+                        showToast(`Pulled ${newTasks.length} new task(s) from Google Tasks`, 'success');
+                        updateSyncStatus('success', `Synced - ${newTasks.length} new tasks`);
+                    } else {
+                        updateSyncStatus('success', 'All synced - no new tasks');
+                    }
+                    
+                    syncState.lastPull = Date.now();
+                } else {
+                    updateSyncStatus('error', data.error || 'Pull failed');
+                }
+            } catch (error) {
+                console.error('Auto-pull error:', error);
+                updateSyncStatus('error', 'Pull failed: ' + error.message);
+            }
+            
+            syncState.isSyncing = false;
+            
+            // Reset status after 5 seconds
+            setTimeout(() => {
+                if (!syncState.isSyncing) {
+                    const lastSync = syncState.lastPull ? formatTimeAgo(syncState.lastPull) : 'never';
+                    updateSyncStatus('ready', `Last sync: ${lastSync}`);
+                }
+            }, 5000);
+        }
+        
+        async function autoPushToGoogleTasks() {
+            if (syncState.isSyncing) return;
+            
+            const settings = getSettings();
+            const todos = yearData.quarters[currentQuarter].todos || [];
+            
+            // Find tasks that need pushing (new tasks without googleTaskId)
+            const newTasks = todos.filter(t => !t.googleTaskId && t.text && !t.done);
+            
+            if (newTasks.length === 0) {
+                syncState.pendingChanges = 0;
+                return;
+            }
+            
+            syncState.isSyncing = true;
+            updateSyncStatus('syncing', `Pushing ${newTasks.length} task(s)...`);
+            
+            // Group by owner
+            const tasksByOwner = {};
+            newTasks.forEach(t => {
+                const owner = t.owner || settings.teamMembers?.[0]?.initials;
+                if (!tasksByOwner[owner]) tasksByOwner[owner] = [];
+                tasksByOwner[owner].push(t);
+            });
+            
+            let totalPushed = 0;
+            
+            for (const [owner, tasks] of Object.entries(tasksByOwner)) {
+                const member = settings.teamMembers?.find(m => m.initials === owner);
+                if (!member?.webAppUrl) continue;
+                
+                try {
+                    const payload = {
+                        secretKey: member.webAppSecret || '',
+                        action: 'createTasks',
+                        listId: member.pushListId || '@default',
+                        tasks: tasks.map(t => ({
+                            title: t.text,
+                            notes: 'From EOS Tool',
+                            dueDate: t.dueDate ? new Date(t.dueDate).toISOString() : ''
+                        }))
+                    };
+                    
+                    const response = await fetch(member.webAppUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.results) {
+                        // Update tasks with Google Task IDs
+                        tasks.forEach((t, idx) => {
+                            if (data.results[idx]?.taskId) {
+                                t.googleTaskId = data.results[idx].taskId;
+                                t.googleListId = member.pushListId || '@default';
+                            }
+                        });
+                        totalPushed += data.success || 0;
+                    }
+                } catch (error) {
+                    console.error(`Push error for ${owner}:`, error);
+                }
+            }
+            
+            if (totalPushed > 0) {
+                autoSave();
+                showToast(`Pushed ${totalPushed} task(s) to Google Tasks`, 'success');
+                updateSyncStatus('success', `Pushed ${totalPushed} tasks`);
+            }
+            
+            syncState.pendingChanges = 0;
+            syncState.lastPush = Date.now();
+            syncState.isSyncing = false;
+        }
+        
+        function manualSync() {
+            autoPullFromGoogleTasks();
+        }
+        
+        function formatTimeAgo(timestamp) {
+            const seconds = Math.floor((Date.now() - timestamp) / 1000);
+            if (seconds < 60) return 'just now';
+            if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+            if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+            return `${Math.floor(seconds / 86400)}d ago`;
+        }
+        
+        // Track pending changes when tasks are added locally
+        function markPendingChanges() {
+            const todos = yearData.quarters[currentQuarter]?.todos || [];
+            syncState.pendingChanges = todos.filter(t => !t.googleTaskId && t.text && !t.done).length;
+            
+            const badge = document.getElementById('syncPendingBadge');
+            if (badge) {
+                if (syncState.pendingChanges > 0) {
+                    badge.style.display = 'inline';
+                    badge.textContent = `${syncState.pendingChanges} pending`;
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        }
+        
+        // Add CSS for toast animations
+        const toastStyles = document.createElement('style');
+        toastStyles.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(toastStyles);
         
         function initVersionDisplay() {
             // Update header badge
@@ -3268,6 +3657,30 @@ Example:
 Build Date: ${EOS_BUILD_DATE}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📝 Version 2.8.0 Changes:
+• 🚀 AUTO-SYNC ON LOAD/LEAVE!
+  - Opens EOS Tool → automatically pulls new tasks from Google Tasks
+  - Leaves/switches tabs → automatically pushes pending tasks
+• Sync status bar shows last sync time and pending changes
+• Toast notifications for sync events
+• "Sync Now" button for manual sync
+• Auto-sync can be toggled on/off
+
+📝 Version 2.7.1 Changes:
+• 🔄 REAL-TIME SYNC! All task changes now sync to Google Tasks:
+  - Due date changes → synced instantly
+  - Task text changes → synced instantly  
+  - Owner changes → task pushed to new owner's Google Tasks
+• Smart list matching - tasks go back to their original list
+• Cross-user task assignment with automatic sync
+
+📝 Version 2.7.0 Changes:
+• 🎉 AUTO-SYNC COMPLETION! Completed tasks now sync back to Google Tasks
+• Check a task in EOS → automatically marks complete in Google Tasks
+• Archive tasks → batch syncs all to Google Tasks
+• Works from Weekly Meeting AND Daily Plan views
+• Per-user sync through each member's Web App
 
 📝 Version 2.6.7 Changes:
 • Fixed "Load Lists" button - was sending wrong action name
@@ -4123,11 +4536,129 @@ Build Date: ${EOS_BUILD_DATE}
             yearData.quarters[currentQuarter].todos.push({ text: '', owner: '', done: false });
             renderTodos(yearData.quarters[currentQuarter].todos);
             autoSave();
+            markPendingChanges();
         }
         
         function updateTodo(idx, field, value) {
-            yearData.quarters[currentQuarter].todos[idx][field] = value;
+            const todo = yearData.quarters[currentQuarter].todos[idx];
+            const oldValue = todo[field];
+            const oldOwner = todo.owner;
+            
+            // Update the field
+            todo[field] = value;
             autoSave();
+            
+            // Handle different field changes
+            if (field === 'owner' && value !== oldOwner && value) {
+                // Owner changed - push task to new owner's Google Tasks
+                syncTaskToNewOwner(todo, oldOwner, value);
+            } else if (field === 'dueDate' && todo.googleTaskId && !todo.googleTaskId.startsWith('synced_')) {
+                // Due date changed on a synced task - update in Google Tasks
+                syncTaskUpdateToGoogle(todo, { due: value ? new Date(value).toISOString() : null });
+            } else if (field === 'text' && todo.googleTaskId && !todo.googleTaskId.startsWith('synced_')) {
+                // Text changed on a synced task - update in Google Tasks
+                syncTaskUpdateToGoogle(todo, { title: value });
+            }
+            
+            // Track pending changes for new tasks
+            if (field === 'text' && !todo.googleTaskId) {
+                markPendingChanges();
+            }
+        }
+        
+        // Sync task updates (due date, title) to Google Tasks
+        async function syncTaskUpdateToGoogle(todo, updates) {
+            const settings = getSettings();
+            const member = settings.teamMembers.find(m => m.initials === todo.owner) || settings.teamMembers[0];
+            
+            if (!member?.webAppUrl || !todo.googleTaskId) return;
+            
+            try {
+                const response = await fetch(member.webAppUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        secretKey: member.webAppSecret || '',
+                        action: 'updateTask',
+                        taskId: todo.googleTaskId,
+                        listId: todo.googleListId || '@default',
+                        updates: updates
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    console.log('✅ Task updated in Google Tasks:', Object.keys(updates).join(', '));
+                } else {
+                    console.warn('Failed to sync update:', data.error);
+                }
+            } catch (error) {
+                console.error('Error syncing task update:', error);
+            }
+        }
+        
+        // When owner changes, push task to new owner's Google Tasks
+        async function syncTaskToNewOwner(todo, oldOwner, newOwner) {
+            const settings = getSettings();
+            const newMember = settings.teamMembers.find(m => m.initials === newOwner);
+            
+            if (!newMember?.webAppUrl) {
+                console.log(`No Web App URL for ${newOwner} - task not synced`);
+                return;
+            }
+            
+            try {
+                // Create task in new owner's Google Tasks
+                const today = new Date();
+                const payload = {
+                    secretKey: newMember.webAppSecret || '',
+                    action: 'createTask',
+                    listId: newMember.pushListId || '@default',
+                    task: {
+                        title: todo.text,
+                        notes: `Assigned from ${oldOwner || 'Traction Meeting'} on ${today.toLocaleDateString()}`,
+                        dueDate: todo.dueDate ? new Date(todo.dueDate).toISOString() : ''
+                    }
+                };
+                
+                const response = await fetch(newMember.webAppUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                if (data.success && data.taskId) {
+                    // Update task with new Google Task ID from new owner's account
+                    todo.googleTaskId = data.taskId;
+                    todo.googleListId = newMember.pushListId || '@default';
+                    todo.googleListName = newMember.taskLists?.find(l => l.id === todo.googleListId)?.title || 'Tasks';
+                    autoSave();
+                    console.log(`✅ Task assigned to ${newOwner} and synced to their Google Tasks`);
+                    addLogEntry(`Task reassigned: "${todo.text.substring(0, 25)}..." → ${newOwner}`);
+                }
+                
+                // Optionally: Complete the task in old owner's Google Tasks
+                // (so it doesn't show as duplicate)
+                if (oldOwner && todo.googleTaskId) {
+                    const oldMember = settings.teamMembers.find(m => m.initials === oldOwner);
+                    if (oldMember?.webAppUrl) {
+                        // Mark as complete in old owner's list (archiving it essentially)
+                        fetch(oldMember.webAppUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                secretKey: oldMember.webAppSecret || '',
+                                action: 'completeTask',
+                                taskId: todo.googleTaskId,
+                                listId: todo.googleListId || '@default'
+                            })
+                        }).catch(e => console.log('Could not archive from old owner'));
+                    }
+                }
+            } catch (error) {
+                console.error('Error syncing task to new owner:', error);
+            }
         }
         
         function toggleTodo(idx) {
@@ -4135,6 +4666,90 @@ Build Date: ${EOS_BUILD_DATE}
             todo.done = !todo.done;
             renderTodos(yearData.quarters[currentQuarter].todos);
             autoSave();
+            
+            // If task is now complete AND has a Google Task ID, sync to Google Tasks
+            if (todo.done && todo.googleTaskId && !todo.googleTaskId.startsWith('synced_')) {
+                syncTaskCompletionToGoogle(todo);
+            }
+        }
+        
+        // Sync a completed task back to Google Tasks
+        async function syncTaskCompletionToGoogle(todo) {
+            const settings = getSettings();
+            // Find the team member who owns this task
+            const member = settings.teamMembers.find(m => m.initials === todo.owner) || settings.teamMembers[0];
+            
+            if (!member?.webAppUrl) {
+                console.log('No Web App URL configured for sync');
+                return;
+            }
+            
+            try {
+                const response = await fetch(member.webAppUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        secretKey: member.webAppSecret || '',
+                        action: 'completeTask',
+                        taskId: todo.googleTaskId,
+                        listId: todo.googleListId || '@default'
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    console.log('✅ Task synced as complete in Google Tasks:', todo.text?.substring(0, 30));
+                    addLogEntry(`Synced completion to Google Tasks: ${todo.text?.substring(0, 25)}...`);
+                } else {
+                    console.warn('Failed to sync completion:', data.error);
+                }
+            } catch (error) {
+                console.error('Error syncing task completion:', error);
+            }
+        }
+        
+        // Batch sync multiple completed tasks to Google Tasks
+        async function syncCompletedTasksToGoogle(todos) {
+            const settings = getSettings();
+            const tasksByOwner = {};
+            
+            // Group tasks by owner
+            todos.forEach(todo => {
+                if (todo.googleTaskId && !todo.googleTaskId.startsWith('synced_')) {
+                    const owner = todo.owner || settings.teamMembers[0]?.initials;
+                    if (!tasksByOwner[owner]) tasksByOwner[owner] = [];
+                    tasksByOwner[owner].push({
+                        taskId: todo.googleTaskId,
+                        listId: todo.googleListId || '@default'
+                    });
+                }
+            });
+            
+            // Sync each owner's tasks through their Web App
+            for (const [owner, tasks] of Object.entries(tasksByOwner)) {
+                const member = settings.teamMembers.find(m => m.initials === owner) || settings.teamMembers[0];
+                if (!member?.webAppUrl || tasks.length === 0) continue;
+                
+                try {
+                    const response = await fetch(member.webAppUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            secretKey: member.webAppSecret || '',
+                            action: 'completeTasks',
+                            tasks: tasks
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    if (data.success > 0) {
+                        console.log(`✅ Synced ${data.success}/${data.total} tasks as complete for ${owner}`);
+                        addLogEntry(`Synced ${data.success} completed task(s) to Google Tasks (${owner})`);
+                    }
+                } catch (error) {
+                    console.error(`Error batch syncing for ${owner}:`, error);
+                }
+            }
         }
         
         function sortAndRenderTodos() {
@@ -4175,6 +4790,12 @@ Build Date: ${EOS_BUILD_DATE}
         function archiveCheckedTodos() {
             const todos = yearData.quarters[currentQuarter].todos;
             const toArchive = todos.filter(t => t.done);
+            
+            // Sync completed tasks to Google Tasks BEFORE archiving
+            const tasksToSync = toArchive.filter(t => t.googleTaskId && !t.googleTaskId.startsWith('synced_'));
+            if (tasksToSync.length > 0) {
+                syncCompletedTasksToGoogle(tasksToSync);
+            }
             
             // Track Google Task IDs so they don't get re-pulled
             const settings = getSettings();
@@ -8514,10 +9135,16 @@ Return ONLY the JSON array:`;
                 // Find actual index in main array
                 const actualIdx = yearData.quarters[currentQuarter].todos.indexOf(todos[idx]);
                 if (actualIdx >= 0) {
-                    yearData.quarters[currentQuarter].todos[actualIdx].done = true;
+                    const todo = yearData.quarters[currentQuarter].todos[actualIdx];
+                    todo.done = true;
                     autoSave();
                     renderRepository();
                     renderTodos(yearData.quarters[currentQuarter].todos);
+                    
+                    // Sync completion to Google Tasks
+                    if (todo.googleTaskId && !todo.googleTaskId.startsWith('synced_')) {
+                        syncTaskCompletionToGoogle(todo);
+                    }
                 }
             }
         }
