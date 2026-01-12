@@ -3121,7 +3121,7 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.0.0';
+        const EOS_VERSION = '3.0.1';
         const EOS_BUILD_DATE = '2026-01-12';
         
         // ==================== DATA STRUCTURE ====================
@@ -7063,9 +7063,9 @@ Make sure your suggestions directly address the specific root cause and discussi
                     }
                     
                     // Check for success
-                    if (data.status === 'ok') {
-                        alert('✅ Connection successful for ' + (member.name || member.initials) + '!\n\n' + (data.message || 'Connected'));
-                    } else if (data.status === 'error') {
+                    if (data.status === 'ok' || data.success === true) {
+                        alert('✅ Connection successful for ' + (member.name || member.initials) + '!\n\n' + (data.message || 'Connected') + (data.version ? '\nScript version: ' + data.version : ''));
+                    } else if (data.status === 'error' || data.success === false) {
                         alert('âŒ Error from Apps Script:\n\n' + (data.error || data.message || 'Unknown error') + 
                               (data.stack ? '\n\nStack: ' + data.stack : ''));
                     } else if (data.error) {
