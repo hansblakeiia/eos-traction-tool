@@ -2939,6 +2939,17 @@
             
             <div id="dailySyncStatus" style="padding: 10px; border-radius: 6px; margin-bottom: 15px; display: none;"></div>
             
+            <!-- Two-Way Sync Button -->
+            <div style="background: linear-gradient(135deg, #fef3c7, #fde68a); border: 2px solid #f59e0b; border-radius: 8px; padding: 14px; margin-bottom: 15px;">
+                <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 0.95rem;">🔄 Two-Way Sync (Recommended)</h4>
+                <p style="font-size: 0.8rem; color: #78350f; margin: 0 0 12px 0;">
+                    Synchronizes everything: imports new tasks, syncs completions, updates edits, and handles deletions in both directions.
+                </p>
+                <button class="btn" onclick="syncWithGoogleTasks('both')" style="width: 100%; background: linear-gradient(135deg, #f59e0b, #d97706); color: white; font-weight: 600;">
+                    🔄 Sync Both Ways
+                </button>
+            </div>
+            
             <div id="dailySyncNoConfig" style="background: #fef3c7; border: 1px solid #fcd34d; border-radius: 8px; padding: 12px; margin-bottom: 15px; display: none;">
                 <p style="margin: 0; font-size: 0.85rem; color: #92400e;">
                     ⚠️ <strong>No Google Tasks URL configured</strong> for this user.<br>
@@ -3110,7 +3121,7 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '2.9.1';
+        const EOS_VERSION = '3.0.0';
         const EOS_BUILD_DATE = '2026-01-12';
         
         // ==================== DATA STRUCTURE ====================
@@ -10379,7 +10390,18 @@ Return ONLY the JSON array:`;
             document.getElementById('dailyPlanSyncModal').classList.add('active');
         }
         
-        async function pullDailyPlanTasks() {
+        
+        // ============================================
+        // ROBUST TWO-WAY GOOGLE TASKS SYNC (v3.0.0)
+        // ============================================
+        // Architecture:
+        // - Each EOS task has: googleTaskId, googleListId, lastSyncedAt, modifiedAt
+        // - Sync compares timestamps to detect changes on both sides
+        // - Conflict resolution: most recent modification wins
+        // - Deletions in Google = archive in EOS (safe deletion)
+        // - ID mapping prevents duplicates
+        
+        async function syncWithGoogleTasks(direction = 'both') {
             const user = document.getElementById('dailyPlanUser')?.value;
             const settings = getSettings();
             const member = settings.teamMembers.find(m => m.initials === user);
@@ -10388,225 +10410,357 @@ Return ONLY the JSON array:`;
             statusEl.style.display = 'block';
             statusEl.style.background = '#e8f4fd';
             statusEl.style.color = '#1a73e8';
-            statusEl.textContent = 'â³ Pulling tasks from Google Tasks...';
+            statusEl.textContent = '🔄 Syncing with Google Tasks...';
             
             if (!member?.webAppUrl) {
                 statusEl.style.background = '#fff3cd';
                 statusEl.style.color = '#856404';
-                statusEl.textContent = '⚠️ No Web App URL configured.';
+                statusEl.textContent = '⚠️ No Web App URL configured. Go to Settings.';
                 return;
             }
             
+            const syncStats = {
+                imported: 0,
+                created: 0,
+                completedFromGoogle: 0,
+                completedToGoogle: 0,
+                updatedFromGoogle: 0,
+                updatedToGoogle: 0,
+                archivedFromGoogle: 0,
+                errors: []
+            };
+            
             try {
-                const pullListIds = member.pullListIds || ['@default'];
-                const listIdsParam = pullListIds.join(',');
-                const secretParam = member.webAppSecret ? '&secretKey=' + encodeURIComponent(member.webAppSecret) : '';
-                const response = await fetch(member.webAppUrl + '?action=getAllTasks&listIds=' + encodeURIComponent(listIdsParam) + secretParam);
-                const result = await response.json();
+                yearData.quarters[currentQuarter].todos = yearData.quarters[currentQuarter].todos || [];
+                const existingTasks = yearData.quarters[currentQuarter].todos;
                 
-                let imported = 0;
-                if (result.tasks && result.tasks.length > 0) {
-                    yearData.quarters[currentQuarter].todos = yearData.quarters[currentQuarter].todos || [];
-                    const existingTasks = yearData.quarters[currentQuarter].todos;
-                    const existingTexts = new Set(existingTasks.map(t => t.text.toLowerCase().trim()));
+                // Build ID map for quick lookups
+                const taskByGoogleId = new Map();
+                existingTasks.forEach(t => {
+                    if (t.googleTaskId && !t.googleTaskId.startsWith('synced_')) {
+                        taskByGoogleId.set(t.googleTaskId, t);
+                    }
+                });
+                
+                // STEP 1: PULL - Get all tasks from Google (active AND completed)
+                if (direction === 'both' || direction === 'pull') {
+                    statusEl.textContent = '⬇️ Pulling from Google Tasks...';
                     
-                    for (const task of result.tasks) {
-                        let taskTitle = task.title;
-                        let isStarred = false;
-                        if (taskTitle.startsWith('⭐ ')) {
-                            isStarred = true;
-                            taskTitle = taskTitle.substring(2).trim();
+                    const pullListIds = member.pullListIds || ['@default'];
+                    const listIdsParam = pullListIds.join(',');
+                    const secretParam = member.webAppSecret ? '&secretKey=' + encodeURIComponent(member.webAppSecret) : '';
+                    
+                    // Get active tasks
+                    const activeResponse = await fetch(
+                        member.webAppUrl + '?action=getAllTasks&listIds=' + encodeURIComponent(listIdsParam) + secretParam
+                    );
+                    const activeResult = await activeResponse.json();
+                    
+                    // Get completed tasks (last 7 days)
+                    let completedTasks = [];
+                    try {
+                        const completedResponse = await fetch(
+                            member.webAppUrl + '?action=getCompletedTasks&listIds=' + encodeURIComponent(listIdsParam) + secretParam
+                        );
+                        const completedResult = await completedResponse.json();
+                        if (completedResult.tasks) {
+                            completedTasks = completedResult.tasks;
                         }
-                        
-                        if (!existingTexts.has(taskTitle.toLowerCase().trim())) {
-                            let dueDate = '';
-                            if (task.due) {
-                                const d = new Date(task.due);
-                                if (!isNaN(d.getTime())) {
-                                    dueDate = d.toISOString().split('T')[0];
+                    } catch (e) {
+                        console.log('Could not fetch completed tasks:', e);
+                    }
+                    
+                    // Process active tasks from Google
+                    const googleActiveIds = new Set();
+                    if (activeResult.tasks && activeResult.tasks.length > 0) {
+                        for (const gTask of activeResult.tasks) {
+                            googleActiveIds.add(gTask.id);
+                            
+                            // Check if we already have this task by ID
+                            const existingTask = taskByGoogleId.get(gTask.id);
+                            
+                            if (existingTask) {
+                                // Task exists - check for updates from Google
+                                const gModified = new Date(gTask.updated || gTask.due || 0).getTime();
+                                const eosModified = new Date(existingTask.modifiedAt || existingTask.importedAt || 0).getTime();
+                                
+                                // If Google has newer changes, update EOS
+                                if (gModified > eosModified) {
+                                    // Parse title (remove star prefix)
+                                    let newTitle = gTask.title;
+                                    let isStarred = false;
+                                    if (newTitle.startsWith('⭐ ')) {
+                                        isStarred = true;
+                                        newTitle = newTitle.substring(2).trim();
+                                    }
+                                    
+                                    // Check for title change
+                                    if (newTitle !== existingTask.text) {
+                                        existingTask.text = newTitle;
+                                        existingTask.originalText = newTitle;
+                                        syncStats.updatedFromGoogle++;
+                                    }
+                                    
+                                    // Check for due date change
+                                    let newDue = '';
+                                    if (gTask.due) {
+                                        const d = new Date(gTask.due);
+                                        if (!isNaN(d.getTime())) {
+                                            newDue = d.toISOString().split('T')[0];
+                                        }
+                                    }
+                                    if (newDue !== existingTask.dueDate) {
+                                        existingTask.dueDate = newDue;
+                                        existingTask.originalDueDate = newDue;
+                                        if (!syncStats.updatedFromGoogle) syncStats.updatedFromGoogle++;
+                                    }
+                                    
+                                    existingTask.starred = isStarred;
+                                    existingTask.lastSyncedAt = new Date().toISOString();
+                                }
+                                
+                                // If task was marked done in EOS but still active in Google, it was un-completed
+                                if (existingTask.done && !gTask.status?.includes('completed')) {
+                                    existingTask.done = false;
+                                    existingTask.modifiedAt = new Date().toISOString();
+                                }
+                            } else {
+                                // New task from Google - import it
+                                const existingByText = existingTasks.find(t => 
+                                    t.text.toLowerCase().trim() === (gTask.title.replace('⭐ ', '')).toLowerCase().trim()
+                                );
+                                
+                                if (!existingByText) {
+                                    let taskTitle = gTask.title;
+                                    let isStarred = false;
+                                    if (taskTitle.startsWith('⭐ ')) {
+                                        isStarred = true;
+                                        taskTitle = taskTitle.substring(2).trim();
+                                    }
+                                    
+                                    let dueDate = '';
+                                    if (gTask.due) {
+                                        const d = new Date(gTask.due);
+                                        if (!isNaN(d.getTime())) {
+                                            dueDate = d.toISOString().split('T')[0];
+                                        }
+                                    }
+                                    
+                                    const newTask = {
+                                        text: taskTitle,
+                                        originalText: taskTitle,
+                                        owner: user,
+                                        done: false,
+                                        starred: isStarred,
+                                        dueDate: dueDate,
+                                        originalDueDate: dueDate,
+                                        importedAt: new Date().toISOString(),
+                                        modifiedAt: new Date().toISOString(),
+                                        lastSyncedAt: new Date().toISOString(),
+                                        googleTaskId: gTask.id,
+                                        googleListId: gTask.listId || '',
+                                        googleListName: gTask.listName || ''
+                                    };
+                                    
+                                    existingTasks.push(newTask);
+                                    taskByGoogleId.set(gTask.id, newTask);
+                                    syncStats.imported++;
+                                } else if (!existingByText.googleTaskId) {
+                                    // Link existing task to Google task by text match
+                                    existingByText.googleTaskId = gTask.id;
+                                    existingByText.googleListId = gTask.listId || '';
+                                    existingByText.googleListName = gTask.listName || '';
+                                    existingByText.lastSyncedAt = new Date().toISOString();
+                                    taskByGoogleId.set(gTask.id, existingByText);
                                 }
                             }
-                            
-                            existingTasks.push({
-                                text: taskTitle,
-                                owner: user,
-                                done: false,
-                                starred: isStarred,
-                                dueDate: dueDate,
-                                originalDueDate: dueDate, // Track original for sync detection
-                                importedAt: new Date().toISOString(),
-                                googleTaskId: task.id,
-                                googleListId: task.listId || '',
-                                googleListName: task.listName || ''
-                            });
-                            imported++;
-                            existingTexts.add(taskTitle.toLowerCase().trim());
+                        }
+                    }
+                    
+                    // Process completed tasks from Google
+                    const googleCompletedIds = new Set();
+                    for (const gTask of completedTasks) {
+                        googleCompletedIds.add(gTask.id);
+                        const existingTask = taskByGoogleId.get(gTask.id);
+                        
+                        if (existingTask && !existingTask.done) {
+                            // Task was completed in Google - mark done in EOS
+                            existingTask.done = true;
+                            existingTask.completedFromGoogle = true;
+                            existingTask.modifiedAt = new Date().toISOString();
+                            existingTask.lastSyncedAt = new Date().toISOString();
+                            syncStats.completedFromGoogle++;
+                        }
+                    }
+                    
+                    // Check for tasks deleted in Google (has googleTaskId but not in Google anymore)
+                    for (const task of existingTasks) {
+                        if (task.googleTaskId && 
+                            !task.googleTaskId.startsWith('synced_') &&
+                            !googleActiveIds.has(task.googleTaskId) && 
+                            !googleCompletedIds.has(task.googleTaskId) &&
+                            !task.archivedFromGoogle) {
+                            // Task was deleted in Google - archive in EOS
+                            task.done = true;
+                            task.archivedFromGoogle = true;
+                            task.modifiedAt = new Date().toISOString();
+                            syncStats.archivedFromGoogle++;
+                            addLogEntry(`Archived (deleted in Google): ${task.text.substring(0, 25)}...`);
                         }
                     }
                 }
                 
-                if (imported > 0) {
-                    autoSave();
-                    renderRepository();
-                    renderTodos(yearData.quarters[currentQuarter].todos);
+                // STEP 2: PUSH - Send changes to Google
+                if (direction === 'both' || direction === 'push') {
+                    statusEl.textContent = '⬆️ Pushing to Google Tasks...';
+                    
+                    const pushListId = member.pushListId || '@default';
+                    
+                    // Find tasks to push
+                    for (const task of existingTasks) {
+                        if (task.owner !== user && task.owner !== 'Both') continue;
+                        if (!task.text) continue;
+                        
+                        // NEW task - create in Google
+                        if (!task.googleTaskId) {
+                            try {
+                                const taskData = {
+                                    title: task.starred ? `⭐ ${task.text}` : task.text,
+                                    notes: `From EOS Tool - ${new Date().toLocaleDateString()}${task.owner === 'Both' ? ' [Both]' : ''}`,
+                                    due: task.dueDate ? new Date(task.dueDate).toISOString() : null
+                                };
+                                
+                                const response = await fetch(member.webAppUrl, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'text/plain' },
+                                    body: JSON.stringify({ 
+                                        action: 'addTask', 
+                                        listId: pushListId, 
+                                        task: taskData,
+                                        secretKey: member.webAppSecret || ''
+                                    })
+                                });
+                                
+                                const result = await response.json();
+                                if (result.success && result.task?.id) {
+                                    task.googleTaskId = result.task.id;
+                                    task.googleListId = pushListId;
+                                    task.originalDueDate = task.dueDate;
+                                    task.originalText = task.text;
+                                    task.lastSyncedAt = new Date().toISOString();
+                                    syncStats.created++;
+                                }
+                            } catch (e) {
+                                console.log('Error creating task:', e);
+                            }
+                        }
+                        // COMPLETED task - sync completion to Google
+                        else if (task.done && !task.completionSynced && !task.completedFromGoogle && !task.archivedFromGoogle) {
+                            try {
+                                const response = await fetch(member.webAppUrl, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        secretKey: member.webAppSecret || '',
+                                        action: 'completeTask',
+                                        taskId: task.googleTaskId,
+                                        listId: task.googleListId || '@default'
+                                    })
+                                });
+                                
+                                const result = await response.json();
+                                if (result.success) {
+                                    task.completionSynced = true;
+                                    task.lastSyncedAt = new Date().toISOString();
+                                    syncStats.completedToGoogle++;
+                                }
+                            } catch (e) {
+                                console.log('Error syncing completion:', e);
+                            }
+                        }
+                        // UPDATED task - sync edits to Google
+                        else if (!task.done && task.googleTaskId && !task.googleTaskId.startsWith('synced_')) {
+                            const titleChanged = task.originalText && task.text !== task.originalText;
+                            const dueChanged = task.originalDueDate !== task.dueDate;
+                            
+                            if (titleChanged || dueChanged) {
+                                try {
+                                    const updates = {};
+                                    if (titleChanged) {
+                                        updates.title = task.starred ? `⭐ ${task.text}` : task.text;
+                                    }
+                                    if (dueChanged) {
+                                        updates.due = task.dueDate ? new Date(task.dueDate).toISOString() : null;
+                                    }
+                                    
+                                    const response = await fetch(member.webAppUrl, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'text/plain' },
+                                        body: JSON.stringify({
+                                            action: 'updateTask',
+                                            taskId: task.googleTaskId,
+                                            listId: task.googleListId || '@default',
+                                            secretKey: member.webAppSecret || '',
+                                            updates: updates
+                                        })
+                                    });
+                                    
+                                    const result = await response.json();
+                                    if (result.success) {
+                                        task.originalDueDate = task.dueDate;
+                                        task.originalText = task.text;
+                                        task.lastSyncedAt = new Date().toISOString();
+                                        syncStats.updatedToGoogle++;
+                                    }
+                                } catch (e) {
+                                    console.log('Error updating task:', e);
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Save and refresh UI
+                autoSave();
+                renderRepository();
+                renderTodos(yearData.quarters[currentQuarter].todos);
+                
+                // Build status message
+                const parts = [];
+                if (syncStats.imported > 0) parts.push(`${syncStats.imported} imported`);
+                if (syncStats.created > 0) parts.push(`${syncStats.created} created`);
+                if (syncStats.completedFromGoogle > 0) parts.push(`${syncStats.completedFromGoogle} marked done`);
+                if (syncStats.completedToGoogle > 0) parts.push(`${syncStats.completedToGoogle} completions synced`);
+                if (syncStats.updatedFromGoogle > 0) parts.push(`${syncStats.updatedFromGoogle} updated from Google`);
+                if (syncStats.updatedToGoogle > 0) parts.push(`${syncStats.updatedToGoogle} updated to Google`);
+                if (syncStats.archivedFromGoogle > 0) parts.push(`${syncStats.archivedFromGoogle} archived`);
+                
+                if (parts.length > 0) {
                     statusEl.style.background = '#e6f4ea';
                     statusEl.style.color = '#1e8e3e';
-                    statusEl.textContent = `✅ Imported ${imported} new task(s) from Google Tasks!`;
-                    addLogEntry(`Pulled ${imported} tasks from Google Tasks for ${user}`);
+                    statusEl.textContent = `✅ Sync complete: ${parts.join(', ')}`;
+                    addLogEntry(`Synced with Google Tasks for ${user}: ${parts.join(', ')}`);
                 } else {
                     statusEl.style.background = '#e6f4ea';
                     statusEl.style.color = '#1e8e3e';
-                    statusEl.textContent = '✅ Already in sync - no new tasks found.';
+                    statusEl.textContent = '✅ Already in sync - no changes found.';
                 }
+                
             } catch (error) {
+                console.error('Sync error:', error);
                 statusEl.style.background = '#fce8e6';
                 statusEl.style.color = '#d93025';
-                statusEl.textContent = 'âŒ Pull failed: ' + error.message;
+                statusEl.textContent = '❌ Sync failed: ' + error.message;
             }
         }
         
+        // Legacy function wrappers for backward compatibility
+        async function pullDailyPlanTasks() {
+            await syncWithGoogleTasks('pull');
+        }
+        
         async function pushDailyPlanTasks() {
-            const user = document.getElementById('dailyPlanUser')?.value;
-            const settings = getSettings();
-            const member = settings.teamMembers.find(m => m.initials === user);
-            
-            const statusEl = document.getElementById('dailySyncStatus');
-            statusEl.style.display = 'block';
-            statusEl.style.background = '#e8f4fd';
-            statusEl.style.color = '#1a73e8';
-            statusEl.textContent = 'â³ Pushing tasks to Google Tasks...';
-            
-            if (!member?.webAppUrl) {
-                statusEl.style.background = '#fff3cd';
-                statusEl.style.color = '#856404';
-                statusEl.textContent = '⚠️ No Web App URL configured.';
-                return;
-            }
-            
-            try {
-                const todos = yearData.quarters[currentQuarter].todos || [];
-                
-                // NEW tasks for this user (including "Both" tasks)
-                const newTasks = todos.filter(t => 
-                    (t.owner === user || t.owner === 'Both') && 
-                    !t.done && 
-                    t.text && 
-                    !t.googleTaskId
-                );
-                
-                // Tasks with UPDATED due dates
-                const tasksToUpdate = todos.filter(t => 
-                    t.owner === user && 
-                    !t.done && 
-                    t.text && 
-                    t.googleTaskId && 
-                    t.originalDueDate !== t.dueDate
-                );
-                
-                if (newTasks.length === 0 && tasksToUpdate.length === 0) {
-                    statusEl.style.background = '#e6f4ea';
-                    statusEl.style.color = '#1e8e3e';
-                    statusEl.textContent = '✅ All tasks synced - nothing to push.';
-                    return;
-                }
-                
-                const pushListId = member.pushListId || '@default';
-                let sent = 0;
-                let updated = 0;
-                let errors = [];
-                
-                // Push NEW tasks
-                for (const task of newTasks) {
-                    try {
-                        const taskData = {
-                            title: task.starred ? `⭐ ${task.text}` : task.text,
-                            notes: `From EOS Tool - ${new Date().toLocaleDateString()}${task.owner === 'Both' ? ' [Both]' : ''}`,
-                            due: task.dueDate ? new Date(task.dueDate).toISOString() : null
-                        };
-                        
-                        const response = await fetch(member.webAppUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'text/plain' },
-                            body: JSON.stringify({ 
-                                action: 'addTask', 
-                                listId: pushListId, 
-                                task: taskData,
-                                secretKey: member.webAppSecret || ''
-                            })
-                        });
-                        
-                        const result = await response.json();
-                        if (result.success) {
-                            // Only mark as synced for non-Both tasks (Both tasks go to multiple users)
-                            if (task.owner !== 'Both') {
-                                task.googleTaskId = result.task?.id || 'synced';
-                                task.googleListId = pushListId;
-                                task.originalDueDate = task.dueDate;
-                            }
-                            sent++;
-                        } else {
-                            errors.push(task.text.substring(0, 20) + '...');
-                        }
-                    } catch (e) {
-                        // Assume success with CORS
-                        sent++;
-                    }
-                }
-                
-                // Update tasks with changed due dates
-                for (const task of tasksToUpdate) {
-                    try {
-                        const response = await fetch(member.webAppUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'text/plain' },
-                            body: JSON.stringify({
-                                action: 'updateTask',
-                                taskId: task.googleTaskId,
-                                listId: task.googleListId || '@default',
-                                secretKey: member.webAppSecret || '',
-                                updates: {
-                                    due: task.dueDate ? new Date(task.dueDate).toISOString() : null
-                                }
-                            })
-                        });
-                        
-                        const result = await response.json();
-                        if (result.success) {
-                            task.originalDueDate = task.dueDate;
-                            updated++;
-                        }
-                    } catch (e) {
-                        // Assume success with CORS
-                        task.originalDueDate = task.dueDate;
-                        updated++;
-                    }
-                }
-                
-                autoSave();
-                
-                let msg = '';
-                if (sent > 0) msg += `Created ${sent} task(s)`;
-                if (updated > 0) msg += `${msg ? ', ' : ''}Updated ${updated} due date(s)`;
-                
-                if ((sent > 0 || updated > 0) && errors.length === 0) {
-                    statusEl.style.background = '#e6f4ea';
-                    statusEl.style.color = '#1e8e3e';
-                    statusEl.textContent = `✅ ${msg}!`;
-                    addLogEntry(`Pushed to Google Tasks for ${user}: ${msg}`);
-                } else if ((sent > 0 || updated > 0) && errors.length > 0) {
-                    statusEl.style.background = '#fef3c7';
-                    statusEl.style.color = '#92400e';
-                    statusEl.textContent = `⚠️ ${msg}, but ${errors.length} failed.`;
-                } else {
-                    statusEl.style.background = '#fce8e6';
-                    statusEl.style.color = '#d93025';
-                    statusEl.textContent = 'âŒ Push failed for all tasks.';
-                }
-            } catch (error) {
-                statusEl.style.background = '#fce8e6';
-                statusEl.style.color = '#d93025';
-                statusEl.textContent = 'âŒ Push failed: ' + error.message;
-            }
+            await syncWithGoogleTasks('push');
         }
         
         function printDailyPlan() {
@@ -10630,9 +10784,7 @@ Return ONLY the JSON array:`;
                             const isChecked = dailyPlanData.habits?.[h] || false;
                             return `
                                 <div style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: white; border-radius: 6px; border: 1px solid ${isChecked ? '#22c55e' : '#d1d5db'};">
-                                    <span style="width: 16px; height: 16px; border: 2px solid ${isChecked ? '#22c55e' : '#9ca3af'}; border-radius: 4px; display: flex; align-items: center; justify-content: center; ${isChecked ? 'background: #22c55e;' : ''}">
-                                        ${isChecked ? '<span style="color: white; font-size: 10px;">✔</span>' : ''}
-                                    </span>
+                                    <span class="checkbox ${isChecked ? 'checked' : ''}" style="width: 16px; height: 16px;"></span>
                                     <span style="font-weight: 500; ${isChecked ? 'text-decoration: line-through; color: #666;' : ''}">${h}</span>
                                 </div>
                             `;
@@ -10646,7 +10798,7 @@ Return ONLY the JSON array:`;
                 if (task) {
                     return `
                         <div style="display: flex; align-items: center; padding: 10px; margin: 6px 0; background: #fffbeb; border-radius: 6px; border-left: 4px solid #f59e0b;">
-                            <span style="width: 20px; height: 20px; border: 2px solid #9ca3af; border-radius: 4px; margin-right: 12px;"></span>
+                            <span class="checkbox" style="width: 20px; height: 20px;"></span>
                             <span style="font-weight: 600;">${idx + 1}. ${task.type === 'rock' ? '🪨 ' : ''}${task.text}</span>
                         </div>
                     `;
@@ -10670,8 +10822,8 @@ Return ONLY the JSON array:`;
                     <div style="background: ${label.bg}; border: 2px solid ${label.color}40; border-radius: 8px; padding: 8px; min-height: 80px;">
                         <div style="font-weight: 700; font-size: 9pt; color: ${label.color}; margin-bottom: 6px;">${label.name}</div>
                         ${tasks.map(t => `
-                            <div style="display: flex; align-items: center; padding: 3px 0; font-size: 8pt;">
-                                <span style="width: 12px; height: 12px; border: 1.5px solid #9ca3af; border-radius: 2px; margin-right: 6px; ${t.done ? 'background: #22c55e; border-color: #22c55e;' : ''}"></span>
+                            <div class="task-row">
+                                <span class="checkbox ${t.done ? 'checked' : ''}"></span>
                                 <span style="${t.done ? 'text-decoration: line-through; opacity: 0.5;' : ''}">${t.type === 'rock' ? '🪨 ' : ''}${t.text}</span>
                             </div>
                         `).join('') || '<p style="color: #999; font-size: 7pt; margin: 0;">Empty</p>'}
@@ -10685,8 +10837,8 @@ Return ONLY the JSON array:`;
                 .filter(r => r.owner === user && r.text);
             
             const rocksHtml = rocks.length ? rocks.map(r => `
-                <div style="display: flex; align-items: center; padding: 6px 0; font-size: 9pt;">
-                    <span style="width: 14px; height: 14px; border: 2px solid #22c55e; border-radius: 3px; margin-right: 10px;"></span>
+                <div class="task-row">
+                    <span class="checkbox ${r.done ? 'checked' : ''}"></span>
                     <span style="font-weight: 500;">🪨 ${r.text}</span>
                     <span style="margin-left: auto; font-size: 8pt; color: ${r.status === 'on-track' ? '#16a34a' : r.status === 'off-track' ? '#dc2626' : '#9ca3af'};">${r.status || ''}</span>
                 </div>
@@ -10697,8 +10849,8 @@ Return ONLY the JSON array:`;
                 .filter(t => t.owner === user && t.text && !t.done);
             
             const todosHtml = todos.length ? todos.map(t => `
-                <div style="display: flex; align-items: center; padding: 5px 0; font-size: 9pt;">
-                    <span style="width: 14px; height: 14px; border: 1.5px solid #9ca3af; border-radius: 3px; margin-right: 10px;"></span>
+                <div class="task-row">
+                    <span class="checkbox"></span>
                     <span>${t.starred ? '⭐ ' : ''}${t.text}</span>
                     ${t.dueDate ? `<span style="margin-left: auto; font-size: 8pt; color: #6b7280;">${new Date(t.dueDate).toLocaleDateString('en-US', {month: 'short', day: 'numeric'})}</span>` : ''}
                 </div>
@@ -10720,6 +10872,39 @@ Return ONLY the JSON array:`;
                         .section { margin-bottom: 15px; }
                         .section h3 { font-size: 11pt; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #ddd; }
                         .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+                        /* Consistent checkbox styling */
+                        .checkbox {
+                            display: inline-block;
+                            width: 14px;
+                            height: 14px;
+                            border: 2px solid #9ca3af;
+                            border-radius: 3px;
+                            margin-right: 8px;
+                            vertical-align: middle;
+                            flex-shrink: 0;
+                        }
+                        .checkbox.checked {
+                            background: #22c55e;
+                            border-color: #22c55e;
+                            position: relative;
+                        }
+                        .checkbox.checked::after {
+                            content: '';
+                            position: absolute;
+                            left: 3px;
+                            top: 0px;
+                            width: 4px;
+                            height: 8px;
+                            border: solid white;
+                            border-width: 0 2px 2px 0;
+                            transform: rotate(45deg);
+                        }
+                        .task-row {
+                            display: flex;
+                            align-items: center;
+                            padding: 4px 0;
+                            font-size: 9pt;
+                        }
                     </style>
                 </head>
                 <body>
