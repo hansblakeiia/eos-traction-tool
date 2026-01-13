@@ -1905,7 +1905,7 @@
                 </div>
                 <button class="header-btn primary" onclick="openSaveModal()">💾 Save Year</button>
                 <button class="header-btn secondary" onclick="openMasterPrintModal()">🖨️ Print</button>
-                <button class="header-btn secondary" onclick="openSettings()">⚡️ Settings</button>
+                <button class="header-btn secondary" onclick="openSettings()">⚙️ Settings</button>
                 <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
             </div>
         </header>
@@ -1915,14 +1915,14 @@
             <button class="tab-btn" onclick="showPage('plan')">1-Year Plan</button>
             <button class="tab-btn quarter-tab" onclick="showPage('quarterly')">Quarterly (Rocks/Scorecard)</button>
             <button class="tab-btn" onclick="showPage('meeting')">Weekly Meeting</button>
-            <button class="tab-btn daily-plan-tab" onclick="showPage('dailyPlan')">📦 My Daily Plan</button>
+            <button class="tab-btn daily-plan-tab" onclick="showPage('dailyPlan')">📅 My Daily Plan</button>
             <button class="tab-btn" onclick="showPage('history')">Compare Years</button>
         </div>
         
         <!-- Sync Status Bar -->
         <div id="syncStatusBar" style="display: none; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-bottom: 1px solid #bae6fd; padding: 8px 20px; font-size: 0.85rem; display: flex; align-items: center; justify-content: space-between;">
             <div style="display: flex; align-items: center; gap: 15px;">
-                <span id="syncStatusIcon">🔔</span>
+                <span id="syncStatusIcon">🔄</span>
                 <span id="syncStatusText">Checking sync status...</span>
                 <span id="syncPendingBadge" style="display: none; background: #fbbf24; color: #78350f; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 600;">3 pending</span>
             </div>
@@ -1970,7 +1970,7 @@
                     
                     <!-- 10-Year Target -->
                     <div class="section target">
-                        <h3>🏝️ 10-Year Target™</h3>
+                        <h3>🏔️ 10-Year Target™</h3>
                         <textarea id="ten_target" rows="3" placeholder="Your big, long-term goal..."></textarea>
                     </div>
                 </div>
@@ -2091,7 +2091,7 @@
             
             <!-- 1-Year Plan Reference -->
             <div class="reference-panel" id="yearRefPanel">
-                <h4>📒 2026 ANNUAL GOALS (Reference)</h4>
+                <h4>📌 2026 ANNUAL GOALS (Reference)</h4>
                 <div class="goals" id="yearGoalsRef">
                     <!-- Populated by JS -->
                 </div>
@@ -2150,7 +2150,7 @@
                     <button class="btn btn-secondary" onclick="openParseMeetingModal()">📥 Import from Otter</button>
                     <button class="btn btn-secondary" onclick="printMeeting()">🖨️ Print Agenda</button>
                     <button class="btn btn-primary" onclick="openExportTasksModal()">📋 Sync with Google Tasks</button>
-                    <button class="btn btn-success" onclick="archiveMeeting()">✜ Complete & Archive</button>
+                    <button class="btn btn-success" onclick="archiveMeeting()">✓ Complete & Archive</button>
                 </div>
             </div>
             
@@ -2178,11 +2178,11 @@
                     <!-- To-Dos -->
                     <div class="section">
                         <h3 style="display: flex; align-items: center; justify-content: space-between;">
-                            <span>✦ To-Dos</span>
+                            <span>✅ To-Dos</span>
                             <select id="todoSortOrder" onchange="sortAndRenderTodos()" style="padding: 4px 8px; font-size: 0.8rem; border-radius: 4px;">
                                 <option value="manual">My Order</option>
                                 <option value="starred">⭐ Starred First</option>
-                                <option value="dueDate">📦 Due Date</option>
+                                <option value="dueDate">📅 Due Date</option>
                                 <option value="title">🔤 Title (A-Z)</option>
                                 <option value="owner">👤 Owner</option>
                             </select>
@@ -2218,8 +2218,8 @@
                                     <textarea id="idsSolve" rows="2" placeholder="Solution / Action item..." onchange="saveCurrentIDS()"></textarea>
                                 </div>
                                 <div style="display: flex; gap: 8px; margin-top: 10px;">
-                                    <button class="btn btn-success" onclick="resolveIssue()" style="flex: 1;">✜ Create To-Do from Solution</button>
-                                    <button class="btn btn-secondary" onclick="askAIForHelp()" style="padding: 8px 12px;" title="Get AI suggestions">🤓 AI Help</button>
+                                    <button class="btn btn-success" onclick="resolveIssue()" style="flex: 1;">✓ Create To-Do from Solution</button>
+                                    <button class="btn btn-secondary" onclick="askAIForHelp()" style="padding: 8px 12px;" title="Get AI suggestions">🤖 AI Help</button>
                                 </div>
                             </div>
                         </div>
@@ -2230,7 +2230,7 @@
             <!-- AI Assistant Modal -->
             <div class="modal-overlay" id="aiAssistModal">
                 <div class="modal" style="max-width: 600px;">
-                    <h2>🤓 AI Assistant</h2>
+                    <h2>🤖 AI Assistant</h2>
                     <p style="font-size: 0.9rem; color: var(--gray-600); margin-bottom: 15px;">
                         Get AI-powered suggestions for solving this issue.
                     </p>
@@ -2253,8 +2253,8 @@
                     
                     <div class="modal-actions">
                         <button class="btn btn-secondary" onclick="closeModal('aiAssistModal')">Close</button>
-                        <button class="btn btn-primary" onclick="getAISuggestions()">🤓 Get Suggestions</button>
-                        <button class="btn btn-success" onclick="useAISuggestion()" id="useAISuggestionBtn" style="display: none;">✜ Use This Solution</button>
+                        <button class="btn btn-primary" onclick="getAISuggestions()">🤖 Get Suggestions</button>
+                        <button class="btn btn-success" onclick="useAISuggestion()" id="useAISuggestionBtn" style="display: none;">✓ Use This Solution</button>
                     </div>
                 </div>
             </div>
@@ -2268,15 +2268,15 @@
         <!-- MY DAILY PLAN PAGE -->
         <div id="dailyPlan" class="page">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h2 class="page-title" style="margin-bottom: 0;">📦 My Daily Plan</h2>
+                <h2 class="page-title" style="margin-bottom: 0;">📅 My Daily Plan</h2>
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <div>
                         <label style="font-size: 0.85rem; color: var(--gray-600);">Current User:</label>
                         <select id="dailyPlanUser" onchange="loadDailyPlan()" style="padding: 6px 12px; font-weight: 600;"></select>
                     </div>
-                    <button class="btn btn-primary" onclick="openDailyPlanSyncModal()" style="padding: 8px 14px;">🔔 Sync Tasks</button>
+                    <button class="btn btn-primary" onclick="openDailyPlanSyncModal()" style="padding: 8px 14px;">🔄 Sync Tasks</button>
                     <button class="btn btn-secondary" onclick="printDailyPlan()" style="padding: 8px 14px;">🖨️ Print</button>
-                    <button class="btn btn-secondary" onclick="endDayRoutine()" style="padding: 8px 16px;">📚 End Day</button>
+                    <button class="btn btn-secondary" onclick="endDayRoutine()" style="padding: 8px 16px;">🌙 End Day</button>
                 </div>
             </div>
             
@@ -2286,10 +2286,10 @@
             <div id="goodMorningBanner" style="display: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 20px; border-radius: 10px; margin-bottom: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: start;">
                     <div>
-                        <h3 style="margin: 0 0 8px 0;">⌀️ Good Morning!</h3>
+                        <h3 style="margin: 0 0 8px 0;">☀️ Good Morning!</h3>
                         <p id="tomorrowNotesDisplay" style="margin: 0; opacity: 0.9;"></p>
                     </div>
-                    <button onclick="dismissGoodMorning()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 10px; border-radius: 4px; cursor: pointer;">●</button>
+                    <button onclick="dismissGoodMorning()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 10px; border-radius: 4px; cursor: pointer;">✕</button>
                 </div>
             </div>
             
@@ -2297,7 +2297,7 @@
             <div id="dailyHabitsSection" style="display: none; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid #86efac; padding: 15px 20px; border-radius: 10px; margin-bottom: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                     <div style="display: flex; align-items: center; gap: 10px;">
-                        <h3 style="margin: 0; color: #166534;">📆 Daily Habits</h3>
+                        <h3 style="margin: 0; color: #166534;">🌅 Daily Habits</h3>
                         <span id="habitsWeekProgress" style="background: #22c55e; color: white; padding: 2px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600;"></span>
                     </div>
                     <span style="font-size: 0.8rem; color: #166534;">Complete these daily for consistency!</span>
@@ -2317,15 +2317,15 @@
                     <div class="repo-section">
                         <div class="repo-header" onclick="toggleRepoSection('rocks')">
                             <span>🪨 Rocks (90-Day Goals)</span>
-                            <span id="rocksToggle">◼</span>
+                            <span id="rocksToggle">▼</span>
                         </div>
                         <div id="repoRocks" class="repo-items"></div>
                     </div>
                     
                     <div class="repo-section">
                         <div class="repo-header" onclick="toggleRepoSection('todos')">
-                            <span>✦ To-Dos (7-Day Tasks)</span>
-                            <span id="todosToggle">◼</span>
+                            <span>✅ To-Dos (7-Day Tasks)</span>
+                            <span id="todosToggle">▼</span>
                         </div>
                         <div id="repoTodos" class="repo-items"></div>
                     </div>
@@ -2333,7 +2333,7 @@
                     <div class="repo-section">
                         <div class="repo-header" onclick="toggleRepoSection('local')">
                             <span>📝 Local Tasks (Private)</span>
-                            <span id="localToggle">◼</span>
+                            <span id="localToggle">▼</span>
                         </div>
                         <div id="repoLocal" class="repo-items"></div>
                         <div style="display: flex; gap: 6px; margin-top: 8px;">
@@ -2397,7 +2397,7 @@
                     </div>
                     
                     <div class="pomodoro-section">
-                        <div class="pomodoro-header">🍦 Pomodoro Timer</div>
+                        <div class="pomodoro-header">🍅 Pomodoro Timer</div>
                         <div class="pomodoro-display" id="pomodoroDisplay">25:00</div>
                         <div class="pomodoro-buttons">
                             <button class="pomo-btn focus" onclick="startPomodoro('focus')">Focus (25m)</button>
@@ -2406,10 +2406,10 @@
                         </div>
                         <div class="pomodoro-controls">
                             <button onclick="togglePomodoro()" id="pomoToggleBtn">▶️ Start</button>
-                            <button onclick="resetPomodoro()">🔔 Reset</button>
+                            <button onclick="resetPomodoro()">🔄 Reset</button>
                         </div>
                         <div class="pomo-stats">
-                            <span>Today: <strong id="pomoCount">0</strong> 🍦</span>
+                            <span>Today: <strong id="pomoCount">0</strong> 🍅</span>
                         </div>
                     </div>
                     
@@ -2485,7 +2485,7 @@
     <!-- Settings Modal -->
     <div class="modal-overlay" id="settingsModal">
         <div class="modal" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
-            <h2>⚡️ Settings</h2>
+            <h2>⚙️ Settings</h2>
             
             <!-- SECTION 1: TEAM & INTEGRATIONS -->
             <div style="margin-bottom: 24px;">
@@ -2513,25 +2513,25 @@
                     
                     <!-- Otter.ai -->
                     <div style="margin-bottom: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
-                        <h4 style="color: #1e40af; margin-bottom: 8px; font-size: 0.95rem;">ðŸŽ™️ Otter.ai Integration</h4>
+                        <h4 style="color: #1e40af; margin-bottom: 8px; font-size: 0.95rem;">🎙️ Otter.ai Integration</h4>
                         <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 8px;">
                             Auto-import action items from Otter meeting transcripts.
                         </p>
                         <input type="text" id="otterSheetUrl" placeholder="https://script.google.com/macros/s/xxxxx/exec" style="font-size: 0.85rem;">
                         <div id="otterTestStatus" style="margin-top: 6px; padding: 6px; border-radius: 4px; display: none; font-size: 0.8rem;"></div>
-                        <button class="btn btn-secondary" onclick="testOtterSheetConnection()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">🔔 Test Connection</button>
+                        <button class="btn btn-secondary" onclick="testOtterSheetConnection()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">🔗 Test Connection</button>
                     </div>
                     
                     <!-- Gemini AI -->
                     <div style="padding-top: 16px; border-top: 1px solid #e5e7eb;">
-                        <h4 style="color: #1e40af; margin-bottom: 8px; font-size: 0.95rem;">🤓 AI Assistant (Gemini)</h4>
+                        <h4 style="color: #1e40af; margin-bottom: 8px; font-size: 0.95rem;">🤖 AI Assistant (Gemini)</h4>
                         <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 8px;">
                             Enable AI-powered suggestions for IDS and daily planning. 
                             <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #3b82f6;">Get free API key →</a>
                         </p>
                         <input type="password" id="geminiApiKey" placeholder="AIza..." style="font-size: 0.85rem;">
                         <div id="geminiTestStatus" style="margin-top: 6px; padding: 6px; border-radius: 4px; display: none; font-size: 0.8rem;"></div>
-                        <button class="btn btn-secondary" onclick="testGeminiConnection()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">🔔 Test Connection</button>
+                        <button class="btn btn-secondary" onclick="testGeminiConnection()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">🔗 Test Connection</button>
                     </div>
                 </div>
             </div>
@@ -2545,7 +2545,7 @@
                     
                     <!-- Weekly Meeting -->
                     <div style="margin-bottom: 16px;">
-                        <h4 style="color: #047857; margin-bottom: 8px; font-size: 0.95rem;">📦 Weekly Meeting Schedule</h4>
+                        <h4 style="color: #047857; margin-bottom: 8px; font-size: 0.95rem;">📅 Weekly Meeting Schedule</h4>
                         <div class="input-row">
                             <div>
                                 <label style="font-size: 0.8rem;">Day</label>
@@ -2575,7 +2575,7 @@
                     
                     <!-- Quarter Start Dates -->
                     <div style="padding-top: 16px; border-top: 1px solid #a7f3d0;">
-                        <h4 style="color: #047857; margin-bottom: 8px; font-size: 0.95rem;">📠 Quarter Start Dates</h4>
+                        <h4 style="color: #047857; margin-bottom: 8px; font-size: 0.95rem;">📆 Quarter Start Dates</h4>
                         <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 10px;">Adjust if your fiscal quarters don't follow calendar year</p>
                         <div class="input-row">
                             <div>
@@ -2602,7 +2602,7 @@
             <!-- SECTION 3: PRODUCTIVITY TOOLS -->
             <div style="margin-bottom: 24px;">
                 <div style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 12px 16px; border-radius: 8px 8px 0 0; font-weight: 600; font-size: 1.1rem;">
-                    🍦 Productivity Tools
+                    🍅 Productivity Tools
                 </div>
                 <div style="border: 1px solid #fcd34d; border-top: none; border-radius: 0 0 8px 8px; padding: 16px; background: #fffbeb;">
                     
@@ -2636,7 +2636,7 @@
                                 <em>Fallback topic (used if no member topic set):</em>
                             </p>
                             <input type="text" id="ntfyTopic" placeholder="fallback-topic (optional)" style="font-size: 0.85rem; margin-top: 6px;">
-                            <button class="btn btn-secondary" onclick="testNtfyNotification()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">🔝 Test Fallback</button>
+                            <button class="btn btn-secondary" onclick="testNtfyNotification()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">🔔 Test Fallback</button>
                         </div>
                     </div>
                 </div>
@@ -2684,7 +2684,7 @@
                         <textarea id="toolIssuesNotes" rows="3" placeholder="- Bug: something not working&#10;- Feature: add dark mode" style="width: 100%; font-size: 0.85rem;" onblur="saveToolIssues()"></textarea>
                         <div style="display: flex; gap: 8px; margin-top: 8px;">
                             <button class="btn btn-secondary" onclick="copyToolIssues()" style="flex: 1; padding: 6px 10px; font-size: 0.85rem;">📋 Copy for Claude</button>
-                            <button class="btn btn-secondary" onclick="clearToolIssues()" style="padding: 6px 10px; font-size: 0.85rem;">😘️</button>
+                            <button class="btn btn-secondary" onclick="clearToolIssues()" style="padding: 6px 10px; font-size: 0.85rem;">🗑️</button>
                         </div>
                     </div>
                     
@@ -2698,7 +2698,7 @@
                             </div>
                             <div style="flex: 1; min-width: 200px;">
                                 <h4 style="color: #374151; margin-bottom: 6px; font-size: 0.95rem;">📱 Hosting & Mobile</h4>
-                                <button class="btn btn-secondary" onclick="openHostingGuideModal()" style="padding: 6px 12px; font-size: 0.85rem;">📓 View Hosting Guide</button>
+                                <button class="btn btn-secondary" onclick="openHostingGuideModal()" style="padding: 6px 12px; font-size: 0.85rem;">📖 View Hosting Guide</button>
                                 <p style="font-size: 0.75rem; color: var(--gray-500); margin-top: 4px;">GitHub Pages or Google Cloud</p>
                             </div>
                         </div>
@@ -2810,7 +2810,7 @@
             <div style="background: #fef3c7; border-radius: 8px; padding: 14px;">
                 <h4 style="margin: 0 0 8px 0; color: #92400e;">⚠️ Important Notes</h4>
                 <ul style="font-size: 0.85rem; margin: 0; padding-left: 18px; color: #92400e;">
-                    <li>Data is stored in your browser's localStorage " not synced between devices</li>
+                    <li>Data is stored in your browser's localStorage — not synced between devices</li>
                     <li>Use Export/Import (Settings) to transfer data between devices</li>
                     <li>Export weekly as backup!</li>
                 </ul>
@@ -2845,7 +2845,7 @@
                 <!-- Populated by JS -->
             </div>
             <div class="modal-actions" style="margin-top: 15px;">
-                <button class="btn btn-secondary" onclick="clearActivityLog()">😘️ Clear Log</button>
+                <button class="btn btn-secondary" onclick="clearActivityLog()">🗑️ Clear Log</button>
                 <button class="btn btn-secondary" onclick="copyActivityLog()">📋 Copy Log</button>
                 <button class="btn btn-primary" onclick="closeModal('activityLogModal')">Close</button>
             </div>
@@ -2898,7 +2898,7 @@
     <!-- Daily Plan Sync Modal -->
     <div class="modal-overlay" id="dailyPlanSyncModal">
         <div class="modal" style="max-width: 550px;">
-            <h2>🔔 Sync Tasks for My Daily Plan</h2>
+            <h2>🔄 Sync Tasks for My Daily Plan</h2>
             
             <div id="dailySyncUserInfo" style="background: #f0f9ff; padding: 12px; border-radius: 8px; margin-bottom: 15px;">
                 <!-- Populated by JS -->
@@ -2931,7 +2931,7 @@
             <div id="dailySyncNoConfig" style="background: #fef3c7; border: 1px solid #fcd34d; border-radius: 8px; padding: 12px; margin-bottom: 15px; display: none;">
                 <p style="margin: 0; font-size: 0.85rem; color: #92400e;">
                     ⚠️ <strong>No Google Tasks URL configured</strong> for this user.<br>
-                    Go to Settings (⚡️) → Team Members to add a Web App URL.
+                    Go to Settings (⚙️) → Team Members to add a Web App URL.
                 </p>
             </div>
             
@@ -2967,7 +2967,7 @@
             </div>
             
             <p id="noWebAppMsg" style="font-size: 0.8rem; color: var(--gray-500); margin-top: 15px; display: none;">
-                💡 <strong>To enable sync:</strong> Add Web App URLs for team members in Settings (⚡️).
+                💡 <strong>To enable sync:</strong> Add Web App URLs for team members in Settings (⚙️).
             </p>
         </div>
     </div>
@@ -2981,7 +2981,7 @@
             <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 12px; margin-bottom: 15px;">
                 <p style="margin: 0; font-size: 0.85rem; color: #1e40af;">
                     <strong>💡 How this works:</strong> When you record a meeting in Otter.ai with <strong>"Traction"</strong> in the title, 
-                    this will automatically import action items from the most recent meeting. Make sure your Otter Sheet Web App URL is configured in Settings (⚡️).
+                    this will automatically import action items from the most recent meeting. Make sure your Otter Sheet Web App URL is configured in Settings (⚙️).
                 </p>
             </div>
             
@@ -3012,7 +3012,7 @@ Outsource fixing banisters., Call the Johnson family., Review quarterly report."
             <!-- AI-Powered Notes Parsing -->
             <details style="margin-bottom: 15px;">
                 <summary style="cursor: pointer; color: #7c3aed; font-size: 0.9rem; padding: 8px 0; font-weight: 500;">
-                    🤓 AI: Parse meeting notes/outline into tasks...
+                    🤖 AI: Parse meeting notes/outline into tasks...
                 </summary>
                 <div style="margin-top: 10px; background: #f5f3ff; padding: 12px; border-radius: 8px; border: 1px solid #ddd6fe;">
                     <p style="font-size: 0.8rem; color: #6b21a8; margin: 0 0 10px 0;">
@@ -3027,7 +3027,7 @@ Example:
    * Proposes adding alerts for portfolio anomalies"></textarea>
                     <div style="display: flex; gap: 8px; margin-top: 10px;">
                         <button class="btn" onclick="parseNotesWithAI()" style="background: #7c3aed; color: white; flex: 1;">
-                            🤓 Extract Tasks with AI
+                            🤖 Extract Tasks with AI
                         </button>
                     </div>
                     <div id="aiParseStatus" style="display: none; margin-top: 10px; padding: 10px; border-radius: 6px;"></div>
@@ -3037,8 +3037,8 @@ Example:
             
             <div class="modal-actions">
                 <button class="btn btn-secondary" onclick="closeModal('parseMeetingModal')">Cancel</button>
-                <button class="btn btn-primary" onclick="refreshOtterFetch()">🔔 Refresh</button>
-                <button class="btn btn-success" id="addParsedTasksBtn" onclick="addOtterItemsToTodos()" style="display: none;">✜ Add Selected to To-Dos</button>
+                <button class="btn btn-primary" onclick="refreshOtterFetch()">🔄 Refresh</button>
+                <button class="btn btn-success" id="addParsedTasksBtn" onclick="addOtterItemsToTodos()" style="display: none;">✓ Add Selected to To-Dos</button>
             </div>
         </div>
     </div>
@@ -3057,7 +3057,7 @@ Example:
             
             <div class="modal-actions" style="margin-top: 15px;">
                 <button class="btn btn-secondary" onclick="closeModal('editAgendaModal')">Cancel</button>
-                <button class="btn btn-secondary" onclick="resetAgendaToDefault()">† Reset to Default</button>
+                <button class="btn btn-secondary" onclick="resetAgendaToDefault()">↩ Reset to Default</button>
                 <button class="btn btn-success" onclick="saveAgendaChanges()">Save Agenda</button>
             </div>
         </div>
@@ -3066,7 +3066,7 @@ Example:
     <!-- Add Task Modal -->
     <div class="modal-overlay" id="addTaskModal">
         <div class="modal" style="max-width: 450px;">
-            <h2>➢ Add Task</h2>
+            <h2>➕ Add Task</h2>
             <div style="margin-bottom: 15px;">
                 <label style="display: block; margin-bottom: 6px; font-weight: 500;">Task Description</label>
                 <input type="text" id="newTaskText" placeholder="Enter your task..." 
@@ -3076,7 +3076,7 @@ Example:
             <div style="margin-bottom: 15px;">
                 <label style="display: block; margin-bottom: 6px; font-weight: 500;">📋 Category / List</label>
                 <select id="newTaskList" style="width: 100%; padding: 10px; font-size: 1rem; border: 1px solid var(--gray-300); border-radius: 6px;">
-                    <option value="local">🔙 Local Task (Private - not synced)</option>
+                    <option value="local">🔒 Local Task (Private - not synced)</option>
                     <option value="default">📝 Default To-Dos</option>
                 </select>
             </div>
@@ -3087,7 +3087,7 @@ Example:
         </div>
     </div>
     
-    <div class="save-indicator" id="saveIndicator">✜ Saved</div>
+    <div class="save-indicator" id="saveIndicator">✓ Saved</div>
     
     <script>
         // ==================== DEBUGGING ====================
@@ -3108,12 +3108,12 @@ Example:
         let yearData = {};
         
         const defaultAgendaItems = [
-            { title: '🎯 Opening / Prayer', time: 'Start' },
+            { title: '🙏 Opening / Prayer', time: 'Start' },
             { title: '📰 Customer Headlines', time: '1 min' },
             { title: '📊 Scorecard Review', time: '5 min' },
             { title: '🪨 Rock Review', time: '5 min' },
-            { title: '🔔 Redtail Workflows', time: '5 min' },
-            { title: '✦ To-Do Review', time: '5 min' },
+            { title: '🔄 Redtail Workflows', time: '5 min' },
+            { title: '✅ To-Do Review', time: '5 min' },
             { title: '💡 IDS', time: '15 min' },
             { title: '🎯 Conclude', time: '5 min' }
         ];
@@ -3152,7 +3152,7 @@ Example:
                     "cv1": "Compassion", "cv2": "Legacy", "cv3": "Integrity",
                     "cv4": "Excellence", "cv5": "Nimbleness", "cv6": "Truth",
                     "cf_purpose": "We minimize financial stress to maximize your life.",
-                    "cf_niche": "We are a boutique wealth management firm serving high-net-worth individuals and families. We organize their financial junk drawers by intelligently integrating their financial lives with IntelligrationsÂ©.",
+                    "cf_niche": "We are a boutique wealth management firm serving high-net-worth individuals and families. We organize their financial junk drawers by intelligently integrating their financial lives with Intelligrations©.",
                     "ten_target": "$75 Million AUM with $500k operating profit after paying for technology and salaries before paying ourselves. Working 4 days a week. Possibly 5th employee.",
                     "ty_date": "12/31/2028",
                     "ty_revenue": "$65M AUM",
@@ -3315,15 +3315,15 @@ Example:
                     bar.style.background = 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)';
                     break;
                 case 'success':
-                    icon.textContent = '✦';
+                    icon.textContent = '✅';
                     bar.style.background = 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)';
                     break;
                 case 'error':
-                    icon.textContent = '❒';
+                    icon.textContent = '❌';
                     bar.style.background = 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)';
                     break;
                 case 'ready':
-                    icon.textContent = '🔔';
+                    icon.textContent = '🔄';
                     bar.style.background = 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)';
                     break;
                 case 'paused':
@@ -3363,12 +3363,12 @@ Example:
                 case 'success':
                     toast.style.background = '#d1fae5';
                     toast.style.color = '#065f46';
-                    toast.innerHTML = `✦ ${message}`;
+                    toast.innerHTML = `✅ ${message}`;
                     break;
                 case 'error':
                     toast.style.background = '#fee2e2';
                     toast.style.color = '#991b1b';
-                    toast.innerHTML = `❒ ${message}`;
+                    toast.innerHTML = `❌ ${message}`;
                     break;
                 case 'warning':
                     toast.style.background = '#fef3c7';
@@ -3378,7 +3378,7 @@ Example:
                 default:
                     toast.style.background = '#e0f2fe';
                     toast.style.color = '#0369a1';
-                    toast.innerHTML = `™️ ${message}`;
+                    toast.innerHTML = `ℹ️ ${message}`;
             }
             
             container.appendChild(toast);
@@ -3656,7 +3656,7 @@ Example:
 📊 EOS Traction Tool v${EOS_VERSION}
 Build Date: ${EOS_BUILD_DATE}
 
-✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 📝 Version 2.8.0 Changes:
 • 🚀 AUTO-SYNC ON LOAD/LEAVE!
@@ -3668,7 +3668,7 @@ Build Date: ${EOS_BUILD_DATE}
 • Auto-sync can be toggled on/off
 
 📝 Version 2.7.1 Changes:
-• 🔔 REAL-TIME SYNC! All task changes now sync to Google Tasks:
+• 🔄 REAL-TIME SYNC! All task changes now sync to Google Tasks:
   - Due date changes → synced instantly
   - Task text changes → synced instantly  
   - Owner changes → task pushed to new owner's Google Tasks
@@ -3696,7 +3696,7 @@ Build Date: ${EOS_BUILD_DATE}
 • Fixed test connection error handling
 
 📝 Version 2.6.4 Changes:
-• Scorecard: Delete measurable rows (● button) 
+• Scorecard: Delete measurable rows (✕ button) 
 • Scorecard: Drag to reorder measurable rows
 • Weekly Meeting: Task text now wraps (no more truncation!)
 • Daily Plan: Inline task editing (no more popup)
@@ -3756,7 +3756,7 @@ Build Date: ${EOS_BUILD_DATE}
 • Rule of 3 completion tracking
 • Backup reminder improvements
 
-✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁✁
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 💡 Tip: Keep this version number handy when 
    reporting issues or requesting features!
@@ -3933,7 +3933,7 @@ Build Date: ${EOS_BUILD_DATE}
                 </div>
             `).join('');
             
-            document.querySelector('#yearRefPanel h4').textContent = `📒 ${currentYear} ANNUAL GOALS (Reference)`;
+            document.querySelector('#yearRefPanel h4').textContent = `📌 ${currentYear} ANNUAL GOALS (Reference)`;
         }
         
         // ==================== QUARTERLY: ROCKS ====================
@@ -3952,7 +3952,7 @@ Build Date: ${EOS_BUILD_DATE}
             container.innerHTML = (rocks || []).map((r, idx) => {
                 const isCompleted = r.done;
                 const completedStyle = isCompleted ? 'text-decoration: line-through; opacity: 0.6; background: #f0fdf4;' : '';
-                const completedBadge = isCompleted ? '<span style="background: #22c55e; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; margin-left: 8px;">✜ DONE</span>' : '';
+                const completedBadge = isCompleted ? '<span style="background: #22c55e; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; margin-left: 8px;">✓ DONE</span>' : '';
                 
                 return `
                 <div class="rock-card" style="${isCompleted ? 'border-left-color: #22c55e;' : ''}">
@@ -3970,13 +3970,13 @@ Build Date: ${EOS_BUILD_DATE}
                     </select>
                     ${!isCompleted ? `
                         <div class="status-toggle">
-                            <button class="status-btn on-track ${r.status === 'on' ? 'active' : ''}" onclick="setRockStatus(${idx}, 'on')">✜ On</button>
-                            <button class="status-btn off-track ${r.status === 'off' ? 'active' : ''}" onclick="setRockStatus(${idx}, 'off')">⚡Â  Off</button>
+                            <button class="status-btn on-track ${r.status === 'on' ? 'active' : ''}" onclick="setRockStatus(${idx}, 'on')">✓ On</button>
+                            <button class="status-btn off-track ${r.status === 'off' ? 'active' : ''}" onclick="setRockStatus(${idx}, 'off')">⚠ Off</button>
                         </div>
                     ` : `
-                        <button class="btn btn-secondary" onclick="uncompleteRock(${idx})" style="padding: 4px 8px; font-size: 0.75rem;" title="Mark as incomplete">† Undo</button>
+                        <button class="btn btn-secondary" onclick="uncompleteRock(${idx})" style="padding: 4px 8px; font-size: 0.75rem;" title="Mark as incomplete">↩ Undo</button>
                     `}
-                    <button class="issue-btn remove" onclick="deleteRock(${idx})" title="Delete Rock" style="margin-left: 8px;">●</button>
+                    <button class="issue-btn remove" onclick="deleteRock(${idx})" title="Delete Rock" style="margin-left: 8px;">✕</button>
                 </div>
             `}).join('');
         }
@@ -4063,7 +4063,7 @@ Build Date: ${EOS_BUILD_DATE}
                             onkeydown="handleScorecardKey(event, ${idx}, ${w})"></td>`;
                     }).join('')}
                     <td style="border: none; background: transparent; padding: 2px;">
-                        <button onclick="deleteMeasurable(${idx})" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 14px; padding: 4px;" title="Delete row">●</button>
+                        <button onclick="deleteMeasurable(${idx})" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 14px; padding: 4px;" title="Delete row">✕</button>
                     </td>
                 </tr>
             `).join('');
@@ -4242,7 +4242,7 @@ Build Date: ${EOS_BUILD_DATE}
             
             container.innerHTML = items.map((item, idx) => `
                 <div class="agenda-item" onclick="toggleAgenda(${idx})">
-                    <div class="agenda-check">✜</div>
+                    <div class="agenda-check">✓</div>
                     <span class="agenda-title">${item.title}</span>
                     <span class="agenda-time">${item.time}</span>
                 </div>
@@ -4312,7 +4312,7 @@ Build Date: ${EOS_BUILD_DATE}
             if (totalPomos === 0) {
                 container.innerHTML = `
                     <div style="padding: 12px; background: #fefce8; border-radius: 8px; border: 1px solid #fef08a;">
-                        <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 6px;">🍦 Weekly Pomodoro Challenge</div>
+                        <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 6px;">🍅 Weekly Pomodoro Challenge</div>
                         <p style="font-size: 0.85rem; color: #78716c; margin: 0;">
                             No pomodoros completed this week yet! Use the timer in My Daily Plan to track focus sessions.
                         </p>
@@ -4333,7 +4333,7 @@ Build Date: ${EOS_BUILD_DATE}
             container.innerHTML = `
                 <div style="padding: 12px; background: linear-gradient(135deg, #fef3c7, #fde68a); border-radius: 8px; border: 1px solid #fcd34d;">
                     <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
-                        <span>🍦 Weekly Pomodoro Leaderboard</span>
+                        <span>🍅 Weekly Pomodoro Leaderboard</span>
                         <span style="font-size: 0.8rem; font-weight: normal; color: #78716c;">Week ${week}, ${year}</span>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 6px;">
@@ -4342,10 +4342,10 @@ Build Date: ${EOS_BUILD_DATE}
                                 <span style="width: 24px; font-size: 1.1rem;">${getMedal(idx)}</span>
                                 <span style="flex: 1; font-weight: 500;">${m.name}</span>
                                 <div style="display: flex; align-items: center; gap: 4px;">
-                                    <button onclick="adjustPomodoroCount('${m.initials}', -1)" style="width: 22px; height: 22px; padding: 0; border: 1px solid #d1d5db; border-radius: 4px; background: white; cursor: pointer;">←</button>
+                                    <button onclick="adjustPomodoroCount('${m.initials}', -1)" style="width: 22px; height: 22px; padding: 0; border: 1px solid #d1d5db; border-radius: 4px; background: white; cursor: pointer;">−</button>
                                     <span style="font-size: 1.2rem; font-weight: 700; color: #dc2626; min-width: 24px; text-align: center;">${m.count}</span>
                                     <button onclick="adjustPomodoroCount('${m.initials}', 1)" style="width: 22px; height: 22px; padding: 0; border: 1px solid #d1d5db; border-radius: 4px; background: white; cursor: pointer;">+</button>
-                                    <span style="font-size: 0.8rem; color: #78716c;">🍦</span>
+                                    <span style="font-size: 0.8rem; color: #78716c;">🍅</span>
                                 </div>
                             </div>
                         `).join('')}
@@ -4436,9 +4436,9 @@ Build Date: ${EOS_BUILD_DATE}
                             ${checkedCount > 0 ? `${checkedCount} of ${totalCount} selected` : `${totalCount} to-do(s)`}
                         </span>
                         ${checkedCount > 0 ? `
-                            <button class="btn btn-success" style="padding: 5px 10px; font-size: 0.8rem;" onclick="archiveCheckedTodos()">✜ Archive</button>
-                            <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 0.8rem;" onclick="uncheckAllTodos()">† Uncheck</button>
-                            <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 0.8rem; background: #fee2e2; color: #dc2626;" onclick="deleteCheckedTodos()">😘 Delete</button>
+                            <button class="btn btn-success" style="padding: 5px 10px; font-size: 0.8rem;" onclick="archiveCheckedTodos()">✓ Archive</button>
+                            <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 0.8rem;" onclick="uncheckAllTodos()">↩ Uncheck</button>
+                            <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 0.8rem; background: #fee2e2; color: #dc2626;" onclick="deleteCheckedTodos()">🗑 Delete</button>
                         ` : ''}
                     </div>
                 `;
@@ -4481,7 +4481,7 @@ Build Date: ${EOS_BUILD_DATE}
                     <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTodo(${idx})">
                     <button onclick="toggleStarred(${idx})" style="background: none; border: none; cursor: pointer; font-size: 1rem; padding: 2px 4px; flex-shrink: 0;" 
                             title="${t.starred ? 'Unstar' : 'Star this task'}">
-                        ${t.starred ? '⭐' : '•'}
+                        ${t.starred ? '⭐' : '☆'}
                     </button>
                     <div class="todo-text" contenteditable="true" 
                          onblur="updateTodo(${idx}, 'text', this.textContent)"
@@ -4588,7 +4588,7 @@ Build Date: ${EOS_BUILD_DATE}
                 
                 const data = await response.json();
                 if (data.success) {
-                    console.log('✦ Task updated in Google Tasks:', Object.keys(updates).join(', '));
+                    console.log('✅ Task updated in Google Tasks:', Object.keys(updates).join(', '));
                 } else {
                     console.warn('Failed to sync update:', data.error);
                 }
@@ -4634,7 +4634,7 @@ Build Date: ${EOS_BUILD_DATE}
                     todo.googleListId = newMember.pushListId || '@default';
                     todo.googleListName = newMember.taskLists?.find(l => l.id === todo.googleListId)?.title || 'Tasks';
                     autoSave();
-                    console.log(`✦ Task assigned to ${newOwner} and synced to their Google Tasks`);
+                    console.log(`✅ Task assigned to ${newOwner} and synced to their Google Tasks`);
                     addLogEntry(`Task reassigned: "${todo.text.substring(0, 25)}..." → ${newOwner}`);
                 }
                 
@@ -4698,7 +4698,7 @@ Build Date: ${EOS_BUILD_DATE}
                 
                 const data = await response.json();
                 if (data.success) {
-                    console.log('✦ Task synced as complete in Google Tasks:', todo.text?.substring(0, 30));
+                    console.log('✅ Task synced as complete in Google Tasks:', todo.text?.substring(0, 30));
                     addLogEntry(`Synced completion to Google Tasks: ${todo.text?.substring(0, 25)}...`);
                 } else {
                     console.warn('Failed to sync completion:', data.error);
@@ -4743,7 +4743,7 @@ Build Date: ${EOS_BUILD_DATE}
                     
                     const data = await response.json();
                     if (data.success > 0) {
-                        console.log(`✦ Synced ${data.success}/${data.total} tasks as complete for ${owner}`);
+                        console.log(`✅ Synced ${data.success}/${data.total} tasks as complete for ${owner}`);
                         addLogEntry(`Synced ${data.success} completed task(s) to Google Tasks (${owner})`);
                     }
                 } catch (error) {
@@ -4866,7 +4866,7 @@ Build Date: ${EOS_BUILD_DATE}
                     <input type="text" value="${issue.text || ''}" onchange="updateWeeklyIssue(${idx}, 'text', this.value)">
                     <button class="issue-btn ids ${issue.identify || issue.discuss || issue.solve ? 'has-content' : ''}" 
                             onclick="startIDS(${idx})" title="Work on IDS">IDS</button>
-                    <button class="issue-btn remove" onclick="removeWeeklyIssue(${idx})">●</button>
+                    <button class="issue-btn remove" onclick="removeWeeklyIssue(${idx})">✕</button>
                 </div>
             `).join('');
         }
@@ -4924,7 +4924,7 @@ Build Date: ${EOS_BUILD_DATE}
                 <div style="padding: 10px; margin: 8px 0; background: #f5f5f5; border-radius: 6px; cursor: pointer;" 
                      onclick="restoreArchivedIssue(${idx})">
                     <div style="font-weight: 600;">${issue.text || '(no text)'}</div>
-                    ${issue.solve ? `<div style="font-size: 0.85rem; color: #22c55e;">✜ Solved: ${issue.solve.substring(0, 100)}...</div>` : ''}
+                    ${issue.solve ? `<div style="font-size: 0.85rem; color: #22c55e;">✓ Solved: ${issue.solve.substring(0, 100)}...</div>` : ''}
                     <div style="font-size: 0.8rem; color: #999;">Archived: ${new Date(issue.archivedAt).toLocaleDateString()}</div>
                 </div>
             `).join('');
@@ -4969,7 +4969,7 @@ Build Date: ${EOS_BUILD_DATE}
             if (promoted.length > 0) {
                 autoSave();
                 addLogEntry(`Promoted ${promoted.length} long-term issue(s) to weekly IDS`);
-                alert(`✦ Added ${promoted.length} issue(s) to Weekly Meeting IDS:\n\n${promoted.map((p, i) => `${i + 1}. ${p}`).join('\n')}`);
+                alert(`✅ Added ${promoted.length} issue(s) to Weekly Meeting IDS:\n\n${promoted.map((p, i) => `${i + 1}. ${p}`).join('\n')}`);
             } else {
                 alert('Please check at least one issue with text to promote to IDS.');
             }
@@ -5045,7 +5045,7 @@ ${textarea.value}
 Can you help me fix these or implement these features?`;
             
             navigator.clipboard.writeText(formatted).then(() => {
-                alert('✦ Copied! Paste this into a new Claude conversation.');
+                alert('✅ Copied! Paste this into a new Claude conversation.');
                 saveToolIssues(); // Save when copying
             });
         }
@@ -5164,7 +5164,7 @@ Can you help me fix these or implement these features?`;
             const apiKey = settings.geminiApiKey;
             
             const suggestionsEl = document.getElementById('aiSuggestions');
-            suggestionsEl.innerHTML = '<p style="text-align: center; color: var(--primary);">🔔 Thinking...</p>';
+            suggestionsEl.innerHTML = '<p style="text-align: center; color: var(--primary);">🔄 Thinking...</p>';
             
             const prompt = `You are a business consultant helping with EOS (Entrepreneurial Operating System) issue solving. Analyze this issue and provide practical solutions.
 
@@ -5276,11 +5276,11 @@ Make sure your suggestions directly address the specific root cause and discussi
         function displaySuggestions(el, suggestions) {
             el.innerHTML = `
                 <div style="margin-bottom: 12px;">
-                    <strong style="color: var(--success);">⚡Â¡ Quick Win:</strong>
+                    <strong style="color: var(--success);">⚡ Quick Win:</strong>
                     <p style="margin: 4px 0;">${suggestions.quick || 'No suggestion available'}</p>
                 </div>
                 <div style="margin-bottom: 12px;">
-                    <strong style="color: var(--primary);">📦 This Week:</strong>
+                    <strong style="color: var(--primary);">📅 This Week:</strong>
                     <p style="margin: 4px 0;">${suggestions.medium || 'No suggestion available'}</p>
                 </div>
                 <div style="margin-bottom: 12px;">
@@ -5413,16 +5413,16 @@ Make sure your suggestions directly address the specific root cause and discussi
             const container = document.getElementById('editAgendaList');
             container.innerHTML = editingAgenda.map((item, idx) => `
                 <div style="display: flex; align-items: center; gap: 8px; padding: 10px; background: var(--gray-50); border-radius: 6px; margin-bottom: 8px;">
-                    <span style="cursor: grab; color: var(--gray-400);">°</span>
+                    <span style="cursor: grab; color: var(--gray-400);">☰</span>
                     <input type="text" value="${item.title}" 
                            onchange="editingAgenda[${idx}].title = this.value"
                            style="flex: 1; margin: 0;" placeholder="Agenda item title">
                     <input type="text" value="${item.time}" 
                            onchange="editingAgenda[${idx}].time = this.value"
                            style="width: 70px; margin: 0; text-align: center;" placeholder="Time">
-                    <button onclick="moveAgendaItem(${idx}, -1)" style="padding: 4px 8px; background: var(--gray-100); border: none; border-radius: 4px; cursor: pointer;">←</button>
-                    <button onclick="moveAgendaItem(${idx}, 1)" style="padding: 4px 8px; background: var(--gray-100); border: none; border-radius: 4px; cursor: pointer;">→</button>
-                    <button onclick="removeAgendaItem(${idx})" style="padding: 4px 8px; background: #fee2e2; border: none; border-radius: 4px; cursor: pointer; color: #dc2626;">●</button>
+                    <button onclick="moveAgendaItem(${idx}, -1)" style="padding: 4px 8px; background: var(--gray-100); border: none; border-radius: 4px; cursor: pointer;">↑</button>
+                    <button onclick="moveAgendaItem(${idx}, 1)" style="padding: 4px 8px; background: var(--gray-100); border: none; border-radius: 4px; cursor: pointer;">↓</button>
+                    <button onclick="removeAgendaItem(${idx})" style="padding: 4px 8px; background: #fee2e2; border: none; border-radius: 4px; cursor: pointer; color: #dc2626;">✕</button>
                 </div>
             `).join('');
         }
@@ -5641,7 +5641,7 @@ Make sure your suggestions directly address the specific root cause and discussi
             
             if (!lastBackup) {
                 // Never backed up - but only nag once per session
-                document.getElementById('daysSinceBackup').textContent = '↞ (never)';
+                document.getElementById('daysSinceBackup').textContent = '∞ (never)';
                 document.getElementById('backupReminderModal').classList.add('active');
                 sessionStorage.setItem('eos_backup_reminder_shown', 'true');
                 return;
@@ -6065,9 +6065,9 @@ Make sure your suggestions directly address the specific root cause and discussi
                     <div class="item-row ${statusClass}">
                         <span class="item-num" style="${r.done ? 'background: #22c55e;' : ''}">${idx + 1}</span>
                         <span style="flex: 1; ${r.done ? 'text-decoration: line-through; opacity: 0.7;' : ''}">${r.text || ''}</span>
-                        ${r.done ? '<span class="done-badge">✜ DONE</span>' : ''}
+                        ${r.done ? '<span class="done-badge">✓ DONE</span>' : ''}
                         <span style="width: 40px; text-align: center; font-weight: 600;">${r.owner || ''}</span>
-                        ${!r.done ? `<span style="width: 50px; text-align: center; font-size: 8pt;">${r.status === 'on' ? '✜ On' : r.status === 'off' ? '⚠ Off' : '"'}</span>` : ''}
+                        ${!r.done ? `<span style="width: 50px; text-align: center; font-size: 8pt;">${r.status === 'on' ? '✓ On' : r.status === 'off' ? '⚠ Off' : '—'}</span>` : ''}
                     </div>
                 `;
             }).join('');
@@ -6186,7 +6186,7 @@ Make sure your suggestions directly address the specific root cause and discussi
             // Build agenda HTML
             const agendaHtml = agenda.map((item, idx) => `
                 <div class="item-row" style="border-left: 3px solid ${agendaState[idx] ? '#22c55e' : '#ccc'};">
-                    <span style="width: 16px; height: 16px; border: 2px solid ${agendaState[idx] ? '#22c55e' : '#999'}; border-radius: 3px; margin-right: 8px; display: flex; align-items: center; justify-content: center; color: ${agendaState[idx] ? '#22c55e' : 'transparent'}; font-size: 10pt;">✜</span>
+                    <span style="width: 16px; height: 16px; border: 2px solid ${agendaState[idx] ? '#22c55e' : '#999'}; border-radius: 3px; margin-right: 8px; display: flex; align-items: center; justify-content: center; color: ${agendaState[idx] ? '#22c55e' : 'transparent'}; font-size: 10pt;">✓</span>
                     <span style="width: 20px; font-weight: 600; color: #666;">${idx + 1}.</span>
                     <span style="flex: 1;">${item.title}</span>
                     <span style="color: #666; font-size: 8pt;">${item.time}</span>
@@ -6209,7 +6209,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                 
                 <!-- To-Dos in Two Columns -->
                 <div class="section">
-                    <h3>✦ To-Dos (${todos.length})</h3>
+                    <h3>✅ To-Dos (${todos.length})</h3>
                     <div style="column-count: 2; column-gap: 15px;">
                         ${todosHtml}
                     </div>
@@ -6239,14 +6239,14 @@ Make sure your suggestions directly address the specific root cause and discussi
             const habits = (member?.dailyHabits || '').split(',').map(h => h.trim()).filter(h => h);
             const habitsHtml = habits.length > 0 ? `
                 <div class="section no-break" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 10px; border-radius: 6px; border: 2px solid #86efac; margin-bottom: 12px;">
-                    <h3 style="color: #166534; margin: 0 0 8px 0; font-size: 10pt;">📆 Daily Habits</h3>
+                    <h3 style="color: #166534; margin: 0 0 8px 0; font-size: 10pt;">🌅 Daily Habits</h3>
                     <div style="display: flex; flex-wrap: wrap; gap: 8px;">
                         ${habits.map(h => {
                             const isChecked = plan.habits?.[h] || false;
                             return `
                                 <div style="display: flex; align-items: center; gap: 5px; padding: 5px 10px; background: white; border-radius: 4px; border: 1px solid ${isChecked ? '#22c55e' : '#d1d5db'};">
                                     <span style="width: 14px; height: 14px; border: 2px solid ${isChecked ? '#22c55e' : '#9ca3af'}; border-radius: 3px; display: flex; align-items: center; justify-content: center; ${isChecked ? 'background: #22c55e;' : ''}">
-                                        ${isChecked ? '<span style="color: white; font-size: 8px;">✜</span>' : ''}
+                                        ${isChecked ? '<span style="color: white; font-size: 8px;">✓</span>' : ''}
                                     </span>
                                     <span style="font-size: 8pt; ${isChecked ? 'text-decoration: line-through; color: #666;' : ''}">${h}</span>
                                 </div>
@@ -6408,29 +6408,29 @@ Make sure your suggestions directly address the specific root cause and discussi
                         
                         <div class="section">
                             <h3>💡 Core Focus</h3>
-                            <p><strong>Purpose:</strong> ${coreFocus.purpose || '"'}</p>
-                            <p><strong>Niche:</strong> ${coreFocus.niche || '"'}</p>
+                            <p><strong>Purpose:</strong> ${coreFocus.purpose || '—'}</p>
+                            <p><strong>Niche:</strong> ${coreFocus.niche || '—'}</p>
                         </div>
                     </div>
                     
                     <div class="section">
                         <h3>🎯 10-Year Target (BHAG)</h3>
-                        <p>${tenYear || '"'}</p>
+                        <p>${tenYear || '—'}</p>
                     </div>
                     
                     <div class="section">
                         <h3>📢 Marketing Strategy</h3>
-                        <p><strong>Target Market:</strong> ${marketingStrategy.target || '"'}</p>
-                        <p><strong>3 Uniques:</strong> ${marketingStrategy.uniques || '"'}</p>
-                        <p><strong>Proven Process:</strong> ${marketingStrategy.proven || '"'}</p>
-                        <p><strong>Guarantee:</strong> ${marketingStrategy.guarantee || '"'}</p>
+                        <p><strong>Target Market:</strong> ${marketingStrategy.target || '—'}</p>
+                        <p><strong>3 Uniques:</strong> ${marketingStrategy.uniques || '—'}</p>
+                        <p><strong>Proven Process:</strong> ${marketingStrategy.proven || '—'}</p>
+                        <p><strong>Guarantee:</strong> ${marketingStrategy.guarantee || '—'}</p>
                     </div>
                     
                     <div class="section">
-                        <h3>📦 3-Year Picture</h3>
-                        <p><strong>Date:</strong> ${threeYear.date || '"'} | <strong>Revenue:</strong> ${threeYear.revenue || '"'} | <strong>Profit:</strong> ${threeYear.profit || '"'}</p>
-                        <p><strong>Measurables:</strong> ${threeYear.measurables || '"'}</p>
-                        <p><strong>What does it look like?</strong> ${threeYear.picture || '"'}</p>
+                        <h3>📅 3-Year Picture</h3>
+                        <p><strong>Date:</strong> ${threeYear.date || '—'} | <strong>Revenue:</strong> ${threeYear.revenue || '—'} | <strong>Profit:</strong> ${threeYear.profit || '—'}</p>
+                        <p><strong>Measurables:</strong> ${threeYear.measurables || '—'}</p>
+                        <p><strong>What does it look like?</strong> ${threeYear.picture || '—'}</p>
                     </div>
                 </body>
                 </html>
@@ -6482,26 +6482,26 @@ Make sure your suggestions directly address the specific root cause and discussi
                 </head>
                 <body>
                     <div class="header">
-                        <h1>📦 1-Year Plan</h1>
+                        <h1>📅 1-Year Plan</h1>
                         <div>Intelligent Investing LLC - ${currentYear} | Printed: ${dateStr}</div>
                     </div>
                     
                     <div class="metrics">
                         <div class="metric">
                             <div class="metric-label">Plan End Date</div>
-                            <div class="metric-value">${oneYear.date || '"'}</div>
+                            <div class="metric-value">${oneYear.date || '—'}</div>
                         </div>
                         <div class="metric">
                             <div class="metric-label">Revenue Target</div>
-                            <div class="metric-value">${oneYear.revenue || '"'}</div>
+                            <div class="metric-value">${oneYear.revenue || '—'}</div>
                         </div>
                         <div class="metric">
                             <div class="metric-label">Profit Target</div>
-                            <div class="metric-value">${oneYear.profit || '"'}</div>
+                            <div class="metric-value">${oneYear.profit || '—'}</div>
                         </div>
                         <div class="metric">
                             <div class="metric-label">Key Measurables</div>
-                            <div class="metric-value">${oneYear.measurables || '"'}</div>
+                            <div class="metric-value">${oneYear.measurables || '—'}</div>
                         </div>
                     </div>
                     
@@ -6614,7 +6614,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                     <span style="width: 24px; height: 24px; background: #3b82f6; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 10px;">${idx + 1}</span>
                     <span style="flex: 1;">${r.text || ''}</span>
                     <span style="width: 50px; text-align: center; font-weight: 600;">${r.owner || ''}</span>
-                    <span style="width: 60px; text-align: center; padding: 2px 6px; border-radius: 4px; font-size: 9pt; background: ${r.status === 'on' ? '#c6f6d5' : r.status === 'off' ? '#fed7d7' : '#f3f4f6'};">${r.status === 'on' ? '✜ On' : r.status === 'off' ? '⚠ Off' : '"'}</span>
+                    <span style="width: 60px; text-align: center; padding: 2px 6px; border-radius: 4px; font-size: 9pt; background: ${r.status === 'on' ? '#c6f6d5' : r.status === 'off' ? '#fed7d7' : '#f3f4f6'};">${r.status === 'on' ? '✓ On' : r.status === 'off' ? '⚠ Off' : '—'}</span>
                 </div>
             `).join('');
             
@@ -6707,7 +6707,7 @@ Make sure your suggestions directly address the specific root cause and discussi
             // Build agenda HTML
             const agendaHtml = agenda.map((item, idx) => `
                 <div style="display: flex; align-items: center; padding: 6px; margin-bottom: 4px; background: #f5f5f5; border-radius: 4px; border-left: 3px solid ${agendaState[idx] ? '#22c55e' : '#ccc'};">
-                    <span style="width: 18px; height: 18px; border: 2px solid ${agendaState[idx] ? '#22c55e' : '#999'}; border-radius: 3px; margin-right: 10px; display: flex; align-items: center; justify-content: center; color: ${agendaState[idx] ? '#22c55e' : 'transparent'}; font-size: 12pt;">✜</span>
+                    <span style="width: 18px; height: 18px; border: 2px solid ${agendaState[idx] ? '#22c55e' : '#999'}; border-radius: 3px; margin-right: 10px; display: flex; align-items: center; justify-content: center; color: ${agendaState[idx] ? '#22c55e' : 'transparent'}; font-size: 12pt;">✓</span>
                     <span style="width: 20px; font-weight: 600; color: #666;">${idx + 1}.</span>
                     <span style="flex: 1;">${item.title}</span>
                     <span style="color: #666; font-size: 9pt;">${item.time}</span>
@@ -6750,7 +6750,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                     
                     <!-- To-Dos in Two Columns -->
                     <div class="section">
-                        <h3>✦ To-Dos (${todos.length})</h3>
+                        <h3>✅ To-Dos (${todos.length})</h3>
                         <div style="column-count: 2; column-gap: 15px;">
                             ${todosHtml}
                         </div>
@@ -6852,13 +6852,13 @@ Make sure your suggestions directly address the specific root cause and discussi
                                style="width: 70px; margin: 0;" onchange="updateTeamMember(${idx}, 'initials', this.value)">
                         <input type="text" value="${m.name || ''}" placeholder="Full Name" 
                                style="flex: 1; margin: 0;" onchange="updateTeamMember(${idx}, 'name', this.value)">
-                        <button class="issue-btn remove" onclick="removeTeamMember(${idx})">●</button>
+                        <button class="issue-btn remove" onclick="removeTeamMember(${idx})">✕</button>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                         <input type="text" value="${m.ntfyTopic || ''}" placeholder="📱 ntfy topic (e.g., hans-pomodoro-2024)" 
                                style="flex: 1; margin: 0; font-size: 0.85rem;" onchange="updateTeamMember(${idx}, 'ntfyTopic', this.value)">
                         <button class="btn btn-secondary" style="padding: 6px 10px; font-size: 0.75rem;" 
-                                onclick="testMemberNtfy(${idx})">🔝 Test</button>
+                                onclick="testMemberNtfy(${idx})">🔔 Test</button>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                         <input type="text" value="${m.webAppUrl || ''}" placeholder="Google Tasks Web App URL" 
@@ -6879,10 +6879,10 @@ Make sure your suggestions directly address the specific root cause and discussi
                             ).join('')}
                         </select>
                         <button class="btn btn-secondary" style="padding: 6px 10px; font-size: 0.75rem;" 
-                                onclick="fetchTaskLists(${idx})">🔔 Load Lists</button>
+                                onclick="fetchTaskLists(${idx})">🔄 Load Lists</button>
                     </div>
                     <div style="margin-top: 8px;">
-                        <label style="font-size: 0.8rem; color: var(--gray-600);">📆 Daily Habits (comma-separated):</label>
+                        <label style="font-size: 0.8rem; color: var(--gray-600);">🌅 Daily Habits (comma-separated):</label>
                         <input type="text" value="${m.dailyHabits || ''}" placeholder="e.g., Personal devotions, Exercise, Read 30 min" 
                                style="width: 100%; margin: 4px 0 0 0; font-size: 0.85rem;" 
                                onchange="updateTeamMember(${idx}, 'dailyHabits', this.value)">
@@ -6932,7 +6932,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                         'Priority': '3',
                         'Tags': 'white_check_mark'
                     },
-                    body: `✦ Test notification for ${member.name || member.initials}! Pomodoro notifications will appear here.`
+                    body: `✅ Test notification for ${member.name || member.initials}! Pomodoro notifications will appear here.`
                 });
                 alert(`Test notification sent to ${topic}! Check ${member.name}'s phone.`);
             } catch (e) {
@@ -6963,12 +6963,12 @@ Make sure your suggestions directly address the specific root cause and discussi
                     }
                     seededData._settings = settings;
                     renderTeamMembersList(settings.teamMembers);
-                    alert(`✦ Found ${data.lists.length} task list(s) for ${member.name}`);
+                    alert(`✅ Found ${data.lists.length} task list(s) for ${member.name}`);
                 } else {
                     alert('⚠️ Could not fetch lists: ' + (data.message || 'Unknown error'));
                 }
             } catch (error) {
-                alert('❒ Error fetching lists: ' + error.message);
+                alert('❌ Error fetching lists: ' + error.message);
             }
         }
         
@@ -7042,19 +7042,19 @@ Make sure your suggestions directly address the specific root cause and discussi
                     
                     // Check for success
                     if (data.status === 'ok') {
-                        alert('✦ Connection successful for ' + (member.name || member.initials) + '!\n\n' + (data.message || 'Connected'));
+                        alert('✅ Connection successful for ' + (member.name || member.initials) + '!\n\n' + (data.message || 'Connected'));
                     } else if (data.status === 'error') {
-                        alert('❒ Error from Apps Script:\n\n' + (data.error || data.message || 'Unknown error') + 
+                        alert('❌ Error from Apps Script:\n\n' + (data.error || data.message || 'Unknown error') + 
                               (data.stack ? '\n\nStack: ' + data.stack : ''));
                     } else if (data.error) {
-                        alert('❒ Error:\n\n' + data.error);
+                        alert('❌ Error:\n\n' + data.error);
                     } else {
                         // Show the actual response for debugging
                         alert('⚠️ Unexpected response format:\n\n' + JSON.stringify(data, null, 2).substring(0, 800));
                     }
                 })
                 .catch(error => {
-                    alert('❒ Connection failed for ' + (member.name || member.initials) + ':\n\n' + error.message + 
+                    alert('❌ Connection failed for ' + (member.name || member.initials) + ':\n\n' + error.message + 
                           '\n\nCommon fixes:\n1. Check the Web App URL is correct\n2. Create a NEW deployment after code changes\n3. Make sure secret key matches');
                 });
         }
@@ -7147,7 +7147,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                     if (data.status === 'ok') {
                         statusEl.style.background = '#e6f4ea';
                         statusEl.style.color = '#1e8e3e';
-                        statusEl.textContent = '✦ Connection successful! ' + (data.message || '');
+                        statusEl.textContent = '✅ Connection successful! ' + (data.message || '');
                     } else {
                         statusEl.style.background = '#fce8e6';
                         statusEl.style.color = '#d93025';
@@ -7157,7 +7157,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                 .catch(error => {
                     statusEl.style.background = '#fce8e6';
                     statusEl.style.color = '#d93025';
-                    statusEl.textContent = '❒ Connection failed: ' + error.message;
+                    statusEl.textContent = '❌ Connection failed: ' + error.message;
                 });
         }
         
@@ -7192,11 +7192,11 @@ Make sure your suggestions directly address the specific root cause and discussi
                 if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
                     statusEl.style.background = '#e6f4ea';
                     statusEl.style.color = '#1e8e3e';
-                    statusEl.textContent = '✦ Gemini API connected successfully!';
+                    statusEl.textContent = '✅ Gemini API connected successfully!';
                 } else if (data.error) {
                     statusEl.style.background = '#fce8e6';
                     statusEl.style.color = '#d93025';
-                    statusEl.textContent = '❒ API Error: ' + (data.error.message || 'Unknown error');
+                    statusEl.textContent = '❌ API Error: ' + (data.error.message || 'Unknown error');
                 } else {
                     statusEl.style.background = '#fce8e6';
                     statusEl.style.color = '#d93025';
@@ -7205,7 +7205,7 @@ Make sure your suggestions directly address the specific root cause and discussi
             } catch (error) {
                 statusEl.style.background = '#fce8e6';
                 statusEl.style.color = '#d93025';
-                statusEl.textContent = '❒ Connection failed: ' + error.message;
+                statusEl.textContent = '❌ Connection failed: ' + error.message;
             }
         }
         
@@ -7256,7 +7256,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                         // Check if we have action items OR need to use AI on abstract summary
                         if (data.hasActionItems && data.actionItems) {
                             // We have action items - parse them directly
-                            statusEl.innerHTML = `✦ Found action items in "${meetingTitle}" - parsing...`;
+                            statusEl.innerHTML = `✅ Found action items in "${meetingTitle}" - parsing...`;
                             
                             const parsedItems = parseOtterActionItems(data.actionItems);
                             await processOtterItems(parsedItems, meetingTitle, data.transcriptUrl, statusEl);
@@ -7265,7 +7265,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                             // No action items, but we have abstract summary - use AI
                             statusEl.style.background = '#f5f3ff';
                             statusEl.style.color = '#7c3aed';
-                            statusEl.innerHTML = `🤓 No action items found. Using AI to extract tasks from summary of "${meetingTitle}"...`;
+                            statusEl.innerHTML = `🤖 No action items found. Using AI to extract tasks from summary of "${meetingTitle}"...`;
                             
                             // Check if Gemini is configured
                             if (!settings.geminiApiKey) {
@@ -7279,7 +7279,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                             const aiTasks = await extractTasksWithAI(data.abstractSummary, settings.geminiApiKey);
                             
                             if (aiTasks && aiTasks.length > 0) {
-                                statusEl.innerHTML = `🤓 AI extracted ${aiTasks.length} potential task(s) from summary`;
+                                statusEl.innerHTML = `🤖 AI extracted ${aiTasks.length} potential task(s) from summary`;
                                 await processOtterItems(aiTasks, meetingTitle + ' (AI-extracted)', data.transcriptUrl, statusEl);
                             } else {
                                 statusEl.style.background = '#fff3cd';
@@ -7335,7 +7335,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                         if (otterItems.length > 0) {
                             statusEl.style.background = '#e6f4ea';
                             statusEl.style.color = '#1e8e3e';
-                            statusEl.innerHTML = `✦ Found ${otterItems.length} new action item(s) from ${data.items.length} meeting(s)`;
+                            statusEl.innerHTML = `✅ Found ${otterItems.length} new action item(s) from ${data.items.length} meeting(s)`;
                             displayOtterItems();
                         } else {
                             statusEl.style.background = '#fff3cd';
@@ -7359,7 +7359,7 @@ Make sure your suggestions directly address the specific root cause and discussi
             } catch (error) {
                 statusEl.style.background = '#fce8e6';
                 statusEl.style.color = '#d93025';
-                statusEl.innerHTML = '❒ Connection failed: ' + error.message + '<br><small>Check Settings to configure Otter integration</small>';
+                statusEl.innerHTML = '❌ Connection failed: ' + error.message + '<br><small>Check Settings to configure Otter integration</small>';
             }
         }
         
@@ -7378,7 +7378,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                     /^[-•*]\s*(.+)$/,           // Bullet points
                     /^\d+[\.)]\s*(.+)$/,        // Numbered lists
                     /^\[[ x]?\]\s*(.+)$/i,      // Checkboxes
-                    /^[â–¡•]\s*(.+)$/,            // Unicode checkboxes
+                    /^[□☐]\s*(.+)$/,            // Unicode checkboxes
                 ];
                 
                 let matched = false;
@@ -7426,7 +7426,7 @@ Make sure your suggestions directly address the specific root cause and discussi
             if (otterItems.length > 0) {
                 statusEl.style.background = '#e6f4ea';
                 statusEl.style.color = '#1e8e3e';
-                statusEl.innerHTML = `✦ Found ${otterItems.length} new task(s) from "${meetingTitle}"`;
+                statusEl.innerHTML = `✅ Found ${otterItems.length} new task(s) from "${meetingTitle}"`;
                 displayOtterItems();
             } else {
                 statusEl.style.background = '#fff3cd';
@@ -7559,7 +7559,7 @@ Return ONLY the JSON array:`;
                     .catch(e => console.log('Could not mark as imported:', e));
             }
             
-            alert(`✦ Added ${selectedItems.length} action item(s) to To-Dos!`);
+            alert(`✅ Added ${selectedItems.length} action item(s) to To-Dos!`);
         }
         
         function selectAllOtterItems() {
@@ -7635,7 +7635,7 @@ Return ONLY the JSON array:`;
             const apiKey = settings.geminiApiKey;
             
             if (!apiKey) {
-                alert('Please configure your Gemini API key in Settings (⚡️) under "AI Assistance".');
+                alert('Please configure your Gemini API key in Settings (⚙️) under "AI Assistance".');
                 return;
             }
             
@@ -7713,7 +7713,7 @@ Return ONLY the JSON array:`;
                 
                 statusEl.style.background = '#dcfce7';
                 statusEl.style.color = '#166534';
-                statusEl.innerHTML = `✦ Found ${tasks.length} task(s), ${newTasks.length} are new`;
+                statusEl.innerHTML = `✅ Found ${tasks.length} task(s), ${newTasks.length} are new`;
                 
                 // Display the extracted tasks
                 tasksEl.style.display = 'block';
@@ -7729,7 +7729,7 @@ Return ONLY the JSON array:`;
                         </div>
                     `).join('')}
                     <button class="btn btn-success" onclick="importAITasks()" style="margin-top: 10px; width: 100%;">
-                        ✜ Import Selected Tasks
+                        ✓ Import Selected Tasks
                     </button>
                 `;
                 
@@ -7739,7 +7739,7 @@ Return ONLY the JSON array:`;
             } catch (error) {
                 statusEl.style.background = '#fee2e2';
                 statusEl.style.color = '#dc2626';
-                statusEl.innerHTML = '❒ Error: ' + error.message;
+                statusEl.innerHTML = '❌ Error: ' + error.message;
             }
         }
         
@@ -7773,9 +7773,9 @@ Return ONLY the JSON array:`;
                 // Clear the AI section
                 document.getElementById('aiNotesInput').value = '';
                 document.getElementById('aiParsedTasks').style.display = 'none';
-                document.getElementById('aiParseStatus').innerHTML = `✦ Imported ${imported} task(s)!`;
+                document.getElementById('aiParseStatus').innerHTML = `✅ Imported ${imported} task(s)!`;
                 
-                alert(`✦ Imported ${imported} task(s) to To-Dos!`);
+                alert(`✅ Imported ${imported} task(s) to To-Dos!`);
             } else {
                 alert('No tasks selected to import.');
             }
@@ -7887,7 +7887,7 @@ Return ONLY the JSON array:`;
             
             select.innerHTML = '<option value="all">All Tasks</option>' +
                 settings.teamMembers.map(m => 
-                    `<option value="${m.initials}">${m.initials} - ${m.name}${m.webAppUrl ? ' ✜' : ''}</option>`
+                    `<option value="${m.initials}">${m.initials} - ${m.name}${m.webAppUrl ? ' ✓' : ''}</option>`
                 ).join('');
             
             // Show/hide Google Tasks buttons
@@ -7960,13 +7960,13 @@ Return ONLY the JSON array:`;
                 formatted += '📝 NEW TASKS:\n';
                 formatted += newTasks.map(t => 
                     owner === 'all' 
-                        ? `  • ${t.text}${t.owner ? ' [' + t.owner + ']' : ''}`
-                        : `  • ${t.text}`
+                        ? `  ☐ ${t.text}${t.owner ? ' [' + t.owner + ']' : ''}`
+                        : `  ☐ ${t.text}`
                 ).join('\n');
             }
             if (updateTasks.length > 0) {
                 if (formatted) formatted += '\n\n';
-                formatted += '📦 DUE DATE UPDATES:\n';
+                formatted += '📅 DUE DATE UPDATES:\n';
                 formatted += updateTasks.map(t => 
                     `  • ${t.text.substring(0, 40)}${t.text.length > 40 ? '...' : ''} → ${t.dueDate || '(none)'}`
                 ).join('\n');
@@ -8209,8 +8209,8 @@ Return ONLY the JSON array:`;
                 statusEl.style.background = '#e6f4ea';
                 statusEl.style.color = '#1e8e3e';
                 let msg = '';
-                if (totalSent > 0) msg += `✦ Created ${totalSent} task(s)`;
-                if (totalUpdated > 0) msg += `${msg ? ', ' : '✦ '}Updated ${totalUpdated} due date(s)`;
+                if (totalSent > 0) msg += `✅ Created ${totalSent} task(s)`;
+                if (totalUpdated > 0) msg += `${msg ? ', ' : '✅ '}Updated ${totalUpdated} due date(s)`;
                 if (errors.length > 0) {
                     msg += ' ⚠️ ' + errors.join('; ');
                 }
@@ -8219,7 +8219,7 @@ Return ONLY the JSON array:`;
             } else {
                 statusEl.style.background = '#fce8e6';
                 statusEl.style.color = '#d93025';
-                statusEl.textContent = '❒ No tasks sent. ' + errors.join('; ');
+                statusEl.textContent = '❌ No tasks sent. ' + errors.join('; ');
                 addLogEntry(`Push to Google Tasks failed: ${errors.join('; ')}`);
             }
         }
@@ -8248,7 +8248,7 @@ Return ONLY the JSON array:`;
             if (membersToCheck.length === 0) {
                 statusEl.style.background = '#fff3cd';
                 statusEl.style.color = '#856404';
-                statusEl.textContent = '⚠️ No Web App URLs configured. Set up in Settings (⚡️).';
+                statusEl.textContent = '⚠️ No Web App URLs configured. Set up in Settings (⚙️).';
                 return;
             }
             
@@ -8352,7 +8352,7 @@ Return ONLY the JSON array:`;
                 updateTaskExportPreview();
                 statusEl.style.background = '#e6f4ea';
                 statusEl.style.color = '#1e8e3e';
-                statusEl.innerHTML = `✦ Imported ${totalImported} new task(s)! <button onclick="undoLastPull()" style="margin-left: 10px; padding: 4px 10px; background: white; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;">† Undo</button>`;
+                statusEl.innerHTML = `✅ Imported ${totalImported} new task(s)! <button onclick="undoLastPull()" style="margin-left: 10px; padding: 4px 10px; background: white; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;">↩ Undo</button>`;
             } else {
                 statusEl.style.background = '#fff3cd';
                 statusEl.style.color = '#856404';
@@ -8381,7 +8381,7 @@ Return ONLY the JSON array:`;
             const statusEl = document.getElementById('googleTasksStatus');
             statusEl.style.background = '#fff3cd';
             statusEl.style.color = '#856404';
-            statusEl.textContent = `† Undone! Removed ${removedCount} imported task(s).`;
+            statusEl.textContent = `↩ Undone! Removed ${removedCount} imported task(s).`;
         }
         
         // ==================== PARSE MEETING NOTES (Otter.ai) ====================
@@ -8550,7 +8550,7 @@ Return ONLY the JSON array:`;
                     }
                     clearPomodoroState(user);
                     resetPomodoroDisplay();
-                    alert('🍦 Your Pomodoro timer finished while you were away! Credit has been added.');
+                    alert('🍅 Your Pomodoro timer finished while you were away! Credit has been added.');
                 }
             } else if (state && !state.running && state.pausedSeconds) {
                 // Timer was paused
@@ -8714,7 +8714,7 @@ Return ONLY the JSON array:`;
                                onchange="toggleHabit('${habit.replace(/'/g, "\\'")}', this.checked)"
                                style="width: 20px; height: 20px; accent-color: #22c55e;">
                         <span style="font-weight: 500; ${isChecked ? 'text-decoration: line-through; color: #666;' : 'color: #166534;'}">${habit}</span>
-                        ${isChecked ? '<span style="color: #22c55e;">✜</span>' : ''}
+                        ${isChecked ? '<span style="color: #22c55e;">✓</span>' : ''}
                     </label>
                 `;
             }).join('');
@@ -8745,7 +8745,7 @@ Return ONLY the JSON array:`;
                 setTimeout(() => {
                     habitsSection.style.background = 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)';
                     habitsSection.querySelector('h3').style.color = '#166534';
-                    habitsSection.querySelector('h3').textContent = '📆 Daily Habits';
+                    habitsSection.querySelector('h3').textContent = '🌅 Daily Habits';
                 }, 2000);
             }
         }
@@ -8955,7 +8955,7 @@ Return ONLY the JSON array:`;
                               title="Click to edit">${t.text}</span>
                         ${inUse ? '<span class="in-use-badge">📍</span>' : ''}
                         <button onclick="promoteLocalToTodo(${idx})" title="Add to Weekly Meeting To-Dos" style="background: none; border: none; cursor: pointer; opacity: 0.5; font-size: 0.8rem;">⬆️</button>
-                        <button onclick="removeLocalTask(${idx})" style="background: none; border: none; cursor: pointer; opacity: 0.5;">●</button>
+                        <button onclick="removeLocalTask(${idx})" style="background: none; border: none; cursor: pointer; opacity: 0.5;">✕</button>
                     </div>
                 `}).join('') : '<p style="color: var(--gray-400); font-size: 0.8rem; padding: 8px;">Add personal tasks here</p>';
             }
@@ -8970,7 +8970,7 @@ Return ONLY the JSON array:`;
             const toggleEl = document.getElementById(`${section}Toggle`);
             if (itemsEl && toggleEl) {
                 itemsEl.classList.toggle('collapsed');
-                toggleEl.textContent = itemsEl.classList.contains('collapsed') ? '⚪“Â¶' : '◼';
+                toggleEl.textContent = itemsEl.classList.contains('collapsed') ? '▶' : '▼';
             }
         }
         
@@ -9041,7 +9041,7 @@ Return ONLY the JSON array:`;
             // Populate the select dropdown
             const select = document.getElementById('newTaskList');
             select.innerHTML = `
-                <option value="local">🔙 Local Task (Private - not synced)</option>
+                <option value="local">🔒 Local Task (Private - not synced)</option>
                 <option value="default">📝 Default To-Dos</option>
                 ${lists.map((list, i) => `<option value="list_${i}">${list.title}</option>`).join('')}
             `;
@@ -9306,11 +9306,11 @@ Return ONLY the JSON array:`;
                             ${t.done ? `
                                 <div class="task-actions" style="display: flex; gap: 4px; margin-left: 8px;">
                                     <button class="action-btn archive" onclick="archiveMatrixTask('${q}', ${idx})" title="Archive (remove from everywhere)">📦</button>
-                                    <button class="action-btn uncheck" onclick="uncheckMatrixTask('${q}', ${idx})" title="Uncheck">†</button>
-                                    <button class="action-btn delete" onclick="deleteMatrixTask('${q}', ${idx})" title="Delete permanently">😘</button>
+                                    <button class="action-btn uncheck" onclick="uncheckMatrixTask('${q}', ${idx})" title="Uncheck">↩</button>
+                                    <button class="action-btn delete" onclick="deleteMatrixTask('${q}', ${idx})" title="Delete permanently">🗑</button>
                                 </div>
                             ` : ''}
-                            <button class="remove-btn" onclick="removeFromMatrix('${q}', ${idx})">●</button>
+                            <button class="remove-btn" onclick="removeFromMatrix('${q}', ${idx})">✕</button>
                         </div>
                     `).join('');
                 }
@@ -9666,11 +9666,11 @@ Return ONLY the JSON array:`;
                             ${!isCompleted ? `<button class="focus-btn" onclick="focusOnTask(${idx})">🎯 Focus</button>` : `
                                 <div class="task-actions" style="display: flex; gap: 4px; margin-left: 8px;">
                                     <button class="action-btn archive" onclick="archiveRuleTask(${idx})" title="Archive (remove from everywhere)">📦</button>
-                                    <button class="action-btn uncheck" onclick="uncheckRuleTask(${idx})" title="Uncheck">†</button>
-                                    <button class="action-btn delete" onclick="deleteRuleTask(${idx})" title="Delete permanently">😘</button>
+                                    <button class="action-btn uncheck" onclick="uncheckRuleTask(${idx})" title="Uncheck">↩</button>
+                                    <button class="action-btn delete" onclick="deleteRuleTask(${idx})" title="Delete permanently">🗑</button>
                                 </div>
                             `}
-                            <button class="complete-btn-gray" onclick="removeRuleTask(${idx})" title="Remove from Rule of 3">●</button>
+                            <button class="complete-btn-gray" onclick="removeRuleTask(${idx})" title="Remove from Rule of 3">✕</button>
                         </div>
                     `;
                 } else {
@@ -9933,7 +9933,7 @@ Return ONLY the JSON array:`;
                     saveDailyPlan();
                 }
                 
-                alert(pomodoroMode === 'focus' ? '🍦 Focus session complete! Take a break.' : '• Break over! Ready to focus?');
+                alert(pomodoroMode === 'focus' ? '🍅 Focus session complete! Take a break.' : '☕ Break over! Ready to focus?');
             }
         }
         
@@ -10027,7 +10027,7 @@ Return ONLY the JSON array:`;
             
             // Browser notification
             if (settings.pomoBrowserNotify && Notification.permission === 'granted') {
-                new Notification('🍦 Pomodoro Complete!', { 
+                new Notification('🍅 Pomodoro Complete!', { 
                     body: pomodoroMode === 'focus' ? 'Great focus session! Take a break.' : 'Break over! Ready to focus?'
                 });
             }
@@ -10036,7 +10036,7 @@ Return ONLY the JSON array:`;
             if (topic) {
                 fetch(`https://ntfy.sh/${topic}`, {
                     method: 'POST',
-                    body: pomodoroMode === 'focus' ? '🍦 Pomodoro Complete! Time for a break.' : '• Break over! Time to focus.',
+                    body: pomodoroMode === 'focus' ? '🍅 Pomodoro Complete! Time for a break.' : '☕ Break over! Time to focus.',
                     headers: { 'Title': 'EOS Traction Tool' }
                 }).catch(e => console.log('ntfy error:', e));
             }
@@ -10118,16 +10118,16 @@ Return ONLY the JSON array:`;
             const settings = getSettings();
             const user = document.getElementById('dailyPlanUser')?.value;
             const member = settings.teamMembers.find(m => m.initials === user);
-            const message = pomodoroMode === 'focus' ? '🍦 Focus session complete! Take a break.' : '• Break over! Ready to focus?';
+            const message = pomodoroMode === 'focus' ? '🍅 Focus session complete! Take a break.' : '☕ Break over! Ready to focus?';
             
             // Browser notification
             if (settings.pomoBrowserNotify && 'Notification' in window) {
                 if (Notification.permission === 'granted') {
-                    new Notification('Pomodoro Timer', { body: message, icon: '🍦' });
+                    new Notification('Pomodoro Timer', { body: message, icon: '🍅' });
                 } else if (Notification.permission !== 'denied') {
                     const permission = await Notification.requestPermission();
                     if (permission === 'granted') {
-                        new Notification('Pomodoro Timer', { body: message, icon: '🍦' });
+                        new Notification('Pomodoro Timer', { body: message, icon: '🍅' });
                     }
                 }
             }
@@ -10168,7 +10168,7 @@ Return ONLY the JSON array:`;
                         'Priority': '3',
                         'Tags': 'white_check_mark'
                     },
-                    body: '✦ Test notification from EOS Traction Tool! If you see this on your phone, notifications are working.'
+                    body: '✅ Test notification from EOS Traction Tool! If you see this on your phone, notifications are working.'
                 });
                 alert('Test notification sent! Check your ntfy app on your phone.');
             } catch (e) {
@@ -10220,7 +10220,7 @@ Return ONLY the JSON array:`;
                 saveDailyPlan();
             }
             
-            alert('📚 Great work today! ' + (incompleteTasks.length > 0 ? `${incompleteTasks.length} task(s) will carry over to tomorrow.` : 'Your notes are now displayed at the top.'));
+            alert('🌙 Great work today! ' + (incompleteTasks.length > 0 ? `${incompleteTasks.length} task(s) will carry over to tomorrow.` : 'Your notes are now displayed at the top.'));
         }
         
         function openDailyPlanSyncModal() {
@@ -10356,17 +10356,17 @@ Return ONLY the JSON array:`;
                     renderTodos(yearData.quarters[currentQuarter].todos);
                     statusEl.style.background = '#e6f4ea';
                     statusEl.style.color = '#1e8e3e';
-                    statusEl.textContent = `✦ Imported ${imported} new task(s) from Google Tasks!`;
+                    statusEl.textContent = `✅ Imported ${imported} new task(s) from Google Tasks!`;
                     addLogEntry(`Pulled ${imported} tasks from Google Tasks for ${user}`);
                 } else {
                     statusEl.style.background = '#e6f4ea';
                     statusEl.style.color = '#1e8e3e';
-                    statusEl.textContent = '✦ Already in sync - no new tasks found.';
+                    statusEl.textContent = '✅ Already in sync - no new tasks found.';
                 }
             } catch (error) {
                 statusEl.style.background = '#fce8e6';
                 statusEl.style.color = '#d93025';
-                statusEl.textContent = '❒ Pull failed: ' + error.message;
+                statusEl.textContent = '❌ Pull failed: ' + error.message;
             }
         }
         
@@ -10411,7 +10411,7 @@ Return ONLY the JSON array:`;
                 if (newTasks.length === 0 && tasksToUpdate.length === 0) {
                     statusEl.style.background = '#e6f4ea';
                     statusEl.style.color = '#1e8e3e';
-                    statusEl.textContent = '✦ All tasks synced - nothing to push.';
+                    statusEl.textContent = '✅ All tasks synced - nothing to push.';
                     return;
                 }
                 
@@ -10496,7 +10496,7 @@ Return ONLY the JSON array:`;
                 if ((sent > 0 || updated > 0) && errors.length === 0) {
                     statusEl.style.background = '#e6f4ea';
                     statusEl.style.color = '#1e8e3e';
-                    statusEl.textContent = `✦ ${msg}!`;
+                    statusEl.textContent = `✅ ${msg}!`;
                     addLogEntry(`Pushed to Google Tasks for ${user}: ${msg}`);
                 } else if ((sent > 0 || updated > 0) && errors.length > 0) {
                     statusEl.style.background = '#fef3c7';
@@ -10505,12 +10505,12 @@ Return ONLY the JSON array:`;
                 } else {
                     statusEl.style.background = '#fce8e6';
                     statusEl.style.color = '#d93025';
-                    statusEl.textContent = '❒ Push failed for all tasks.';
+                    statusEl.textContent = '❌ Push failed for all tasks.';
                 }
             } catch (error) {
                 statusEl.style.background = '#fce8e6';
                 statusEl.style.color = '#d93025';
-                statusEl.textContent = '❒ Push failed: ' + error.message;
+                statusEl.textContent = '❌ Push failed: ' + error.message;
             }
         }
         
@@ -10529,14 +10529,14 @@ Return ONLY the JSON array:`;
             const habits = (member?.dailyHabits || '').split(',').map(h => h.trim()).filter(h => h);
             const habitsHtml = habits.length > 0 ? `
                 <div class="section" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 12px; border-radius: 8px; border: 2px solid #86efac; margin-bottom: 15px;">
-                    <h3 style="color: #166534; margin: 0 0 10px 0; font-size: 11pt;">📆 Daily Habits</h3>
+                    <h3 style="color: #166534; margin: 0 0 10px 0; font-size: 11pt;">🌅 Daily Habits</h3>
                     <div style="display: flex; flex-wrap: wrap; gap: 10px;">
                         ${habits.map(h => {
                             const isChecked = dailyPlanData.habits?.[h] || false;
                             return `
                                 <div style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: white; border-radius: 6px; border: 1px solid ${isChecked ? '#22c55e' : '#d1d5db'};">
                                     <span style="width: 16px; height: 16px; border: 2px solid ${isChecked ? '#22c55e' : '#9ca3af'}; border-radius: 4px; display: flex; align-items: center; justify-content: center; ${isChecked ? 'background: #22c55e;' : ''}">
-                                        ${isChecked ? '<span style="color: white; font-size: 10px;">✜</span>' : ''}
+                                        ${isChecked ? '<span style="color: white; font-size: 10px;">✓</span>' : ''}
                                     </span>
                                     <span style="font-weight: 500; ${isChecked ? 'text-decoration: line-through; color: #666;' : ''}">${h}</span>
                                 </div>
@@ -10629,7 +10629,7 @@ Return ONLY the JSON array:`;
                 </head>
                 <body>
                     <div class="header">
-                        <h1>📦 My Daily Plan</h1>
+                        <h1>📅 My Daily Plan</h1>
                         <div class="subtitle">${userName} • ${dateStr}</div>
                     </div>
                     
@@ -10651,7 +10651,7 @@ Return ONLY the JSON array:`;
                             ${rocksHtml}
                         </div>
                         <div class="section">
-                            <h3>✦ To-Dos (7-Day Tasks)</h3>
+                            <h3>✅ To-Dos (7-Day Tasks)</h3>
                             ${todosHtml}
                         </div>
                     </div>
