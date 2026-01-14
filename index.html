@@ -2223,7 +2223,7 @@
             
             <!-- 1-Year Plan Reference -->
             <div class="reference-panel" id="yearRefPanel">
-                <h4>📌 2026 ANNUAL GOALS (Reference)</h4>
+                <h4>📒 2026 ANNUAL GOALS (Reference)</h4>
                 <div class="goals" id="yearGoalsRef">
                     <!-- Populated by JS -->
                 </div>
@@ -2282,7 +2282,7 @@
                     <button class="btn btn-secondary" onclick="openParseMeetingModal()">📥 Import from Otter</button>
                     <button class="btn btn-secondary" onclick="printMeeting()">🖨️ Print Agenda</button>
                     <button class="btn btn-primary" onclick="openExportTasksModal()">📋 Sync with Google Tasks</button>
-                    <button class="btn btn-success" onclick="archiveMeeting()">✓ Complete & Archive</button>
+                    <button class="btn btn-success" onclick="archiveMeeting()">✔ Complete & Archive</button>
                 </div>
             </div>
             
@@ -2350,7 +2350,7 @@
                                     <textarea id="idsSolve" rows="2" placeholder="Solution / Action item..." onchange="saveCurrentIDS()"></textarea>
                                 </div>
                                 <div style="display: flex; gap: 8px; margin-top: 10px;">
-                                    <button class="btn btn-success" onclick="resolveIssue()" style="flex: 1;">✓ Create To-Do from Solution</button>
+                                    <button class="btn btn-success" onclick="resolveIssue()" style="flex: 1;">✔ Create To-Do from Solution</button>
                                     <button class="btn btn-secondary" onclick="askAIForHelp()" style="padding: 8px 12px;" title="Get AI suggestions">🤖 AI Help</button>
                                 </div>
                             </div>
@@ -2386,7 +2386,7 @@
                     <div class="modal-actions">
                         <button class="btn btn-secondary" onclick="closeModal('aiAssistModal')">Close</button>
                         <button class="btn btn-primary" onclick="getAISuggestions()">🤖 Get Suggestions</button>
-                        <button class="btn btn-success" onclick="useAISuggestion()" id="useAISuggestionBtn" style="display: none;">✓ Use This Solution</button>
+                        <button class="btn btn-success" onclick="useAISuggestion()" id="useAISuggestionBtn" style="display: none;">✔ Use This Solution</button>
                     </div>
                 </div>
             </div>
@@ -2659,7 +2659,7 @@
                         <h4 style="color: #1e40af; margin-bottom: 8px; font-size: 0.95rem;">🤖 AI Assistant (Gemini)</h4>
                         <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 8px;">
                             Enable AI-powered suggestions for IDS and daily planning. 
-                            <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #3b82f6;">Get free API key →</a>
+                            <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #3b82f6;">Get free API key ↑</a>
                         </p>
                         <input type="password" id="geminiApiKey" placeholder="AIza..." style="font-size: 0.85rem;">
                         <div id="geminiTestStatus" style="margin-top: 6px; padding: 6px; border-radius: 4px; display: none; font-size: 0.8rem;"></div>
@@ -2768,7 +2768,7 @@
                                 <em>Fallback topic (used if no member topic set):</em>
                             </p>
                             <input type="text" id="ntfyTopic" placeholder="fallback-topic (optional)" style="font-size: 0.85rem; margin-top: 6px;">
-                            <button class="btn btn-secondary" onclick="testNtfyNotification()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">🔔 Test Fallback</button>
+                            <button class="btn btn-secondary" onclick="testNtfyNotification()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">🔓 Test Fallback</button>
                         </div>
                     </div>
                 </div>
@@ -2895,12 +2895,12 @@
                     <p style="font-size: 0.85rem; margin: 0 0 12px 0;"><strong>Best for:</strong> Simple, free hosting with easy updates</p>
                     <ol style="margin: 0; padding-left: 20px; font-size: 0.9rem;">
                         <li style="margin-bottom: 8px;">Create a free <a href="https://github.com/signup" target="_blank" style="color: #059669;">GitHub account</a> if you don't have one</li>
-                        <li style="margin-bottom: 8px;">Click the <strong>+</strong> button → <strong>New repository</strong></li>
+                        <li style="margin-bottom: 8px;">Click the <strong>+</strong> button ↑ <strong>New repository</strong></li>
                         <li style="margin-bottom: 8px;">Name it <code style="background: #d1fae5; padding: 2px 6px; border-radius: 3px;">eos-tool</code> (or any name)</li>
                         <li style="margin-bottom: 8px;">Make it <strong>Public</strong> and click <strong>Create repository</strong></li>
-                        <li style="margin-bottom: 8px;">Click <strong>uploading an existing file</strong> → drag your HTML file</li>
+                        <li style="margin-bottom: 8px;">Click <strong>uploading an existing file</strong> ↑ drag your HTML file</li>
                         <li style="margin-bottom: 8px;"><strong>Important:</strong> Rename the file to <code style="background: #d1fae5; padding: 2px 6px; border-radius: 3px;">index.html</code></li>
-                        <li style="margin-bottom: 8px;">Go to <strong>Settings</strong> → <strong>Pages</strong> → Source: <strong>main branch</strong> → Save</li>
+                        <li style="margin-bottom: 8px;">Go to <strong>Settings</strong> ↑ <strong>Pages</strong> ↑ Source: <strong>main branch</strong> ↑ Save</li>
                         <li style="margin-bottom: 8px;">Your URL: <code style="background: #d1fae5; padding: 2px 6px; border-radius: 3px;">https://yourusername.github.io/eos-tool/</code></li>
                     </ol>
                     <p style="margin: 12px 0 0 0; font-size: 0.85rem; color: #047857;">
@@ -2920,8 +2920,8 @@
                         <li style="margin-bottom: 8px;">Go to <a href="https://console.cloud.google.com/storage" target="_blank" style="color: #3b82f6;">Google Cloud Console</a></li>
                         <li style="margin-bottom: 8px;">Create a bucket with a unique name (e.g., <code>mycompany-eos-tool</code>)</li>
                         <li style="margin-bottom: 8px;">Upload your HTML file (rename to <code>index.html</code>)</li>
-                        <li style="margin-bottom: 8px;">Make the bucket public: Permissions → Add <code>allUsers</code> as <strong>Storage Object Viewer</strong></li>
-                        <li style="margin-bottom: 8px;">Enable static hosting: Website Configuration → Index: <code>index.html</code></li>
+                        <li style="margin-bottom: 8px;">Make the bucket public: Permissions ↑ Add <code>allUsers</code> as <strong>Storage Object Viewer</strong></li>
+                        <li style="margin-bottom: 8px;">Enable static hosting: Website Configuration ↑ Index: <code>index.html</code></li>
                         <li style="margin-bottom: 8px;">Access at: <code>https://storage.googleapis.com/your-bucket-name/index.html</code></li>
                     </ol>
                     <p style="margin: 12px 0 0 0; font-size: 0.85rem; color: #6b7280;">
@@ -2934,8 +2934,8 @@
             <div style="background: #f3f4f6; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
                 <h4 style="margin: 0 0 8px 0; color: #374151;">📲 Add to Home Screen (Mobile)</h4>
                 <p style="font-size: 0.85rem; margin: 0; color: #6b7280;">
-                    <strong>iPhone:</strong> Safari → Share → Add to Home Screen<br>
-                    <strong>Android:</strong> Chrome → ⋮ Menu → Add to Home screen
+                    <strong>iPhone:</strong> Safari ↑ Share ↑ Add to Home Screen<br>
+                    <strong>Android:</strong> Chrome ↑ ⋮ Menu ↑ Add to Home screen
                 </p>
             </div>
             
@@ -3063,7 +3063,7 @@
             <div id="dailySyncNoConfig" style="background: #fef3c7; border: 1px solid #fcd34d; border-radius: 8px; padding: 12px; margin-bottom: 15px; display: none;">
                 <p style="margin: 0; font-size: 0.85rem; color: #92400e;">
                     ⚠️ <strong>No Google Tasks URL configured</strong> for this user.<br>
-                    Go to Settings (⚙️) → Team Members to add a Web App URL.
+                    Go to Settings (⚙️) ↑ Team Members to add a Web App URL.
                 </p>
             </div>
             
@@ -3170,7 +3170,7 @@ Example:
             <div class="modal-actions">
                 <button class="btn btn-secondary" onclick="closeModal('parseMeetingModal')">Cancel</button>
                 <button class="btn btn-primary" onclick="refreshOtterFetch()">🔄 Refresh</button>
-                <button class="btn btn-success" id="addParsedTasksBtn" onclick="addOtterItemsToTodos()" style="display: none;">✓ Add Selected to To-Dos</button>
+                <button class="btn btn-success" id="addParsedTasksBtn" onclick="addOtterItemsToTodos()" style="display: none;">✔ Add Selected to To-Dos</button>
             </div>
         </div>
     </div>
@@ -3208,7 +3208,7 @@ Example:
             <div style="margin-bottom: 15px;">
                 <label style="display: block; margin-bottom: 6px; font-weight: 500;">📋 Category / List</label>
                 <select id="newTaskList" style="width: 100%; padding: 10px; font-size: 1rem; border: 1px solid var(--gray-300); border-radius: 6px;">
-                    <option value="local">🔒 Local Task (Private - not synced)</option>
+                    <option value="local">🔑 Local Task (Private - not synced)</option>
                     <option value="default">📝 Default To-Dos</option>
                 </select>
             </div>
@@ -3219,7 +3219,7 @@ Example:
         </div>
     </div>
     
-    <div class="save-indicator" id="saveIndicator">✓ Saved</div>
+    <div class="save-indicator" id="saveIndicator">✔ Saved</div>
     
     <script>
         // ==================== DEBUGGING ====================
@@ -3231,7 +3231,7 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.3.1';
+        const EOS_VERSION = '3.4.0';
         const EOS_BUILD_DATE = '2026-01-14';
         
         // ==================== DATA STRUCTURE ====================
@@ -3284,7 +3284,7 @@ Example:
                     "cv1": "Compassion", "cv2": "Legacy", "cv3": "Integrity",
                     "cv4": "Excellence", "cv5": "Nimbleness", "cv6": "Truth",
                     "cf_purpose": "We minimize financial stress to maximize your life.",
-                    "cf_niche": "We are a boutique wealth management firm serving high-net-worth individuals and families. We organize their financial junk drawers by intelligently integrating their financial lives with Intelligrations©.",
+                    "cf_niche": "We are a boutique wealth management firm serving high-net-worth individuals and families. We organize their financial junk drawers by intelligently integrating their financial lives with IntelligrationsÂ©.",
                     "ten_target": "$75 Million AUM with $500k operating profit after paying for technology and salaries before paying ourselves. Working 4 days a week. Possibly 5th employee.",
                     "ty_date": "12/31/2028",
                     "ty_revenue": "$65M AUM",
@@ -3296,7 +3296,7 @@ Example:
                     "ms_u2": "Families - Unite families through financial communication",
                     "ms_u3": "Time - Maximize time",
                     "ms_u4": "Technology - Leverage technology to improve behavior",
-                    "ms_process": "Intelligent Investing Onboarding Process (Traditional Finance → Behavioral Finance → Values-based Finance)",
+                    "ms_process": "Intelligent Investing Onboarding Process (Traditional Finance ↑ Behavioral Finance ↑ Values-based Finance)",
                     "ms_guarantee": "We guarantee that we will organize your \"financial junk drawers\" and be at the forefront of financial technology."
                 },
                 "plan": {
@@ -3647,7 +3647,7 @@ Example:
                     
                     const response = await fetch(member.webAppUrl, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 'Content-Type': 'text/plain' },
                         body: JSON.stringify(payload)
                     });
                     
@@ -3792,8 +3792,8 @@ Build Date: ${EOS_BUILD_DATE}
 
 📝 Version 2.8.0 Changes:
 • 🚀 AUTO-SYNC ON LOAD/LEAVE!
-  - Opens EOS Tool → automatically pulls new tasks from Google Tasks
-  - Leaves/switches tabs → automatically pushes pending tasks
+  - Opens EOS Tool ↑ automatically pulls new tasks from Google Tasks
+  - Leaves/switches tabs ↑ automatically pushes pending tasks
 • Sync status bar shows last sync time and pending changes
 • Toast notifications for sync events
 • "Sync Now" button for manual sync
@@ -3801,16 +3801,16 @@ Build Date: ${EOS_BUILD_DATE}
 
 📝 Version 2.7.1 Changes:
 • 🔄 REAL-TIME SYNC! All task changes now sync to Google Tasks:
-  - Due date changes → synced instantly
-  - Task text changes → synced instantly  
-  - Owner changes → task pushed to new owner's Google Tasks
+  - Due date changes ↑ synced instantly
+  - Task text changes ↑ synced instantly  
+  - Owner changes ↑ task pushed to new owner's Google Tasks
 • Smart list matching - tasks go back to their original list
 • Cross-user task assignment with automatic sync
 
 📝 Version 2.7.0 Changes:
 • 🎉 AUTO-SYNC COMPLETION! Completed tasks now sync back to Google Tasks
-• Check a task in EOS → automatically marks complete in Google Tasks
-• Archive tasks → batch syncs all to Google Tasks
+• Check a task in EOS ↑ automatically marks complete in Google Tasks
+• Archive tasks ↑ batch syncs all to Google Tasks
 • Works from Weekly Meeting AND Daily Plan views
 • Per-user sync through each member's Web App
 
@@ -4065,7 +4065,7 @@ Build Date: ${EOS_BUILD_DATE}
                 </div>
             `).join('');
             
-            document.querySelector('#yearRefPanel h4').textContent = `📌 ${currentYear} ANNUAL GOALS (Reference)`;
+            document.querySelector('#yearRefPanel h4').textContent = `📒 ${currentYear} ANNUAL GOALS (Reference)`;
         }
         
         // ==================== QUARTERLY: ROCKS ====================
@@ -4084,7 +4084,7 @@ Build Date: ${EOS_BUILD_DATE}
             container.innerHTML = (rocks || []).map((r, idx) => {
                 const isCompleted = r.done;
                 const completedStyle = isCompleted ? 'text-decoration: line-through; opacity: 0.6; background: #f0fdf4;' : '';
-                const completedBadge = isCompleted ? '<span style="background: #22c55e; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; margin-left: 8px;">✓ DONE</span>' : '';
+                const completedBadge = isCompleted ? '<span style="background: #22c55e; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; margin-left: 8px;">✔ DONE</span>' : '';
                 
                 return `
                 <div class="rock-card" style="${isCompleted ? 'border-left-color: #22c55e;' : ''}">
@@ -4102,7 +4102,7 @@ Build Date: ${EOS_BUILD_DATE}
                     </select>
                     ${!isCompleted ? `
                         <div class="status-toggle">
-                            <button class="status-btn on-track ${r.status === 'on' ? 'active' : ''}" onclick="setRockStatus(${idx}, 'on')">✓ On</button>
+                            <button class="status-btn on-track ${r.status === 'on' ? 'active' : ''}" onclick="setRockStatus(${idx}, 'on')">✔ On</button>
                             <button class="status-btn off-track ${r.status === 'off' ? 'active' : ''}" onclick="setRockStatus(${idx}, 'off')">⚠ Off</button>
                         </div>
                     ` : `
@@ -4374,7 +4374,7 @@ Build Date: ${EOS_BUILD_DATE}
             
             container.innerHTML = items.map((item, idx) => `
                 <div class="agenda-item" onclick="toggleAgenda(${idx})">
-                    <div class="agenda-check">✓</div>
+                    <div class="agenda-check">✔</div>
                     <span class="agenda-title">${item.title}</span>
                     <span class="agenda-time">${item.time}</span>
                 </div>
@@ -4474,7 +4474,7 @@ Build Date: ${EOS_BUILD_DATE}
                                 <span style="width: 24px; font-size: 1.1rem;">${getMedal(idx)}</span>
                                 <span style="flex: 1; font-weight: 500;">${m.name}</span>
                                 <div style="display: flex; align-items: center; gap: 4px;">
-                                    <button onclick="adjustPomodoroCount('${m.initials}', -1)" style="width: 22px; height: 22px; padding: 0; border: 1px solid #d1d5db; border-radius: 4px; background: white; cursor: pointer;">−</button>
+                                    <button onclick="adjustPomodoroCount('${m.initials}', -1)" style="width: 22px; height: 22px; padding: 0; border: 1px solid #d1d5db; border-radius: 4px; background: white; cursor: pointer;">∑</button>
                                     <span style="font-size: 1.2rem; font-weight: 700; color: #dc2626; min-width: 24px; text-align: center;">${m.count}</span>
                                     <button onclick="adjustPomodoroCount('${m.initials}', 1)" style="width: 22px; height: 22px; padding: 0; border: 1px solid #d1d5db; border-radius: 4px; background: white; cursor: pointer;">+</button>
                                     <span style="font-size: 0.8rem; color: #78716c;">🍅</span>
@@ -4503,7 +4503,7 @@ Build Date: ${EOS_BUILD_DATE}
             
             autoSave();
             renderPomodoroLeaderboard();
-            addLogEntry(`Manually adjusted ${userInitials}'s pomodoros: ${current} → ${newValue}`);
+            addLogEntry(`Manually adjusted ${userInitials}'s pomodoros: ${current} ↑ ${newValue}`);
         }
         
         function openPomoAdjustModal() {
@@ -4553,8 +4553,12 @@ Build Date: ${EOS_BUILD_DATE}
         
         function renderTodos(todos) {
             const container = document.getElementById('todosContainer');
-            const checkedCount = todos.filter(t => t.done).length;
-            const totalCount = todos.length;
+            
+            // Filter out archived items - they should not appear in the list
+            const visibleTodos = todos.filter(t => !t.archived);
+            
+            const checkedCount = visibleTodos.filter(t => t.done).length;
+            const totalCount = visibleTodos.length;
             const allChecked = totalCount > 0 && checkedCount === totalCount;
             
             // Check All header row
@@ -4568,7 +4572,7 @@ Build Date: ${EOS_BUILD_DATE}
                             ${checkedCount > 0 ? `${checkedCount} of ${totalCount} selected` : `${totalCount} to-do(s)`}
                         </span>
                         ${checkedCount > 0 ? `
-                            <button class="btn btn-success" style="padding: 5px 10px; font-size: 0.8rem;" onclick="archiveCheckedTodos()">✓ Archive</button>
+                            <button class="btn btn-success" style="padding: 5px 10px; font-size: 0.8rem;" onclick="archiveCheckedTodos()">✔ Archive</button>
                             <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 0.8rem;" onclick="uncheckAllTodos()">↩ Uncheck</button>
                             <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 0.8rem; background: #fee2e2; color: #dc2626;" onclick="deleteCheckedTodos()">🗑 Delete</button>
                         ` : ''}
@@ -4576,9 +4580,10 @@ Build Date: ${EOS_BUILD_DATE}
                 `;
             }
             
-            // Group todos by Google list if they have list names
+            // Group todos by Google list if they have list names (skip archived)
             const todosByList = {};
             todos.forEach((t, idx) => {
+                if (t.archived) return; // Skip archived items
                 const listName = t.googleListName || 'To-Dos';
                 if (!todosByList[listName]) todosByList[listName] = [];
                 todosByList[listName].push({ ...t, originalIndex: idx });
@@ -4601,7 +4606,7 @@ Build Date: ${EOS_BUILD_DATE}
                     `;
                 }
             } else {
-                todosHtml = todos.map((t, idx) => renderTodoItem(t, idx)).join('');
+                todosHtml = todos.map((t, idx) => t.archived ? '' : renderTodoItem(t, idx)).join('');
             }
             
             container.innerHTML = headerRow + todosHtml;
@@ -4708,7 +4713,7 @@ Build Date: ${EOS_BUILD_DATE}
             try {
                 const response = await fetch(member.webAppUrl, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify({
                         secretKey: member.webAppSecret || '',
                         action: 'updateTask',
@@ -4755,7 +4760,7 @@ Build Date: ${EOS_BUILD_DATE}
                 
                 const response = await fetch(newMember.webAppUrl, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify(payload)
                 });
                 
@@ -4767,7 +4772,7 @@ Build Date: ${EOS_BUILD_DATE}
                     todo.googleListName = newMember.taskLists?.find(l => l.id === todo.googleListId)?.title || 'Tasks';
                     autoSave();
                     console.log(`✅ Task assigned to ${newOwner} and synced to their Google Tasks`);
-                    addLogEntry(`Task reassigned: "${todo.text.substring(0, 25)}..." → ${newOwner}`);
+                    addLogEntry(`Task reassigned: "${todo.text.substring(0, 25)}..." ↑ ${newOwner}`);
                 }
                 
                 // Optionally: Complete the task in old owner's Google Tasks
@@ -4778,7 +4783,7 @@ Build Date: ${EOS_BUILD_DATE}
                         // Mark as complete in old owner's list (archiving it essentially)
                         fetch(oldMember.webAppUrl, {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 'Content-Type': 'text/plain' },
                             body: JSON.stringify({
                                 secretKey: oldMember.webAppSecret || '',
                                 action: 'completeTask',
@@ -4823,7 +4828,8 @@ Build Date: ${EOS_BUILD_DATE}
             try {
                 const response = await fetch(member.webAppUrl, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'text/plain' },
+                    redirect: 'follow',
                     body: JSON.stringify({
                         secretKey: member.webAppSecret || '',
                         action: 'completeTask',
@@ -4858,7 +4864,7 @@ Build Date: ${EOS_BUILD_DATE}
             try {
                 const response = await fetch(member.webAppUrl, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify({
                         secretKey: member.webAppSecret || '',
                         action: 'uncompleteTask',
@@ -4905,7 +4911,7 @@ Build Date: ${EOS_BUILD_DATE}
                 try {
                     const response = await fetch(member.webAppUrl, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 'Content-Type': 'text/plain' },
                         body: JSON.stringify({
                             secretKey: member.webAppSecret || '',
                             action: 'completeTasks',
@@ -5005,6 +5011,26 @@ Build Date: ${EOS_BUILD_DATE}
             });
             saveSettings(settings);
             
+            // Also remove from Daily Plan Matrix for current user
+            const dailyPlanKey = `eos_dailyPlan_${currentUser}`;
+            let dailyPlanData = JSON.parse(localStorage.getItem(dailyPlanKey) || 'null');
+            if (dailyPlanData && dailyPlanData.matrix) {
+                const textToDelete = new Set(toDelete.map(t => t.text));
+                const quadrants = ['q1', 'q2', 'q3', 'q4'];
+                let removedFromMatrix = 0;
+                quadrants.forEach(q => {
+                    if (dailyPlanData.matrix[q]) {
+                        const before = dailyPlanData.matrix[q].length;
+                        dailyPlanData.matrix[q] = dailyPlanData.matrix[q].filter(t => !textToDelete.has(t.text));
+                        removedFromMatrix += before - dailyPlanData.matrix[q].length;
+                    }
+                });
+                if (removedFromMatrix > 0) {
+                    localStorage.setItem(dailyPlanKey, JSON.stringify(dailyPlanData));
+                    console.log('Removed ' + removedFromMatrix + ' task(s) from Daily Plan Matrix');
+                }
+            }
+            
             yearData.quarters[currentQuarter].todos = todos.filter(t => !t.done);
             renderTodos(yearData.quarters[currentQuarter].todos);
             autoSave();
@@ -5096,7 +5122,7 @@ Build Date: ${EOS_BUILD_DATE}
                 <div style="padding: 10px; margin: 8px 0; background: #f5f5f5; border-radius: 6px; cursor: pointer;" 
                      onclick="restoreArchivedIssue(${idx})">
                     <div style="font-weight: 600;">${issue.text || '(no text)'}</div>
-                    ${issue.solve ? `<div style="font-size: 0.85rem; color: #22c55e;">✓ Solved: ${issue.solve.substring(0, 100)}...</div>` : ''}
+                    ${issue.solve ? `<div style="font-size: 0.85rem; color: #22c55e;">✔ Solved: ${issue.solve.substring(0, 100)}...</div>` : ''}
                     <div style="font-size: 0.8rem; color: #999;">Archived: ${new Date(issue.archivedAt).toLocaleDateString()}</div>
                 </div>
             `).join('');
@@ -5365,7 +5391,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                 if (apiKey && provider === 'gemini') {
                     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 'Content-Type': 'text/plain' },
                         body: JSON.stringify({
                             contents: [{ parts: [{ text: prompt }] }],
                             generationConfig: {
@@ -5532,7 +5558,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                 quick = `Based on the discussion ("${discussClean.substring(0, 40)}..."), identify the single most impactful action to take today.`;
                 medium = `Create an action plan addressing the key points discussed, with owners and deadlines.`;
                 strategic = "Schedule a follow-up to review progress and adjust approach based on results.";
-                action = `From discussion: ${discussClean.substring(0, 80)}... → Define specific next step with owner`;
+                action = `From discussion: ${discussClean.substring(0, 80)}... ↑ Define specific next step with owner`;
             } else if (hasRockIssue) {
                 // Rock-specific suggestions
                 quick = "Identify the specific blocker preventing progress and assign someone to remove it today.";
@@ -5593,7 +5619,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                            onchange="editingAgenda[${idx}].time = this.value"
                            style="width: 70px; margin: 0; text-align: center;" placeholder="Time">
                     <button onclick="moveAgendaItem(${idx}, -1)" style="padding: 4px 8px; background: var(--gray-100); border: none; border-radius: 4px; cursor: pointer;">↑</button>
-                    <button onclick="moveAgendaItem(${idx}, 1)" style="padding: 4px 8px; background: var(--gray-100); border: none; border-radius: 4px; cursor: pointer;">↓</button>
+                    <button onclick="moveAgendaItem(${idx}, 1)" style="padding: 4px 8px; background: var(--gray-100); border: none; border-radius: 4px; cursor: pointer;">↔</button>
                     <button onclick="removeAgendaItem(${idx})" style="padding: 4px 8px; background: #fee2e2; border: none; border-radius: 4px; cursor: pointer; color: #dc2626;">✕</button>
                 </div>
             `).join('');
@@ -6237,9 +6263,9 @@ Make sure your suggestions directly address the specific root cause and discussi
                     <div class="item-row ${statusClass}">
                         <span class="item-num" style="${r.done ? 'background: #22c55e;' : ''}">${idx + 1}</span>
                         <span style="flex: 1; ${r.done ? 'text-decoration: line-through; opacity: 0.7;' : ''}">${r.text || ''}</span>
-                        ${r.done ? '<span class="done-badge">✓ DONE</span>' : ''}
+                        ${r.done ? '<span class="done-badge">✔ DONE</span>' : ''}
                         <span style="width: 40px; text-align: center; font-weight: 600;">${r.owner || ''}</span>
-                        ${!r.done ? `<span style="width: 50px; text-align: center; font-size: 8pt;">${r.status === 'on' ? '✓ On' : r.status === 'off' ? '⚠ Off' : '—'}</span>` : ''}
+                        ${!r.done ? `<span style="width: 50px; text-align: center; font-size: 8pt;">${r.status === 'on' ? '✔ On' : r.status === 'off' ? '⚠ Off' : '—'}</span>` : ''}
                     </div>
                 `;
             }).join('');
@@ -6358,7 +6384,7 @@ Make sure your suggestions directly address the specific root cause and discussi
             // Build agenda HTML
             const agendaHtml = agenda.map((item, idx) => `
                 <div class="item-row" style="border-left: 3px solid ${agendaState[idx] ? '#22c55e' : '#ccc'};">
-                    <span style="width: 16px; height: 16px; border: 2px solid ${agendaState[idx] ? '#22c55e' : '#999'}; border-radius: 3px; margin-right: 8px; display: flex; align-items: center; justify-content: center; color: ${agendaState[idx] ? '#22c55e' : 'transparent'}; font-size: 10pt;">✓</span>
+                    <span style="width: 16px; height: 16px; border: 2px solid ${agendaState[idx] ? '#22c55e' : '#999'}; border-radius: 3px; margin-right: 8px; display: flex; align-items: center; justify-content: center; color: ${agendaState[idx] ? '#22c55e' : 'transparent'}; font-size: 10pt;">✔</span>
                     <span style="width: 20px; font-weight: 600; color: #666;">${idx + 1}.</span>
                     <span style="flex: 1;">${item.title}</span>
                     <span style="color: #666; font-size: 8pt;">${item.time}</span>
@@ -6418,7 +6444,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                             return `
                                 <div style="display: flex; align-items: center; gap: 5px; padding: 5px 10px; background: white; border-radius: 4px; border: 1px solid ${isChecked ? '#22c55e' : '#d1d5db'};">
                                     <span style="width: 14px; height: 14px; border: 2px solid ${isChecked ? '#22c55e' : '#9ca3af'}; border-radius: 3px; display: flex; align-items: center; justify-content: center; ${isChecked ? 'background: #22c55e;' : ''}">
-                                        ${isChecked ? '<span style="color: white; font-size: 8px;">✓</span>' : ''}
+                                        ${isChecked ? '<span style="color: white; font-size: 8px;">✔</span>' : ''}
                                     </span>
                                     <span style="font-size: 8pt; ${isChecked ? 'text-decoration: line-through; color: #666;' : ''}">${h}</span>
                                 </div>
@@ -6786,7 +6812,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                     <span style="width: 24px; height: 24px; background: #3b82f6; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 10px;">${idx + 1}</span>
                     <span style="flex: 1;">${r.text || ''}</span>
                     <span style="width: 50px; text-align: center; font-weight: 600;">${r.owner || ''}</span>
-                    <span style="width: 60px; text-align: center; padding: 2px 6px; border-radius: 4px; font-size: 9pt; background: ${r.status === 'on' ? '#c6f6d5' : r.status === 'off' ? '#fed7d7' : '#f3f4f6'};">${r.status === 'on' ? '✓ On' : r.status === 'off' ? '⚠ Off' : '—'}</span>
+                    <span style="width: 60px; text-align: center; padding: 2px 6px; border-radius: 4px; font-size: 9pt; background: ${r.status === 'on' ? '#c6f6d5' : r.status === 'off' ? '#fed7d7' : '#f3f4f6'};">${r.status === 'on' ? '✔ On' : r.status === 'off' ? '⚠ Off' : '—'}</span>
                 </div>
             `).join('');
             
@@ -6879,7 +6905,7 @@ Make sure your suggestions directly address the specific root cause and discussi
             // Build agenda HTML
             const agendaHtml = agenda.map((item, idx) => `
                 <div style="display: flex; align-items: center; padding: 6px; margin-bottom: 4px; background: #f5f5f5; border-radius: 4px; border-left: 3px solid ${agendaState[idx] ? '#22c55e' : '#ccc'};">
-                    <span style="width: 18px; height: 18px; border: 2px solid ${agendaState[idx] ? '#22c55e' : '#999'}; border-radius: 3px; margin-right: 10px; display: flex; align-items: center; justify-content: center; color: ${agendaState[idx] ? '#22c55e' : 'transparent'}; font-size: 12pt;">✓</span>
+                    <span style="width: 18px; height: 18px; border: 2px solid ${agendaState[idx] ? '#22c55e' : '#999'}; border-radius: 3px; margin-right: 10px; display: flex; align-items: center; justify-content: center; color: ${agendaState[idx] ? '#22c55e' : 'transparent'}; font-size: 12pt;">✔</span>
                     <span style="width: 20px; font-weight: 600; color: #666;">${idx + 1}.</span>
                     <span style="flex: 1;">${item.title}</span>
                     <span style="color: #666; font-size: 9pt;">${item.time}</span>
@@ -7030,7 +7056,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                         <input type="text" value="${m.ntfyTopic || ''}" placeholder="📱 ntfy topic (e.g., hans-pomodoro-2024)" 
                                style="flex: 1; margin: 0; font-size: 0.85rem;" onchange="updateTeamMember(${idx}, 'ntfyTopic', this.value)">
                         <button class="btn btn-secondary" style="padding: 6px 10px; font-size: 0.75rem;" 
-                                onclick="testMemberNtfy(${idx})">🔔 Test</button>
+                                onclick="testMemberNtfy(${idx})">🔓 Test</button>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                         <input type="text" value="${m.webAppUrl || ''}" placeholder="Google Tasks Web App URL" 
@@ -7353,7 +7379,7 @@ Make sure your suggestions directly address the specific root cause and discussi
             try {
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify({
                         contents: [{ parts: [{ text: 'Say "Connection successful!" in exactly those words.' }] }]
                     })
@@ -7631,7 +7657,7 @@ Return ONLY the JSON array:`;
             try {
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify({
                         contents: [{ parts: [{ text: prompt }] }],
                         generationConfig: { temperature: 0.3 }
@@ -7838,7 +7864,7 @@ Return ONLY the JSON array:`;
             try {
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify({
                         contents: [{ parts: [{ text: prompt }] }],
                         generationConfig: { temperature: 0.3 }
@@ -7901,7 +7927,7 @@ Return ONLY the JSON array:`;
                         </div>
                     `).join('')}
                     <button class="btn btn-success" onclick="importAITasks()" style="margin-top: 10px; width: 100%;">
-                        ✓ Import Selected Tasks
+                        ✔ Import Selected Tasks
                     </button>
                 `;
                 
@@ -8059,7 +8085,7 @@ Return ONLY the JSON array:`;
             
             select.innerHTML = '<option value="all">All Tasks</option>' +
                 settings.teamMembers.map(m => 
-                    `<option value="${m.initials}">${m.initials} - ${m.name}${m.webAppUrl ? ' ✓' : ''}</option>`
+                    `<option value="${m.initials}">${m.initials} - ${m.name}${m.webAppUrl ? ' ✔' : ''}</option>`
                 ).join('');
             
             // Show/hide Google Tasks buttons
@@ -8140,7 +8166,7 @@ Return ONLY the JSON array:`;
                 if (formatted) formatted += '\n\n';
                 formatted += '📅 DUE DATE UPDATES:\n';
                 formatted += updateTasks.map(t => 
-                    `  • ${t.text.substring(0, 40)}${t.text.length > 40 ? '...' : ''} → ${t.dueDate || '(none)'}`
+                    `  • ${t.text.substring(0, 40)}${t.text.length > 40 ? '...' : ''} ↑ ${t.dueDate || '(none)'}`
                 ).join('\n');
             }
             
@@ -8409,6 +8435,7 @@ Return ONLY the JSON array:`;
             statusEl.textContent = '⏳ Pulling tasks from Google Tasks...';
             
             let totalImported = 0;
+            let totalCompletionsSynced = 0;  // Track completion syncs across all members
             let errors = [];
             lastPulledTaskIds = [];  // Reset undo list
             
@@ -8445,7 +8472,6 @@ Return ONLY the JSON array:`;
                         
                         // Get list of ignored task IDs (previously deleted/archived)
                         const ignoredIds = new Set(settings.ignoredGoogleTaskIds || []);
-                        let completionsSynced = 0;
                         
                         for (const task of result.tasks) {
                             // Skip tasks that were previously deleted/archived
@@ -8493,7 +8519,7 @@ Return ONLY the JSON array:`;
                                 if (isCompletedInGoogle && !existingByGId.done) {
                                     existingByGId.done = true;
                                     existingByGId.syncedCompletedAt = new Date().toISOString();
-                                    completionsSynced++;
+                                    totalCompletionsSynced++;  // Use global tracker
                                     updated = true;
                                 }
                                 if (updated) totalImported++;
@@ -8535,18 +8561,16 @@ Return ONLY the JSON array:`;
                 }
             }
             
-            // Count total completions synced
-            const completionsSynced = yearData.quarters[currentQuarter].todos.filter(t => t.syncedCompletedAt).length;
-            
-            if (totalImported > 0 || completionsSynced > 0) {
+            // Use the tracked completion count (not recounted)
+            if (totalImported > 0 || totalCompletionsSynced > 0) {
                 autoSave();
                 renderTodos(yearData.quarters[currentQuarter].todos);
                 updateTaskExportPreview();
                 statusEl.style.background = '#e6f4ea';
                 statusEl.style.color = '#1e8e3e';
                 let msg = `✅ Sync complete: ${totalImported} new task(s)`;
-                if (completionsSynced > 0) {
-                    msg += `, ${completionsSynced} completion(s) synced`;
+                if (totalCompletionsSynced > 0) {
+                    msg += `, ${totalCompletionsSynced} completion(s) synced`;
                 }
                 statusEl.innerHTML = msg + ` <button onclick="undoLastPull()" style="margin-left: 10px; padding: 4px 10px; background: white; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;">↩ Undo</button>`;
             } else {
@@ -8910,7 +8934,7 @@ Return ONLY the JSON array:`;
                                onchange="toggleHabit('${habit.replace(/'/g, "\\'")}', this.checked)"
                                style="width: 20px; height: 20px; accent-color: #22c55e;">
                         <span style="font-weight: 500; ${isChecked ? 'text-decoration: line-through; color: #666;' : 'color: #166534;'}">${habit}</span>
-                        ${isChecked ? '<span style="color: #22c55e;">✓</span>' : ''}
+                        ${isChecked ? '<span style="color: #22c55e;">✔</span>' : ''}
                     </label>
                 `;
             }).join('');
@@ -9237,7 +9261,7 @@ Return ONLY the JSON array:`;
             // Populate the select dropdown
             const select = document.getElementById('newTaskList');
             select.innerHTML = `
-                <option value="local">🔒 Local Task (Private - not synced)</option>
+                <option value="local">🔑 Local Task (Private - not synced)</option>
                 <option value="default">📝 Default To-Dos</option>
                 ${lists.map((list, i) => `<option value="list_${i}">${list.title}</option>`).join('')}
             `;
@@ -9366,7 +9390,7 @@ Return ONLY the JSON array:`;
                     autoSave();
                     renderRepository();
                     renderTodos(yearData.quarters[currentQuarter].todos);
-                    addLogEntry(`Task edited: "${oldText.substring(0, 25)}..." → "${newText.trim().substring(0, 25)}..."`);
+                    addLogEntry(`Task edited: "${oldText.substring(0, 25)}..." ↑ "${newText.trim().substring(0, 25)}..."`);
                 }
             }
         }
@@ -9602,12 +9626,14 @@ Return ONLY the JSON array:`;
             // Remove from matrix
             dailyPlanData.matrix[quadrant].splice(idx, 1);
             
-            // If it's a todo, ensure it's marked done (archived)
+            // If it's a todo, mark as done AND archived
             if (task.type === 'todo') {
                 const todos = yearData.quarters[currentQuarter].todos;
                 const found = todos.find(t => t.text === task.text);
                 if (found) {
                     found.done = true;
+                    found.archived = true;
+                    found.archivedAt = new Date().toISOString();
                     autoSave();
                     renderTodos(todos);
                 }
@@ -9713,7 +9739,7 @@ Return ONLY the JSON array:`;
                         found.text = newText.trim();
                         autoSave();
                         renderTodos(todos);
-                        addLogEntry(`Task updated: "${oldText.substring(0, 30)}..." → "${newText.trim().substring(0, 30)}..."`);
+                        addLogEntry(`Task updated: "${oldText.substring(0, 30)}..." ↑ "${newText.trim().substring(0, 30)}..."`);
                     }
                 }
                 
@@ -9970,12 +9996,14 @@ Return ONLY the JSON array:`;
             // Remove from Rule of 3
             dailyPlanData.ruleOf3[slotIdx] = null;
             
-            // If it's a todo, ensure it's marked done (archived)
+            // If it's a todo, mark as done AND archived
             if (task.type === 'todo') {
                 const todos = yearData.quarters[currentQuarter].todos;
                 const found = todos.find(t => t.text === task.text);
                 if (found) {
                     found.done = true;
+                    found.archived = true;
+                    found.archivedAt = new Date().toISOString();
                     autoSave();
                     renderTodos(todos);
                 }
@@ -10124,7 +10152,7 @@ Return ONLY the JSON array:`;
                         found.text = newText.trim();
                         autoSave();
                         renderTodos(todos);
-                        addLogEntry(`Task updated: "${oldText.substring(0, 30)}..." → "${newText.trim().substring(0, 30)}..."`);
+                        addLogEntry(`Task updated: "${oldText.substring(0, 30)}..." ↑ "${newText.trim().substring(0, 30)}..."`);
                     }
                 }
                 
@@ -10814,7 +10842,7 @@ Return ONLY the JSON array:`;
                             return `
                                 <div style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: white; border-radius: 6px; border: 1px solid ${isChecked ? '#22c55e' : '#d1d5db'};">
                                     <span style="width: 16px; height: 16px; border: 2px solid ${isChecked ? '#22c55e' : '#9ca3af'}; border-radius: 4px; display: flex; align-items: center; justify-content: center; ${isChecked ? 'background: #22c55e;' : ''}">
-                                        ${isChecked ? '<span style="color: white; font-size: 10px;">✓</span>' : ''}
+                                        ${isChecked ? '<span style="color: white; font-size: 10px;">✔</span>' : ''}
                                     </span>
                                     <span style="font-weight: 500; ${isChecked ? 'text-decoration: line-through; color: #666;' : ''}">${h}</span>
                                 </div>
