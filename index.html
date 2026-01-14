@@ -958,6 +958,22 @@
             opacity: 0.5;
         }
         
+        .matrix-task.drag-over-before {
+            border-top: 3px solid #3b82f6 !important;
+            margin-top: -1px;
+        }
+        
+        .matrix-task.drag-over-after {
+            border-bottom: 3px solid #3b82f6 !important;
+            margin-bottom: -1px;
+        }
+        
+        .matrix-items.drag-over-empty {
+            background: rgba(59, 130, 246, 0.1);
+            border: 2px dashed #3b82f6;
+            min-height: 40px;
+        }
+        
         .slot-number {
             width: 24px;
             height: 24px;
@@ -1797,6 +1813,122 @@
                 min-height: 60px !important;
                 font-size: 9pt !important;
                 white-space: pre-wrap !important;
+            }
+            
+            /* ==================== DAILY PLAN PRINT LAYOUT ==================== */
+            /* Compact layout to fit on one page */
+            .daily-plan-grid {
+                display: grid !important;
+                grid-template-columns: 1fr 2fr !important;
+                gap: 8px !important;
+                page-break-inside: avoid !important;
+            }
+            
+            .daily-plan-column {
+                padding: 6px !important;
+                background: white !important;
+                border: 1px solid #ddd !important;
+            }
+            
+            .daily-plan-column h3 {
+                font-size: 9pt !important;
+                margin-bottom: 6px !important;
+                padding-bottom: 4px !important;
+                border-bottom: 1px solid #eee !important;
+            }
+            
+            /* Hide repository column in print - only show matrix and execution */
+            #repositoryDropZone {
+                display: none !important;
+            }
+            
+            /* Eisenhower Matrix - compact 2x2 grid */
+            .matrix-grid {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 4px !important;
+            }
+            
+            .matrix-quadrant {
+                min-height: 60px !important;
+                padding: 4px !important;
+                border-width: 1px !important;
+            }
+            
+            .matrix-label {
+                font-size: 7pt !important;
+                padding: 2px 4px !important;
+                margin-bottom: 2px !important;
+            }
+            
+            .matrix-subtitle {
+                display: none !important;
+            }
+            
+            .matrix-task {
+                font-size: 7pt !important;
+                padding: 2px 4px !important;
+                margin-bottom: 2px !important;
+                background: white !important;
+            }
+            
+            .matrix-task .task-actions,
+            .matrix-task .remove-btn {
+                display: none !important;
+            }
+            
+            /* Rule of 3 - compact */
+            .rule-of-3 {
+                margin-bottom: 6px !important;
+            }
+            
+            .rule-of-3-header {
+                font-size: 8pt !important;
+                padding: 4px !important;
+            }
+            
+            .rule-slot {
+                padding: 4px !important;
+                min-height: 20px !important;
+                font-size: 8pt !important;
+            }
+            
+            .rule-slot .slot-number {
+                width: 14px !important;
+                height: 14px !important;
+                font-size: 7pt !important;
+            }
+            
+            .rule-slot.empty {
+                display: none !important;
+            }
+            
+            /* Hide pomodoro, habits, banners for print */
+            .pomodoro-section,
+            #dailyHabitsSection,
+            #goodMorningBanner,
+            .daily-plan-header,
+            #repoSearch,
+            .repo-header,
+            .add-btn,
+            .today-date {
+                display: none !important;
+            }
+            
+            /* To-Dos in Daily Plan - compact list */
+            #dailyPlanTodos {
+                margin-top: 6px !important;
+            }
+            
+            #dailyPlanTodos h4 {
+                font-size: 8pt !important;
+                margin-bottom: 4px !important;
+            }
+            
+            .daily-todo-item {
+                font-size: 7pt !important;
+                padding: 2px !important;
+                margin-bottom: 1px !important;
             }
         }
             
@@ -3099,7 +3231,7 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.2.0';
+        const EOS_VERSION = '3.3.0';
         const EOS_BUILD_DATE = '2026-01-13';
         
         // ==================== DATA STRUCTURE ====================
@@ -4667,9 +4799,13 @@ Build Date: ${EOS_BUILD_DATE}
             renderTodos(yearData.quarters[currentQuarter].todos);
             autoSave();
             
-            // If task is now complete AND has a Google Task ID, sync to Google Tasks
-            if (todo.done && todo.googleTaskId && !todo.googleTaskId.startsWith('synced_')) {
-                syncTaskCompletionToGoogle(todo);
+            // Sync to Google Tasks if task has a Google Task ID
+            if (todo.googleTaskId && !todo.googleTaskId.startsWith('synced_')) {
+                if (todo.done) {
+                    syncTaskCompletionToGoogle(todo);
+                } else {
+                    syncTaskUncompleteToGoogle(todo);
+                }
             }
         }
         
@@ -4700,11 +4836,47 @@ Build Date: ${EOS_BUILD_DATE}
                 if (data.success) {
                     console.log('✅ Task synced as complete in Google Tasks:', todo.text?.substring(0, 30));
                     addLogEntry(`Synced completion to Google Tasks: ${todo.text?.substring(0, 25)}...`);
+                    showToast('success', `✅ Synced to Google Tasks`);
                 } else {
                     console.warn('Failed to sync completion:', data.error);
                 }
             } catch (error) {
                 console.error('Error syncing task completion:', error);
+            }
+        }
+        
+        // Sync an uncompleted task back to Google Tasks
+        async function syncTaskUncompleteToGoogle(todo) {
+            const settings = getSettings();
+            const member = settings.teamMembers.find(m => m.initials === todo.owner) || settings.teamMembers[0];
+            
+            if (!member?.webAppUrl) {
+                console.log('No Web App URL configured for sync');
+                return;
+            }
+            
+            try {
+                const response = await fetch(member.webAppUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        secretKey: member.webAppSecret || '',
+                        action: 'uncompleteTask',
+                        taskId: todo.googleTaskId,
+                        listId: todo.googleListId || '@default'
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    console.log('↩️ Task synced as incomplete in Google Tasks:', todo.text?.substring(0, 30));
+                    addLogEntry(`Synced uncomplete to Google Tasks: ${todo.text?.substring(0, 25)}...`);
+                    showToast('success', `↩️ Task uncompleted in Google Tasks`);
+                } else {
+                    console.warn('Failed to sync uncomplete:', data.error);
+                }
+            } catch (error) {
+                console.error('Error syncing task uncomplete:', error);
             }
         }
         
@@ -8258,9 +8430,10 @@ Return ONLY the JSON array:`;
                     statusEl.textContent = `⏳ Pulling tasks for ${member.name} from ${pullListIds.length} list(s)...`;
                     
                     // Fetch from multiple lists if configured, include secret key
+                    // Include completed tasks to sync completion status
                     const listIdsParam = pullListIds.join(',');
                     const secretParam = member.webAppSecret ? '&secretKey=' + encodeURIComponent(member.webAppSecret) : '';
-                    const response = await fetch(member.webAppUrl + '?action=getAllTasks&listIds=' + encodeURIComponent(listIdsParam) + secretParam);
+                    const response = await fetch(member.webAppUrl + '?action=getAllTasks&listIds=' + encodeURIComponent(listIdsParam) + '&includeCompleted=true' + secretParam);
                     const result = await response.json();
                     
                     if (result.tasks && result.tasks.length > 0) {
@@ -8272,12 +8445,16 @@ Return ONLY the JSON array:`;
                         
                         // Get list of ignored task IDs (previously deleted/archived)
                         const ignoredIds = new Set(settings.ignoredGoogleTaskIds || []);
+                        let completionsSynced = 0;
                         
                         for (const task of result.tasks) {
                             // Skip tasks that were previously deleted/archived
                             if (ignoredIds.has(task.id)) {
                                 continue;
                             }
+                            
+                            // Check if task was completed in Google Tasks (sync completion)
+                            const isCompletedInGoogle = task.status === 'completed';
                             
                             // Detect and strip ⭐ prefix (workaround for starred tasks)
                             let taskTitle = task.title;
@@ -8312,7 +8489,19 @@ Return ONLY the JSON array:`;
                                     existingByGId.originalDueDate = dueDate;
                                     updated = true;
                                 }
+                                // Sync completion status from Google Tasks
+                                if (isCompletedInGoogle && !existingByGId.done) {
+                                    existingByGId.done = true;
+                                    existingByGId.syncedCompletedAt = new Date().toISOString();
+                                    completionsSynced++;
+                                    updated = true;
+                                }
                                 if (updated) totalImported++;
+                                continue;
+                            }
+                            
+                            // Skip already completed tasks from Google when importing new tasks
+                            if (isCompletedInGoogle) {
                                 continue;
                             }
                             
@@ -8346,13 +8535,20 @@ Return ONLY the JSON array:`;
                 }
             }
             
-            if (totalImported > 0) {
+            // Count total completions synced
+            const completionsSynced = yearData.quarters[currentQuarter].todos.filter(t => t.syncedCompletedAt).length;
+            
+            if (totalImported > 0 || completionsSynced > 0) {
                 autoSave();
                 renderTodos(yearData.quarters[currentQuarter].todos);
                 updateTaskExportPreview();
                 statusEl.style.background = '#e6f4ea';
                 statusEl.style.color = '#1e8e3e';
-                statusEl.innerHTML = `✅ Imported ${totalImported} new task(s)! <button onclick="undoLastPull()" style="margin-left: 10px; padding: 4px 10px; background: white; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;">↩ Undo</button>`;
+                let msg = `✅ Sync complete: ${totalImported} new task(s)`;
+                if (completionsSynced > 0) {
+                    msg += `, ${completionsSynced} completion(s) synced`;
+                }
+                statusEl.innerHTML = msg + ` <button onclick="undoLastPull()" style="margin-left: 10px; padding: 4px 10px; background: white; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;">↩ Undo</button>`;
             } else {
                 statusEl.style.background = '#fff3cd';
                 statusEl.style.color = '#856404';
@@ -9299,7 +9495,11 @@ Return ONLY the JSON array:`;
                     const tasks = dailyPlanData.matrix[q] || [];
                     el.innerHTML = tasks.map((t, idx) => `
                         <div class="matrix-task ${t.done ? 'completed' : ''}" draggable="true" 
+                             data-quadrant="${q}" data-idx="${idx}"
                              ondragstart="dragMatrixItem(event, '${q}', ${idx})"
+                             ondragover="matrixItemDragOver(event, '${q}', ${idx})"
+                             ondragleave="matrixItemDragLeave(event)"
+                             ondrop="dropOnMatrixItem(event, '${q}', ${idx})"
                              ondragend="dragEnd(event)">
                             <input type="checkbox" class="matrix-check" onclick="completeMatrixTask('${q}', ${idx})" ${t.done ? 'checked' : ''}>
                             <span class="task-text-editable" ondblclick="editMatrixTask('${q}', ${idx})" title="Double-click to edit" style="${t.done ? 'text-decoration: line-through; opacity: 0.5;' : ''}">${t.type === 'rock' ? '🪨 ' : ''}${t.text}</span>
@@ -9315,6 +9515,84 @@ Return ONLY the JSON array:`;
                     `).join('');
                 }
             });
+        }
+        
+        // Matrix item drag-over for reordering within quadrant
+        function matrixItemDragOver(event, quadrant, idx) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            const targetEl = event.currentTarget;
+            const rect = targetEl.getBoundingClientRect();
+            const midY = rect.top + rect.height / 2;
+            
+            // Clear previous indicators
+            document.querySelectorAll('.matrix-task').forEach(el => {
+                el.classList.remove('drag-over-before', 'drag-over-after');
+            });
+            
+            // Show indicator above or below based on mouse position
+            if (event.clientY < midY) {
+                targetEl.classList.add('drag-over-before');
+            } else {
+                targetEl.classList.add('drag-over-after');
+            }
+        }
+        
+        function matrixItemDragLeave(event) {
+            event.currentTarget.classList.remove('drag-over-before', 'drag-over-after');
+        }
+        
+        // Drop on specific matrix item for reordering
+        function dropOnMatrixItem(event, targetQuadrant, targetIdx) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            // Clear indicators
+            document.querySelectorAll('.matrix-task').forEach(el => {
+                el.classList.remove('drag-over-before', 'drag-over-after');
+            });
+            
+            let data;
+            try {
+                data = JSON.parse(event.dataTransfer.getData('text/plain'));
+            } catch (e) {
+                return;
+            }
+            
+            // Determine insert position based on mouse position
+            const targetEl = event.currentTarget;
+            const rect = targetEl.getBoundingClientRect();
+            const midY = rect.top + rect.height / 2;
+            const insertAfter = event.clientY >= midY;
+            
+            // Same quadrant reorder
+            if (data.source === 'matrix' && data.quadrant === targetQuadrant) {
+                const sourceIdx = data.idx;
+                const tasks = dailyPlanData.matrix[targetQuadrant];
+                
+                if (sourceIdx === targetIdx) return; // Same position
+                
+                // Remove from source position
+                const [task] = tasks.splice(sourceIdx, 1);
+                
+                // Calculate new position (accounting for removal)
+                let newIdx = targetIdx;
+                if (sourceIdx < targetIdx) {
+                    newIdx = insertAfter ? targetIdx : targetIdx - 1;
+                } else {
+                    newIdx = insertAfter ? targetIdx + 1 : targetIdx;
+                }
+                
+                // Insert at new position
+                tasks.splice(newIdx, 0, task);
+                
+                saveDailyPlan();
+                renderMatrix();
+            } else {
+                // Different quadrant - use standard drop
+                dropToMatrix(event, targetQuadrant);
+            }
         }
         
         function archiveMatrixTask(quadrant, idx) {
