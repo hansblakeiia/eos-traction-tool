@@ -3231,8 +3231,8 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.3.0';
-        const EOS_BUILD_DATE = '2026-01-13';
+        const EOS_VERSION = '3.3.1';
+        const EOS_BUILD_DATE = '2026-01-14';
         
         // ==================== DATA STRUCTURE ====================
         let currentYear = '2026';
@@ -7190,10 +7190,10 @@ Make sure your suggestions directly address the specific root cause and discussi
                 return;
             }
             
-            // Include secret key if configured
-            const secretParam = member.webAppSecret ? '?secretKey=' + encodeURIComponent(member.webAppSecret) : '';
+            // Include action=test and secret key
+            const secretParam = member.webAppSecret ? '&secretKey=' + encodeURIComponent(member.webAppSecret) : '';
             
-            fetch(url + secretParam)
+            fetch(url + '?action=test' + secretParam)
                 .then(response => {
                     // Check if response is OK
                     if (!response.ok) {
