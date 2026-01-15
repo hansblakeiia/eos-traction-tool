@@ -3231,7 +3231,7 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.5.0';
+        const EOS_VERSION = '3.5.1';
         const EOS_BUILD_DATE = '2026-01-15';
         
         // ==================== DATA STRUCTURE ====================
@@ -3775,6 +3775,9 @@ Example:
                     const existingTexts = new Set(existingTasks.map(t => t.text?.toLowerCase().trim()));
                     const ignoredIds = new Set(settings.ignoredGoogleTaskIds || []);
                     
+                    console.log('Sync Debug: Local tasks with googleTaskId:', existingById.size);
+                    console.log('Sync Debug: Google tasks received:', pullData.tasks.length);
+                    
                     for (const task of pullData.tasks) {
                         if (ignoredIds.has(task.id)) continue;
                         
@@ -3799,26 +3802,31 @@ Example:
                         
                         // Check for existing task
                         const existing = existingById.get(task.id);
+                        console.log(`Sync Debug: Task "${taskTitle}" (${task.id}) - Local match: ${existing ? 'YES' : 'NO'}`);
+                        
                         if (existing) {
                             let updated = false;
                             
                             // Sync title
+                            console.log(`  Title compare: local="${existing.text}" vs google="${taskTitle}"`);
                             if (existing.text !== taskTitle && taskTitle) {
-                                console.log(`Sync: Title "${existing.text}" -> "${taskTitle}"`);
+                                console.log(`  -> Updating title`);
                                 existing.text = taskTitle;
                                 updated = true;
                             }
                             
                             // Sync due date
+                            console.log(`  Due date compare: local="${existing.dueDate}" vs google="${dueDate}"`);
                             if (existing.dueDate !== dueDate && dueDate) {
-                                console.log(`Sync: Due date "${existing.dueDate}" -> "${dueDate}"`);
+                                console.log(`  -> Updating due date`);
                                 existing.dueDate = dueDate;
                                 updated = true;
                             }
                             
                             // Sync completion
+                            console.log(`  Completion compare: local done=${existing.done} vs google completed=${isCompleted}`);
                             if (isCompleted && !existing.done) {
-                                console.log(`Sync: Marking complete "${existing.text}"`);
+                                console.log(`  -> Marking complete`);
                                 existing.done = true;
                                 existing.syncedCompletedAt = new Date().toISOString();
                                 pullResults.completions++;
@@ -3828,6 +3836,7 @@ Example:
                             if (updated) pullResults.updated++;
                         } else if (!isCompleted && !existingTexts.has(taskTitle.toLowerCase().trim())) {
                             // New task
+                            console.log(`  -> Adding as NEW task`);
                             existingTasks.push({
                                 text: taskTitle,
                                 owner: currentUser,
@@ -3850,7 +3859,14 @@ Example:
                 updateSyncStatus('syncing', 'Pushing to Google Tasks...');
                 
                 const todos = yearData.quarters[currentQuarter].todos || [];
-                const newTasks = todos.filter(t => !t.googleTaskId && t.text && !t.done && t.owner === currentUser);
+                // Find tasks without googleTaskId - these need to be pushed
+                const tasksWithoutGoogleId = todos.filter(t => !t.googleTaskId && t.text && !t.done);
+                console.log('Sync Debug: Tasks without googleTaskId:', tasksWithoutGoogleId.length);
+                tasksWithoutGoogleId.forEach(t => console.log(`  - "${t.text}" owner=${t.owner}`));
+                
+                // Filter to current user's tasks (or tasks without owner)
+                const newTasks = tasksWithoutGoogleId.filter(t => !t.owner || t.owner === currentUser);
+                console.log('Sync Debug: Tasks to push for', currentUser, ':', newTasks.length);
                 
                 if (newTasks.length > 0) {
                     const payload = {
@@ -3864,16 +3880,22 @@ Example:
                         }))
                     };
                     
+                    console.log('Sync Debug: Push payload:', payload);
+                    
                     const pushResponse = await fetch(member.webAppUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'text/plain' },
+                        redirect: 'follow',
                         body: JSON.stringify(payload)
                     });
                     
                     const pushData = await pushResponse.json();
                     console.log('Sync - Push response:', pushData);
                     
-                    if (pushData.results) {
+                    if (pushData.error) {
+                        console.error('Push error:', pushData.error);
+                        showToast('Push failed: ' + pushData.error, 'error');
+                    } else if (pushData.results) {
                         newTasks.forEach((t, idx) => {
                             if (pushData.results[idx]?.taskId) {
                                 t.googleTaskId = pushData.results[idx].taskId;
