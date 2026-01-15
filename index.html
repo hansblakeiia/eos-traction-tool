@@ -2320,7 +2320,7 @@
                             </select>
                         </h3>
                         <div id="todosContainer"></div>
-                        <button class="add-btn" onclick="addTodo()">+ Add To-Do</button>
+                        <button class="add-btn" onclick="addTodoWithList()">+ Add To-Do</button>
                     </div>
                     
                     <!-- IDS -->
@@ -3231,7 +3231,7 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.4.2';
+        const EOS_VERSION = '3.4.3';
         const EOS_BUILD_DATE = '2026-01-15';
         
         // ==================== DATA STRUCTURE ====================
@@ -3538,7 +3538,7 @@ Example:
             
             try {
                 const listIds = member.pullListIds?.length > 0 ? member.pullListIds : ['@default'];
-                const url = `${member.webAppUrl}?action=getAllTasks&listIds=${listIds.join(',')}&includeCompleted=true&secretKey=${encodeURIComponent(member.webAppSecret || '')}`;
+                const url = `${member.webAppUrl}?action=getAllTasks&listIds=${encodeURIComponent(listIds.join(','))}&includeCompleted=true&secretKey=${encodeURIComponent(member.webAppSecret || '')}`;
                 
                 const response = await fetch(url);
                 const data = await response.json();
@@ -4691,6 +4691,32 @@ Build Date: ${EOS_BUILD_DATE}
             markPendingChanges();
         }
         
+        function addTodoWithList() {
+            const settings = getSettings();
+            const currentUser = settings.teamMembers?.[0]?.initials || '';
+            const member = settings.teamMembers?.find(m => m.initials === currentUser);
+            const lists = member?.taskLists || [];
+            
+            // Populate the select dropdown
+            const select = document.getElementById('newTaskList');
+            select.innerHTML = `
+                <option value="default">📝 Default To-Dos</option>
+                ${lists.map((list, i) => `<option value="list_${i}">${list.title}</option>`).join('')}
+            `;
+            
+            // Clear the text input
+            document.getElementById('newTaskText').value = '';
+            
+            // Set a flag so submitNewTask knows this is for Weekly Meeting
+            window.addTaskContext = 'weekly';
+            
+            // Open modal
+            openModal('addTaskModal');
+            
+            // Focus the input
+            setTimeout(() => document.getElementById('newTaskText').focus(), 100);
+        }
+        
         function updateTodo(idx, field, value) {
             const todo = yearData.quarters[currentQuarter].todos[idx];
             const oldValue = todo[field];
@@ -5026,6 +5052,12 @@ Build Date: ${EOS_BUILD_DATE}
             // Track Google Task IDs so they don't get re-pulled
             const todos = yearData.quarters[currentQuarter].todos;
             const toDelete = todos.filter(t => t.done);
+            
+            if (toDelete.length === 0) {
+                alert('No tasks are checked to delete.');
+                return;
+            }
+            
             const settings = getSettings();
             settings.ignoredGoogleTaskIds = settings.ignoredGoogleTaskIds || [];
             toDelete.forEach(todo => {
@@ -5035,29 +5067,32 @@ Build Date: ${EOS_BUILD_DATE}
             });
             saveSettings(settings);
             
-            // Also remove from Daily Plan Matrix for current user
-            const dailyPlanKey = `eos_dailyPlan_${currentUser}`;
-            let dailyPlanData = JSON.parse(localStorage.getItem(dailyPlanKey) || 'null');
-            if (dailyPlanData && dailyPlanData.matrix) {
-                const textToDelete = new Set(toDelete.map(t => t.text));
-                const quadrants = ['q1', 'q2', 'q3', 'q4'];
-                let removedFromMatrix = 0;
-                quadrants.forEach(q => {
-                    if (dailyPlanData.matrix[q]) {
-                        const before = dailyPlanData.matrix[q].length;
-                        dailyPlanData.matrix[q] = dailyPlanData.matrix[q].filter(t => !textToDelete.has(t.text));
-                        removedFromMatrix += before - dailyPlanData.matrix[q].length;
+            // Also remove from Daily Plan Matrix for all team members
+            const textToDelete = new Set(toDelete.map(t => t.text));
+            settings.teamMembers.forEach(member => {
+                const dailyPlanKey = `eos_dailyPlan_${member.initials}`;
+                let memberDailyPlan = JSON.parse(localStorage.getItem(dailyPlanKey) || 'null');
+                if (memberDailyPlan && memberDailyPlan.matrix) {
+                    const quadrants = ['q1', 'q2', 'q3', 'q4'];
+                    let removedFromMatrix = 0;
+                    quadrants.forEach(q => {
+                        if (memberDailyPlan.matrix[q]) {
+                            const before = memberDailyPlan.matrix[q].length;
+                            memberDailyPlan.matrix[q] = memberDailyPlan.matrix[q].filter(t => !textToDelete.has(t.text));
+                            removedFromMatrix += before - memberDailyPlan.matrix[q].length;
+                        }
+                    });
+                    if (removedFromMatrix > 0) {
+                        localStorage.setItem(dailyPlanKey, JSON.stringify(memberDailyPlan));
+                        console.log(`Removed ${removedFromMatrix} task(s) from ${member.initials}'s Daily Plan Matrix`);
                     }
-                });
-                if (removedFromMatrix > 0) {
-                    localStorage.setItem(dailyPlanKey, JSON.stringify(dailyPlanData));
-                    console.log('Removed ' + removedFromMatrix + ' task(s) from Daily Plan Matrix');
                 }
-            }
+            });
             
             yearData.quarters[currentQuarter].todos = todos.filter(t => !t.done);
             renderTodos(yearData.quarters[currentQuarter].todos);
             autoSave();
+            showToast(`Deleted ${toDelete.length} task(s)`, 'success');
         }
         
         function uncheckAllTodos() {
@@ -9293,6 +9328,9 @@ Return ONLY the JSON array:`;
             // Clear the text input
             document.getElementById('newTaskText').value = '';
             
+            // Set context for submitNewTask
+            window.addTaskContext = 'daily';
+            
             // Open modal
             openModal('addTaskModal');
             
@@ -9308,16 +9346,24 @@ Return ONLY the JSON array:`;
             }
             
             const listValue = document.getElementById('newTaskList').value;
-            const user = document.getElementById('dailyPlanUser')?.value;
+            const context = window.addTaskContext || 'daily';
             const settings = getSettings();
+            
+            // Get user - from daily plan selector or first team member for weekly context
+            let user = document.getElementById('dailyPlanUser')?.value;
+            if (!user || context === 'weekly') {
+                user = settings.teamMembers?.[0]?.initials || '';
+            }
+            
             const member = settings.teamMembers.find(m => m.initials === user);
             const lists = member?.taskLists || [];
             
-            if (listValue === 'local') {
-                // Add as local task
+            if (listValue === 'local' && context === 'daily') {
+                // Add as local task (only in Daily Plan context)
                 dailyPlanData.localTasks = dailyPlanData.localTasks || [];
                 dailyPlanData.localTasks.push({ text: text, done: false });
                 saveDailyPlan();
+                renderRepository();
             } else {
                 // Add to Weekly Meeting todos
                 let googleListId = '';
@@ -9342,10 +9388,15 @@ Return ONLY the JSON array:`;
                 });
                 autoSave();
                 renderTodos(yearData.quarters[currentQuarter].todos);
+                
+                // Only render repository if in daily context
+                if (context === 'daily') {
+                    renderRepository();
+                }
             }
             
-            renderRepository();
             closeModal('addTaskModal');
+            showToast('Task added', 'success');
             addLogEntry(`Added task: "${text.substring(0, 30)}..."`);
         }
         
