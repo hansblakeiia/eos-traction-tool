@@ -3231,7 +3231,7 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.4.1';
+        const EOS_VERSION = '3.4.2';
         const EOS_BUILD_DATE = '2026-01-15';
         
         // ==================== DATA STRUCTURE ====================
@@ -3538,7 +3538,7 @@ Example:
             
             try {
                 const listIds = member.pullListIds?.length > 0 ? member.pullListIds : ['@default'];
-                const url = `${member.webAppUrl}?action=getAllTasks&listIds=${listIds.join(',')}&secretKey=${encodeURIComponent(member.webAppSecret || '')}`;
+                const url = `${member.webAppUrl}?action=getAllTasks&listIds=${listIds.join(',')}&includeCompleted=true&secretKey=${encodeURIComponent(member.webAppSecret || '')}`;
                 
                 const response = await fetch(url);
                 const data = await response.json();
@@ -3546,18 +3546,30 @@ Example:
                 if (data.status === 'ok' && data.tasks) {
                     // Get existing task IDs to avoid duplicates
                     const existingTasks = yearData.quarters[currentQuarter].todos || [];
-                    const existingIds = new Set(existingTasks.filter(t => t.googleTaskId).map(t => t.googleTaskId));
+                    const existingById = new Map(existingTasks.filter(t => t.googleTaskId).map(t => [t.googleTaskId, t]));
                     const existingTexts = new Set(existingTasks.map(t => t.text?.toLowerCase().trim()));
                     const ignoredIds = new Set(settings.ignoredGoogleTaskIds || []);
                     
-                    // Filter for new tasks
+                    // Sync completion status for existing tasks
+                    let completionsSynced = 0;
+                    data.tasks.forEach(task => {
+                        const existing = existingById.get(task.id);
+                        if (existing && task.status === 'completed' && !existing.done) {
+                            existing.done = true;
+                            existing.syncedCompletedAt = new Date().toISOString();
+                            completionsSynced++;
+                        }
+                    });
+                    
+                    // Filter for new tasks (exclude completed tasks from Google)
                     const newTasks = data.tasks.filter(task => 
-                        !existingIds.has(task.id) && 
+                        task.status !== 'completed' &&
+                        !existingById.has(task.id) && 
                         !ignoredIds.has(task.id) &&
                         !existingTexts.has(task.title?.toLowerCase().trim())
                     );
                     
-                    if (newTasks.length > 0) {
+                    if (newTasks.length > 0 || completionsSynced > 0) {
                         // Add new tasks
                         newTasks.forEach(task => {
                             existingTasks.push({
@@ -3576,10 +3588,13 @@ Example:
                         autoSave();
                         renderTodos(existingTasks);
                         
-                        showToast(`Pulled ${newTasks.length} new task(s) from Google Tasks`, 'success');
-                        updateSyncStatus('success', `Synced - ${newTasks.length} new tasks`);
+                        let msg = [];
+                        if (newTasks.length > 0) msg.push(`${newTasks.length} new`);
+                        if (completionsSynced > 0) msg.push(`${completionsSynced} completed`);
+                        showToast(`Synced: ${msg.join(', ')}`, 'success');
+                        updateSyncStatus('success', `Synced - ${msg.join(', ')}`);
                     } else {
-                        updateSyncStatus('success', 'All synced - no new tasks');
+                        updateSyncStatus('success', 'All synced - no changes');
                     }
                     
                     syncState.lastPull = Date.now();
@@ -4726,12 +4741,15 @@ Build Date: ${EOS_BUILD_DATE}
                 
                 const data = await response.json();
                 if (data.success) {
-                    console.log('✅ Task updated in Google Tasks:', Object.keys(updates).join(', '));
+                    console.log('Task updated in Google Tasks:', Object.keys(updates).join(', '));
+                    showToast('Updated in Google Tasks', 'success');
                 } else {
                     console.warn('Failed to sync update:', data.error);
+                    showToast('Failed to sync update: ' + (data.error || 'Unknown error'), 'error');
                 }
             } catch (error) {
                 console.error('Error syncing task update:', error);
+                showToast('Could not sync update (network error)', 'warning');
             }
         }
         
@@ -4841,14 +4859,16 @@ Build Date: ${EOS_BUILD_DATE}
                 
                 const data = await response.json();
                 if (data.success) {
-                    console.log('✅ Task synced as complete in Google Tasks:', todo.text?.substring(0, 30));
+                    console.log('Task synced as complete in Google Tasks:', todo.text?.substring(0, 30));
                     addLogEntry(`Synced completion to Google Tasks: ${todo.text?.substring(0, 25)}...`);
-                    showToast('success', `✅ Synced to Google Tasks`);
+                    showToast('Completed in Google Tasks', 'success');
                 } else {
                     console.warn('Failed to sync completion:', data.error);
+                    showToast('Failed to sync completion: ' + (data.error || 'Unknown error'), 'error');
                 }
             } catch (error) {
                 console.error('Error syncing task completion:', error);
+                showToast('Could not sync completion (network error)', 'warning');
             }
         }
         
@@ -4877,14 +4897,16 @@ Build Date: ${EOS_BUILD_DATE}
                 
                 const data = await response.json();
                 if (data.success) {
-                    console.log('↩️ Task synced as incomplete in Google Tasks:', todo.text?.substring(0, 30));
+                    console.log('Task synced as incomplete in Google Tasks:', todo.text?.substring(0, 30));
                     addLogEntry(`Synced uncomplete to Google Tasks: ${todo.text?.substring(0, 25)}...`);
-                    showToast('success', `↩️ Task uncompleted in Google Tasks`);
+                    showToast('Task uncompleted in Google Tasks', 'success');
                 } else {
                     console.warn('Failed to sync uncomplete:', data.error);
+                    showToast('Failed to sync uncomplete: ' + (data.error || 'Unknown error'), 'error');
                 }
             } catch (error) {
                 console.error('Error syncing task uncomplete:', error);
+                showToast('Could not sync uncomplete (network error)', 'warning');
             }
         }
         
