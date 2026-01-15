@@ -3231,7 +3231,7 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.4.3';
+        const EOS_VERSION = '3.4.4';
         const EOS_BUILD_DATE = '2026-01-15';
         
         // ==================== DATA STRUCTURE ====================
@@ -3538,38 +3538,29 @@ Example:
             
             try {
                 const listIds = member.pullListIds?.length > 0 ? member.pullListIds : ['@default'];
-                const url = `${member.webAppUrl}?action=getAllTasks&listIds=${encodeURIComponent(listIds.join(','))}&includeCompleted=true&secretKey=${encodeURIComponent(member.webAppSecret || '')}`;
+                const url = `${member.webAppUrl}?action=getAllTasks&listIds=${listIds.join(',')}&secretKey=${encodeURIComponent(member.webAppSecret || '')}`;
                 
                 const response = await fetch(url);
                 const data = await response.json();
                 
+                // Log for debugging
+                console.log('Auto-pull response:', data);
+                
                 if (data.status === 'ok' && data.tasks) {
                     // Get existing task IDs to avoid duplicates
                     const existingTasks = yearData.quarters[currentQuarter].todos || [];
-                    const existingById = new Map(existingTasks.filter(t => t.googleTaskId).map(t => [t.googleTaskId, t]));
+                    const existingIds = new Set(existingTasks.filter(t => t.googleTaskId).map(t => t.googleTaskId));
                     const existingTexts = new Set(existingTasks.map(t => t.text?.toLowerCase().trim()));
                     const ignoredIds = new Set(settings.ignoredGoogleTaskIds || []);
                     
-                    // Sync completion status for existing tasks
-                    let completionsSynced = 0;
-                    data.tasks.forEach(task => {
-                        const existing = existingById.get(task.id);
-                        if (existing && task.status === 'completed' && !existing.done) {
-                            existing.done = true;
-                            existing.syncedCompletedAt = new Date().toISOString();
-                            completionsSynced++;
-                        }
-                    });
-                    
-                    // Filter for new tasks (exclude completed tasks from Google)
+                    // Filter for new tasks
                     const newTasks = data.tasks.filter(task => 
-                        task.status !== 'completed' &&
-                        !existingById.has(task.id) && 
+                        !existingIds.has(task.id) && 
                         !ignoredIds.has(task.id) &&
                         !existingTexts.has(task.title?.toLowerCase().trim())
                     );
                     
-                    if (newTasks.length > 0 || completionsSynced > 0) {
+                    if (newTasks.length > 0) {
                         // Add new tasks
                         newTasks.forEach(task => {
                             existingTasks.push({
@@ -3588,13 +3579,10 @@ Example:
                         autoSave();
                         renderTodos(existingTasks);
                         
-                        let msg = [];
-                        if (newTasks.length > 0) msg.push(`${newTasks.length} new`);
-                        if (completionsSynced > 0) msg.push(`${completionsSynced} completed`);
-                        showToast(`Synced: ${msg.join(', ')}`, 'success');
-                        updateSyncStatus('success', `Synced - ${msg.join(', ')}`);
+                        showToast(`Pulled ${newTasks.length} new task(s) from Google Tasks`, 'success');
+                        updateSyncStatus('success', `Synced - ${newTasks.length} new tasks`);
                     } else {
-                        updateSyncStatus('success', 'All synced - no changes');
+                        updateSyncStatus('success', 'All synced - no new tasks');
                     }
                     
                     syncState.lastPull = Date.now();
@@ -8521,6 +8509,15 @@ Return ONLY the JSON array:`;
                     const secretParam = member.webAppSecret ? '&secretKey=' + encodeURIComponent(member.webAppSecret) : '';
                     const response = await fetch(member.webAppUrl + '?action=getAllTasks&listIds=' + encodeURIComponent(listIdsParam) + '&includeCompleted=true' + secretParam);
                     const result = await response.json();
+                    
+                    // Log for debugging
+                    console.log(`Pull response for ${member.name}:`, result);
+                    
+                    // Check for error response
+                    if (result.error) {
+                        errors.push(`${member.name}: ${result.error}`);
+                        continue;
+                    }
                     
                     if (result.tasks && result.tasks.length > 0) {
                         // Add tasks that don't already exist
