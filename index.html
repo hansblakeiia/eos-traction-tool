@@ -2047,7 +2047,7 @@
             <button class="tab-btn" onclick="showPage('plan')">1-Year Plan</button>
             <button class="tab-btn quarter-tab" onclick="showPage('quarterly')">Quarterly (Rocks/Scorecard)</button>
             <button class="tab-btn" onclick="showPage('meeting')">Weekly Meeting</button>
-            <button class="tab-btn daily-plan-tab" onclick="showPage('dailyPlan')">📅 My Daily Plan</button>
+            <button class="tab-btn daily-plan-tab" onclick="showPage('dailyPlan')">📦 My Daily Plan</button>
             <button class="tab-btn" onclick="showPage('history')">Compare Years</button>
         </div>
         
@@ -2223,7 +2223,7 @@
             
             <!-- 1-Year Plan Reference -->
             <div class="reference-panel" id="yearRefPanel">
-                <h4>📒 2026 ANNUAL GOALS (Reference)</h4>
+                <h4>📙 2026 ANNUAL GOALS (Reference)</h4>
                 <div class="goals" id="yearGoalsRef">
                     <!-- Populated by JS -->
                 </div>
@@ -2281,7 +2281,7 @@
                 <div class="actions" style="margin: 0;">
                     <button class="btn btn-secondary" onclick="openParseMeetingModal()">📥 Import from Otter</button>
                     <button class="btn btn-secondary" onclick="printMeeting()">🖨️ Print Agenda</button>
-                    <button class="btn btn-primary" onclick="openExportTasksModal()">📋 Sync with Google Tasks</button>
+                    <button class="btn btn-primary" onclick="openExportTasksModal()">📹 Sync with Google Tasks</button>
                     <button class="btn btn-success" onclick="archiveMeeting()">✔ Complete & Archive</button>
                 </div>
             </div>
@@ -2291,7 +2291,7 @@
                     <!-- Agenda -->
                     <div class="section">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <h3 style="margin: 0;">📋 Meeting Agenda</h3>
+                            <h3 style="margin: 0;">📹 Meeting Agenda</h3>
                             <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="openEditAgendaModal()">✏️ Edit</button>
                         </div>
                         <div id="agendaItems"></div>
@@ -2314,8 +2314,8 @@
                             <select id="todoSortOrder" onchange="sortAndRenderTodos()" style="padding: 4px 8px; font-size: 0.8rem; border-radius: 4px;">
                                 <option value="manual">My Order</option>
                                 <option value="starred">⭐ Starred First</option>
-                                <option value="dueDate">📅 Due Date</option>
-                                <option value="title">🔤 Title (A-Z)</option>
+                                <option value="dueDate">📦 Due Date</option>
+                                <option value="title">🔄 Title (A-Z)</option>
                                 <option value="owner">👤 Owner</option>
                             </select>
                         </h3>
@@ -2334,7 +2334,7 @@
                         <div id="idsWorkspace" style="margin-top: 15px; display: none;">
                             <div style="background: var(--primary); color: white; padding: 8px 12px; border-radius: 6px 6px 0 0; font-weight: 600;">
                                 <span id="idsIssueTitle">Issue #1</span>
-                                <button onclick="closeIDSWorkspace()" style="float: right; background: none; border: none; color: white; cursor: pointer; font-size: 1.2rem;">×</button>
+                                <button onclick="closeIDSWorkspace()" style="float: right; background: none; border: none; color: white; cursor: pointer; font-size: 1.2rem;">Ã—</button>
                             </div>
                             <div style="background: var(--gray-50); padding: 12px; border-radius: 0 0 6px 6px; border: 1px solid var(--gray-200); border-top: none;">
                                 <div class="ids-step">
@@ -2400,7 +2400,7 @@
         <!-- MY DAILY PLAN PAGE -->
         <div id="dailyPlan" class="page">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h2 class="page-title" style="margin-bottom: 0;">📅 My Daily Plan</h2>
+                <h2 class="page-title" style="margin-bottom: 0;">📦 My Daily Plan</h2>
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <div>
                         <label style="font-size: 0.85rem; color: var(--gray-600);">Current User:</label>
@@ -2600,7 +2600,7 @@
     <!-- New Year Modal -->
     <div class="modal-overlay" id="newYearModal">
         <div class="modal">
-            <h2>📋 New Year from Template</h2>
+            <h2>📹 New Year from Template</h2>
             <p style="color: var(--gray-500); margin-bottom: 15px;">Start a new year using a previous year as a template.</p>
             <div id="templateList" style="max-height: 200px; overflow-y: auto; margin-bottom: 15px;"></div>
             <div style="margin-bottom: 15px;">
@@ -2651,7 +2651,7 @@
                         </p>
                         <input type="text" id="otterSheetUrl" placeholder="https://script.google.com/macros/s/xxxxx/exec" style="font-size: 0.85rem;">
                         <div id="otterTestStatus" style="margin-top: 6px; padding: 6px; border-radius: 4px; display: none; font-size: 0.8rem;"></div>
-                        <button class="btn btn-secondary" onclick="testOtterSheetConnection()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">🔗 Test Connection</button>
+                        <button class="btn btn-secondary" onclick="testOtterSheetConnection()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">🔔 Test Connection</button>
                     </div>
                     
                     <!-- Gemini AI -->
@@ -2659,11 +2659,11 @@
                         <h4 style="color: #1e40af; margin-bottom: 8px; font-size: 0.95rem;">🤖 AI Assistant (Gemini)</h4>
                         <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 8px;">
                             Enable AI-powered suggestions for IDS and daily planning. 
-                            <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #3b82f6;">Get free API key ↑</a>
+                            <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #3b82f6;">Get free API key →</a>
                         </p>
                         <input type="password" id="geminiApiKey" placeholder="AIza..." style="font-size: 0.85rem;">
                         <div id="geminiTestStatus" style="margin-top: 6px; padding: 6px; border-radius: 4px; display: none; font-size: 0.8rem;"></div>
-                        <button class="btn btn-secondary" onclick="testGeminiConnection()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">🔗 Test Connection</button>
+                        <button class="btn btn-secondary" onclick="testGeminiConnection()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">🔔 Test Connection</button>
                     </div>
                 </div>
             </div>
@@ -2677,7 +2677,7 @@
                     
                     <!-- Weekly Meeting -->
                     <div style="margin-bottom: 16px;">
-                        <h4 style="color: #047857; margin-bottom: 8px; font-size: 0.95rem;">📅 Weekly Meeting Schedule</h4>
+                        <h4 style="color: #047857; margin-bottom: 8px; font-size: 0.95rem;">📦 Weekly Meeting Schedule</h4>
                         <div class="input-row">
                             <div>
                                 <label style="font-size: 0.8rem;">Day</label>
@@ -2707,7 +2707,7 @@
                     
                     <!-- Quarter Start Dates -->
                     <div style="padding-top: 16px; border-top: 1px solid #a7f3d0;">
-                        <h4 style="color: #047857; margin-bottom: 8px; font-size: 0.95rem;">📆 Quarter Start Dates</h4>
+                        <h4 style="color: #047857; margin-bottom: 8px; font-size: 0.95rem;">📠 Quarter Start Dates</h4>
                         <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 10px;">Adjust if your fiscal quarters don't follow calendar year</p>
                         <div class="input-row">
                             <div>
@@ -2768,7 +2768,7 @@
                                 <em>Fallback topic (used if no member topic set):</em>
                             </p>
                             <input type="text" id="ntfyTopic" placeholder="fallback-topic (optional)" style="font-size: 0.85rem; margin-top: 6px;">
-                            <button class="btn btn-secondary" onclick="testNtfyNotification()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">🔓 Test Fallback</button>
+                            <button class="btn btn-secondary" onclick="testNtfyNotification()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">🔜 Test Fallback</button>
                         </div>
                     </div>
                 </div>
@@ -2787,7 +2787,7 @@
                         <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;">
                             <button class="btn btn-secondary" onclick="exportDataWithBackupTracking(); closeModal('settingsModal');" style="padding: 6px 12px; font-size: 0.85rem;">📤 Export</button>
                             <button class="btn btn-secondary" onclick="document.getElementById('importFile').click();" style="padding: 6px 12px; font-size: 0.85rem;">📥 Import</button>
-                            <button class="btn btn-secondary" onclick="openNewYearModal(); closeModal('settingsModal');" style="padding: 6px 12px; font-size: 0.85rem;">📋 New Year</button>
+                            <button class="btn btn-secondary" onclick="openNewYearModal(); closeModal('settingsModal');" style="padding: 6px 12px; font-size: 0.85rem;">📹 New Year</button>
                         </div>
                         
                         <!-- Backup Reminder Setting -->
@@ -2809,13 +2809,13 @@
                     
                     <!-- Tool Issues -->
                     <div style="margin-bottom: 16px; padding-top: 14px; border-top: 1px solid #e5e7eb;">
-                        <h4 style="color: #374151; margin-bottom: 8px; font-size: 0.95rem;">🐛 Issues & Feature Requests</h4>
+                        <h4 style="color: #374151; margin-bottom: 8px; font-size: 0.95rem;">🐻 Issues & Feature Requests</h4>
                         <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 8px;">
                             Log bugs or ideas here, then copy to share with Claude for fixes.
                         </p>
                         <textarea id="toolIssuesNotes" rows="3" placeholder="- Bug: something not working&#10;- Feature: add dark mode" style="width: 100%; font-size: 0.85rem;" onblur="saveToolIssues()"></textarea>
                         <div style="display: flex; gap: 8px; margin-top: 8px;">
-                            <button class="btn btn-secondary" onclick="copyToolIssues()" style="flex: 1; padding: 6px 10px; font-size: 0.85rem;">📋 Copy for Claude</button>
+                            <button class="btn btn-secondary" onclick="copyToolIssues()" style="flex: 1; padding: 6px 10px; font-size: 0.85rem;">📹 Copy for Claude</button>
                             <button class="btn btn-secondary" onclick="clearToolIssues()" style="padding: 6px 10px; font-size: 0.85rem;">🗑️</button>
                         </div>
                     </div>
@@ -2825,7 +2825,7 @@
                         <div style="display: flex; gap: 16px; flex-wrap: wrap;">
                             <div style="flex: 1; min-width: 200px;">
                                 <h4 style="color: #374151; margin-bottom: 6px; font-size: 0.95rem;">🔧 Troubleshooting</h4>
-                                <button class="btn btn-secondary" onclick="viewActivityLog(); closeModal('settingsModal');" style="padding: 6px 12px; font-size: 0.85rem;">📋 Activity Log</button>
+                                <button class="btn btn-secondary" onclick="viewActivityLog(); closeModal('settingsModal');" style="padding: 6px 12px; font-size: 0.85rem;">📹 Activity Log</button>
                                 <p style="font-size: 0.75rem; color: var(--gray-500); margin-top: 4px;">Clears on refresh</p>
                             </div>
                             <div style="flex: 1; min-width: 200px;">
@@ -2843,7 +2843,7 @@
                                 <span style="font-weight: 600; color: var(--gray-700);">📊 EOS Traction Tool</span>
                                 <span id="settingsVersion" style="font-size: 0.8rem; color: var(--gray-500); margin-left: 8px;">v2.5.0</span>
                             </div>
-                            <button class="btn btn-secondary" onclick="showVersionInfo()" style="padding: 4px 10px; font-size: 0.75rem;">📋 Changelog</button>
+                            <button class="btn btn-secondary" onclick="showVersionInfo()" style="padding: 4px 10px; font-size: 0.75rem;">📹 Changelog</button>
                         </div>
                         <p style="font-size: 0.7rem; color: var(--gray-400); margin: 4px 0 0 0;">
                             Build: <span id="settingsBuildDate">2025-12-15</span> • 
@@ -2895,12 +2895,12 @@
                     <p style="font-size: 0.85rem; margin: 0 0 12px 0;"><strong>Best for:</strong> Simple, free hosting with easy updates</p>
                     <ol style="margin: 0; padding-left: 20px; font-size: 0.9rem;">
                         <li style="margin-bottom: 8px;">Create a free <a href="https://github.com/signup" target="_blank" style="color: #059669;">GitHub account</a> if you don't have one</li>
-                        <li style="margin-bottom: 8px;">Click the <strong>+</strong> button ↑ <strong>New repository</strong></li>
+                        <li style="margin-bottom: 8px;">Click the <strong>+</strong> button → <strong>New repository</strong></li>
                         <li style="margin-bottom: 8px;">Name it <code style="background: #d1fae5; padding: 2px 6px; border-radius: 3px;">eos-tool</code> (or any name)</li>
                         <li style="margin-bottom: 8px;">Make it <strong>Public</strong> and click <strong>Create repository</strong></li>
-                        <li style="margin-bottom: 8px;">Click <strong>uploading an existing file</strong> ↑ drag your HTML file</li>
+                        <li style="margin-bottom: 8px;">Click <strong>uploading an existing file</strong> → drag your HTML file</li>
                         <li style="margin-bottom: 8px;"><strong>Important:</strong> Rename the file to <code style="background: #d1fae5; padding: 2px 6px; border-radius: 3px;">index.html</code></li>
-                        <li style="margin-bottom: 8px;">Go to <strong>Settings</strong> ↑ <strong>Pages</strong> ↑ Source: <strong>main branch</strong> ↑ Save</li>
+                        <li style="margin-bottom: 8px;">Go to <strong>Settings</strong> → <strong>Pages</strong> → Source: <strong>main branch</strong> → Save</li>
                         <li style="margin-bottom: 8px;">Your URL: <code style="background: #d1fae5; padding: 2px 6px; border-radius: 3px;">https://yourusername.github.io/eos-tool/</code></li>
                     </ol>
                     <p style="margin: 12px 0 0 0; font-size: 0.85rem; color: #047857;">
@@ -2920,8 +2920,8 @@
                         <li style="margin-bottom: 8px;">Go to <a href="https://console.cloud.google.com/storage" target="_blank" style="color: #3b82f6;">Google Cloud Console</a></li>
                         <li style="margin-bottom: 8px;">Create a bucket with a unique name (e.g., <code>mycompany-eos-tool</code>)</li>
                         <li style="margin-bottom: 8px;">Upload your HTML file (rename to <code>index.html</code>)</li>
-                        <li style="margin-bottom: 8px;">Make the bucket public: Permissions ↑ Add <code>allUsers</code> as <strong>Storage Object Viewer</strong></li>
-                        <li style="margin-bottom: 8px;">Enable static hosting: Website Configuration ↑ Index: <code>index.html</code></li>
+                        <li style="margin-bottom: 8px;">Make the bucket public: Permissions → Add <code>allUsers</code> as <strong>Storage Object Viewer</strong></li>
+                        <li style="margin-bottom: 8px;">Enable static hosting: Website Configuration → Index: <code>index.html</code></li>
                         <li style="margin-bottom: 8px;">Access at: <code>https://storage.googleapis.com/your-bucket-name/index.html</code></li>
                     </ol>
                     <p style="margin: 12px 0 0 0; font-size: 0.85rem; color: #6b7280;">
@@ -2934,15 +2934,15 @@
             <div style="background: #f3f4f6; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
                 <h4 style="margin: 0 0 8px 0; color: #374151;">📲 Add to Home Screen (Mobile)</h4>
                 <p style="font-size: 0.85rem; margin: 0; color: #6b7280;">
-                    <strong>iPhone:</strong> Safari ↑ Share ↑ Add to Home Screen<br>
-                    <strong>Android:</strong> Chrome ↑ ⋮ Menu ↑ Add to Home screen
+                    <strong>iPhone:</strong> Safari → Share → Add to Home Screen<br>
+                    <strong>Android:</strong> Chrome → ⋮ Menu → Add to Home screen
                 </p>
             </div>
             
             <div style="background: #fef3c7; border-radius: 8px; padding: 14px;">
                 <h4 style="margin: 0 0 8px 0; color: #92400e;">⚠️ Important Notes</h4>
                 <ul style="font-size: 0.85rem; margin: 0; padding-left: 18px; color: #92400e;">
-                    <li>Data is stored in your browser's localStorage — not synced between devices</li>
+                    <li>Data is stored in your browser's localStorage – not synced between devices</li>
                     <li>Use Export/Import (Settings) to transfer data between devices</li>
                     <li>Export weekly as backup!</li>
                 </ul>
@@ -2969,7 +2969,7 @@
     <!-- Activity Log Modal -->
     <div class="modal-overlay" id="activityLogModal">
         <div class="modal" style="max-width: 700px;">
-            <h2>📋 Activity Log</h2>
+            <h2>📹 Activity Log</h2>
             <p style="font-size: 0.85rem; color: var(--gray-500); margin-bottom: 15px;">
                 Recent system activity for troubleshooting. Log is stored locally and cleared on page refresh.
             </p>
@@ -2978,7 +2978,7 @@
             </div>
             <div class="modal-actions" style="margin-top: 15px;">
                 <button class="btn btn-secondary" onclick="clearActivityLog()">🗑️ Clear Log</button>
-                <button class="btn btn-secondary" onclick="copyActivityLog()">📋 Copy Log</button>
+                <button class="btn btn-secondary" onclick="copyActivityLog()">📹 Copy Log</button>
                 <button class="btn btn-primary" onclick="closeModal('activityLogModal')">Close</button>
             </div>
         </div>
@@ -3063,7 +3063,7 @@
             <div id="dailySyncNoConfig" style="background: #fef3c7; border: 1px solid #fcd34d; border-radius: 8px; padding: 12px; margin-bottom: 15px; display: none;">
                 <p style="margin: 0; font-size: 0.85rem; color: #92400e;">
                     ⚠️ <strong>No Google Tasks URL configured</strong> for this user.<br>
-                    Go to Settings (⚙️) ↑ Team Members to add a Web App URL.
+                    Go to Settings (⚙️) → Team Members to add a Web App URL.
                 </p>
             </div>
             
@@ -3075,7 +3075,7 @@
     
     <div class="modal-overlay" id="exportTasksModal">
         <div class="modal" style="max-width: 550px;">
-            <h2>📋 Google Tasks Sync</h2>
+            <h2>📹 Google Tasks Sync</h2>
             
             <div style="margin-bottom: 15px;">
                 <label>Select Team Member</label>
@@ -3093,7 +3093,7 @@
             
             <div class="modal-actions" style="flex-wrap: wrap; gap: 8px;">
                 <button class="btn btn-secondary" onclick="closeModal('exportTasksModal')">Close</button>
-                <button class="btn btn-secondary" onclick="copyTasksToClipboard()">📋 Copy</button>
+                <button class="btn btn-secondary" onclick="copyTasksToClipboard()">📹 Copy</button>
                 <button class="btn btn-primary" id="pullFromGoogleBtn" onclick="pullTasksFromGoogle()">⬇️ Pull from Google</button>
                 <button class="btn btn-success" id="sendToGoogleBtn" onclick="sendTasksToGoogle()">⬆️ Push to Google</button>
             </div>
@@ -3132,7 +3132,7 @@
             <!-- Manual paste fallback -->
             <details style="margin-bottom: 15px;">
                 <summary style="cursor: pointer; color: var(--gray-600); font-size: 0.9rem; padding: 8px 0;">
-                    📋 Or paste action items manually...
+                    📹 Or paste action items manually...
                 </summary>
                 <div style="margin-top: 10px;">
                     <textarea id="meetingNotesInput" rows="5" placeholder="Paste comma-separated action items here:
@@ -3206,9 +3206,9 @@ Example:
                        onkeypress="if(event.key==='Enter') submitNewTask()">
             </div>
             <div style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 6px; font-weight: 500;">📋 Category / List</label>
+                <label style="display: block; margin-bottom: 6px; font-weight: 500;">📹 Category / List</label>
                 <select id="newTaskList" style="width: 100%; padding: 10px; font-size: 1rem; border: 1px solid var(--gray-300); border-radius: 6px;">
-                    <option value="local">🔑 Local Task (Private - not synced)</option>
+                    <option value="local">🔘 Local Task (Private - not synced)</option>
                     <option value="default">📝 Default To-Dos</option>
                 </select>
             </div>
@@ -3231,8 +3231,8 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.4.0';
-        const EOS_BUILD_DATE = '2026-01-14';
+        const EOS_VERSION = '3.4.1';
+        const EOS_BUILD_DATE = '2026-01-15';
         
         // ==================== DATA STRUCTURE ====================
         let currentYear = '2026';
@@ -3240,7 +3240,7 @@ Example:
         let yearData = {};
         
         const defaultAgendaItems = [
-            { title: '🙏 Opening / Prayer', time: 'Start' },
+            { title: '📏 Opening / Prayer', time: 'Start' },
             { title: '📰 Customer Headlines', time: '1 min' },
             { title: '📊 Scorecard Review', time: '5 min' },
             { title: '🪨 Rock Review', time: '5 min' },
@@ -3284,7 +3284,7 @@ Example:
                     "cv1": "Compassion", "cv2": "Legacy", "cv3": "Integrity",
                     "cv4": "Excellence", "cv5": "Nimbleness", "cv6": "Truth",
                     "cf_purpose": "We minimize financial stress to maximize your life.",
-                    "cf_niche": "We are a boutique wealth management firm serving high-net-worth individuals and families. We organize their financial junk drawers by intelligently integrating their financial lives with IntelligrationsÂ©.",
+                    "cf_niche": "We are a boutique wealth management firm serving high-net-worth individuals and families. We organize their financial junk drawers by intelligently integrating their financial lives with IntelligrationsÃ‚Â©.",
                     "ten_target": "$75 Million AUM with $500k operating profit after paying for technology and salaries before paying ourselves. Working 4 days a week. Possibly 5th employee.",
                     "ty_date": "12/31/2028",
                     "ty_revenue": "$65M AUM",
@@ -3296,7 +3296,7 @@ Example:
                     "ms_u2": "Families - Unite families through financial communication",
                     "ms_u3": "Time - Maximize time",
                     "ms_u4": "Technology - Leverage technology to improve behavior",
-                    "ms_process": "Intelligent Investing Onboarding Process (Traditional Finance ↑ Behavioral Finance ↑ Values-based Finance)",
+                    "ms_process": "Intelligent Investing Onboarding Process (Traditional Finance → Behavioral Finance → Values-based Finance)",
                     "ms_guarantee": "We guarantee that we will organize your \"financial junk drawers\" and be at the forefront of financial technology."
                 },
                 "plan": {
@@ -3792,8 +3792,8 @@ Build Date: ${EOS_BUILD_DATE}
 
 📝 Version 2.8.0 Changes:
 • 🚀 AUTO-SYNC ON LOAD/LEAVE!
-  - Opens EOS Tool ↑ automatically pulls new tasks from Google Tasks
-  - Leaves/switches tabs ↑ automatically pushes pending tasks
+  - Opens EOS Tool → automatically pulls new tasks from Google Tasks
+  - Leaves/switches tabs → automatically pushes pending tasks
 • Sync status bar shows last sync time and pending changes
 • Toast notifications for sync events
 • "Sync Now" button for manual sync
@@ -3801,16 +3801,16 @@ Build Date: ${EOS_BUILD_DATE}
 
 📝 Version 2.7.1 Changes:
 • 🔄 REAL-TIME SYNC! All task changes now sync to Google Tasks:
-  - Due date changes ↑ synced instantly
-  - Task text changes ↑ synced instantly  
-  - Owner changes ↑ task pushed to new owner's Google Tasks
+  - Due date changes → synced instantly
+  - Task text changes → synced instantly  
+  - Owner changes → task pushed to new owner's Google Tasks
 • Smart list matching - tasks go back to their original list
 • Cross-user task assignment with automatic sync
 
 📝 Version 2.7.0 Changes:
-• 🎉 AUTO-SYNC COMPLETION! Completed tasks now sync back to Google Tasks
-• Check a task in EOS ↑ automatically marks complete in Google Tasks
-• Archive tasks ↑ batch syncs all to Google Tasks
+• 🎰 AUTO-SYNC COMPLETION! Completed tasks now sync back to Google Tasks
+• Check a task in EOS → automatically marks complete in Google Tasks
+• Archive tasks → batch syncs all to Google Tasks
 • Works from Weekly Meeting AND Daily Plan views
 • Per-user sync through each member's Web App
 
@@ -4065,7 +4065,7 @@ Build Date: ${EOS_BUILD_DATE}
                 </div>
             `).join('');
             
-            document.querySelector('#yearRefPanel h4').textContent = `📒 ${currentYear} ANNUAL GOALS (Reference)`;
+            document.querySelector('#yearRefPanel h4').textContent = `📙 ${currentYear} ANNUAL GOALS (Reference)`;
         }
         
         // ==================== QUARTERLY: ROCKS ====================
@@ -4458,7 +4458,7 @@ Build Date: ${EOS_BUILD_DATE}
             const getMedal = (idx) => {
                 if (idx === 0) return '🥇';
                 if (idx === 1) return '🥈';
-                if (idx === 2) return '🥉';
+                if (idx === 2) return '🥰';
                 return '';
             };
             
@@ -4503,7 +4503,7 @@ Build Date: ${EOS_BUILD_DATE}
             
             autoSave();
             renderPomodoroLeaderboard();
-            addLogEntry(`Manually adjusted ${userInitials}'s pomodoros: ${current} ↑ ${newValue}`);
+            addLogEntry(`Manually adjusted ${userInitials}'s pomodoros: ${current} → ${newValue}`);
         }
         
         function openPomoAdjustModal() {
@@ -4599,7 +4599,7 @@ Build Date: ${EOS_BUILD_DATE}
                     todosHtml += `
                         <div style="margin-bottom: 12px;">
                             <div style="font-size: 0.8rem; font-weight: 600; color: var(--gray-500); margin-bottom: 4px; padding-left: 4px;">
-                                📋 ${listName}
+                                📹 ${listName}
                             </div>
                             ${todosByList[listName].map(t => renderTodoItem(t, t.originalIndex)).join('')}
                         </div>
@@ -4714,6 +4714,7 @@ Build Date: ${EOS_BUILD_DATE}
                 const response = await fetch(member.webAppUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain' },
+                    redirect: 'follow',
                     body: JSON.stringify({
                         secretKey: member.webAppSecret || '',
                         action: 'updateTask',
@@ -4772,7 +4773,7 @@ Build Date: ${EOS_BUILD_DATE}
                     todo.googleListName = newMember.taskLists?.find(l => l.id === todo.googleListId)?.title || 'Tasks';
                     autoSave();
                     console.log(`✅ Task assigned to ${newOwner} and synced to their Google Tasks`);
-                    addLogEntry(`Task reassigned: "${todo.text.substring(0, 25)}..." ↑ ${newOwner}`);
+                    addLogEntry(`Task reassigned: "${todo.text.substring(0, 25)}..." → ${newOwner}`);
                 }
                 
                 // Optionally: Complete the task in old owner's Google Tasks
@@ -4865,6 +4866,7 @@ Build Date: ${EOS_BUILD_DATE}
                 const response = await fetch(member.webAppUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain' },
+                    redirect: 'follow',
                     body: JSON.stringify({
                         secretKey: member.webAppSecret || '',
                         action: 'uncompleteTask',
@@ -5478,7 +5480,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                     <p style="margin: 4px 0;">${suggestions.quick || 'No suggestion available'}</p>
                 </div>
                 <div style="margin-bottom: 12px;">
-                    <strong style="color: var(--primary);">📅 This Week:</strong>
+                    <strong style="color: var(--primary);">📦 This Week:</strong>
                     <p style="margin: 4px 0;">${suggestions.medium || 'No suggestion available'}</p>
                 </div>
                 <div style="margin-bottom: 12px;">
@@ -5558,7 +5560,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                 quick = `Based on the discussion ("${discussClean.substring(0, 40)}..."), identify the single most impactful action to take today.`;
                 medium = `Create an action plan addressing the key points discussed, with owners and deadlines.`;
                 strategic = "Schedule a follow-up to review progress and adjust approach based on results.";
-                action = `From discussion: ${discussClean.substring(0, 80)}... ↑ Define specific next step with owner`;
+                action = `From discussion: ${discussClean.substring(0, 80)}... → Define specific next step with owner`;
             } else if (hasRockIssue) {
                 // Rock-specific suggestions
                 quick = "Identify the specific blocker preventing progress and assign someone to remove it today.";
@@ -5618,7 +5620,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                     <input type="text" value="${item.time}" 
                            onchange="editingAgenda[${idx}].time = this.value"
                            style="width: 70px; margin: 0; text-align: center;" placeholder="Time">
-                    <button onclick="moveAgendaItem(${idx}, -1)" style="padding: 4px 8px; background: var(--gray-100); border: none; border-radius: 4px; cursor: pointer;">↑</button>
+                    <button onclick="moveAgendaItem(${idx}, -1)" style="padding: 4px 8px; background: var(--gray-100); border: none; border-radius: 4px; cursor: pointer;">→</button>
                     <button onclick="moveAgendaItem(${idx}, 1)" style="padding: 4px 8px; background: var(--gray-100); border: none; border-radius: 4px; cursor: pointer;">↔</button>
                     <button onclick="removeAgendaItem(${idx})" style="padding: 4px 8px; background: #fee2e2; border: none; border-radius: 4px; cursor: pointer; color: #dc2626;">✕</button>
                 </div>
@@ -6265,7 +6267,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                         <span style="flex: 1; ${r.done ? 'text-decoration: line-through; opacity: 0.7;' : ''}">${r.text || ''}</span>
                         ${r.done ? '<span class="done-badge">✔ DONE</span>' : ''}
                         <span style="width: 40px; text-align: center; font-weight: 600;">${r.owner || ''}</span>
-                        ${!r.done ? `<span style="width: 50px; text-align: center; font-size: 8pt;">${r.status === 'on' ? '✔ On' : r.status === 'off' ? '⚠ Off' : '—'}</span>` : ''}
+                        ${!r.done ? `<span style="width: 50px; text-align: center; font-size: 8pt;">${r.status === 'on' ? '✔ On' : r.status === 'off' ? '⚠ Off' : '–'}</span>` : ''}
                     </div>
                 `;
             }).join('');
@@ -6347,7 +6349,7 @@ Make sure your suggestions directly address the specific root cause and discussi
             
             for (const listName of listNames) {
                 if (hasMultipleLists) {
-                    todosHtml += `<div class="list-header">📋 ${listName}</div>`;
+                    todosHtml += `<div class="list-header">📹 ${listName}</div>`;
                 }
                 todosHtml += todosByList[listName].map((t, idx) => `
                     <div class="item-row" style="${t.starred ? 'background: #fef3c7;' : ''}">
@@ -6399,7 +6401,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                 
                 <!-- Agenda Full Width at Top -->
                 <div class="section">
-                    <h3>📋 Meeting Agenda</h3>
+                    <h3>📹 Meeting Agenda</h3>
                     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px;">
                         ${agendaHtml}
                     </div>
@@ -6471,7 +6473,7 @@ Make sure your suggestions directly address the specific root cause and discussi
             }).join('');
             
             // Build Matrix HTML
-            const quadrantNames = { q1: '🔴 Urgent + Important', q2: '🟢 Important (Not Urgent)', q3: '🟡 Urgent (Not Important)', q4: '⚪ Neither' };
+            const quadrantNames = { q1: '🔴 Urgent + Important', q2: '🨢 Important (Not Urgent)', q3: '🨡 Urgent (Not Important)', q4: '⚪ Neither' };
             const matrixHtml = ['q1', 'q2', 'q3', 'q4'].map(q => {
                 const tasks = plan.matrix[q] || [];
                 return `
@@ -6503,7 +6505,7 @@ Make sure your suggestions directly address the specific root cause and discussi
             
             let repoHtml = '';
             for (const [listName, items] of Object.entries(todosByList)) {
-                repoHtml += `<div style="font-size: 8pt; font-weight: 600; color: #666; margin-top: 6px;">📋 ${listName} (${items.length})</div>`;
+                repoHtml += `<div style="font-size: 8pt; font-weight: 600; color: #666; margin-top: 6px;">📹 ${listName} (${items.length})</div>`;
                 repoHtml += items.slice(0, 10).map(t => `
                     <div style="font-size: 8pt; color: #333; margin-left: 12px;">• ${t.text}</div>
                 `).join('');
@@ -6530,7 +6532,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                 </div>
                 ${repoHtml ? `
                 <div class="section" style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #ddd;">
-                    <h3>📋 Task Repository</h3>
+                    <h3>📹 Task Repository</h3>
                     ${repoHtml}
                 </div>
                 ` : ''}
@@ -6606,29 +6608,29 @@ Make sure your suggestions directly address the specific root cause and discussi
                         
                         <div class="section">
                             <h3>💡 Core Focus</h3>
-                            <p><strong>Purpose:</strong> ${coreFocus.purpose || '—'}</p>
-                            <p><strong>Niche:</strong> ${coreFocus.niche || '—'}</p>
+                            <p><strong>Purpose:</strong> ${coreFocus.purpose || '–'}</p>
+                            <p><strong>Niche:</strong> ${coreFocus.niche || '–'}</p>
                         </div>
                     </div>
                     
                     <div class="section">
                         <h3>🎯 10-Year Target (BHAG)</h3>
-                        <p>${tenYear || '—'}</p>
+                        <p>${tenYear || '–'}</p>
                     </div>
                     
                     <div class="section">
                         <h3>📢 Marketing Strategy</h3>
-                        <p><strong>Target Market:</strong> ${marketingStrategy.target || '—'}</p>
-                        <p><strong>3 Uniques:</strong> ${marketingStrategy.uniques || '—'}</p>
-                        <p><strong>Proven Process:</strong> ${marketingStrategy.proven || '—'}</p>
-                        <p><strong>Guarantee:</strong> ${marketingStrategy.guarantee || '—'}</p>
+                        <p><strong>Target Market:</strong> ${marketingStrategy.target || '–'}</p>
+                        <p><strong>3 Uniques:</strong> ${marketingStrategy.uniques || '–'}</p>
+                        <p><strong>Proven Process:</strong> ${marketingStrategy.proven || '–'}</p>
+                        <p><strong>Guarantee:</strong> ${marketingStrategy.guarantee || '–'}</p>
                     </div>
                     
                     <div class="section">
-                        <h3>📅 3-Year Picture</h3>
-                        <p><strong>Date:</strong> ${threeYear.date || '—'} | <strong>Revenue:</strong> ${threeYear.revenue || '—'} | <strong>Profit:</strong> ${threeYear.profit || '—'}</p>
-                        <p><strong>Measurables:</strong> ${threeYear.measurables || '—'}</p>
-                        <p><strong>What does it look like?</strong> ${threeYear.picture || '—'}</p>
+                        <h3>📦 3-Year Picture</h3>
+                        <p><strong>Date:</strong> ${threeYear.date || '–'} | <strong>Revenue:</strong> ${threeYear.revenue || '–'} | <strong>Profit:</strong> ${threeYear.profit || '–'}</p>
+                        <p><strong>Measurables:</strong> ${threeYear.measurables || '–'}</p>
+                        <p><strong>What does it look like?</strong> ${threeYear.picture || '–'}</p>
                     </div>
                 </body>
                 </html>
@@ -6680,26 +6682,26 @@ Make sure your suggestions directly address the specific root cause and discussi
                 </head>
                 <body>
                     <div class="header">
-                        <h1>📅 1-Year Plan</h1>
+                        <h1>📦 1-Year Plan</h1>
                         <div>Intelligent Investing LLC - ${currentYear} | Printed: ${dateStr}</div>
                     </div>
                     
                     <div class="metrics">
                         <div class="metric">
                             <div class="metric-label">Plan End Date</div>
-                            <div class="metric-value">${oneYear.date || '—'}</div>
+                            <div class="metric-value">${oneYear.date || '–'}</div>
                         </div>
                         <div class="metric">
                             <div class="metric-label">Revenue Target</div>
-                            <div class="metric-value">${oneYear.revenue || '—'}</div>
+                            <div class="metric-value">${oneYear.revenue || '–'}</div>
                         </div>
                         <div class="metric">
                             <div class="metric-label">Profit Target</div>
-                            <div class="metric-value">${oneYear.profit || '—'}</div>
+                            <div class="metric-value">${oneYear.profit || '–'}</div>
                         </div>
                         <div class="metric">
                             <div class="metric-label">Key Measurables</div>
-                            <div class="metric-value">${oneYear.measurables || '—'}</div>
+                            <div class="metric-value">${oneYear.measurables || '–'}</div>
                         </div>
                     </div>
                     
@@ -6812,7 +6814,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                     <span style="width: 24px; height: 24px; background: #3b82f6; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 10px;">${idx + 1}</span>
                     <span style="flex: 1;">${r.text || ''}</span>
                     <span style="width: 50px; text-align: center; font-weight: 600;">${r.owner || ''}</span>
-                    <span style="width: 60px; text-align: center; padding: 2px 6px; border-radius: 4px; font-size: 9pt; background: ${r.status === 'on' ? '#c6f6d5' : r.status === 'off' ? '#fed7d7' : '#f3f4f6'};">${r.status === 'on' ? '✔ On' : r.status === 'off' ? '⚠ Off' : '—'}</span>
+                    <span style="width: 60px; text-align: center; padding: 2px 6px; border-radius: 4px; font-size: 9pt; background: ${r.status === 'on' ? '#c6f6d5' : r.status === 'off' ? '#fed7d7' : '#f3f4f6'};">${r.status === 'on' ? '✔ On' : r.status === 'off' ? '⚠ Off' : '–'}</span>
                 </div>
             `).join('');
             
@@ -6868,7 +6870,7 @@ Make sure your suggestions directly address the specific root cause and discussi
             
             for (const listName of listNames) {
                 if (hasMultipleLists) {
-                    todosHtml += `<div style="font-size: 9pt; font-weight: 600; color: #666; margin: 8px 0 4px 0; padding-left: 4px;">📋 ${listName}</div>`;
+                    todosHtml += `<div style="font-size: 9pt; font-weight: 600; color: #666; margin: 8px 0 4px 0; padding-left: 4px;">📹 ${listName}</div>`;
                 }
                 todosHtml += todosByList[listName].map((t, idx) => `
                     <div style="display: flex; align-items: center; padding: 6px; margin-bottom: 4px; background: ${t.starred ? '#fef3c7' : '#f5f5f5'}; border-radius: 4px;">
@@ -6940,7 +6942,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                     
                     <!-- Agenda Full Width at Top -->
                     <div class="section">
-                        <h3>📋 Meeting Agenda</h3>
+                        <h3>📹 Meeting Agenda</h3>
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px;">
                             ${agendaHtml}
                         </div>
@@ -7056,7 +7058,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                         <input type="text" value="${m.ntfyTopic || ''}" placeholder="📱 ntfy topic (e.g., hans-pomodoro-2024)" 
                                style="flex: 1; margin: 0; font-size: 0.85rem;" onchange="updateTeamMember(${idx}, 'ntfyTopic', this.value)">
                         <button class="btn btn-secondary" style="padding: 6px 10px; font-size: 0.75rem;" 
-                                onclick="testMemberNtfy(${idx})">🔓 Test</button>
+                                onclick="testMemberNtfy(${idx})">🔜 Test</button>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                         <input type="text" value="${m.webAppUrl || ''}" placeholder="Google Tasks Web App URL" 
@@ -8164,9 +8166,9 @@ Return ONLY the JSON array:`;
             }
             if (updateTasks.length > 0) {
                 if (formatted) formatted += '\n\n';
-                formatted += '📅 DUE DATE UPDATES:\n';
+                formatted += '📦 DUE DATE UPDATES:\n';
                 formatted += updateTasks.map(t => 
-                    `  • ${t.text.substring(0, 40)}${t.text.length > 40 ? '...' : ''} ↑ ${t.dueDate || '(none)'}`
+                    `  • ${t.text.substring(0, 40)}${t.text.length > 40 ? '...' : ''} → ${t.dueDate || '(none)'}`
                 ).join('\n');
             }
             
@@ -8961,7 +8963,7 @@ Return ONLY the JSON array:`;
                 const habitsSection = document.getElementById('dailyHabitsSection');
                 habitsSection.style.background = 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)';
                 habitsSection.querySelector('h3').style.color = 'white';
-                habitsSection.querySelector('h3').textContent = '🎉 All Habits Complete!';
+                habitsSection.querySelector('h3').textContent = '🎰 All Habits Complete!';
                 setTimeout(() => {
                     habitsSection.style.background = 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)';
                     habitsSection.querySelector('h3').style.color = '#166534';
@@ -9131,7 +9133,7 @@ Return ONLY the JSON array:`;
                     let todosHtml = '';
                     for (const listName of listNames) {
                         if (hasMultipleLists) {
-                            todosHtml += `<div style="font-size: 0.75rem; font-weight: 600; color: var(--gray-500); margin: 8px 0 4px 4px;">📋 ${listName}</div>`;
+                            todosHtml += `<div style="font-size: 0.75rem; font-weight: 600; color: var(--gray-500); margin: 8px 0 4px 4px;">📹 ${listName}</div>`;
                         }
                         todosHtml += todosByList[listName].map(t => {
                             const inUse = tasksInUse.has(`todo:${t.text}`);
@@ -9261,7 +9263,7 @@ Return ONLY the JSON array:`;
             // Populate the select dropdown
             const select = document.getElementById('newTaskList');
             select.innerHTML = `
-                <option value="local">🔑 Local Task (Private - not synced)</option>
+                <option value="local">🔘 Local Task (Private - not synced)</option>
                 <option value="default">📝 Default To-Dos</option>
                 ${lists.map((list, i) => `<option value="list_${i}">${list.title}</option>`).join('')}
             `;
@@ -9390,7 +9392,7 @@ Return ONLY the JSON array:`;
                     autoSave();
                     renderRepository();
                     renderTodos(yearData.quarters[currentQuarter].todos);
-                    addLogEntry(`Task edited: "${oldText.substring(0, 25)}..." ↑ "${newText.trim().substring(0, 25)}..."`);
+                    addLogEntry(`Task edited: "${oldText.substring(0, 25)}..." → "${newText.trim().substring(0, 25)}..."`);
                 }
             }
         }
@@ -9739,7 +9741,7 @@ Return ONLY the JSON array:`;
                         found.text = newText.trim();
                         autoSave();
                         renderTodos(todos);
-                        addLogEntry(`Task updated: "${oldText.substring(0, 30)}..." ↑ "${newText.trim().substring(0, 30)}..."`);
+                        addLogEntry(`Task updated: "${oldText.substring(0, 30)}..." → "${newText.trim().substring(0, 30)}..."`);
                     }
                 }
                 
@@ -10152,7 +10154,7 @@ Return ONLY the JSON array:`;
                         found.text = newText.trim();
                         autoSave();
                         renderTodos(todos);
-                        addLogEntry(`Task updated: "${oldText.substring(0, 30)}..." ↑ "${newText.trim().substring(0, 30)}..."`);
+                        addLogEntry(`Task updated: "${oldText.substring(0, 30)}..." → "${newText.trim().substring(0, 30)}..."`);
                     }
                 }
                 
@@ -10935,7 +10937,7 @@ Return ONLY the JSON array:`;
                 </head>
                 <body>
                     <div class="header">
-                        <h1>📅 My Daily Plan</h1>
+                        <h1>📦 My Daily Plan</h1>
                         <div class="subtitle">${userName} • ${dateStr}</div>
                     </div>
                     
