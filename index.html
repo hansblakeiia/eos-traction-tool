@@ -3231,7 +3231,7 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.5.4';
+        const EOS_VERSION = '3.5.5';
         const EOS_BUILD_DATE = '2026-01-15';
         
         // ==================== DATA STRUCTURE ====================
@@ -7532,8 +7532,12 @@ Make sure your suggestions directly address the specific root cause and discussi
             try {
                 // Include secret key if configured
                 const secretParam = member.webAppSecret ? '&secretKey=' + encodeURIComponent(member.webAppSecret) : '';
-                const response = await fetch(url + '?action=getTaskLists' + secretParam);
+                const fullUrl = url + '?action=getLists' + secretParam;
+                console.log('Fetching lists from:', fullUrl);
+                
+                const response = await fetch(fullUrl);
                 const data = await response.json();
+                console.log('Fetch lists response:', data);
                 
                 if (data.status === 'ok' && data.lists) {
                     member.taskLists = data.lists;
@@ -7542,12 +7546,15 @@ Make sure your suggestions directly address the specific root cause and discussi
                     }
                     seededData._settings = settings;
                     renderTeamMembersList(settings.teamMembers);
-                    alert(`✅ Found ${data.lists.length} task list(s) for ${member.name}`);
+                    alert('Found ' + data.lists.length + ' task list(s) for ' + member.name);
                 } else {
-                    alert('⚠️ Could not fetch lists: ' + (data.message || 'Unknown error'));
+                    const errorMsg = data.error || data.message || JSON.stringify(data);
+                    console.error('Fetch lists failed:', data);
+                    alert('Could not fetch lists: ' + errorMsg);
                 }
             } catch (error) {
-                alert('❌ Error fetching lists: ' + error.message);
+                console.error('Fetch lists error:', error);
+                alert('Error fetching lists: ' + error.message);
             }
         }
         
