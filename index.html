@@ -3198,7 +3198,7 @@ Example:
     <!-- Add Task Modal -->
     <div class="modal-overlay" id="addTaskModal">
         <div class="modal" style="max-width: 450px;">
-            <h2>➕ Add Task</h2>
+            <h2>Add Task</h2>
             <div style="margin-bottom: 15px;">
                 <label style="display: block; margin-bottom: 6px; font-weight: 500;">Task Description</label>
                 <input type="text" id="newTaskText" placeholder="Enter your task..." 
@@ -3206,10 +3206,16 @@ Example:
                        onkeypress="if(event.key==='Enter') submitNewTask()">
             </div>
             <div style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 6px; font-weight: 500;">📹 Category / List</label>
+                <label style="display: block; margin-bottom: 6px; font-weight: 500;">Owner</label>
+                <select id="newTaskOwner" style="width: 100%; padding: 10px; font-size: 1rem; border: 1px solid var(--gray-300); border-radius: 6px;"
+                        onchange="updateTaskListOptions()">
+                </select>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 6px; font-weight: 500;">Google Tasks List</label>
                 <select id="newTaskList" style="width: 100%; padding: 10px; font-size: 1rem; border: 1px solid var(--gray-300); border-radius: 6px;">
-                    <option value="local">🔘 Local Task (Private - not synced)</option>
-                    <option value="default">📝 Default To-Dos</option>
+                    <option value="local">Local Task (Private - not synced)</option>
+                    <option value="default">Default To-Dos</option>
                 </select>
             </div>
             <div class="modal-actions">
@@ -3231,7 +3237,7 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.5.5';
+        const EOS_VERSION = '3.5.6';
         const EOS_BUILD_DATE = '2026-01-15';
         
         // ==================== DATA STRUCTURE ====================
@@ -5015,16 +5021,18 @@ Build Date: ${EOS_BUILD_DATE}
         
         function addTodoWithList() {
             const settings = getSettings();
-            const currentUser = settings.teamMembers?.[0]?.initials || '';
-            const member = settings.teamMembers?.find(m => m.initials === currentUser);
-            const lists = member?.taskLists || [];
             
-            // Populate the select dropdown
-            const select = document.getElementById('newTaskList');
-            select.innerHTML = `
-                <option value="default">📝 Default To-Dos</option>
-                ${lists.map((list, i) => `<option value="list_${i}">${list.title}</option>`).join('')}
-            `;
+            // Populate the owner dropdown
+            const ownerSelect = document.getElementById('newTaskOwner');
+            ownerSelect.innerHTML = settings.teamMembers.map(m => 
+                '<option value="' + m.initials + '">' + (m.name || m.initials) + '</option>'
+            ).join('');
+            
+            // Set default to first team member
+            ownerSelect.value = settings.teamMembers?.[0]?.initials || '';
+            
+            // Populate lists based on selected owner
+            updateTaskListOptions();
             
             // Clear the text input
             document.getElementById('newTaskText').value = '';
@@ -5037,6 +5045,29 @@ Build Date: ${EOS_BUILD_DATE}
             
             // Focus the input
             setTimeout(() => document.getElementById('newTaskText').focus(), 100);
+        }
+        
+        function updateTaskListOptions() {
+            const settings = getSettings();
+            const ownerSelect = document.getElementById('newTaskOwner');
+            const selectedOwner = ownerSelect?.value || settings.teamMembers?.[0]?.initials || '';
+            const member = settings.teamMembers?.find(m => m.initials === selectedOwner);
+            const lists = member?.taskLists || [];
+            
+            const listSelect = document.getElementById('newTaskList');
+            const context = window.addTaskContext || 'daily';
+            
+            // Build options based on context
+            let options = '';
+            if (context === 'daily') {
+                options += '<option value="local">Local Task (Private - not synced)</option>';
+            }
+            options += '<option value="default">Default To-Dos</option>';
+            lists.forEach((list, i) => {
+                options += '<option value="list_' + i + '">' + list.title + '</option>';
+            });
+            
+            listSelect.innerHTML = options;
         }
         
         function updateTodo(idx, field, value) {
@@ -9669,24 +9700,26 @@ Return ONLY the JSON array:`;
         }
         
         function addTaskWithCategory() {
-            const user = document.getElementById('dailyPlanUser')?.value;
             const settings = getSettings();
-            const member = settings.teamMembers.find(m => m.initials === user);
-            const lists = member?.taskLists || [];
+            const currentUser = document.getElementById('dailyPlanUser')?.value || settings.teamMembers?.[0]?.initials || '';
             
-            // Populate the select dropdown
-            const select = document.getElementById('newTaskList');
-            select.innerHTML = `
-                <option value="local">🔘 Local Task (Private - not synced)</option>
-                <option value="default">📝 Default To-Dos</option>
-                ${lists.map((list, i) => `<option value="list_${i}">${list.title}</option>`).join('')}
-            `;
+            // Populate the owner dropdown
+            const ownerSelect = document.getElementById('newTaskOwner');
+            ownerSelect.innerHTML = settings.teamMembers.map(m => 
+                '<option value="' + m.initials + '">' + (m.name || m.initials) + '</option>'
+            ).join('');
             
-            // Clear the text input
-            document.getElementById('newTaskText').value = '';
+            // Set default to current daily plan user
+            ownerSelect.value = currentUser;
             
             // Set context for submitNewTask
             window.addTaskContext = 'daily';
+            
+            // Populate lists based on selected owner
+            updateTaskListOptions();
+            
+            // Clear the text input
+            document.getElementById('newTaskText').value = '';
             
             // Open modal
             openModal('addTaskModal');
@@ -9694,7 +9727,7 @@ Return ONLY the JSON array:`;
             // Focus the input
             setTimeout(() => document.getElementById('newTaskText').focus(), 100);
         }
-        
+
         function submitNewTask() {
             const text = document.getElementById('newTaskText').value.trim();
             if (!text) {
@@ -9706,10 +9739,12 @@ Return ONLY the JSON array:`;
             const context = window.addTaskContext || 'daily';
             const settings = getSettings();
             
-            // Get user - from daily plan selector or first team member for weekly context
-            let user = document.getElementById('dailyPlanUser')?.value;
-            if (!user || context === 'weekly') {
-                user = settings.teamMembers?.[0]?.initials || '';
+            // Get user - from owner dropdown for weekly, or daily plan selector for daily
+            let user;
+            if (context === 'weekly') {
+                user = document.getElementById('newTaskOwner')?.value || settings.teamMembers?.[0]?.initials || '';
+            } else {
+                user = document.getElementById('dailyPlanUser')?.value || settings.teamMembers?.[0]?.initials || '';
             }
             
             const member = settings.teamMembers.find(m => m.initials === user);
