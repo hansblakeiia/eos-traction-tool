@@ -3231,7 +3231,7 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.5.2';
+        const EOS_VERSION = '3.5.3';
         const EOS_BUILD_DATE = '2026-01-15';
         
         // ==================== DATA STRUCTURE ====================
@@ -3685,42 +3685,53 @@ Example:
             
             let totalPushed = 0;
             
-            for (const [owner, tasks] of Object.entries(tasksByOwner)) {
+            for (const [owner, ownerTasks] of Object.entries(tasksByOwner)) {
                 const member = settings.teamMembers?.find(m => m.initials === owner);
                 if (!member?.webAppUrl) continue;
                 
-                try {
-                    const payload = {
-                        secretKey: member.webAppSecret || '',
-                        action: 'createTasks',
-                        listId: member.pushListId || '@default',
-                        tasks: tasks.map(t => ({
-                            title: t.text,
-                            notes: 'From EOS Tool',
-                            dueDate: t.dueDate ? new Date(t.dueDate).toISOString() : ''
-                        }))
-                    };
-                    
-                    const response = await fetch(member.webAppUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify(payload)
-                    });
-                    
-                    const data = await response.json();
-                    
-                    if (data.results) {
-                        // Update tasks with Google Task IDs
-                        tasks.forEach((t, idx) => {
-                            if (data.results[idx]?.taskId) {
-                                t.googleTaskId = data.results[idx].taskId;
-                                t.googleListId = member.pushListId || '@default';
-                            }
+                // Group by list within owner
+                const tasksByList = {};
+                ownerTasks.forEach(t => {
+                    const listId = t.googleListId || member.pushListId || '@default';
+                    if (!tasksByList[listId]) tasksByList[listId] = [];
+                    tasksByList[listId].push(t);
+                });
+                
+                for (const [listId, tasks] of Object.entries(tasksByList)) {
+                    try {
+                        const payload = {
+                            secretKey: member.webAppSecret || '',
+                            action: 'createTasks',
+                            listId: listId,
+                            tasks: tasks.map(t => ({
+                                title: t.text,
+                                notes: 'From EOS Tool',
+                                dueDate: t.dueDate ? new Date(t.dueDate).toISOString() : ''
+                            }))
+                        };
+                        
+                        const response = await fetch(member.webAppUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain' },
+                            redirect: 'follow',
+                            body: JSON.stringify(payload)
                         });
-                        totalPushed += data.success || 0;
+                        
+                        const data = await response.json();
+                        
+                        if (data.results) {
+                            // Update tasks with Google Task IDs
+                            tasks.forEach((t, idx) => {
+                                if (data.results[idx]?.taskId) {
+                                    t.googleTaskId = data.results[idx].taskId;
+                                    t.googleListId = listId;
+                                }
+                            });
+                            totalPushed += data.count || 0;
+                        }
+                    } catch (error) {
+                        console.error(`Push error for ${owner}:`, error);
                     }
-                } catch (error) {
-                    console.error(`Push error for ${owner}:`, error);
                 }
             }
             
@@ -3872,47 +3883,62 @@ Example:
                 // Find tasks without googleTaskId - these need to be pushed
                 const tasksWithoutGoogleId = todos.filter(t => !t.googleTaskId && t.text && !t.done);
                 console.log('Sync Debug: Tasks without googleTaskId:', tasksWithoutGoogleId.length);
-                tasksWithoutGoogleId.forEach(t => console.log(`  - "${t.text}" owner=${t.owner}`));
+                tasksWithoutGoogleId.forEach(t => console.log(`  - "${t.text}" owner=${t.owner} listId=${t.googleListId || 'default'}`));
                 
                 // Filter to current user's tasks (or tasks without owner)
                 const newTasks = tasksWithoutGoogleId.filter(t => !t.owner || t.owner === currentUser);
                 console.log('Sync Debug: Tasks to push for', currentUser, ':', newTasks.length);
                 
                 if (newTasks.length > 0) {
-                    const payload = {
-                        secretKey: member.webAppSecret || '',
-                        action: 'createTasks',
-                        listId: member.pushListId || '@default',
-                        tasks: newTasks.map(t => ({
-                            title: t.text,
-                            notes: 'From EOS Tool',
-                            dueDate: t.dueDate ? new Date(t.dueDate).toISOString() : ''
-                        }))
-                    };
-                    
-                    console.log('Sync Debug: Push payload:', payload);
-                    
-                    const pushResponse = await fetch(member.webAppUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'text/plain' },
-                        redirect: 'follow',
-                        body: JSON.stringify(payload)
+                    // Group tasks by their target list
+                    const tasksByList = {};
+                    newTasks.forEach(t => {
+                        const listId = t.googleListId || member.pushListId || '@default';
+                        if (!tasksByList[listId]) tasksByList[listId] = [];
+                        tasksByList[listId].push(t);
                     });
                     
-                    const pushData = await pushResponse.json();
-                    console.log('Sync - Push response:', pushData);
+                    console.log('Sync Debug: Pushing to', Object.keys(tasksByList).length, 'different list(s)');
                     
-                    if (pushData.error) {
-                        console.error('Push error:', pushData.error);
-                        showToast('Push failed: ' + pushData.error, 'error');
-                    } else if (pushData.results) {
-                        newTasks.forEach((t, idx) => {
-                            if (pushData.results[idx]?.taskId) {
-                                t.googleTaskId = pushData.results[idx].taskId;
-                                t.googleListId = member.pushListId || '@default';
-                                pushResults.pushed++;
-                            }
+                    // Push to each list separately
+                    for (const [listId, tasks] of Object.entries(tasksByList)) {
+                        console.log(`Sync Debug: Pushing ${tasks.length} task(s) to list: ${listId}`);
+                        
+                        const payload = {
+                            secretKey: member.webAppSecret || '',
+                            action: 'createTasks',
+                            listId: listId,
+                            tasks: tasks.map(t => ({
+                                title: t.text,
+                                notes: 'From EOS Tool',
+                                dueDate: t.dueDate ? new Date(t.dueDate).toISOString() : ''
+                            }))
+                        };
+                        
+                        console.log('Sync Debug: Push payload:', payload);
+                        
+                        const pushResponse = await fetch(member.webAppUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain' },
+                            redirect: 'follow',
+                            body: JSON.stringify(payload)
                         });
+                        
+                        const pushData = await pushResponse.json();
+                        console.log('Sync - Push response:', pushData);
+                        
+                        if (pushData.error) {
+                            console.error('Push error:', pushData.error);
+                            showToast('Push failed: ' + pushData.error, 'error');
+                        } else if (pushData.results) {
+                            tasks.forEach((t, idx) => {
+                                if (pushData.results[idx]?.taskId) {
+                                    t.googleTaskId = pushData.results[idx].taskId;
+                                    t.googleListId = listId;
+                                    pushResults.pushed++;
+                                }
+                            });
+                        }
                     }
                 }
                 
