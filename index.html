@@ -3231,7 +3231,7 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.5.1';
+        const EOS_VERSION = '3.5.2';
         const EOS_BUILD_DATE = '2026-01-15';
         
         // ==================== DATA STRUCTURE ====================
@@ -3834,21 +3834,31 @@ Example:
                             }
                             
                             if (updated) pullResults.updated++;
-                        } else if (!isCompleted && !existingTexts.has(taskTitle.toLowerCase().trim())) {
-                            // New task
-                            console.log(`  -> Adding as NEW task`);
-                            existingTasks.push({
-                                text: taskTitle,
-                                owner: currentUser,
-                                done: false,
-                                googleTaskId: task.id,
-                                googleListId: task.listId,
-                                googleListName: task.listName,
-                                dueDate: dueDate,
-                                pulledAt: new Date().toISOString()
-                            });
-                            existingTexts.add(taskTitle.toLowerCase().trim());
-                            pullResults.newTasks++;
+                        } else {
+                            // No local match - check if we should add as new
+                            const textExists = existingTexts.has(taskTitle.toLowerCase().trim());
+                            console.log(`  No match - isCompleted=${isCompleted}, textAlreadyExists=${textExists}`);
+                            
+                            if (!isCompleted && !textExists) {
+                                // New task
+                                console.log(`  -> Adding as NEW task`);
+                                existingTasks.push({
+                                    text: taskTitle,
+                                    owner: currentUser,
+                                    done: false,
+                                    googleTaskId: task.id,
+                                    googleListId: task.listId,
+                                    googleListName: task.listName,
+                                    dueDate: dueDate,
+                                    pulledAt: new Date().toISOString()
+                                });
+                                existingTexts.add(taskTitle.toLowerCase().trim());
+                                pullResults.newTasks++;
+                            } else if (isCompleted) {
+                                console.log(`  -> Skipping (completed task)`);
+                            } else {
+                                console.log(`  -> Skipping (text already exists locally)`);
+                            }
                         }
                     }
                     
