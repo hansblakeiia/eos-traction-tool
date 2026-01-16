@@ -3231,7 +3231,7 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.5.3';
+        const EOS_VERSION = '3.5.4';
         const EOS_BUILD_DATE = '2026-01-15';
         
         // ==================== DATA STRUCTURE ====================
@@ -3658,6 +3658,45 @@ Example:
             }, 5000);
         }
         
+        // Push a single task immediately to Google Tasks
+        async function pushSingleTask(task, member, listId) {
+            try {
+                const payload = {
+                    secretKey: member.webAppSecret || '',
+                    action: 'createTask',
+                    listId: listId,
+                    title: task.text,
+                    notes: 'From EOS Tool',
+                    due: task.dueDate ? new Date(task.dueDate).toISOString() : null
+                };
+                
+                console.log('Auto-push single task:', payload);
+                
+                const response = await fetch(member.webAppUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    redirect: 'follow',
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                console.log('Auto-push response:', data);
+                
+                if (data.success && data.taskId) {
+                    task.googleTaskId = data.taskId;
+                    task.googleListId = listId;
+                    autoSave();
+                    showToast('Synced to Google Tasks', 'success');
+                } else if (data.error) {
+                    console.error('Auto-push failed:', data.error);
+                    showToast('Sync failed - will retry on next Sync', 'warning');
+                }
+            } catch (error) {
+                console.error('Auto-push error:', error);
+                showToast('Sync failed - will retry on next Sync', 'warning');
+            }
+        }
+        
         async function autoPushToGoogleTasks() {
             if (syncState.isSyncing) return;
             
@@ -3773,6 +3812,8 @@ Example:
                 updateSyncStatus('syncing', 'Pulling from Google Tasks...');
                 
                 const listIds = member.pullListIds?.length > 0 ? member.pullListIds : ['@default'];
+                console.log('Sync Debug: Pulling from lists:', listIds);
+                
                 const pullUrl = `${member.webAppUrl}?action=getAllTasks&listIds=${listIds.join(',')}&includeCompleted=true&secretKey=${encodeURIComponent(member.webAppSecret || '')}`;
                 
                 const pullResponse = await fetch(pullUrl);
@@ -3794,6 +3835,15 @@ Example:
                         
                         const isCompleted = task.status === 'completed';
                         let taskTitle = task.title || '';
+                        
+                        // Debug: log raw task from Google
+                        console.log(`Sync Debug: Raw task from Google:`, {
+                            title: task.title,
+                            id: task.id,
+                            status: task.status,
+                            listName: task.listName,
+                            due: task.due
+                        });
                         
                         // Strip star prefix
                         if (taskTitle.startsWith('\u2B50 ')) {
@@ -9678,20 +9728,26 @@ Return ONLY the JSON array:`;
                 }
                 
                 yearData.quarters[currentQuarter].todos = yearData.quarters[currentQuarter].todos || [];
-                yearData.quarters[currentQuarter].todos.push({
+                const newTask = {
                     text: text,
                     owner: user,
                     done: false,
                     googleListId: googleListId,
                     googleListName: googleListName,
                     createdAt: new Date().toISOString()
-                });
+                };
+                yearData.quarters[currentQuarter].todos.push(newTask);
                 autoSave();
                 renderTodos(yearData.quarters[currentQuarter].todos);
                 
                 // Only render repository if in daily context
                 if (context === 'daily') {
                     renderRepository();
+                }
+                
+                // Auto-push to Google Tasks if list is assigned
+                if (googleListId && member?.webAppUrl) {
+                    pushSingleTask(newTask, member, googleListId);
                 }
             }
             
