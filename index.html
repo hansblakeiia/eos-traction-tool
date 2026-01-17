@@ -3247,7 +3247,7 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.7.0';
+        const EOS_VERSION = '3.7.1';
         const EOS_BUILD_DATE = '2026-01-17';
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
@@ -5546,9 +5546,14 @@ Build Date: ${EOS_BUILD_DATE}
             const newMember = settings.teamMembers.find(m => m.initials === newOwner);
             
             if (!newMember?.webAppUrl) {
-                console.log(`No Web App URL for ${newOwner} - task not synced`);
+                console.log('No Web App URL for ' + newOwner + ' - task not synced');
+                showToast('Task assigned to ' + newOwner + ' but not synced (no URL configured)', 'warning');
                 return;
             }
+            
+            // Save old task info BEFORE we overwrite it
+            const oldGoogleTaskId = todo.googleTaskId;
+            const oldGoogleListId = todo.googleListId;
             
             try {
                 // Create task in new owner's Google Tasks
@@ -5557,51 +5562,64 @@ Build Date: ${EOS_BUILD_DATE}
                     secretKey: newMember.webAppSecret || '',
                     action: 'createTask',
                     listId: newMember.pushListId || '@default',
-                    task: {
-                        title: todo.text,
-                        notes: `Assigned from ${oldOwner || 'Traction Meeting'} on ${today.toLocaleDateString()}`,
-                        dueDate: todo.dueDate ? new Date(todo.dueDate).toISOString() : ''
-                    }
+                    title: todo.text,
+                    notes: 'Assigned from ' + (oldOwner || 'Traction Meeting') + ' on ' + today.toLocaleDateString(),
+                    due: todo.dueDate ? new Date(todo.dueDate).toISOString() : null
                 };
+                
+                console.log('Syncing task to new owner:', newOwner, payload);
                 
                 const response = await fetch(newMember.webAppUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain' },
+                    redirect: 'follow',
                     body: JSON.stringify(payload)
                 });
                 
                 const data = await response.json();
+                console.log('Sync to new owner response:', data);
+                
                 if (data.success && data.taskId) {
                     // Update task with new Google Task ID from new owner's account
                     todo.googleTaskId = data.taskId;
                     todo.googleListId = newMember.pushListId || '@default';
                     todo.googleListName = newMember.taskLists?.find(l => l.id === todo.googleListId)?.title || 'Tasks';
                     autoSave();
-                    console.log(`✅ Task assigned to ${newOwner} and synced to their Google Tasks`);
-                    addLogEntry(`Task reassigned: "${todo.text.substring(0, 25)}..." → ${newOwner}`);
-                }
-                
-                // Optionally: Complete the task in old owner's Google Tasks
-                // (so it doesn't show as duplicate)
-                if (oldOwner && todo.googleTaskId) {
-                    const oldMember = settings.teamMembers.find(m => m.initials === oldOwner);
-                    if (oldMember?.webAppUrl) {
-                        // Mark as complete in old owner's list (archiving it essentially)
-                        fetch(oldMember.webAppUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'text/plain' },
-                            body: JSON.stringify({
-                                secretKey: oldMember.webAppSecret || '',
-                                action: 'completeTask',
-                                taskId: todo.googleTaskId,
-                                listId: todo.googleListId || '@default'
-                            })
-                        }).catch(e => console.log('Could not archive from old owner'));
+                    console.log('Task assigned to ' + newOwner + ' and synced to their Google Tasks');
+                    showToast('Task synced to ' + newOwner + "'s Google Tasks", 'success');
+                    addLogEntry('Task reassigned: "' + todo.text.substring(0, 25) + '..." to ' + newOwner);
+                    
+                    // Now complete the task in old owner's Google Tasks (using saved IDs)
+                    if (oldOwner && oldGoogleTaskId) {
+                        const oldMember = settings.teamMembers.find(m => m.initials === oldOwner);
+                        if (oldMember?.webAppUrl) {
+                            console.log('Completing old task in ' + oldOwner + "'s Google Tasks:", oldGoogleTaskId);
+                            fetch(oldMember.webAppUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'text/plain' },
+                                redirect: 'follow',
+                                body: JSON.stringify({
+                                    secretKey: oldMember.webAppSecret || '',
+                                    action: 'completeTask',
+                                    taskId: oldGoogleTaskId,
+                                    listId: oldGoogleListId || '@default'
+                                })
+                            }).then(r => r.json()).then(d => {
+                                console.log('Old task completed:', d);
+                            }).catch(e => console.log('Could not archive from old owner:', e));
+                        }
                     }
+                } else {
+                    console.error('Failed to sync task to new owner:', data.error);
+                    showToast('Failed to sync to ' + newOwner + ': ' + (data.error || 'Unknown error'), 'error');
                 }
             } catch (error) {
                 console.error('Error syncing task to new owner:', error);
+                showToast('Error syncing to ' + newOwner + ': ' + error.message, 'error');
             }
+            
+            // Refresh the view to respect current filter
+            sortAndRenderTodos();
         }
         
         function toggleTodo(idx) {
