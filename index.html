@@ -2634,9 +2634,12 @@
                     
                     <!-- Team Members -->
                     <div style="margin-bottom: 16px;">
-                        <h4 style="color: #1e40af; margin-bottom: 8px; font-size: 0.95rem;">Team Members</h4>
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                            <h4 style="color: #1e40af; margin: 0; font-size: 0.95rem;">Team Members</h4>
+                            <span id="cloudSyncStatus" style="font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; background: #f3f4f6; color: #6b7280;">Local only</span>
+                        </div>
                         <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 10px;">
-                            Add team members with their Google Tasks URL and ntfy notification topic.
+                            Team settings sync to cloud automatically. All team members share the same configuration.
                         </p>
                         <div id="teamMembersList"></div>
                         <button class="add-btn" onclick="addTeamMember()" style="margin-top: 10px;">+ Add Team Member</button>
@@ -3244,8 +3247,12 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.6.0';
-        const EOS_BUILD_DATE = '2026-01-15';
+        const EOS_VERSION = '3.7.0';
+        const EOS_BUILD_DATE = '2026-01-17';
+        
+        // Shared Settings Sheet - any team member's Apps Script URL can serve this
+        // This URL is used to load/save team settings from the shared Google Sheet
+        const SHARED_SETTINGS_URL = ''; // Will be set from first configured team member's URL
         
         // ==================== DATA STRUCTURE ====================
         let currentYear = '2026';
@@ -3367,6 +3374,16 @@ Example:
             // Initialize sync system
             initAutoSync();
             
+            // Load team settings from cloud (after short delay to not block UI)
+            setTimeout(() => {
+                loadTeamSettingsFromCloud().then(loaded => {
+                    if (loaded) {
+                        // Re-initialize sync with updated settings
+                        initAutoSync();
+                    }
+                });
+            }, 1500);
+            
             console.log(`EOS Traction Tool v${EOS_VERSION} (${EOS_BUILD_DATE}): Ready`);
         });
         
@@ -3379,6 +3396,163 @@ Example:
             autoSyncEnabled: true
         };
         
+        // ==================== SHARED SETTINGS (CLOUD SYNC) ====================
+        
+        let cloudSettingsLoaded = false;
+        
+        // Load team settings from shared Google Sheet
+        async function loadTeamSettingsFromCloud() {
+            const settings = getSettings();
+            
+            // Find first team member with a configured Web App URL
+            const memberWithUrl = settings.teamMembers?.find(m => m.webAppUrl);
+            if (!memberWithUrl) {
+                console.log('Cloud Settings: No Web App URL configured, skipping cloud load');
+                updateCloudSyncStatus('none');
+                return false;
+            }
+            
+            try {
+                console.log('Cloud Settings: Loading from shared sheet...');
+                updateCloudSyncStatus('loading');
+                const url = memberWithUrl.webAppUrl + '?action=getTeamSettings';
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.success && data.teamMembers && data.teamMembers.length > 0) {
+                    console.log('Cloud Settings: Loaded', data.teamMembers.length, 'team members from', data.sheetName);
+                    
+                    // Merge cloud settings with local settings
+                    const localSettings = getSettings();
+                    
+                    // Update team members from cloud
+                    data.teamMembers.forEach(cloudMember => {
+                        const localMember = localSettings.teamMembers?.find(m => m.initials === cloudMember.initials);
+                        if (localMember) {
+                            // Update local member with cloud data
+                            Object.assign(localMember, cloudMember);
+                        } else {
+                            // Add new member from cloud
+                            localSettings.teamMembers = localSettings.teamMembers || [];
+                            localSettings.teamMembers.push(cloudMember);
+                        }
+                    });
+                    
+                    // Save merged settings locally
+                    seededData._settings = localSettings;
+                    localStorage.setItem('eos_traction_data', JSON.stringify(seededData));
+                    
+                    cloudSettingsLoaded = true;
+                    updateCloudSyncStatus('synced');
+                    showToast('Team settings synced from cloud', 'success');
+                    
+                    // Update owner filter dropdown
+                    populateOwnerFilter();
+                    
+                    return true;
+                } else {
+                    console.log('Cloud Settings: No team members found in sheet or error:', data.error);
+                    updateCloudSyncStatus('empty');
+                    return false;
+                }
+            } catch (error) {
+                console.error('Cloud Settings: Failed to load:', error);
+                updateCloudSyncStatus('error');
+                return false;
+            }
+        }
+        
+        // Update cloud sync status badge
+        function updateCloudSyncStatus(status) {
+            const badge = document.getElementById('cloudSyncStatus');
+            if (!badge) return;
+            
+            switch (status) {
+                case 'synced':
+                    badge.textContent = 'Synced to cloud';
+                    badge.style.background = '#d1fae5';
+                    badge.style.color = '#047857';
+                    break;
+                case 'loading':
+                    badge.textContent = 'Syncing...';
+                    badge.style.background = '#fef3c7';
+                    badge.style.color = '#92400e';
+                    break;
+                case 'saving':
+                    badge.textContent = 'Saving...';
+                    badge.style.background = '#dbeafe';
+                    badge.style.color = '#1e40af';
+                    break;
+                case 'error':
+                    badge.textContent = 'Sync error';
+                    badge.style.background = '#fee2e2';
+                    badge.style.color = '#dc2626';
+                    break;
+                case 'empty':
+                    badge.textContent = 'No cloud data';
+                    badge.style.background = '#f3f4f6';
+                    badge.style.color = '#6b7280';
+                    break;
+                case 'none':
+                default:
+                    badge.textContent = 'Local only';
+                    badge.style.background = '#f3f4f6';
+                    badge.style.color = '#6b7280';
+                    break;
+            }
+        }
+        
+        // Save team settings to shared Google Sheet
+        async function saveTeamSettingsToCloud() {
+            const settings = getSettings();
+            
+            // Find first team member with a configured Web App URL
+            const memberWithUrl = settings.teamMembers?.find(m => m.webAppUrl);
+            if (!memberWithUrl) {
+                console.log('Cloud Settings: No Web App URL configured, skipping cloud save');
+                updateCloudSyncStatus('none');
+                return false;
+            }
+            
+            try {
+                console.log('Cloud Settings: Saving to shared sheet...');
+                updateCloudSyncStatus('saving');
+                
+                const payload = {
+                    action: 'saveTeamSettings',
+                    teamMembers: settings.teamMembers,
+                    renameSheet: true  // Rename sheet on first save
+                };
+                
+                const response = await fetch(memberWithUrl.webAppUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    redirect: 'follow',
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    console.log('Cloud Settings: Saved', data.memberCount, 'team members at', data.savedAt);
+                    updateCloudSyncStatus('synced');
+                    showToast('Team settings saved to cloud', 'success');
+                    return true;
+                } else {
+                    console.error('Cloud Settings: Save failed:', data.error);
+                    updateCloudSyncStatus('error');
+                    showToast('Failed to save to cloud: ' + data.error, 'error');
+                    return false;
+                }
+            } catch (error) {
+                console.error('Cloud Settings: Failed to save:', error);
+                updateCloudSyncStatus('error');
+                showToast('Failed to save to cloud: ' + error.message, 'error');
+                return false;
+            }
+        }
+        
         function initAutoSync() {
             // Load sync preferences
             const savedAutoSync = localStorage.getItem('eos_autoSync');
@@ -3387,21 +3561,36 @@ Example:
             const checkbox = document.getElementById('autoSyncEnabled');
             if (checkbox) checkbox.checked = syncState.autoSyncEnabled;
             
-            // Show sync bar if user has Web App configured
+            // Check sync configuration
             const settings = getSettings();
-            const hasWebApp = settings.teamMembers?.some(m => m.webAppUrl);
+            const configuredMembers = settings.teamMembers?.filter(m => m.webAppUrl) || [];
+            const unconfiguredMembers = settings.teamMembers?.filter(m => !m.webAppUrl) || [];
+            const currentUser = document.getElementById('dailyPlanUser')?.value || settings.teamMembers?.[0]?.initials;
+            const currentMember = settings.teamMembers?.find(m => m.initials === currentUser);
             
-            if (hasWebApp) {
+            console.log('Sync Init: Configured members:', configuredMembers.map(m => m.initials));
+            console.log('Sync Init: Unconfigured members:', unconfiguredMembers.map(m => m.initials));
+            console.log('Sync Init: Current user:', currentUser, 'has URL:', !!currentMember?.webAppUrl);
+            
+            // Show sync bar if any user has Web App configured
+            if (configuredMembers.length > 0) {
                 document.getElementById('syncStatusBar').style.display = 'flex';
                 
-                // Auto-pull on load (with delay to not block UI)
-                if (syncState.autoSyncEnabled) {
+                // Check if current user is configured
+                if (!currentMember?.webAppUrl) {
+                    updateSyncStatus('warning', 'No sync for ' + currentUser + ' - configure in Settings');
+                } else if (syncState.autoSyncEnabled) {
+                    // Auto-pull on load (with delay to not block UI)
                     setTimeout(() => {
                         autoPullFromGoogleTasks();
                     }, 2000);
                 } else {
                     updateSyncStatus('paused', 'Auto-sync disabled');
                 }
+            } else {
+                // No one configured - show bar with setup message
+                document.getElementById('syncStatusBar').style.display = 'flex';
+                updateSyncStatus('warning', 'No sync configured - add Web App URLs in Settings');
             }
             
             // Listen for tab visibility changes
@@ -3477,6 +3666,10 @@ Example:
                 case 'paused':
                     icon.textContent = '⏸️';
                     bar.style.background = 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)';
+                    break;
+                case 'warning':
+                    icon.textContent = '⚠️';
+                    bar.style.background = 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)';
                     break;
             }
             
@@ -3814,8 +4007,13 @@ Example:
             const currentUser = document.getElementById('dailyPlanUser')?.value || settings.teamMembers?.[0]?.initials;
             const member = settings.teamMembers?.find(m => m.initials === currentUser);
             
+            console.log('Sync Debug: Current user:', currentUser);
+            console.log('Sync Debug: Member found:', member ? 'YES' : 'NO');
+            console.log('Sync Debug: Web App URL:', member?.webAppUrl || 'NOT SET');
+            
             if (!member?.webAppUrl) {
-                updateSyncStatus('error', 'No sync configured');
+                updateSyncStatus('error', 'No sync configured for ' + currentUser);
+                showToast('No Web App URL configured for ' + currentUser + '. Go to Settings to add it.', 'warning');
                 syncState.isSyncing = false;
                 return;
             }
@@ -4039,11 +4237,20 @@ Example:
         // Sync ALL team members' tasks (pull and push for everyone)
         async function syncAllTeam() {
             const settings = getSettings();
-            const membersWithSync = settings.teamMembers?.filter(m => m.webAppUrl) || [];
+            const allMembers = settings.teamMembers || [];
+            const membersWithSync = allMembers.filter(m => m.webAppUrl);
+            const membersWithoutSync = allMembers.filter(m => !m.webAppUrl);
+            
+            console.log('Team Sync: Members with sync:', membersWithSync.map(m => m.initials));
+            console.log('Team Sync: Members without sync:', membersWithoutSync.map(m => m.initials));
             
             if (membersWithSync.length === 0) {
-                showToast('No team members have sync configured', 'warning');
+                showToast('No team members have sync configured. Go to Settings to add Web App URLs.', 'warning');
                 return;
+            }
+            
+            if (membersWithoutSync.length > 0) {
+                console.log('Warning: Some team members have no sync URL:', membersWithoutSync.map(m => m.initials).join(', '));
             }
             
             if (syncState.isSyncing) {
@@ -4052,13 +4259,14 @@ Example:
             }
             
             syncState.isSyncing = true;
-            updateSyncStatus('syncing', 'Syncing all team members...');
+            updateSyncStatus('syncing', 'Syncing ' + membersWithSync.length + ' team member(s)...');
             
-            let totalResults = { pulled: 0, pushed: 0, errors: 0 };
+            let totalResults = { pulled: 0, pushed: 0, errors: 0, members: [] };
             
             for (const member of membersWithSync) {
                 try {
                     updateSyncStatus('syncing', 'Syncing ' + (member.name || member.initials) + '...');
+                    console.log('Team Sync: Syncing', member.initials, 'URL:', member.webAppUrl?.substring(0, 50) + '...');
                     
                     // PULL from this member's Google Tasks
                     const listIds = member.pullListIds?.length > 0 ? member.pullListIds : ['@default'];
@@ -5541,9 +5749,17 @@ Build Date: ${EOS_BUILD_DATE}
             // Add original indices to all todos
             let todosWithIndex = allTodos.map((t, idx) => ({ ...t, _originalIndex: idx }));
             
-            // Apply owner filter
+            // Apply owner filter - include tasks where owner contains the filter value
+            // (handles "HB/AB", "Both", or exact matches)
             if (ownerFilter !== 'all') {
-                todosWithIndex = todosWithIndex.filter(t => t.owner === ownerFilter);
+                todosWithIndex = todosWithIndex.filter(t => {
+                    const owner = (t.owner || '').toUpperCase();
+                    const filter = ownerFilter.toUpperCase();
+                    return owner === filter || 
+                           owner.includes(filter) || 
+                           owner === 'BOTH' ||
+                           owner.includes('/');  // Show shared tasks to everyone
+                });
             }
             
             // Apply sort
@@ -7921,8 +8137,14 @@ Make sure your suggestions directly address the specific root cause and discussi
             closeModal('settingsModal');
             showSaveIndicator();
             
+            // Save team settings to cloud (async, don't wait)
+            saveTeamSettingsToCloud();
+            
             // Update meeting time badge
             updateMeetingTimeBadge();
+            
+            // Update owner filter dropdown
+            populateOwnerFilter();
             
             // Update Pomodoro buttons if on Daily Plan page
             if (typeof updatePomodoroButtons === 'function') {
