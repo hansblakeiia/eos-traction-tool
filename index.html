@@ -2309,15 +2309,21 @@
                 <div>
                     <!-- To-Dos -->
                     <div class="section">
-                        <h3 style="display: flex; align-items: center; justify-content: space-between;">
-                            <span>✅ To-Dos</span>
-                            <select id="todoSortOrder" onchange="sortAndRenderTodos()" style="padding: 4px 8px; font-size: 0.8rem; border-radius: 4px;">
-                                <option value="manual">My Order</option>
-                                <option value="starred">⭐ Starred First</option>
-                                <option value="dueDate">📦 Due Date</option>
-                                <option value="title">🔄 Title (A-Z)</option>
-                                <option value="owner">👤 Owner</option>
-                            </select>
+                        <h3 style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                            <span>To-Dos</span>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <select id="todoOwnerFilter" onchange="filterAndRenderTodos()" style="padding: 4px 8px; font-size: 0.8rem; border-radius: 4px;">
+                                    <option value="all">All Team</option>
+                                </select>
+                                <select id="todoSortOrder" onchange="sortAndRenderTodos()" style="padding: 4px 8px; font-size: 0.8rem; border-radius: 4px;">
+                                    <option value="manual">My Order</option>
+                                    <option value="starred">Starred First</option>
+                                    <option value="dueDate">Due Date</option>
+                                    <option value="title">Title (A-Z)</option>
+                                    <option value="owner">Owner</option>
+                                </select>
+                                <button onclick="syncAllTeam()" style="background: #10b981; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;" title="Sync all team members' tasks">All Team Sync</button>
+                            </div>
                         </h3>
                         <div id="todosContainer"></div>
                         <button class="add-btn" onclick="addTodoWithList()">+ Add To-Do</button>
@@ -3093,9 +3099,10 @@
             
             <div class="modal-actions" style="flex-wrap: wrap; gap: 8px;">
                 <button class="btn btn-secondary" onclick="closeModal('exportTasksModal')">Close</button>
-                <button class="btn btn-secondary" onclick="copyTasksToClipboard()">📹 Copy</button>
-                <button class="btn btn-primary" id="pullFromGoogleBtn" onclick="pullTasksFromGoogle()">⬇️ Pull from Google</button>
-                <button class="btn btn-success" id="sendToGoogleBtn" onclick="sendTasksToGoogle()">⬆️ Push to Google</button>
+                <button class="btn btn-secondary" onclick="copyTasksToClipboard()">Copy</button>
+                <button class="btn btn-primary" id="pullFromGoogleBtn" onclick="pullTasksFromGoogle()">Pull from Google</button>
+                <button class="btn btn-success" id="sendToGoogleBtn" onclick="sendTasksToGoogle()">Push to Google</button>
+                <button class="btn" style="background: #8b5cf6; color: white;" onclick="syncAllFromModal()" title="Pull and Push for all team members">Sync All (Push & Pull)</button>
             </div>
             
             <p id="noWebAppMsg" style="font-size: 0.8rem; color: var(--gray-500); margin-top: 15px; display: none;">
@@ -3237,7 +3244,7 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.5.6';
+        const EOS_VERSION = '3.6.0';
         const EOS_BUILD_DATE = '2026-01-15';
         
         // ==================== DATA STRUCTURE ====================
@@ -3350,6 +3357,9 @@ Example:
             loadYear();
             updateMeetingTimeBadge();
             checkNewMeetingSession();
+            
+            // Populate owner filter dropdown
+            populateOwnerFilter();
             
             // Check if backup reminder is needed (after a short delay to let page load)
             setTimeout(checkBackupReminder, 1000);
@@ -4024,6 +4034,189 @@ Example:
             }
             
             syncState.isSyncing = false;
+        }
+        
+        // Sync ALL team members' tasks (pull and push for everyone)
+        async function syncAllTeam() {
+            const settings = getSettings();
+            const membersWithSync = settings.teamMembers?.filter(m => m.webAppUrl) || [];
+            
+            if (membersWithSync.length === 0) {
+                showToast('No team members have sync configured', 'warning');
+                return;
+            }
+            
+            if (syncState.isSyncing) {
+                showToast('Sync already in progress...', 'info');
+                return;
+            }
+            
+            syncState.isSyncing = true;
+            updateSyncStatus('syncing', 'Syncing all team members...');
+            
+            let totalResults = { pulled: 0, pushed: 0, errors: 0 };
+            
+            for (const member of membersWithSync) {
+                try {
+                    updateSyncStatus('syncing', 'Syncing ' + (member.name || member.initials) + '...');
+                    
+                    // PULL from this member's Google Tasks
+                    const listIds = member.pullListIds?.length > 0 ? member.pullListIds : ['@default'];
+                    const pullUrl = member.webAppUrl + '?action=getAllTasks&listIds=' + listIds.join(',') + '&includeCompleted=true&secretKey=' + encodeURIComponent(member.webAppSecret || '');
+                    
+                    const pullResponse = await fetch(pullUrl);
+                    const pullData = await pullResponse.json();
+                    
+                    if (pullData.status === 'ok' && pullData.tasks) {
+                        const existingTasks = yearData.quarters[currentQuarter].todos || [];
+                        const existingById = new Map(existingTasks.filter(t => t.googleTaskId).map(t => [t.googleTaskId, t]));
+                        const existingTexts = new Set(existingTasks.map(t => t.text?.toLowerCase().trim()));
+                        const ignoredIds = new Set(settings.ignoredGoogleTaskIds || []);
+                        
+                        for (const task of pullData.tasks) {
+                            if (ignoredIds.has(task.id)) continue;
+                            
+                            const isCompleted = task.status === 'completed';
+                            let taskTitle = task.title || '';
+                            
+                            // Strip star prefix
+                            if (taskTitle.startsWith('\u2B50 ')) taskTitle = taskTitle.substring(2).trim();
+                            else if (taskTitle.startsWith('\u2B50')) taskTitle = taskTitle.substring(1).trim();
+                            
+                            // Parse due date
+                            let dueDate = '';
+                            if (task.due) {
+                                const d = new Date(task.due);
+                                if (!isNaN(d.getTime())) dueDate = d.toISOString().split('T')[0];
+                            }
+                            
+                            const existing = existingById.get(task.id);
+                            if (existing) {
+                                // Update existing task
+                                if (existing.text !== taskTitle && taskTitle) existing.text = taskTitle;
+                                if (existing.dueDate !== dueDate && dueDate) existing.dueDate = dueDate;
+                                if (isCompleted && !existing.done) {
+                                    existing.done = true;
+                                    existing.syncedCompletedAt = new Date().toISOString();
+                                }
+                            } else if (!isCompleted && !existingTexts.has(taskTitle.toLowerCase().trim())) {
+                                // Add new task
+                                existingTasks.push({
+                                    text: taskTitle,
+                                    owner: member.initials,
+                                    done: false,
+                                    googleTaskId: task.id,
+                                    googleListId: task.listId,
+                                    googleListName: task.listName,
+                                    dueDate: dueDate,
+                                    pulledAt: new Date().toISOString()
+                                });
+                                existingTexts.add(taskTitle.toLowerCase().trim());
+                                totalResults.pulled++;
+                            }
+                        }
+                        
+                        yearData.quarters[currentQuarter].todos = existingTasks;
+                    }
+                    
+                    // PUSH this member's tasks to their Google Tasks
+                    const todos = yearData.quarters[currentQuarter].todos || [];
+                    const memberTasks = todos.filter(t => !t.googleTaskId && t.text && !t.done && t.owner === member.initials);
+                    
+                    if (memberTasks.length > 0) {
+                        // Group by list
+                        const tasksByList = {};
+                        memberTasks.forEach(t => {
+                            const listId = t.googleListId || member.pushListId || '@default';
+                            if (!tasksByList[listId]) tasksByList[listId] = [];
+                            tasksByList[listId].push(t);
+                        });
+                        
+                        for (const [listId, tasks] of Object.entries(tasksByList)) {
+                            const payload = {
+                                secretKey: member.webAppSecret || '',
+                                action: 'createTasks',
+                                listId: listId,
+                                tasks: tasks.map(t => ({
+                                    title: t.text,
+                                    notes: 'From EOS Tool',
+                                    dueDate: t.dueDate ? new Date(t.dueDate).toISOString() : ''
+                                }))
+                            };
+                            
+                            const pushResponse = await fetch(member.webAppUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'text/plain' },
+                                redirect: 'follow',
+                                body: JSON.stringify(payload)
+                            });
+                            
+                            const pushData = await pushResponse.json();
+                            
+                            if (pushData.results) {
+                                tasks.forEach((t, idx) => {
+                                    if (pushData.results[idx]?.taskId) {
+                                        t.googleTaskId = pushData.results[idx].taskId;
+                                        t.googleListId = listId;
+                                        totalResults.pushed++;
+                                    }
+                                });
+                            }
+                        }
+                    }
+                    
+                } catch (error) {
+                    console.error('Sync error for ' + member.initials + ':', error);
+                    totalResults.errors++;
+                }
+            }
+            
+            autoSave();
+            sortAndRenderTodos();
+            
+            let statusMsg = [];
+            if (totalResults.pulled > 0) statusMsg.push(totalResults.pulled + ' pulled');
+            if (totalResults.pushed > 0) statusMsg.push(totalResults.pushed + ' pushed');
+            if (totalResults.errors > 0) statusMsg.push(totalResults.errors + ' errors');
+            
+            const msg = statusMsg.length > 0 ? statusMsg.join(', ') : 'All synced';
+            updateSyncStatus('success', 'Team sync: ' + msg);
+            showToast('Team sync complete: ' + msg, totalResults.errors > 0 ? 'warning' : 'success');
+            
+            syncState.isSyncing = false;
+        }
+        
+        // Wrapper to call syncAllTeam from modal
+        async function syncAllFromModal() {
+            closeModal('exportTasksModal');
+            await syncAllTeam();
+        }
+        
+        // Filter and render todos based on owner filter
+        function filterAndRenderTodos() {
+            const todos = yearData.quarters[currentQuarter]?.todos || [];
+            const filter = document.getElementById('todoOwnerFilter')?.value || 'all';
+            
+            let filtered = todos;
+            if (filter !== 'all') {
+                filtered = todos.filter(t => t.owner === filter);
+            }
+            
+            // Apply current sort
+            sortAndRenderTodos(filtered);
+        }
+        
+        // Populate the owner filter dropdown
+        function populateOwnerFilter() {
+            const settings = getSettings();
+            const select = document.getElementById('todoOwnerFilter');
+            if (!select) return;
+            
+            let html = '<option value="all">All Team</option>';
+            (settings.teamMembers || []).forEach(m => {
+                html += '<option value="' + m.initials + '">' + (m.name || m.initials) + '</option>';
+            });
+            select.innerHTML = html;
         }
         
         function formatTimeAgo(timestamp) {
@@ -4894,7 +5087,7 @@ Build Date: ${EOS_BUILD_DATE}
             }
         }
         
-        function renderTodos(todos) {
+        function renderTodos(todos, useOriginalIndex = false) {
             const container = document.getElementById('todosContainer');
             
             // Filter out archived items - they should not appear in the list
@@ -4915,9 +5108,9 @@ Build Date: ${EOS_BUILD_DATE}
                             ${checkedCount > 0 ? `${checkedCount} of ${totalCount} selected` : `${totalCount} to-do(s)`}
                         </span>
                         ${checkedCount > 0 ? `
-                            <button class="btn btn-success" style="padding: 5px 10px; font-size: 0.8rem;" onclick="archiveCheckedTodos()">✔ Archive</button>
-                            <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 0.8rem;" onclick="uncheckAllTodos()">↩ Uncheck</button>
-                            <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 0.8rem; background: #fee2e2; color: #dc2626;" onclick="deleteCheckedTodos()">🗑 Delete</button>
+                            <button class="btn btn-success" style="padding: 5px 10px; font-size: 0.8rem;" onclick="archiveCheckedTodos()">Archive</button>
+                            <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 0.8rem;" onclick="uncheckAllTodos()">Uncheck</button>
+                            <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 0.8rem; background: #fee2e2; color: #dc2626;" onclick="deleteCheckedTodos()">Delete</button>
                         ` : ''}
                     </div>
                 `;
@@ -4929,7 +5122,9 @@ Build Date: ${EOS_BUILD_DATE}
                 if (t.archived) return; // Skip archived items
                 const listName = t.googleListName || 'To-Dos';
                 if (!todosByList[listName]) todosByList[listName] = [];
-                todosByList[listName].push({ ...t, originalIndex: idx });
+                // Use _originalIndex if available, otherwise use array index
+                const origIdx = useOriginalIndex && t._originalIndex !== undefined ? t._originalIndex : idx;
+                todosByList[listName].push({ ...t, originalIndex: origIdx });
             });
             
             // Render grouped if there are multiple lists
@@ -4942,14 +5137,18 @@ Build Date: ${EOS_BUILD_DATE}
                     todosHtml += `
                         <div style="margin-bottom: 12px;">
                             <div style="font-size: 0.8rem; font-weight: 600; color: var(--gray-500); margin-bottom: 4px; padding-left: 4px;">
-                                📹 ${listName}
+                                ${listName}
                             </div>
                             ${todosByList[listName].map(t => renderTodoItem(t, t.originalIndex)).join('')}
                         </div>
                     `;
                 }
             } else {
-                todosHtml = todos.map((t, idx) => t.archived ? '' : renderTodoItem(t, idx)).join('');
+                todosHtml = todos.map((t, idx) => {
+                    if (t.archived) return '';
+                    const origIdx = useOriginalIndex && t._originalIndex !== undefined ? t._originalIndex : idx;
+                    return renderTodoItem(t, origIdx);
+                }).join('');
             }
             
             container.innerHTML = headerRow + todosHtml;
@@ -5021,6 +5220,7 @@ Build Date: ${EOS_BUILD_DATE}
         
         function addTodoWithList() {
             const settings = getSettings();
+            const dailyPlanUser = document.getElementById('dailyPlanUser')?.value || settings.teamMembers?.[0]?.initials || '';
             
             // Populate the owner dropdown
             const ownerSelect = document.getElementById('newTaskOwner');
@@ -5028,8 +5228,8 @@ Build Date: ${EOS_BUILD_DATE}
                 '<option value="' + m.initials + '">' + (m.name || m.initials) + '</option>'
             ).join('');
             
-            // Set default to first team member
-            ownerSelect.value = settings.teamMembers?.[0]?.initials || '';
+            // Set default to current Daily Plan user (logged-in user)
+            ownerSelect.value = dailyPlanUser;
             
             // Populate lists based on selected owner
             updateTaskListOptions();
@@ -5333,23 +5533,30 @@ Build Date: ${EOS_BUILD_DATE}
             }
         }
         
-        function sortAndRenderTodos() {
+        function sortAndRenderTodos(filteredTodos = null) {
             const sortOrder = document.getElementById('todoSortOrder')?.value || 'manual';
-            const todos = yearData.quarters[currentQuarter].todos || [];
+            const ownerFilter = document.getElementById('todoOwnerFilter')?.value || 'all';
+            const allTodos = yearData.quarters[currentQuarter].todos || [];
             
-            // Create a copy for sorting (don't modify original order for 'manual')
-            let sortedTodos = [...todos];
+            // Add original indices to all todos
+            let todosWithIndex = allTodos.map((t, idx) => ({ ...t, _originalIndex: idx }));
             
+            // Apply owner filter
+            if (ownerFilter !== 'all') {
+                todosWithIndex = todosWithIndex.filter(t => t.owner === ownerFilter);
+            }
+            
+            // Apply sort
             switch (sortOrder) {
                 case 'starred':
-                    sortedTodos.sort((a, b) => {
+                    todosWithIndex.sort((a, b) => {
                         if (a.starred && !b.starred) return -1;
                         if (!a.starred && b.starred) return 1;
                         return 0;
                     });
                     break;
                 case 'dueDate':
-                    sortedTodos.sort((a, b) => {
+                    todosWithIndex.sort((a, b) => {
                         if (!a.dueDate && !b.dueDate) return 0;
                         if (!a.dueDate) return 1;
                         if (!b.dueDate) return -1;
@@ -5357,15 +5564,15 @@ Build Date: ${EOS_BUILD_DATE}
                     });
                     break;
                 case 'title':
-                    sortedTodos.sort((a, b) => (a.text || '').localeCompare(b.text || ''));
+                    todosWithIndex.sort((a, b) => (a.text || '').localeCompare(b.text || ''));
                     break;
                 case 'owner':
-                    sortedTodos.sort((a, b) => (a.owner || '').localeCompare(b.owner || ''));
+                    todosWithIndex.sort((a, b) => (a.owner || '').localeCompare(b.owner || ''));
                     break;
                 // 'manual' - keep original order
             }
             
-            renderTodos(sortedTodos);
+            renderTodos(todosWithIndex, true);
         }
         
         function archiveCheckedTodos() {
