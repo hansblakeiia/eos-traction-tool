@@ -5654,21 +5654,18 @@ Build Date: ${EOS_BUILD_DATE}
             if (!todo) return;
             
             let details = '';
-            if (todo.googleNotes) {
-                details += `<strong>Notes:</strong>\n${todo.googleNotes}\n\n`;
-            }
             if (todo.googleListName) {
-                details += `<strong>Google List:</strong> ${todo.googleListName}\n`;
+                details += `List: ${todo.googleListName}\n`;
             }
-            if (todo.pulledAt) {
-                details += `<strong>Pulled:</strong> ${new Date(todo.pulledAt).toLocaleString()}\n`;
-            }
-            if (todo.googleTaskId) {
-                details += `<strong>Task ID:</strong> ${todo.googleTaskId}\n`;
+            if (todo.googleNotes) {
+                details += `\nDetails:\n${todo.googleNotes}`;
             }
             
-            // Show in a simple alert for now - could make a modal later
-            alert(details || 'No additional details available.');
+            if (!details) {
+                details = 'No details available for this task.';
+            }
+            
+            alert(details);
         }
         
         function isOverdue(dateStr) {
