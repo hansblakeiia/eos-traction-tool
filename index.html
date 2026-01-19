@@ -5683,7 +5683,7 @@ Build Date: ${EOS_BUILD_DATE}
             // Sort starred items to top
             sortTodosByStarred();
             
-            renderTodos(yearData.quarters[currentQuarter].todos);
+            sortAndRenderTodos();
             autoSave();
         }
         
@@ -5698,14 +5698,14 @@ Build Date: ${EOS_BUILD_DATE}
         
         function toggleAllTodos(checked) {
             yearData.quarters[currentQuarter].todos.forEach(t => t.done = checked);
-            renderTodos(yearData.quarters[currentQuarter].todos);
+            sortAndRenderTodos();
             autoSave();
         }
         
         function addTodo() {
             yearData.quarters[currentQuarter].todos = yearData.quarters[currentQuarter].todos || [];
             yearData.quarters[currentQuarter].todos.push({ text: '', owner: '', done: false });
-            renderTodos(yearData.quarters[currentQuarter].todos);
+            sortAndRenderTodos();
             autoSave();
             markPendingChanges();
         }
@@ -5909,7 +5909,7 @@ Build Date: ${EOS_BUILD_DATE}
         function toggleTodo(idx) {
             const todo = yearData.quarters[currentQuarter].todos[idx];
             todo.done = !todo.done;
-            renderTodos(yearData.quarters[currentQuarter].todos);
+            sortAndRenderTodos();
             autoSave();
             
             // Sync to Google Tasks if task has a Google Task ID
@@ -6120,7 +6120,7 @@ Build Date: ${EOS_BUILD_DATE}
             });
             
             yearData.quarters[currentQuarter].todos = todos.filter(t => !t.done);
-            renderTodos(yearData.quarters[currentQuarter].todos);
+            sortAndRenderTodos();
             autoSave();
         }
         
@@ -6168,14 +6168,14 @@ Build Date: ${EOS_BUILD_DATE}
             });
             
             yearData.quarters[currentQuarter].todos = todos.filter(t => !t.done);
-            renderTodos(yearData.quarters[currentQuarter].todos);
+            sortAndRenderTodos();
             autoSave();
             showToast(`Deleted ${toDelete.length} task(s)`, 'success');
         }
         
         function uncheckAllTodos() {
             yearData.quarters[currentQuarter].todos.forEach(t => t.done = false);
-            renderTodos(yearData.quarters[currentQuarter].todos);
+            sortAndRenderTodos();
             autoSave();
         }
         
@@ -6468,7 +6468,7 @@ Can you help me fix these or implement these features?`;
                     renderWeeklyIssues(yearData.quarters[currentQuarter].weeklyIssues);
                 }
                 
-                renderTodos(yearData.quarters[currentQuarter].todos);
+                sortAndRenderTodos();
                 autoSave();
                 alert('To-do created and issue resolved!');
             }
@@ -8938,7 +8938,7 @@ Return ONLY the JSON array:`;
             });
             
             autoSave();
-            renderTodos(yearData.quarters[currentQuarter].todos);
+            sortAndRenderTodos();
             closeModal('parseMeetingModal');
             
             // Mark rows as imported in the sheet
@@ -9155,7 +9155,7 @@ Return ONLY the JSON array:`;
             
             if (imported > 0) {
                 autoSave();
-                renderTodos(yearData.quarters[currentQuarter].todos);
+                sortAndRenderTodos();
                 addLogEntry(`Imported ${imported} AI-extracted task(s)`);
                 
                 // Clear the AI section
@@ -9783,7 +9783,7 @@ Return ONLY the JSON array:`;
             // Use the tracked completion count (not recounted)
             if (totalImported > 0 || totalCompletionsSynced > 0) {
                 autoSave();
-                renderTodos(yearData.quarters[currentQuarter].todos);
+                sortAndRenderTodos();
                 updateTaskExportPreview();
                 statusEl.style.background = '#e6f4ea';
                 statusEl.style.color = '#1e8e3e';
@@ -9814,7 +9814,7 @@ Return ONLY the JSON array:`;
             
             lastPulledTaskIds = [];
             autoSave();
-            renderTodos(yearData.quarters[currentQuarter].todos);
+            sortAndRenderTodos();
             updateTaskExportPreview();
             
             const statusEl = document.getElementById('googleTasksStatus');
@@ -10467,7 +10467,7 @@ Return ONLY the JSON array:`;
             autoSave();
             saveDailyPlan();
             renderRepository();
-            renderTodos(yearData.quarters[currentQuarter].todos);
+            sortAndRenderTodos();
             addLogEntry(`Promoted local task to To-Dos: "${task.text.substring(0, 30)}..."`);
         }
         
@@ -10552,7 +10552,7 @@ Return ONLY the JSON array:`;
                 };
                 yearData.quarters[currentQuarter].todos.push(newTask);
                 autoSave();
-                renderTodos(yearData.quarters[currentQuarter].todos);
+                sortAndRenderTodos();
                 
                 // Only render repository if in daily context
                 if (context === 'daily') {
@@ -10604,7 +10604,7 @@ Return ONLY the JSON array:`;
                     todo.done = true;
                     autoSave();
                     renderRepository();
-                    renderTodos(yearData.quarters[currentQuarter].todos);
+                    sortAndRenderTodos();
                     
                     // Sync completion to Google Tasks
                     if (todo.googleTaskId && !todo.googleTaskId.startsWith('synced_')) {
@@ -10634,7 +10634,7 @@ Return ONLY the JSON array:`;
                     yearData.quarters[currentQuarter].todos[actualIdx].textModified = true;
                     autoSave();
                     renderRepository();
-                    renderTodos(yearData.quarters[currentQuarter].todos);
+                    sortAndRenderTodos();
                     addLogEntry(`Task edited: "${oldText.substring(0, 25)}..." → "${newText.trim().substring(0, 25)}..."`);
                 }
             }
@@ -10660,7 +10660,7 @@ Return ONLY the JSON array:`;
                 yearData.quarters[currentQuarter].todos[actualIdx].text = newText;
                 yearData.quarters[currentQuarter].todos[actualIdx].textModified = true;
                 autoSave();
-                renderTodos(yearData.quarters[currentQuarter].todos);
+                sortAndRenderTodos();
             }
         }
         
@@ -11905,7 +11905,7 @@ Return ONLY the JSON array:`;
                 if (imported > 0) {
                     autoSave();
                     renderRepository();
-                    renderTodos(yearData.quarters[currentQuarter].todos);
+                    sortAndRenderTodos();
                     statusEl.style.background = '#e6f4ea';
                     statusEl.style.color = '#1e8e3e';
                     statusEl.textContent = `✅ Imported ${imported} new task(s) from Google Tasks!`;
@@ -12234,7 +12234,7 @@ Return ONLY the JSON array:`;
             });
             
             autoSave();
-            renderTodos(yearData.quarters[currentQuarter].todos);
+            sortAndRenderTodos();
             closeModal('parseMeetingModal');
             alert(`Added ${selectedTasks.length} task(s) to To-Dos!`);
         }
