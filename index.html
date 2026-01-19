@@ -2255,11 +2255,12 @@
                                     <th>Who</th>
                                     <th>Measurable</th>
                                     <th>Goal</th>
+                                    <th style="width: 30px; font-size: 0.7rem;" title="Goal direction: green when above (≥), below (≤), or exactly (=)">↕</th>
                                     <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th>
                                     <th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>13</th>
                                 </tr>
                                 <tr class="week-dates-row" id="weekDatesRow">
-                                    <th></th><th></th><th></th>
+                                    <th></th><th></th><th></th><th></th>
                                     <th id="wd1"></th><th id="wd2"></th><th id="wd3"></th><th id="wd4"></th>
                                     <th id="wd5"></th><th id="wd6"></th><th id="wd7"></th><th id="wd8"></th>
                                     <th id="wd9"></th><th id="wd10"></th><th id="wd11"></th><th id="wd12"></th><th id="wd13"></th>
@@ -3380,6 +3381,9 @@ Example:
                         // Re-initialize sync with updated settings
                         initAutoSync();
                     }
+                    
+                    // Also load shared EOS data (Scorecard, Rocks, etc.)
+                    loadSharedEOSDataFromCloud();
                 });
             }, 1500);
             
@@ -3548,6 +3552,139 @@ Example:
                 console.error('Cloud Settings: Failed to save:', error);
                 updateCloudSyncStatus('error');
                 showToast('Failed to save to cloud: ' + error.message, 'error');
+                return false;
+            }
+        }
+        
+        // ==================== SHARED EOS DATA (Scorecard, Rocks, Vision) ====================
+        
+        let sharedEOSDataLoaded = false;
+        
+        // Load shared EOS data from cloud (Scorecard, Rocks, Vision, Agenda)
+        async function loadSharedEOSDataFromCloud() {
+            const settings = getSettings();
+            const memberWithUrl = settings.teamMembers?.find(m => m.webAppUrl);
+            
+            if (!memberWithUrl) {
+                console.log('Shared EOS Data: No Web App URL configured, skipping');
+                return false;
+            }
+            
+            try {
+                console.log('Shared EOS Data: Loading from cloud...');
+                const url = memberWithUrl.webAppUrl + '?action=getSharedEOSData';
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    console.log('Shared EOS Data: Loaded keys:', Object.keys(data.data));
+                    
+                    // Merge shared data into current quarter
+                    const sharedData = data.data;
+                    
+                    // Load shared data per quarter
+                    ['Q1', 'Q2', 'Q3', 'Q4'].forEach(q => {
+                        if (sharedData[`${q}_rocks`]) {
+                            yearData.quarters[q].rocks = sharedData[`${q}_rocks`];
+                        }
+                        if (sharedData[`${q}_measurables`]) {
+                            yearData.quarters[q].measurables = sharedData[`${q}_measurables`];
+                        }
+                        if (sharedData[`${q}_scorecard`]) {
+                            yearData.quarters[q].scorecard = sharedData[`${q}_scorecard`];
+                        }
+                    });
+                    
+                    // Load vision (shared across all quarters)
+                    if (sharedData.vision) {
+                        yearData.vision = sharedData.vision;
+                    }
+                    
+                    // Load agenda (shared across all quarters)
+                    if (sharedData.agenda) {
+                        yearData.quarters[currentQuarter].currentMeeting = yearData.quarters[currentQuarter].currentMeeting || {};
+                        yearData.quarters[currentQuarter].currentMeeting.agenda = sharedData.agenda;
+                    }
+                    
+                    // Save locally and refresh UI
+                    localStorage.setItem('eos_traction_data', JSON.stringify(seededData));
+                    sharedEOSDataLoaded = true;
+                    
+                    // Re-render current view
+                    renderQuarter();
+                    renderMeeting();
+                    
+                    console.log('Shared EOS Data: Merged successfully');
+                    return true;
+                } else {
+                    console.log('Shared EOS Data: No data found or error:', data.error);
+                    return false;
+                }
+            } catch (error) {
+                console.error('Shared EOS Data: Load failed:', error);
+                return false;
+            }
+        }
+        
+        // Save shared EOS data to cloud (admin only)
+        async function saveSharedEOSDataToCloud() {
+            if (!isCurrentUserAdmin()) {
+                console.log('Shared EOS Data: Not admin, skipping save');
+                return false;
+            }
+            
+            const settings = getSettings();
+            const memberWithUrl = settings.teamMembers?.find(m => m.webAppUrl);
+            
+            if (!memberWithUrl) {
+                console.log('Shared EOS Data: No Web App URL configured, skipping save');
+                return false;
+            }
+            
+            try {
+                console.log('Shared EOS Data: Saving to cloud...');
+                
+                // Collect all shared data
+                const sharedData = {};
+                
+                // Save data per quarter
+                ['Q1', 'Q2', 'Q3', 'Q4'].forEach(q => {
+                    if (yearData.quarters[q]) {
+                        sharedData[`${q}_rocks`] = yearData.quarters[q].rocks || [];
+                        sharedData[`${q}_measurables`] = yearData.quarters[q].measurables || [];
+                        sharedData[`${q}_scorecard`] = yearData.quarters[q].scorecard || {};
+                    }
+                });
+                
+                // Save vision
+                sharedData.vision = yearData.vision || {};
+                
+                // Save agenda
+                sharedData.agenda = yearData.quarters[currentQuarter]?.currentMeeting?.agenda || [];
+                
+                const payload = {
+                    action: 'saveSharedEOSData',
+                    data: sharedData
+                };
+                
+                const response = await fetch(memberWithUrl.webAppUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    redirect: 'follow',
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    console.log('Shared EOS Data: Saved successfully');
+                    return true;
+                } else {
+                    console.error('Shared EOS Data: Save failed:', result.error);
+                    return false;
+                }
+            } catch (error) {
+                console.error('Shared EOS Data: Save failed:', error);
                 return false;
             }
         }
@@ -3854,6 +3991,7 @@ Example:
                                 googleTaskId: task.id,
                                 googleListId: task.listId,
                                 googleListName: task.listName,
+                                googleNotes: task.notes || '',
                                 dueDate: task.due ? task.due.split('T')[0] : '',
                                 pulledAt: new Date().toISOString()
                             });
@@ -4150,6 +4288,7 @@ Example:
                                     googleTaskId: task.id,
                                     googleListId: task.listId,
                                     googleListName: task.listName,
+                                    googleNotes: task.notes || '',
                                     dueDate: dueDate,
                                     pulledAt: new Date().toISOString()
                                 });
@@ -4357,6 +4496,7 @@ Example:
                                     googleTaskId: task.id,
                                     googleListId: task.listId,
                                     googleListName: task.listName,
+                                    googleNotes: task.notes || '',
                                     dueDate: dueDate,
                                     pulledAt: new Date().toISOString()
                                 });
@@ -4843,9 +4983,20 @@ Build Date: ${EOS_BUILD_DATE}
             localStorage.setItem('eos_traction_data', JSON.stringify(seededData));
         }
         
+        // Debounce cloud save to avoid excessive API calls
+        let cloudSaveTimeout = null;
+        
         function autoSave() {
             saveData();
             showSaveIndicator();
+            
+            // Debounced cloud save for shared data (admin only)
+            if (isCurrentUserAdmin()) {
+                clearTimeout(cloudSaveTimeout);
+                cloudSaveTimeout = setTimeout(() => {
+                    saveSharedEOSDataToCloud();
+                }, 3000); // Wait 3 seconds after last change before saving to cloud
+            }
         }
         
         // Auto-save on input changes
@@ -4997,7 +5148,9 @@ Build Date: ${EOS_BUILD_DATE}
         // ==================== QUARTERLY: SCORECARD ====================
         function renderScorecard(measurables, scorecard) {
             const tbody = document.getElementById('scorecardBody');
-            tbody.innerHTML = (measurables || []).map((m, idx) => `
+            tbody.innerHTML = (measurables || []).map((m, idx) => {
+                const goalType = m.goalType || '>='; // Default: higher is better
+                return `
                 <tr draggable="true" ondragstart="dragMeasurable(event, ${idx})" ondragover="allowDrop(event)" ondrop="dropMeasurable(event, ${idx})" style="cursor: move;">
                     <td style="position: relative; padding-left: 24px;">
                         <span class="drag-handle" style="position: absolute; left: 4px; top: 50%; transform: translateY(-50%); color: #ccc; cursor: grab;">⋮⋮</span>
@@ -5005,24 +5158,41 @@ Build Date: ${EOS_BUILD_DATE}
                     </td>
                     <td class="editable" contenteditable="true" onblur="updateMeasurable(${idx}, 'name', this.textContent)">${m.name || ''}</td>
                     <td class="editable" contenteditable="true" onblur="updateMeasurable(${idx}, 'goal', this.textContent)">${m.goal || ''}</td>
+                    <td style="padding: 2px;">
+                        <select onchange="updateMeasurable(${idx}, 'goalType', this.value)" style="width: 38px; padding: 2px; font-size: 0.75rem; text-align: center;" title="Goal direction">
+                            <option value=">=" ${goalType === '>=' ? 'selected' : ''}>≥</option>
+                            <option value="<=" ${goalType === '<=' ? 'selected' : ''}>≤</option>
+                            <option value="=" ${goalType === '=' ? 'selected' : ''}>=</option>
+                        </select>
+                    </td>
                     ${Array(13).fill().map((_, w) => {
                         const val = scorecard?.[`${idx}-${w}`] || '';
                         const goal = parseFloat(m.goal);
                         const num = parseFloat(val);
                         let cls = '';
                         if (val && !isNaN(num) && !isNaN(goal)) {
-                            cls = num >= goal ? 'on-track' : 'off-track';
+                            cls = isGoalMet(num, goal, goalType) ? 'on-track' : 'off-track';
                         }
                         return `<td><input type="text" value="${val}" class="${cls}" 
                             data-row="${idx}" data-week="${w}"
-                            onchange="updateScorecard(${idx}, ${w}, this.value, ${goal})"
+                            onchange="updateScorecard(${idx}, ${w}, this.value, ${goal}, '${goalType}')"
                             onkeydown="handleScorecardKey(event, ${idx}, ${w})"></td>`;
                     }).join('')}
                     <td style="border: none; background: transparent; padding: 2px;">
                         <button onclick="deleteMeasurable(${idx})" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 14px; padding: 4px;" title="Delete row">✕</button>
                     </td>
                 </tr>
-            `).join('');
+            `}).join('');
+        }
+        
+        // Check if a value meets the goal based on goal type
+        function isGoalMet(value, goal, goalType) {
+            switch (goalType) {
+                case '<=': return value <= goal;
+                case '=': return value === goal;
+                case '>=': 
+                default: return value >= goal;
+            }
         }
         
         function handleScorecardKey(event, row, week) {
@@ -5063,13 +5233,13 @@ Build Date: ${EOS_BUILD_DATE}
             autoSave();
         }
         
-        function updateScorecard(idx, week, value, goal) {
+        function updateScorecard(idx, week, value, goal, goalType) {
             yearData.quarters[currentQuarter].scorecard[`${idx}-${week}`] = value;
             const input = event.target;
             const num = parseFloat(value);
             input.classList.remove('on-track', 'off-track');
             if (value && !isNaN(num) && !isNaN(goal)) {
-                input.classList.add(num >= goal ? 'on-track' : 'off-track');
+                input.classList.add(isGoalMet(num, goal, goalType || '>=') ? 'on-track' : 'off-track');
             }
             autoSave();
         }
@@ -5456,6 +5626,7 @@ Build Date: ${EOS_BUILD_DATE}
         }
         
         function renderTodoItem(t, idx) {
+            const hasDetails = t.googleNotes || t.googleListName || t.pulledAt;
             return `
                 <div class="todo-item ${t.done ? 'completed' : ''} ${t.starred ? 'starred' : ''}">
                     <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTodo(${idx})">
@@ -5467,6 +5638,7 @@ Build Date: ${EOS_BUILD_DATE}
                          onblur="updateTodo(${idx}, 'text', this.textContent)"
                          onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); this.blur();}"
                          ${t.done ? 'style="text-decoration: line-through; color: var(--gray-400);"' : ''}>${t.text || ''}</div>
+                    ${hasDetails ? `<button onclick="showTaskDetails(${idx})" style="background: none; border: none; cursor: pointer; font-size: 0.85rem; padding: 2px 4px; flex-shrink: 0; color: var(--gray-400);" title="View details">ℹ️</button>` : ''}
                     <input type="date" value="${t.dueDate || ''}" onchange="updateTodo(${idx}, 'dueDate', this.value)"
                            style="width: 120px; margin: 0; font-size: 0.8rem; flex-shrink: 0; ${t.dueDate && isOverdue(t.dueDate) && !t.done ? 'border-color: var(--danger); background: #fee2e2;' : ''}"
                            title="Due date">
@@ -5475,6 +5647,28 @@ Build Date: ${EOS_BUILD_DATE}
                     </select>
                 </div>
             `;
+        }
+        
+        function showTaskDetails(idx) {
+            const todo = yearData.quarters[currentQuarter].todos[idx];
+            if (!todo) return;
+            
+            let details = '';
+            if (todo.googleNotes) {
+                details += `<strong>Notes:</strong>\n${todo.googleNotes}\n\n`;
+            }
+            if (todo.googleListName) {
+                details += `<strong>Google List:</strong> ${todo.googleListName}\n`;
+            }
+            if (todo.pulledAt) {
+                details += `<strong>Pulled:</strong> ${new Date(todo.pulledAt).toLocaleString()}\n`;
+            }
+            if (todo.googleTaskId) {
+                details += `<strong>Task ID:</strong> ${todo.googleTaskId}\n`;
+            }
+            
+            // Show in a simple alert for now - could make a modal later
+            alert(details || 'No additional details available.');
         }
         
         function isOverdue(dateStr) {
@@ -9575,6 +9769,7 @@ Return ONLY the JSON array:`;
                                     googleTaskId: task.id,
                                     googleListId: task.listId || '',
                                     googleListName: task.listName || '',
+                                    googleNotes: task.notes || '',
                                     pullId: importId
                                 });
                                 lastPulledTaskIds.push(importId);
@@ -11701,7 +11896,8 @@ Return ONLY the JSON array:`;
                                 importedAt: new Date().toISOString(),
                                 googleTaskId: task.id,
                                 googleListId: task.listId || '',
-                                googleListName: task.listName || ''
+                                googleListName: task.listName || '',
+                                googleNotes: task.notes || ''
                             });
                             imported++;
                             existingTexts.add(taskTitle.toLowerCase().trim());
