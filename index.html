@@ -2063,7 +2063,6 @@
                     <input type="checkbox" id="autoSyncEnabled" checked onchange="toggleAutoSync(this.checked)" style="width: 14px; height: 14px;">
                     Auto-sync
                 </label>
-                <button onclick="manualSync()" style="background: #0ea5e9; color: white; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">↻ Sync Now</button>
             </div>
         </div>
         
@@ -2281,8 +2280,8 @@
                 <div class="actions" style="margin: 0;">
                     <button class="btn btn-secondary" onclick="openParseMeetingModal()">📥 Import from Otter</button>
                     <button class="btn btn-secondary" onclick="printMeeting()">🖨️ Print Agenda</button>
-                    <button class="btn btn-primary" onclick="openExportTasksModal()">📹 Sync with Google Tasks</button>
-                    <button class="btn btn-success" onclick="archiveMeeting()">✔ Complete & Archive</button>
+                    <button class="btn btn-primary" onclick="syncAllTeam()" style="background: #8b5cf6;">🔄 All Team Sync</button>
+                    <button class="btn btn-secondary" onclick="openExportTasksModal()">⚙️ Sync Options</button>
                 </div>
             </div>
             
@@ -2300,6 +2299,7 @@
                             <h4>Rate This Meeting (1-10)</h4>
                             <div class="rating-buttons" id="ratingButtons"></div>
                             <div id="ratingHistory" style="margin-top: 10px; font-size: 0.85rem; color: var(--gray-500);"></div>
+                            <button class="btn btn-success" onclick="archiveMeeting()" style="margin-top: 15px; width: 100%;">✔ Complete & Archive Meeting</button>
                         </div>
                         
                         <div id="pomodoroLeaderboard" style="margin-top: 15px;"></div>
@@ -3247,8 +3247,8 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.7.2';
-        const EOS_BUILD_DATE = '2026-01-17';
+        const EOS_VERSION = '3.8.0';
+        const EOS_BUILD_DATE = '2026-01-19';
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
