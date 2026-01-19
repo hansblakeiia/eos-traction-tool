@@ -2322,7 +2322,6 @@
                                     <option value="title">Title (A-Z)</option>
                                     <option value="owner">Owner</option>
                                 </select>
-                                <button onclick="syncAllTeam()" style="background: #10b981; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;" title="Sync all team members' tasks">All Team Sync</button>
                             </div>
                         </h3>
                         <div id="todosContainer"></div>
@@ -4476,11 +4475,19 @@ Example:
             const select = document.getElementById('todoOwnerFilter');
             if (!select) return;
             
+            // Preserve current selection
+            const currentValue = select.value;
+            
             let html = '<option value="all">All Team</option>';
             (settings.teamMembers || []).forEach(m => {
                 html += '<option value="' + m.initials + '">' + (m.name || m.initials) + '</option>';
             });
             select.innerHTML = html;
+            
+            // Restore selection if it still exists
+            if (currentValue && Array.from(select.options).some(opt => opt.value === currentValue)) {
+                select.value = currentValue;
+            }
         }
         
         function formatTimeAgo(timestamp) {
@@ -4925,12 +4932,20 @@ Build Date: ${EOS_BUILD_DATE}
         }
         
         function addRock() {
+            if (!isCurrentUserAdmin()) {
+                showToast('Only admins can edit Rocks', 'warning');
+                return;
+            }
             yearData.quarters[currentQuarter].rocks.push({ text: '', owner: 'HB', status: '' });
             renderRocks(yearData.quarters[currentQuarter].rocks);
             autoSave();
         }
         
         function deleteRock(idx) {
+            if (!isCurrentUserAdmin()) {
+                showToast('Only admins can edit Rocks', 'warning');
+                return;
+            }
             const rock = yearData.quarters[currentQuarter].rocks[idx];
             if (rock.text && !confirm(`Delete rock "${rock.text.substring(0, 30)}..."?`)) {
                 return;
@@ -4942,11 +4957,20 @@ Build Date: ${EOS_BUILD_DATE}
         }
         
         function updateRock(idx, field, value) {
+            if (!isCurrentUserAdmin()) {
+                showToast('Only admins can edit Rocks', 'warning');
+                renderRocks(yearData.quarters[currentQuarter].rocks);
+                return;
+            }
             yearData.quarters[currentQuarter].rocks[idx][field] = value;
             autoSave();
         }
         
         function setRockStatus(idx, status) {
+            if (!isCurrentUserAdmin()) {
+                showToast('Only admins can update Rock status', 'warning');
+                return;
+            }
             const rock = yearData.quarters[currentQuarter].rocks[idx];
             const wasOff = rock.status === 'off';
             const current = rock.status;
@@ -5030,6 +5054,11 @@ Build Date: ${EOS_BUILD_DATE}
         }
         
         function updateMeasurable(idx, field, value) {
+            if (!isCurrentUserAdmin()) {
+                showToast('Only admins can edit the Scorecard', 'warning');
+                renderScorecard(yearData.quarters[currentQuarter].measurables, yearData.quarters[currentQuarter].scorecard);
+                return;
+            }
             yearData.quarters[currentQuarter].measurables[idx][field] = value.trim();
             autoSave();
         }
@@ -5046,12 +5075,20 @@ Build Date: ${EOS_BUILD_DATE}
         }
         
         function addMeasurable() {
+            if (!isCurrentUserAdmin()) {
+                showToast('Only admins can edit the Scorecard', 'warning');
+                return;
+            }
             yearData.quarters[currentQuarter].measurables.push({ who: '', name: '', goal: '' });
             renderScorecard(yearData.quarters[currentQuarter].measurables, yearData.quarters[currentQuarter].scorecard);
             autoSave();
         }
         
         function deleteMeasurable(idx) {
+            if (!isCurrentUserAdmin()) {
+                showToast('Only admins can edit the Scorecard', 'warning');
+                return;
+            }
             const measurables = yearData.quarters[currentQuarter].measurables;
             const m = measurables[idx];
             const name = m.name || m.who || `Row ${idx + 1}`;
@@ -7953,12 +7990,16 @@ Make sure your suggestions directly address the specific root cause and discussi
         function renderTeamMembersList(members) {
             const container = document.getElementById('teamMembersList');
             container.innerHTML = members.map((m, idx) => `
-                <div style="background: var(--gray-50); padding: 12px; border-radius: 8px; margin-bottom: 10px;">
+                <div style="background: var(--gray-50); padding: 12px; border-radius: 8px; margin-bottom: 10px; ${m.isAdmin ? 'border: 2px solid #8b5cf6;' : ''}">
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
                         <input type="text" value="${m.initials || ''}" placeholder="Initials" 
                                style="width: 70px; margin: 0;" onchange="updateTeamMember(${idx}, 'initials', this.value)">
                         <input type="text" value="${m.name || ''}" placeholder="Full Name" 
                                style="flex: 1; margin: 0;" onchange="updateTeamMember(${idx}, 'name', this.value)">
+                        <label style="display: flex; align-items: center; gap: 4px; font-size: 0.8rem; color: ${m.isAdmin ? '#8b5cf6' : 'var(--gray-500)'}; white-space: nowrap;">
+                            <input type="checkbox" ${m.isAdmin ? 'checked' : ''} onchange="setAdmin(${idx}, this.checked)" style="margin: 0;">
+                            Admin
+                        </label>
                         <button class="issue-btn remove" onclick="removeTeamMember(${idx})">✕</button>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
@@ -8111,6 +8152,42 @@ Make sure your suggestions directly address the specific root cause and discussi
             const settings = getSettings();
             settings.teamMembers[idx][field] = value;
             seededData._settings = settings;
+        }
+        
+        // Set admin status - only one admin allowed at a time
+        function setAdmin(idx, isAdmin) {
+            const settings = getSettings();
+            
+            if (isAdmin) {
+                // Remove admin from all others first
+                settings.teamMembers.forEach((m, i) => {
+                    m.isAdmin = (i === idx);
+                });
+            } else {
+                settings.teamMembers[idx].isAdmin = false;
+            }
+            
+            seededData._settings = settings;
+            renderTeamMembersList(settings.teamMembers);
+        }
+        
+        // Check if current user is admin (for read-only enforcement)
+        function isCurrentUserAdmin() {
+            const settings = getSettings();
+            const currentUser = document.getElementById('dailyPlanUser')?.value || settings.teamMembers?.[0]?.initials;
+            const currentMember = settings.teamMembers?.find(m => m.initials === currentUser);
+            
+            // If no admin is set, everyone has admin rights (backward compatibility)
+            const hasAnyAdmin = settings.teamMembers?.some(m => m.isAdmin);
+            if (!hasAnyAdmin) return true;
+            
+            return currentMember?.isAdmin === true;
+        }
+        
+        // Get the current user's initials
+        function getCurrentUserInitials() {
+            const settings = getSettings();
+            return document.getElementById('dailyPlanUser')?.value || settings.teamMembers?.[0]?.initials;
         }
         
         function removeTeamMember(idx) {
