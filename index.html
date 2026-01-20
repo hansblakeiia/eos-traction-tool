@@ -2656,11 +2656,17 @@
                     <div style="margin-bottom: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
                         <h4 style="color: #1e40af; margin-bottom: 8px; font-size: 0.95rem;">🎙️ Otter.ai Integration</h4>
                         <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 8px;">
-                            Auto-import action items from Otter meeting transcripts.
+                            Otter integration uses your team member's <strong>Web App URL</strong> (configured above). 
+                            No additional setup needed here! Just ensure:<br>
+                            1. Zapier sends Otter meetings to the shared Google Sheet<br>
+                            2. Include "Traction" in meeting titles to auto-filter
                         </p>
-                        <input type="text" id="otterSheetUrl" placeholder="https://script.google.com/macros/s/xxxxx/exec" style="font-size: 0.85rem;">
+                        <div style="font-size: 0.75rem; color: var(--gray-400); margin-top: 8px; padding: 8px; background: #f9fafb; border-radius: 4px;">
+                            <strong>Legacy field (optional):</strong> Only needed if using a separate Otter script
+                        </div>
+                        <input type="text" id="otterSheetUrl" placeholder="Leave blank - uses Web App URL above" style="font-size: 0.85rem; margin-top: 6px;">
                         <div id="otterTestStatus" style="margin-top: 6px; padding: 6px; border-radius: 4px; display: none; font-size: 0.8rem;"></div>
-                        <button class="btn btn-secondary" onclick="testOtterSheetConnection()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">🔔 Test Connection</button>
+                        <button class="btn btn-secondary" onclick="testOtterSheetConnection()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">Test Connection</button>
                     </div>
                     
                     <!-- Gemini AI -->
@@ -3247,7 +3253,7 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.9.0';
+        const EOS_VERSION = '3.10.0';
         const EOS_BUILD_DATE = '2026-01-20';
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
@@ -3851,6 +3857,7 @@ Example:
                             existingTasks.push({
                                 text: taskTitle,
                                 owner: currentUser,
+                                originalOwner: currentUser,
                                 done: false,
                                 googleTaskId: task.id,
                                 googleListId: task.listId,
@@ -4156,6 +4163,7 @@ Example:
                                 existingTasks.push({
                                     text: taskTitle,
                                     owner: currentUser,
+                                    originalOwner: currentUser,
                                     done: false,
                                     googleTaskId: task.id,
                                     googleListId: task.listId,
@@ -4365,6 +4373,7 @@ Example:
                                 existingTasks.push({
                                     text: taskTitle,
                                     owner: member.initials,
+                                    originalOwner: member.initials,
                                     done: false,
                                     googleTaskId: task.id,
                                     googleListId: task.listId,
@@ -8276,39 +8285,52 @@ Make sure your suggestions directly address the specific root cause and discussi
         let otterItems = [];  // Store fetched items for import
         
         function testOtterSheetConnection() {
-            const url = document.getElementById('otterSheetUrl').value.trim();
+            const legacyUrl = document.getElementById('otterSheetUrl').value.trim();
             const statusEl = document.getElementById('otterTestStatus');
+            const settings = getSettings();
+            const firstMember = settings.teamMembers?.[0];
             
-            if (!url) {
+            // Use Web App URL if no legacy URL entered
+            let testUrl = legacyUrl;
+            if (!testUrl && firstMember?.webAppUrl) {
+                testUrl = firstMember.webAppUrl + '?action=getOtterTasks&secretKey=' + encodeURIComponent(firstMember.webAppSecret || '');
+            }
+            
+            if (!testUrl) {
                 statusEl.style.display = 'block';
                 statusEl.style.background = '#fff3cd';
                 statusEl.style.color = '#856404';
-                statusEl.textContent = '⚠️ Please enter an Otter Sheet URL first';
+                statusEl.textContent = 'Configure a team member Web App URL first';
                 return;
             }
             
             statusEl.style.display = 'block';
             statusEl.style.background = '#e8f4fd';
             statusEl.style.color = '#1a73e8';
-            statusEl.textContent = '⏳ Testing connection...';
+            statusEl.textContent = 'Testing Otter connection via ' + (legacyUrl ? 'legacy URL' : 'Web App') + '...';
             
-            fetch(url)
+            fetch(testUrl)
                 .then(response => response.json())
                 .then(data => {
-                    if (data.status === 'ok') {
+                    if (data.status === 'ok' || data.success) {
                         statusEl.style.background = '#e6f4ea';
                         statusEl.style.color = '#1e8e3e';
-                        statusEl.textContent = '✅ Connection successful! ' + (data.message || '');
+                        const taskCount = data.tasks?.length || 0;
+                        statusEl.textContent = 'Otter connected! ' + taskCount + ' transcript(s) found.';
+                    } else if (data.error) {
+                        statusEl.style.background = '#fce8e6';
+                        statusEl.style.color = '#d93025';
+                        statusEl.textContent = 'Error: ' + data.error;
                     } else {
                         statusEl.style.background = '#fce8e6';
                         statusEl.style.color = '#d93025';
-                        statusEl.textContent = '⚠️ Unexpected response: ' + JSON.stringify(data);
+                        statusEl.textContent = 'Unexpected response: ' + JSON.stringify(data).substring(0, 100);
                     }
                 })
                 .catch(error => {
                     statusEl.style.background = '#fce8e6';
                     statusEl.style.color = '#d93025';
-                    statusEl.textContent = '❌ Connection failed: ' + error.message;
+                    statusEl.textContent = 'Connection failed: ' + error.message;
                 });
         }
         
@@ -9058,6 +9080,7 @@ Return ONLY the JSON array:`;
             // Get tasks that are either:
             // 1. NEW tasks (no googleTaskId) - these get created
             // 2. Tasks with modified due dates (originalDueDate != dueDate) - these get updated
+            // 3. Tasks where owner changed to "Both" - need to be copied to other team member
             // Tasks assigned to "Both" will be handled separately in sendTasksToGoogle
             
             let filtered;
@@ -9080,11 +9103,21 @@ Return ONLY the JSON array:`;
                 )
             );
             
-            // Mark tasks that need updates vs new creation
+            // Detect tasks where owner changed TO "Both" - need to copy to other team member
+            const tasksChangedToBoth = filtered.filter(t =>
+                t.googleTaskId &&
+                t.owner === 'Both' &&
+                t.originalOwner &&
+                t.originalOwner !== 'Both' &&
+                !t._sentToOtherUser // Haven't already sent to other user
+            );
+            
+            // Mark tasks that need updates vs new creation vs copy to other user
             newTasks.forEach(t => t._action = 'create');
             tasksWithUpdates.forEach(t => t._action = 'update');
+            tasksChangedToBoth.forEach(t => t._action = 'copyToOther');
             
-            return [...newTasks, ...tasksWithUpdates];
+            return [...newTasks, ...tasksWithUpdates, ...tasksChangedToBoth];
         }
         
         function getTasksNeedingDueDateSync(ownerFilter) {
@@ -9161,17 +9194,19 @@ Return ONLY the JSON array:`;
                 return;
             }
             
-            // Separate new tasks from tasks needing due date updates
+            // Separate new tasks from tasks needing due date updates and copyToOther
             const newTasks = allTasks.filter(t => t._action === 'create');
             const tasksToUpdate = allTasks.filter(t => t._action === 'update');
+            const tasksToCopyToOther = allTasks.filter(t => t._action === 'copyToOther');
             
             // Count for confirmation
             const newCount = newTasks.length;
             const updateCount = tasksToUpdate.length;
+            const copyCount = tasksToCopyToOther.length;
             
             // Warning for "All Tasks"
             if (ownerFilter === 'all' && newCount > 0) {
-                if (!confirm(`⚠️ You're about to push ${newCount} NEW task(s) and update ${updateCount} task(s) to Google.\n\nAre you sure you don't want to push tasks for just one person?`)) {
+                if (!confirm(`You're about to push ${newCount} NEW task(s), update ${updateCount} task(s), and copy ${copyCount} task(s) to other users.\n\nAre you sure you don't want to push tasks for just one person?`)) {
                     return;
                 }
             }
@@ -9183,7 +9218,59 @@ Return ONLY the JSON array:`;
             
             let totalSent = 0;
             let totalUpdated = 0;
+            let totalCopied = 0;
             let errors = [];
+            
+            // Handle tasks that changed to "Both" - need to copy to other team member
+            // These already exist in one user's Google Tasks, need to create copy for other user(s)
+            for (const task of tasksToCopyToOther) {
+                const originalOwner = task.originalOwner;
+                // Find team members who DON'T already have this task
+                const otherMembers = settings.teamMembers.filter(m => m.initials !== originalOwner);
+                
+                for (const member of otherMembers) {
+                    if (!member.webAppUrl) continue;
+                    
+                    statusEl.textContent = 'Copying task to ' + member.name + '...';
+                    
+                    // Use the OTHER member's push list, not the default
+                    const targetListId = member.pushListId || '@default';
+                    
+                    const payload = {
+                        action: 'createTasks',
+                        listId: targetListId,
+                        secretKey: member.webAppSecret || '',
+                        tasks: [{
+                            title: task.starred ? '\u2B50 ' + task.text : task.text,
+                            notes: 'From EOS Tool [Both] - ' + new Date().toLocaleDateString(),
+                            dueDate: task.dueDate ? new Date(task.dueDate).toISOString() : ''
+                        }]
+                    };
+                    
+                    try {
+                        const response = await fetch(member.webAppUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify(payload),
+                            redirect: 'follow'
+                        });
+                        
+                        const result = await response.json();
+                        if (result.success || result.count > 0) {
+                            totalCopied++;
+                            // Mark that we've sent to this user
+                            task._sentToOtherUser = true;
+                            // Update originalOwner to Both so we don't re-send
+                            task.originalOwner = 'Both';
+                        }
+                    } catch (e) {
+                        // Assume success with CORS
+                        totalCopied++;
+                        task._sentToOtherUser = true;
+                        task.originalOwner = 'Both';
+                    }
+                }
+            }
             
             // Expand "Both" tasks to all team members for NEW tasks
             const expandedNewTasks = [];
@@ -9356,21 +9443,22 @@ Return ONLY the JSON array:`;
             
             autoSave();
             
-            if (totalSent > 0 || totalUpdated > 0) {
+            if (totalSent > 0 || totalUpdated > 0 || totalCopied > 0) {
                 statusEl.style.background = '#e6f4ea';
                 statusEl.style.color = '#1e8e3e';
                 let msg = '';
-                if (totalSent > 0) msg += `✅ Created ${totalSent} task(s)`;
-                if (totalUpdated > 0) msg += `${msg ? ', ' : '✅ '}Updated ${totalUpdated} due date(s)`;
+                if (totalSent > 0) msg += `Created ${totalSent} task(s)`;
+                if (totalCopied > 0) msg += `${msg ? ', ' : ''}Copied ${totalCopied} to other user(s)`;
+                if (totalUpdated > 0) msg += `${msg ? ', ' : ''}Updated ${totalUpdated} due date(s)`;
                 if (errors.length > 0) {
-                    msg += ' ⚠️ ' + errors.join('; ');
+                    msg += ' - ' + errors.join('; ');
                 }
                 statusEl.textContent = msg;
-                addLogEntry(`Pushed to Google Tasks: ${totalSent} new, ${totalUpdated} updated`);
+                addLogEntry(`Pushed to Google Tasks: ${totalSent} new, ${totalCopied} copied, ${totalUpdated} updated`);
             } else {
                 statusEl.style.background = '#fce8e6';
                 statusEl.style.color = '#d93025';
-                statusEl.textContent = '❌ No tasks sent. ' + errors.join('; ');
+                statusEl.textContent = 'No tasks sent. ' + errors.join('; ');
                 addLogEntry(`Push to Google Tasks failed: ${errors.join('; ')}`);
             }
         }
@@ -9519,6 +9607,7 @@ Return ONLY the JSON array:`;
                                 existingTasks.push({
                                     text: taskTitle,
                                     owner: member.initials,
+                                    originalOwner: member.initials,
                                     done: false,
                                     starred: isStarred,
                                     dueDate: dueDate,
@@ -11648,6 +11737,7 @@ Return ONLY the JSON array:`;
                             existingTasks.push({
                                 text: taskTitle,
                                 owner: user,
+                                originalOwner: user,
                                 done: false,
                                 starred: isStarred,
                                 dueDate: dueDate,
