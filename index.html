@@ -3253,8 +3253,8 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.10.1';
-        const EOS_BUILD_DATE = '2026-01-20';
+        const EOS_VERSION = '3.10.2';
+        const EOS_BUILD_DATE = '2026-01-22';
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -4496,11 +4496,19 @@ Example:
             const select = document.getElementById('todoOwnerFilter');
             if (!select) return;
             
+            // Preserve current selection if valid
+            const currentValue = select.value;
+            
             let html = '<option value="all">All Team</option>';
             (settings.teamMembers || []).forEach(m => {
                 html += '<option value="' + m.initials + '">' + (m.name || m.initials) + '</option>';
             });
             select.innerHTML = html;
+            
+            // Restore selection if it still exists
+            if (currentValue && Array.from(select.options).some(opt => opt.value === currentValue)) {
+                select.value = currentValue;
+            }
         }
         
         function formatTimeAgo(timestamp) {
@@ -5489,7 +5497,19 @@ Build Date: ${EOS_BUILD_DATE}
         }
         
         function toggleAllTodos(checked) {
-            yearData.quarters[currentQuarter].todos.forEach(t => t.done = checked);
+            const ownerFilter = document.getElementById('todoOwnerFilter')?.value || 'all';
+            yearData.quarters[currentQuarter].todos.forEach(t => {
+                // Only toggle tasks matching the current filter
+                if (ownerFilter === 'all') {
+                    t.done = checked;
+                } else {
+                    const owner = (t.owner || '').toUpperCase();
+                    const filter = ownerFilter.toUpperCase();
+                    if (owner === filter || owner.includes('/') || owner === 'BOTH' || owner.includes(filter)) {
+                        t.done = checked;
+                    }
+                }
+            });
             sortAndRenderTodos();
             autoSave();
         }
@@ -5885,8 +5905,24 @@ Build Date: ${EOS_BUILD_DATE}
         }
         
         function archiveCheckedTodos() {
+            const ownerFilter = document.getElementById('todoOwnerFilter')?.value || 'all';
             const todos = yearData.quarters[currentQuarter].todos;
-            const toArchive = todos.filter(t => t.done);
+            
+            // Helper function to check if task matches current filter
+            const matchesFilter = (t) => {
+                if (ownerFilter === 'all') return true;
+                const owner = (t.owner || '').toUpperCase();
+                const filter = ownerFilter.toUpperCase();
+                return owner === filter || owner.includes('/') || owner === 'BOTH' || owner.includes(filter);
+            };
+            
+            // Only archive checked tasks that match the current filter
+            const toArchive = todos.filter(t => t.done && matchesFilter(t));
+            
+            if (toArchive.length === 0) {
+                showToast('No matching tasks to archive', 'info');
+                return;
+            }
             
             // Sync completed tasks to Google Tasks BEFORE archiving
             const tasksToSync = toArchive.filter(t => t.googleTaskId && !t.googleTaskId.startsWith('synced_'));
@@ -5910,23 +5946,37 @@ Build Date: ${EOS_BUILD_DATE}
                 yearData.quarters[currentQuarter].completedTodos.unshift(todo);
             });
             
-            yearData.quarters[currentQuarter].todos = todos.filter(t => !t.done);
+            yearData.quarters[currentQuarter].todos = todos.filter(t => !(t.done && matchesFilter(t)));
             sortAndRenderTodos();
             autoSave();
+            showToast('Archived ' + toArchive.length + ' task(s)', 'success');
         }
         
         function deleteCheckedTodos() {
-            if (!confirm('Delete selected items permanently? (They will not be archived)')) return;
-            
-            // Track Google Task IDs so they don't get re-pulled
+            const ownerFilter = document.getElementById('todoOwnerFilter')?.value || 'all';
             const todos = yearData.quarters[currentQuarter].todos;
-            const toDelete = todos.filter(t => t.done);
+            
+            // Helper function to check if task matches current filter
+            const matchesFilter = (t) => {
+                if (ownerFilter === 'all') return true;
+                const owner = (t.owner || '').toUpperCase();
+                const filter = ownerFilter.toUpperCase();
+                return owner === filter || owner.includes('/') || owner === 'BOTH' || owner.includes(filter);
+            };
+            
+            // Only delete checked tasks that match the current filter
+            const toDelete = todos.filter(t => t.done && matchesFilter(t));
             
             if (toDelete.length === 0) {
                 alert('No tasks are checked to delete.');
                 return;
             }
             
+            // Show filter context in confirmation
+            const filterName = ownerFilter === 'all' ? 'all team members' : ownerFilter;
+            if (!confirm('Delete ' + toDelete.length + ' selected item(s) for ' + filterName + ' permanently?\n\n(They will not be archived)')) return;
+            
+            // Track Google Task IDs so they don't get re-pulled
             const settings = getSettings();
             settings.ignoredGoogleTaskIds = settings.ignoredGoogleTaskIds || [];
             toDelete.forEach(todo => {
@@ -5936,10 +5986,10 @@ Build Date: ${EOS_BUILD_DATE}
             });
             saveSettings(settings);
             
-            // Also remove from Daily Plan Matrix for all team members
+            // Also remove from Daily Plan Matrix for affected team members
             const textToDelete = new Set(toDelete.map(t => t.text));
             settings.teamMembers.forEach(member => {
-                const dailyPlanKey = `eos_dailyPlan_${member.initials}`;
+                const dailyPlanKey = 'eos_dailyPlan_' + member.initials;
                 let memberDailyPlan = JSON.parse(localStorage.getItem(dailyPlanKey) || 'null');
                 if (memberDailyPlan && memberDailyPlan.matrix) {
                     const quadrants = ['q1', 'q2', 'q3', 'q4'];
@@ -5953,19 +6003,31 @@ Build Date: ${EOS_BUILD_DATE}
                     });
                     if (removedFromMatrix > 0) {
                         localStorage.setItem(dailyPlanKey, JSON.stringify(memberDailyPlan));
-                        console.log(`Removed ${removedFromMatrix} task(s) from ${member.initials}'s Daily Plan Matrix`);
+                        console.log('Removed ' + removedFromMatrix + ' task(s) from ' + member.initials + ' Daily Plan Matrix');
                     }
                 }
             });
             
-            yearData.quarters[currentQuarter].todos = todos.filter(t => !t.done);
+            yearData.quarters[currentQuarter].todos = todos.filter(t => !(t.done && matchesFilter(t)));
             sortAndRenderTodos();
             autoSave();
-            showToast(`Deleted ${toDelete.length} task(s)`, 'success');
+            showToast('Deleted ' + toDelete.length + ' task(s)', 'success');
         }
         
         function uncheckAllTodos() {
-            yearData.quarters[currentQuarter].todos.forEach(t => t.done = false);
+            const ownerFilter = document.getElementById('todoOwnerFilter')?.value || 'all';
+            yearData.quarters[currentQuarter].todos.forEach(t => {
+                // Only uncheck tasks matching the current filter
+                if (ownerFilter === 'all') {
+                    t.done = false;
+                } else {
+                    const owner = (t.owner || '').toUpperCase();
+                    const filter = ownerFilter.toUpperCase();
+                    if (owner === filter || owner.includes('/') || owner === 'BOTH' || owner.includes(filter)) {
+                        t.done = false;
+                    }
+                }
+            });
             sortAndRenderTodos();
             autoSave();
         }
