@@ -3253,8 +3253,8 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.10.2';
-        const EOS_BUILD_DATE = '2026-01-22';
+        const EOS_VERSION = '3.10.3';
+        const EOS_BUILD_DATE = '2026-01-24';
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -10574,6 +10574,31 @@ Return ONLY the JSON array:`;
                 yearData.quarters[currentQuarter].todos[actualIdx].textModified = true;
                 autoSave();
                 sortAndRenderTodos();
+                
+                // Sync text change to Google Tasks if task is synced
+                if (todo.googleTaskId && !todo.googleTaskId.startsWith('synced_')) {
+                    let title = newText;
+                    if (todo.starred) title = '\u2B50 ' + title;
+                    syncTaskUpdateToGoogle(todo, { title: title });
+                }
+                
+                // Also update in Eisenhower Matrix if task is there
+                ['q1', 'q2', 'q3', 'q4'].forEach(q => {
+                    const found = dailyPlanData.matrix[q]?.find(t => t.type === 'todo' && t.text === oldText);
+                    if (found) found.text = newText;
+                });
+                
+                // Also update in Rule of 3 if task is there
+                dailyPlanData.ruleOf3?.forEach(task => {
+                    if (task && task.type === 'todo' && task.text === oldText) {
+                        task.text = newText;
+                    }
+                });
+                
+                saveDailyPlan();
+                renderMatrix();
+                renderRuleOf3();
+                renderRepository();
             }
         }
         
