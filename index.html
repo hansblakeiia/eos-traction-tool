@@ -2047,7 +2047,7 @@
             <button class="tab-btn" onclick="showPage('plan')">1-Year Plan</button>
             <button class="tab-btn quarter-tab" onclick="showPage('quarterly')">Quarterly (Rocks/Scorecard)</button>
             <button class="tab-btn" onclick="showPage('meeting')">Weekly Meeting</button>
-            <button class="tab-btn daily-plan-tab" onclick="showPage('dailyPlan')">📦 My Daily Plan</button>
+            <button class="tab-btn daily-plan-tab" onclick="showPage('dailyPlan')">📅 My Daily Plan</button>
             <button class="tab-btn" onclick="showPage('history')">Compare Years</button>
         </div>
         
@@ -2406,7 +2406,7 @@
         <!-- MY DAILY PLAN PAGE -->
         <div id="dailyPlan" class="page">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h2 class="page-title" style="margin-bottom: 0;">📦 My Daily Plan</h2>
+                <h2 class="page-title" style="margin-bottom: 0;">📅 My Daily Plan</h2>
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <div>
                         <label style="font-size: 0.85rem; color: var(--gray-600);">Current User:</label>
@@ -2455,7 +2455,7 @@
                     <div class="repo-section">
                         <div class="repo-header" onclick="toggleRepoSection('rocks')">
                             <span>🪨 Rocks (90-Day Goals)</span>
-                            <span id="rocksToggle">â–¼</span>
+                            <span id="rocksToggle">▼</span>
                         </div>
                         <div id="repoRocks" class="repo-items"></div>
                     </div>
@@ -2463,7 +2463,7 @@
                     <div class="repo-section">
                         <div class="repo-header" onclick="toggleRepoSection('todos')">
                             <span>✅ To-Dos (7-Day Tasks)</span>
-                            <span id="todosToggle">â–¼</span>
+                            <span id="todosToggle">▼</span>
                         </div>
                         <div id="repoTodos" class="repo-items"></div>
                     </div>
@@ -2471,7 +2471,7 @@
                     <div class="repo-section">
                         <div class="repo-header" onclick="toggleRepoSection('local')">
                             <span>📝 Local Tasks (Private)</span>
-                            <span id="localToggle">â–¼</span>
+                            <span id="localToggle">▼</span>
                         </div>
                         <div id="repoLocal" class="repo-items"></div>
                         <div style="display: flex; gap: 6px; margin-top: 8px;">
@@ -3253,8 +3253,8 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.10.3';
-        const EOS_BUILD_DATE = '2026-01-24';
+        const EOS_VERSION = '3.11.0';
+        const EOS_BUILD_DATE = '2026-01-26';
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -5424,12 +5424,36 @@ Build Date: ${EOS_BUILD_DATE}
             const hasMultipleLists = listNames.length > 1 || (listNames.length === 1 && listNames[0] !== 'To-Dos');
             
             let todosHtml = '';
+            // Get custom list order if it exists
+            const settings = getSettings();
+            const customListOrder = settings.todoListOrder || [];
+            
+            // Sort listNames by custom order
+            let sortedListNames = listNames.slice();
+            if (customListOrder.length > 0) {
+                sortedListNames.sort((a, b) => {
+                    const aIdx = customListOrder.indexOf(a);
+                    const bIdx = customListOrder.indexOf(b);
+                    const aOrder = aIdx >= 0 ? aIdx : customListOrder.length;
+                    const bOrder = bIdx >= 0 ? bIdx : customListOrder.length;
+                    return aOrder - bOrder;
+                });
+            }
+            
             if (hasMultipleLists) {
-                for (const listName of listNames) {
+                for (const listName of sortedListNames) {
+                    const listNameEscaped = listName.replace(/"/g, '&quot;');
                     todosHtml += `
-                        <div style="margin-bottom: 12px;">
-                            <div style="font-size: 0.8rem; font-weight: 600; color: var(--gray-500); margin-bottom: 4px; padding-left: 4px;">
-                                ${listName}
+                        <div class="todo-list-group" draggable="true" 
+                             data-list-name="${listNameEscaped}"
+                             ondragstart="dragListStart(event)"
+                             ondragover="dragListOver(event)"
+                             ondrop="dropList(event)"
+                             ondragleave="dragListLeave(event)"
+                             style="margin-bottom: 12px; border-left: 3px solid transparent; padding-left: 8px; transition: all 0.2s;">
+                            <div style="font-size: 0.8rem; font-weight: 600; color: var(--gray-500); margin-bottom: 4px; padding-left: 4px; cursor: grab; user-select: none;" 
+                                 title="Drag to reorder task lists">
+                                ⋮⋮ ${listName}
                             </div>
                             ${todosByList[listName].map(t => renderTodoItem(t, t.originalIndex)).join('')}
                         </div>
@@ -5447,6 +5471,29 @@ Build Date: ${EOS_BUILD_DATE}
         }
         
         function renderTodoItem(t, idx) {
+            // Determine owner display and color
+            let ownerDisplay = '';
+            let ownerColor = '#9ca3af';
+            let ownerBg = 'transparent';
+            
+            if (t.owner === 'Both' || t.owner === 'HB/AB') {
+                ownerDisplay = 'Both';
+                ownerColor = '#9333ea'; // Purple
+                ownerBg = '#f3e8ff';
+            } else if (t.owner) {
+                const settings = getSettings();
+                const member = settings.teamMembers.find(m => m.initials === t.owner);
+                ownerDisplay = t.owner;
+                // Color code based on member
+                if (t.owner.includes('HB')) {
+                    ownerColor = '#2563eb'; // Blue
+                    ownerBg = '#dbeafe';
+                } else if (t.owner.includes('AB')) {
+                    ownerColor = '#dc2626'; // Red
+                    ownerBg = '#fee2e2';
+                }
+            }
+            
             return `
                 <div class="todo-item ${t.done ? 'completed' : ''} ${t.starred ? 'starred' : ''}">
                     <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTodo(${idx})">
@@ -5461,6 +5508,11 @@ Build Date: ${EOS_BUILD_DATE}
                     <input type="date" value="${t.dueDate || ''}" onchange="updateTodo(${idx}, 'dueDate', this.value)"
                            style="width: 120px; margin: 0; font-size: 0.8rem; flex-shrink: 0; ${t.dueDate && isOverdue(t.dueDate) && !t.done ? 'border-color: var(--danger); background: #fee2e2;' : ''}"
                            title="Due date">
+                    ${ownerDisplay ? `
+                        <div style="padding: 2px 8px; border-radius: 4px; background: ${ownerBg}; color: ${ownerColor}; font-weight: 500; font-size: 0.75rem; white-space: nowrap;">
+                            ${ownerDisplay === 'Both' ? '🔗 ' : ''}${ownerDisplay}
+                        </div>
+                    ` : ''}
                     <select onchange="updateTodo(${idx}, 'owner', this.value)" style="flex-shrink: 0;">
                         ${getTeamMemberOptions(t.owner, true)}
                     </select>
@@ -5639,6 +5691,52 @@ Build Date: ${EOS_BUILD_DATE}
         // When owner changes, push task to new owner's Google Tasks
         async function syncTaskToNewOwner(todo, oldOwner, newOwner) {
             const settings = getSettings();
+            
+            // Special handling for "Both" - send to all team members
+            if (newOwner === 'Both') {
+                let sentCount = 0;
+                for (const member of settings.teamMembers) {
+                    if (!member.webAppUrl) continue;
+                    
+                    try {
+                        const payload = {
+                            secretKey: member.webAppSecret || '',
+                            action: 'createTask',
+                            listId: member.pushListId || '@default',
+                            title: todo.text,
+                            notes: `Shared task (Both) from ${oldOwner || 'Traction Meeting'} on ${new Date().toLocaleDateString()}`,
+                            due: todo.dueDate ? new Date(todo.dueDate).toISOString() : null
+                        };
+                        
+                        const response = await fetch(member.webAppUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain' },
+                            redirect: 'follow',
+                            body: JSON.stringify(payload)
+                        });
+                        
+                        const data = await response.json();
+                        if (data.success && data.taskId) {
+                            sentCount++;
+                        }
+                    } catch (error) {
+                        console.log('Could not sync to ' + member.initials, error);
+                    }
+                }
+                
+                if (sentCount > 0) {
+                    showToast('Task marked as Both - syncing to all team members', 'success');
+                    addLogEntry('Task marked as Both: "' + todo.text.substring(0, 30) + '..."');
+                } else if (settings.teamMembers.length > 0) {
+                    showToast('Task marked as Both - no Web App URLs configured yet', 'info');
+                }
+                
+                todo.originalOwner = 'Both';
+                autoSave();
+                sortAndRenderTodos();
+                return;
+            }
+            
             const newMember = settings.teamMembers.find(m => m.initials === newOwner);
             
             if (!newMember?.webAppUrl) {
@@ -7839,41 +7937,24 @@ Make sure your suggestions directly address the specific root cause and discussi
             const issues = yearData.quarters[currentQuarter].weeklyIssues || [];
             const agenda = getAgendaItems();
             const agendaState = yearData.quarters[currentQuarter].currentMeeting?.agenda || [];
+            const settings = getSettings();
             
             const today = new Date();
             const dateStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
             const shortDate = `${today.getMonth() + 1}/${today.getDate()}`;
             
-            // Build todos HTML - grouped by list
-            const todosByList = {};
-            todos.forEach(t => {
-                const listName = t.googleListName || 'To-Dos';
-                if (!todosByList[listName]) todosByList[listName] = [];
-                todosByList[listName].push(t);
-            });
-            
-            let todosHtml = '';
-            const listNames = Object.keys(todosByList);
-            const hasMultipleLists = listNames.length > 1 || (listNames.length === 1 && listNames[0] !== 'To-Dos');
-            
-            for (const listName of listNames) {
-                if (hasMultipleLists) {
-                    todosHtml += `<div style="font-size: 9pt; font-weight: 600; color: #666; margin: 8px 0 4px 0; padding-left: 4px;">📹 ${listName}</div>`;
-                }
-                todosHtml += todosByList[listName].map((t, idx) => `
-                    <div style="display: flex; align-items: center; padding: 6px; margin-bottom: 4px; background: ${t.starred ? '#fef3c7' : '#f5f5f5'}; border-radius: 4px;">
-                        <input type="checkbox" ${t.done ? 'checked' : ''} style="margin-right: 8px;">
-                        ${t.starred ? '⭐ ' : ''}
-                        <span style="flex: 1; ${t.done ? 'text-decoration: line-through; color: #999;' : ''}">${t.text || ''}</span>
-                        ${t.dueDate ? `<span style="font-size: 8pt; color: #666; margin-right: 8px;">Due: ${t.dueDate}</span>` : ''}
-                        <span style="width: 40px; text-align: center; font-weight: 600;">${t.owner || ''}</span>
-                    </div>
-                `).join('');
-            }
-            if (!todos.length) todosHtml = '<p style="color: #999;">No to-dos</p>';
+            // Build agenda HTML
+            const agendaHtml = agenda.map((item, idx) => `
+                <div style="display: flex; align-items: center; padding: 6px; margin-bottom: 4px; background: #f5f5f5; border-radius: 4px; border-left: 3px solid ${agendaState[idx] ? '#22c55e' : '#ccc'};">
+                    <span style="width: 18px; height: 18px; border: 2px solid ${agendaState[idx] ? '#22c55e' : '#999'}; border-radius: 3px; margin-right: 10px; display: flex; align-items: center; justify-content: center; color: ${agendaState[idx] ? '#22c55e' : 'transparent'}; font-size: 12pt;">✔</span>
+                    <span style="width: 20px; font-weight: 600; color: #666;">${idx + 1}.</span>
+                    <span style="flex: 1;">${item.title}</span>
+                    <span style="color: #666; font-size: 9pt;">${item.time}</span>
+                </div>
+            `).join('');
             
             // Build issues with IDS HTML
-            const issuesHtml = issues.map((issue, idx) => {
+            const issuesHtml = (yearData.quarters[currentQuarter].weeklyIssues || []).map((issue, idx) => {
                 const issueObj = typeof issue === 'string' ? { text: issue } : issue;
                 return `
                     <div style="margin-bottom: 15px; page-break-inside: avoid;">
@@ -7892,15 +7973,91 @@ Make sure your suggestions directly address the specific root cause and discussi
                 `;
             }).join('') || '<p style="color: #999;">No issues</p>';
             
-            // Build agenda HTML
-            const agendaHtml = agenda.map((item, idx) => `
-                <div style="display: flex; align-items: center; padding: 6px; margin-bottom: 4px; background: #f5f5f5; border-radius: 4px; border-left: 3px solid ${agendaState[idx] ? '#22c55e' : '#ccc'};">
-                    <span style="width: 18px; height: 18px; border: 2px solid ${agendaState[idx] ? '#22c55e' : '#999'}; border-radius: 3px; margin-right: 10px; display: flex; align-items: center; justify-content: center; color: ${agendaState[idx] ? '#22c55e' : 'transparent'}; font-size: 12pt;">✔</span>
-                    <span style="width: 20px; font-weight: 600; color: #666;">${idx + 1}.</span>
-                    <span style="flex: 1;">${item.title}</span>
-                    <span style="color: #666; font-size: 9pt;">${item.time}</span>
+            // Function to build user's task section
+            const buildUserTasksHtml = (userInitials) => {
+                const userTodos = todos.filter(t => 
+                    t.owner === userInitials || t.owner === 'Both' || t.owner === 'HB/AB'
+                );
+                
+                if (userTodos.length === 0) {
+                    return '<p style="color: #999;">No assigned to-dos</p>';
+                }
+                
+                // Group by Google Task list
+                const todosByList = {};
+                userTodos.forEach(t => {
+                    const listName = t.googleListName || 'Default Tasks';
+                    if (!todosByList[listName]) todosByList[listName] = [];
+                    todosByList[listName].push(t);
+                });
+                
+                let html = '';
+                for (const listName of Object.keys(todosByList).sort()) {
+                    const listTodos = todosByList[listName];
+                    html += `
+                        <div style="margin-bottom: 10px;">
+                            <div style="font-size: 8pt; font-weight: 600; color: #3b82f6; margin-bottom: 4px; padding-left: 4px; border-left: 3px solid #3b82f6;">
+                                📋 ${listName}
+                            </div>
+                            ${listTodos.map(t => `
+                                <div style="display: flex; align-items: flex-start; padding: 6px; margin-bottom: 4px; background: ${t.starred ? '#fef3c7' : '#f5f5f5'}; border-radius: 4px;">
+                                    <input type="checkbox" ${t.done ? 'checked' : ''} style="margin-right: 8px; margin-top: 2px;">
+                                    <div style="flex: 1;">
+                                        <div style="${t.done ? 'text-decoration: line-through; color: #999;' : ''}">${t.starred ? '⭐ ' : ''}${t.text || ''}</div>
+                                        ${t.notes ? `<div style="font-size: 7pt; color: #666; margin-left: 20px; margin-top: 3px; font-style: italic;">${t.notes.substring(0, 200)}${t.notes.length > 200 ? '...' : ''}</div>` : ''}
+                                    </div>
+                                    ${t.dueDate ? `<div style="font-size: 8pt; color: #666; margin-left: 8px; white-space: nowrap;">Due: ${t.dueDate}</div>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+                return html;
+            };
+            
+            // Build page HTML for each user
+            let pagesHtml = '';
+            for (const member of settings.teamMembers) {
+                pagesHtml += `
+                    <div style="page-break-after: always; padding: 0.4in;">
+                        <div style="text-align: center; margin-bottom: 15px; border-bottom: 2px solid #333; padding-bottom: 10px;">
+                            <h1 style="font-size: 16pt; margin-bottom: 4px;">Traction Meeting (${shortDate})</h1>
+                            <div style="color: #666; font-size: 10pt;">
+                                <strong>${member.name || member.initials}</strong> | Intelligent Investing LLC | ${dateStr}
+                            </div>
+                        </div>
+                        
+                        <!-- Agenda -->
+                        <div style="margin-bottom: 15px;">
+                            <h3 style="font-size: 11pt; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #ddd;">📹 Meeting Agenda</h3>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px;">
+                                ${agendaHtml}
+                            </div>
+                        </div>
+                        
+                        <!-- To-Dos for this user -->
+                        <div style="margin-bottom: 15px;">
+                            <h3 style="font-size: 11pt; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #ddd;">✅ To-Dos (${member.name || member.initials})</h3>
+                            ${buildUserTasksHtml(member.initials)}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Add IDS page at the end
+            pagesHtml += `
+                <div style="padding: 0.4in;">
+                    <div style="text-align: center; margin-bottom: 15px; border-bottom: 2px solid #333; padding-bottom: 10px;">
+                        <h1 style="font-size: 16pt; margin-bottom: 4px;">IDS - Issues (${shortDate})</h1>
+                        <div style="color: #666; font-size: 10pt;">Intelligent Investing LLC | ${dateStr}</div>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <h3 style="font-size: 11pt; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #ddd;">💡 Identify, Discuss, Solve</h3>
+                        ${issuesHtml}
+                    </div>
                 </div>
-            `).join('');
+            `;
             
             printWindow.document.write(`
                 <!DOCTYPE html>
@@ -7911,44 +8068,10 @@ Make sure your suggestions directly address the specific root cause and discussi
                         @page { size: portrait; margin: 0.4in; }
                         * { box-sizing: border-box; }
                         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 9pt; line-height: 1.4; }
-                        .header { text-align: center; margin-bottom: 15px; border-bottom: 2px solid #333; padding-bottom: 10px; }
-                        .header h1 { font-size: 16pt; margin-bottom: 4px; }
-                        .header .subtitle { color: #666; }
-                        .section { margin-bottom: 15px; }
-                        .section h3 { font-size: 11pt; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #ddd; }
-                        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-                        @media print {
-                            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-                        }
                     </style>
                 </head>
                 <body>
-                    <div class="header">
-                        <h1>Traction Meeting (${shortDate})</h1>
-                        <div class="subtitle">Intelligent Investing LLC | ${dateStr}</div>
-                    </div>
-                    
-                    <!-- Agenda Full Width at Top -->
-                    <div class="section">
-                        <h3>📹 Meeting Agenda</h3>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px;">
-                            ${agendaHtml}
-                        </div>
-                    </div>
-                    
-                    <!-- To-Dos in Two Columns -->
-                    <div class="section">
-                        <h3>✅ To-Dos (${todos.length})</h3>
-                        <div style="column-count: 2; column-gap: 15px;">
-                            ${todosHtml}
-                        </div>
-                    </div>
-                    
-                    <!-- IDS Section Below -->
-                    <div class="section">
-                        <h3>💡 IDS - Issues (${issues.length})</h3>
-                        ${issuesHtml}
-                    </div>
+                    ${pagesHtml}
                 </body>
                 </html>
             `);
@@ -8475,8 +8598,21 @@ Make sure your suggestions directly address the specific root cause and discussi
             statusEl.innerHTML = '⏳ Fetching latest Traction meeting from Otter...';
             
             try {
-                // Try the combined approach (via team member's Web App)
+                // Check if Otter is configured
                 const firstMember = settings.teamMembers?.[0];
+                if (!firstMember?.webAppUrl || !settings.otterSheetId) {
+                    statusEl.style.background = '#fff3cd';
+                    statusEl.style.color = '#856404';
+                    statusEl.innerHTML = `⚠️ <strong>Otter.ai integration not fully configured</strong><br><br>
+                        <strong>Setup steps:</strong><br>
+                        1. In Settings (⚙️), enter your <strong>Otter.ai Sheet ID</strong><br>
+                        2. Ensure each team member has a <strong>Web App URL</strong> configured<br>
+                        3. In your Google Apps Script, set:<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<code>const OTTER_SHEET_ID = '${settings.otterSheetId || 'YOUR_SHEET_ID'}';</code><br><br>
+                        <strong>Note:</strong> Otter meetings must have "Traction" in the title to be imported.`;
+                    return;
+                }
+                
                 let response, data;
                 
                 if (firstMember?.webAppUrl) {
@@ -8526,14 +8662,28 @@ Make sure your suggestions directly address the specific root cause and discussi
                             // No action items and no abstract summary
                             statusEl.style.background = '#fff3cd';
                             statusEl.style.color = '#856404';
-                            statusEl.innerHTML = `📭 No action items or summary found in "${meetingTitle}"`;
+                            statusEl.innerHTML = `📭 No action items or summary found in "${meetingTitle}" or meeting doesn't have "Traction" in the title`;
                         }
                         return;
                         
                     } else if (data.error) {
-                        statusEl.style.background = '#fce8e6';
-                        statusEl.style.color = '#d93025';
-                        statusEl.innerHTML = '⚠️ ' + data.error;
+                        // Check for common error messages
+                        if (data.error.includes('Unknown action') || data.error.includes('getOtterMeeting')) {
+                            statusEl.style.background = '#fff3cd';
+                            statusEl.style.color = '#856404';
+                            statusEl.innerHTML = `⚠️ <strong>Otter.ai script not updated</strong><br><br>
+                                Your Google Apps Script needs to be redeployed with the latest code.<br><br>
+                                <strong>To fix:</strong><br>
+                                1. Open your Google Apps Script<br>
+                                2. Paste the latest Google_Tasks_Sync.gs code<br>
+                                3. Create a NEW deployment (don't just save)<br>
+                                4. Copy the new Web App URL to Settings<br><br>
+                                <strong>Note:</strong> Recent Otter meetings must have "Traction" in the title.`;
+                        } else {
+                            statusEl.style.background = '#fce8e6';
+                            statusEl.style.color = '#d93025';
+                            statusEl.innerHTML = '⚠️ Error: ' + data.error;
+                        }
                         return;
                     }
                 }
@@ -9020,19 +9170,24 @@ Return ONLY the JSON array:`;
             const settings = getSettings();
             let options = includeEmpty ? '<option value="">Who</option>' : '';
             
+            // Normalize "Both" variants for comparison
+            let normalizedSelected = selectedValue;
+            if (selectedValue === 'HB/AB' || selectedValue === 'Both') {
+                normalizedSelected = 'Both';
+            }
+            
             options += settings.teamMembers.map(m => 
-                `<option value="${m.initials}" ${selectedValue === m.initials ? 'selected' : ''}>${m.initials}</option>`
+                `<option value="${m.initials}" ${normalizedSelected === m.initials ? 'selected' : ''}>${m.initials}</option>`
             ).join('');
             
             // Add "Both" or combined options if there are 2+ members
             if (settings.teamMembers.length >= 2) {
-                const bothValue = settings.teamMembers.slice(0, 2).map(m => m.initials).join('/');
-                options += `<option value="${bothValue}" ${selectedValue === bothValue || selectedValue === 'HB/AB' ? 'selected' : ''}>Both</option>`;
+                options += `<option value="Both" ${normalizedSelected === 'Both' ? 'selected' : ''} style="color: #9333ea; font-weight: bold;">🔗 Both</option>`;
             }
             
             // Add Delegate option if enabled
             if (settings.enableDelegate) {
-                options += `<option value="Delegate" ${selectedValue === 'Delegate' ? 'selected' : ''}>Delegate</option>`;
+                options += `<option value="Delegate" ${normalizedSelected === 'Delegate' ? 'selected' : ''}>Delegate</option>`;
             }
             
             return options;
@@ -10322,7 +10477,7 @@ Return ONLY the JSON array:`;
             const toggleEl = document.getElementById(`${section}Toggle`);
             if (itemsEl && toggleEl) {
                 itemsEl.classList.toggle('collapsed');
-                toggleEl.textContent = itemsEl.classList.contains('collapsed') ? 'â–¶' : 'â–¼';
+                toggleEl.textContent = itemsEl.classList.contains('collapsed') ? '▶' : '▼';
             }
         }
         
@@ -10617,6 +10772,80 @@ Return ONLY the JSON array:`;
             draggedItem = null;
             // Remove all drag-over highlights
             document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+        }
+        
+        // ==================== TASK LIST REORDERING ====================
+        let draggedListName = null;
+        
+        function dragListStart(event) {
+            draggedListName = event.currentTarget.getAttribute('data-list-name');
+            event.currentTarget.classList.add('dragging');
+            event.currentTarget.style.opacity = '0.6';
+            event.dataTransfer.effectAllowed = 'move';
+        }
+        
+        function dragListOver(event) {
+            event.preventDefault();
+            event.currentTarget.classList.add('drag-over');
+            event.currentTarget.style.borderLeftColor = '#3b82f6';
+            event.dataTransfer.dropEffect = 'move';
+        }
+        
+        function dragListLeave(event) {
+            event.currentTarget.classList.remove('drag-over');
+            event.currentTarget.style.borderLeftColor = 'transparent';
+        }
+        
+        function dropList(event) {
+            event.preventDefault();
+            const targetListName = event.currentTarget.getAttribute('data-list-name');
+            event.currentTarget.classList.remove('drag-over');
+            event.currentTarget.style.borderLeftColor = 'transparent';
+            
+            if (!draggedListName || draggedListName === targetListName) {
+                draggedListName = null;
+                return;
+            }
+            
+            // Get current list order from settings
+            const settings = getSettings();
+            let customListOrder = settings.todoListOrder || [];
+            
+            // Get all current list names
+            const todos = yearData.quarters[currentQuarter].todos || [];
+            const todosByList = {};
+            todos.forEach(t => {
+                const listName = t.googleListName || 'To-Dos';
+                if (!todosByList[listName]) todosByList[listName] = [];
+            });
+            const allListNames = Object.keys(todosByList);
+            
+            // Initialize customListOrder with all lists if empty
+            if (customListOrder.length === 0) {
+                customListOrder = allListNames;
+            }
+            
+            // Find indices
+            const draggedIdx = customListOrder.indexOf(draggedListName);
+            const targetIdx = customListOrder.indexOf(targetListName);
+            
+            // Reorder
+            if (draggedIdx >= 0 && targetIdx >= 0) {
+                customListOrder.splice(draggedIdx, 1);
+                const newTargetIdx = draggedIdx < targetIdx ? targetIdx - 1 : targetIdx;
+                customListOrder.splice(newTargetIdx, 0, draggedListName);
+                
+                // Save new order
+                settings.todoListOrder = customListOrder;
+                saveSettings();
+                
+                // Re-render
+                sortAndRenderTodos();
+                showToast(`Reordered "${draggedListName}"`, 'success');
+                addLogEntry(`Reordered task list: "${draggedListName}"`);
+            }
+            
+            draggedListName = null;
         }
         
         function allowDrop(event) {
@@ -12039,10 +12268,14 @@ Return ONLY the JSON array:`;
             // Get Rule of 3 tasks
             const ruleOf3Html = dailyPlanData.ruleOf3.map((task, idx) => {
                 if (task) {
+                    const notesHtml = task.notes ? `<div style="font-size: 7pt; color: #6b7280; margin-left: 36px; font-style: italic; margin-top: 4px;">${task.notes.substring(0, 250)}${task.notes.length > 250 ? '...' : ''}</div>` : '';
                     return `
-                        <div style="display: flex; align-items: center; padding: 10px; margin: 6px 0; background: #fffbeb; border-radius: 6px; border-left: 4px solid #f59e0b;">
-                            <span style="width: 20px; height: 20px; border: 2px solid #9ca3af; border-radius: 4px; margin-right: 12px;"></span>
-                            <span style="font-weight: 600;">${idx + 1}. ${task.type === 'rock' ? '🪨 ' : ''}${task.text}</span>
+                        <div style="display: flex; flex-direction: column; padding: 10px; margin: 6px 0; background: #fffbeb; border-radius: 6px; border-left: 4px solid #f59e0b;">
+                            <div style="display: flex; align-items: center;">
+                                <span style="width: 20px; height: 20px; border: 2px solid #9ca3af; border-radius: 4px; margin-right: 12px;"></span>
+                                <span style="font-weight: 600;">${idx + 1}. ${task.type === 'rock' ? '🪨 ' : ''}${task.text}</span>
+                            </div>
+                            ${notesHtml}
                         </div>
                     `;
                 }
@@ -12064,12 +12297,18 @@ Return ONLY the JSON array:`;
                 matrixHtml += `
                     <div style="background: ${label.bg}; border: 2px solid ${label.color}40; border-radius: 8px; padding: 8px; min-height: 80px;">
                         <div style="font-weight: 700; font-size: 9pt; color: ${label.color}; margin-bottom: 6px;">${label.name}</div>
-                        ${tasks.map(t => `
-                            <div style="display: flex; align-items: center; padding: 3px 0; font-size: 8pt;">
-                                <span style="width: 12px; height: 12px; border: 1.5px solid #9ca3af; border-radius: 2px; margin-right: 6px; ${t.done ? 'background: #22c55e; border-color: #22c55e;' : ''}"></span>
-                                <span style="${t.done ? 'text-decoration: line-through; opacity: 0.5;' : ''}">${t.type === 'rock' ? '🪨 ' : ''}${t.text}</span>
-                            </div>
-                        `).join('') || '<p style="color: #999; font-size: 7pt; margin: 0;">Empty</p>'}
+                        ${tasks.map(t => {
+                            const notesHtml = t.notes ? `<div style="font-size: 6.5pt; color: #6b7280; margin-left: 18px; margin-top: 3px; font-style: italic;">${t.notes.substring(0, 150)}${t.notes.length > 150 ? '...' : ''}</div>` : '';
+                            return `
+                                <div>
+                                    <div style="display: flex; align-items: center; padding: 3px 0; font-size: 8pt;">
+                                        <span style="width: 12px; height: 12px; border: 1.5px solid #9ca3af; border-radius: 2px; margin-right: 6px; ${t.done ? 'background: #22c55e; border-color: #22c55e;' : ''}"></span>
+                                        <span style="${t.done ? 'text-decoration: line-through; opacity: 0.5;' : ''}">${t.type === 'rock' ? '🪨 ' : ''}${t.text}</span>
+                                    </div>
+                                    ${notesHtml}
+                                </div>
+                            `;
+                        }).join('') || '<p style="color: #999; font-size: 7pt; margin: 0;">Empty</p>'}
                     </div>
                 `;
             });
@@ -12091,9 +12330,24 @@ Return ONLY the JSON array:`;
             const todos = (yearData.quarters[currentQuarter].todos || [])
                 .filter(t => t.owner === user && t.text && !t.done);
             
+            // Filter out tasks that are already in Matrix or Rule of 3
+            const tasksInMatrix = new Set();
+            ['q1', 'q2', 'q3', 'q4'].forEach(q => {
+                (dailyPlanData.matrix[q] || []).forEach(t => {
+                    tasksInMatrix.add(t.text + '|' + (t.type || 'todo'));
+                });
+            });
+            (dailyPlanData.ruleOf3 || []).forEach(t => {
+                if (t) tasksInMatrix.add(t.text + '|' + (t.type || 'todo'));
+            });
+            
+            const repositoryTodos = todos.filter(t => 
+                !tasksInMatrix.has(t.text + '|todo')
+            );
+            
             // Group by Google Task list
             const todosByList = {};
-            todos.forEach(t => {
+            repositoryTodos.forEach(t => {
                 const listName = t.googleListName || 'To-Dos';
                 if (!todosByList[listName]) todosByList[listName] = [];
                 todosByList[listName].push(t);
@@ -12108,7 +12362,7 @@ Return ONLY the JSON array:`;
                         todosHtml += `<div style="font-weight: 600; font-size: 8pt; color: #3b82f6; margin: 8px 0 4px 0; border-bottom: 1px solid #e5e7eb;">${listName}</div>`;
                     }
                     todosHtml += todosByList[listName].map(t => {
-                        const notesHtml = t.notes ? `<div style="font-size: 7pt; color: #6b7280; margin-left: 24px; font-style: italic;">${t.notes.substring(0, 100)}${t.notes.length > 100 ? '...' : ''}</div>` : '';
+                        const notesHtml = t.notes ? `<div style="font-size: 7pt; color: #6b7280; margin-left: 24px; font-style: italic;">${t.notes.substring(0, 250)}${t.notes.length > 250 ? '...' : ''}</div>` : '';
                         return `
                             <div style="margin-bottom: ${t.notes ? '6px' : '2px'};">
                                 <div style="display: flex; align-items: flex-start; padding: 3px 0; font-size: 9pt;">
