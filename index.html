@@ -3813,13 +3813,22 @@ Example:
                         if (updated) updatedCount++;
                     });
                     
-                    // Filter for new tasks (exclude completed tasks - we only want active tasks as new)
-                    const newTasks = data.tasks.filter(task => 
-                        task.status !== 'completed' &&
-                        !existingById.has(task.id) && 
-                        !ignoredIds.has(task.id) &&
-                        !existingTexts.has(task.title?.toLowerCase().trim())
-                    );
+                    // Filter for new tasks (exclude completed tasks and reassignments)
+                    const newTasks = data.tasks.filter(task => {
+                        if (task.status === 'completed') return false;
+                        if (existingById.has(task.id)) return false;  // Already have this ID
+                        if (ignoredIds.has(task.id)) return false;
+                        
+                        const taskText = task.title?.toLowerCase().trim();
+                        const hasTextMatch = existingTexts.has(taskText);
+                        
+                        // If text matches, it might be a reassignment - skip it (let reassignment logic handle it)
+                        if (hasTextMatch) {
+                            return false;  // Will be handled by reassignment detection
+                        }
+                        
+                        return true;  // It's truly new
+                    });
                     
                     // Check for reassigned tasks (text exists but different owner)
                     let reassignedCount = 0;
@@ -3836,13 +3845,21 @@ Example:
                             const existingByText = existingTasks.find(t => 
                                 t.text?.toLowerCase().trim() === taskTitle.toLowerCase().trim()
                             );
-                            if (existingByText && existingByText.owner !== currentUser) {
-                                console.log('Auto-pull: Reassigned task detected - updating owner to ' + currentUser);
-                                existingByText.owner = currentUser;
-                                existingByText.googleTaskId = task.id;
-                                existingByText.googleListId = task.listId;
-                                existingByText.googleListName = task.listName;
-                                reassignedCount++;
+                            if (existingByText) {
+                                // Check if task has been reassigned to current user
+                                const isDifferentOwner = existingByText.owner !== currentUser;
+                                const hasReassignmentPending = existingByText.reassignmentPending === true;
+                                
+                                if (isDifferentOwner || hasReassignmentPending) {
+                                    console.log('Auto-pull: Reassigned task detected - "' + taskTitle + '" owner was ' + existingByText.owner + ', now ' + currentUser);
+                                    existingByText.owner = currentUser;
+                                    existingByText.originalOwner = currentUser;  // Update original owner too
+                                    existingByText.googleTaskId = task.id;  // Update to new task ID
+                                    existingByText.googleListId = task.listId;
+                                    existingByText.googleListName = task.listName;
+                                    existingByText.reassignmentPending = false;  // Clear the flag
+                                    reassignedCount++;
+                                }
                             }
                         }
                     });
@@ -5760,7 +5777,18 @@ Build Date: ${EOS_BUILD_DATE}
             const oldGoogleTaskId = todo.googleTaskId;
             const oldGoogleListId = todo.googleListId;
             
+            // Store the task for removal from old owner's EOS
+            const todos = yearData.quarters[currentQuarter].todos || [];
+            const taskIndex = todos.indexOf(todo);
+            
             try {
+                // IMPORTANT: When reassigning, remove task from old owner's EOS
+                // It will appear in new owner's EOS on their next sync
+                if (oldOwner && oldOwner !== newOwner && taskIndex >= 0) {
+                    console.log('Removing reassigned task from ' + oldOwner + "'s EOS view");
+                    todos.splice(taskIndex, 1);  // Remove from array
+                }
+                
                 // Create task in new owner's Google Tasks
                 const today = new Date();
                 const payload = {
@@ -5794,24 +5822,24 @@ Build Date: ${EOS_BUILD_DATE}
                     showToast('Task synced to ' + newOwner + "'s Google Tasks", 'success');
                     addLogEntry('Task reassigned: "' + todo.text.substring(0, 25) + '..." to ' + newOwner);
                     
-                    // Now complete the task in old owner's Google Tasks (using saved IDs)
+                    // Now delete the task from old owner's Google Tasks (using saved IDs)
                     if (oldOwner && oldGoogleTaskId) {
                         const oldMember = settings.teamMembers.find(m => m.initials === oldOwner);
                         if (oldMember?.webAppUrl) {
-                            console.log('Completing old task in ' + oldOwner + "'s Google Tasks:", oldGoogleTaskId);
+                            console.log('Deleting old task from ' + oldOwner + "'s Google Tasks:", oldGoogleTaskId);
                             fetch(oldMember.webAppUrl, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'text/plain' },
                                 redirect: 'follow',
                                 body: JSON.stringify({
                                     secretKey: oldMember.webAppSecret || '',
-                                    action: 'completeTask',
+                                    action: 'deleteTask',
                                     taskId: oldGoogleTaskId,
                                     listId: oldGoogleListId || '@default'
                                 })
                             }).then(r => r.json()).then(d => {
-                                console.log('Old task completed:', d);
-                            }).catch(e => console.log('Could not archive from old owner:', e));
+                                console.log('Old task deleted from ' + oldOwner + ':', d);
+                            }).catch(e => console.log('Could not delete from old owner:', e));
                         }
                     }
                 } else {
