@@ -3253,7 +3253,7 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.12.0';
+        const EOS_VERSION = '3.11.1';
         const EOS_BUILD_DATE = '2026-01-27';
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
@@ -3399,8 +3399,7 @@ Example:
             lastPush: null,
             pendingChanges: 0,
             isSyncing: false,
-            autoSyncEnabled: true,
-            autoSyncInterval: null
+            autoSyncEnabled: true
         };
         
         // ==================== SHARED SETTINGS (CLOUD SYNC) ====================
@@ -3590,8 +3589,6 @@ Example:
                     // Auto-pull on load (with delay to not block UI)
                     setTimeout(() => {
                         autoPullFromGoogleTasks();
-                        // Start the 30-second sync interval after first pull
-                        startAutoSyncInterval();
                     }, 2000);
                 } else {
                     updateSyncStatus('paused', 'Auto-sync disabled');
@@ -3617,31 +3614,8 @@ Example:
                 updateSyncStatus('ready', 'Auto-sync enabled');
                 // Do an immediate sync check
                 setTimeout(autoPullFromGoogleTasks, 500);
-                // Start the 30-second interval
-                startAutoSyncInterval();
             } else {
                 updateSyncStatus('paused', 'Auto-sync disabled');
-                // Stop the interval
-                if (syncState.autoSyncInterval) {
-                    clearInterval(syncState.autoSyncInterval);
-                    syncState.autoSyncInterval = null;
-                }
-            }
-        }
-        
-        function startAutoSyncInterval() {
-            // Clear existing interval if any
-            if (syncState.autoSyncInterval) {
-                clearInterval(syncState.autoSyncInterval);
-            }
-            
-            // Only start if auto-sync is enabled and tab is visible
-            if (syncState.autoSyncEnabled && !document.hidden) {
-                syncState.autoSyncInterval = setInterval(() => {
-                    if (!document.hidden && syncState.autoSyncEnabled) {
-                        autoPullFromGoogleTasks();
-                    }
-                }, 30000); // 30 seconds
             }
         }
         
@@ -3651,15 +3625,9 @@ Example:
                 if (syncState.autoSyncEnabled && syncState.pendingChanges > 0) {
                     autoPushToGoogleTasks();
                 }
-                // Stop the interval when tab is hidden
-                if (syncState.autoSyncInterval) {
-                    clearInterval(syncState.autoSyncInterval);
-                    syncState.autoSyncInterval = null;
-                }
             } else {
-                // Tab is becoming visible - start interval and check for new tasks
+                // Tab is becoming visible - check for new tasks
                 if (syncState.autoSyncEnabled) {
-                    startAutoSyncInterval();
                     const timeSinceLastPull = Date.now() - (syncState.lastPull || 0);
                     // Only auto-pull if it's been more than 2 minutes
                     if (timeSinceLastPull > 120000) {
@@ -5054,7 +5022,6 @@ Build Date: ${EOS_BUILD_DATE}
                         const goalDir = m.goalDirection || 'above';
                         let cls = '';
                         if (val && !isNaN(num) && !isNaN(goal)) {
-                            // Check if above or below goal based on goalDirection
                             const isOnTrack = goalDir === 'above' ? num >= goal : num <= goal;
                             cls = isOnTrack ? 'on-track' : 'off-track';
                         }
@@ -5111,7 +5078,6 @@ Build Date: ${EOS_BUILD_DATE}
             
             input.classList.remove('on-track', 'off-track');
             if (value && !isNaN(num) && !isNaN(goal)) {
-                // Check if above or below goal based on goalDirection
                 const isOnTrack = direction === 'above' ? num >= goal : num <= goal;
                 input.classList.add(isOnTrack ? 'on-track' : 'off-track');
             }
@@ -5740,8 +5706,6 @@ Build Date: ${EOS_BUILD_DATE}
             // Special handling for "Both" - send to all team members
             if (newOwner === 'Both') {
                 let sentCount = 0;
-                const bothTaskIds = {}; // Track task ID for each member
-                
                 for (const member of settings.teamMembers) {
                     if (!member.webAppUrl) continue;
                     
@@ -5751,7 +5715,7 @@ Build Date: ${EOS_BUILD_DATE}
                             action: 'createTask',
                             listId: member.pushListId || '@default',
                             title: todo.text,
-                            notes: `[Both] Shared task from ${oldOwner || 'Traction Meeting'} on ${new Date().toLocaleDateString()}`,
+                            notes: `Shared task (Both) from ${oldOwner || 'Traction Meeting'} on ${new Date().toLocaleDateString()}`,
                             due: todo.dueDate ? new Date(todo.dueDate).toISOString() : null
                         };
                         
@@ -5764,13 +5728,7 @@ Build Date: ${EOS_BUILD_DATE}
                         
                         const data = await response.json();
                         if (data.success && data.taskId) {
-                            bothTaskIds[member.initials] = {
-                                googleTaskId: data.taskId,
-                                googleListId: member.pushListId || '@default',
-                                googleListName: member.taskLists?.find(l => l.id === (member.pushListId || '@default'))?.title || 'Tasks'
-                            };
                             sentCount++;
-                            console.log(`Both task created for ${member.initials}: ${data.taskId}`);
                         }
                     } catch (error) {
                         console.log('Could not sync to ' + member.initials, error);
@@ -5778,15 +5736,13 @@ Build Date: ${EOS_BUILD_DATE}
                 }
                 
                 if (sentCount > 0) {
-                    // Store the mapped IDs for all members
-                    todo.bothTaskIds = bothTaskIds;
-                    todo.originalOwner = 'Both';
                     showToast('Task marked as Both - syncing to all team members', 'success');
                     addLogEntry('Task marked as Both: "' + todo.text.substring(0, 30) + '..."');
                 } else if (settings.teamMembers.length > 0) {
                     showToast('Task marked as Both - no Web App URLs configured yet', 'info');
                 }
                 
+                todo.originalOwner = 'Both';
                 autoSave();
                 sortAndRenderTodos();
                 return;
@@ -5890,192 +5846,81 @@ Build Date: ${EOS_BUILD_DATE}
         // Sync a completed task back to Google Tasks
         async function syncTaskCompletionToGoogle(todo) {
             const settings = getSettings();
-            const tasksToComplete = [];
+            // Find the team member who owns this task
+            const member = settings.teamMembers.find(m => m.initials === todo.owner) || settings.teamMembers[0];
             
-            if (todo.owner === 'Both' && todo.bothTaskIds) {
-                // For Both tasks, mark complete in all mapped members' Google Tasks
-                for (const [memberInitials, taskInfo] of Object.entries(todo.bothTaskIds)) {
-                    const member = settings.teamMembers.find(m => m.initials === memberInitials);
-                    if (member && member.webAppUrl) {
-                        tasksToComplete.push({
-                            member,
-                            taskId: taskInfo.googleTaskId,
-                            listId: taskInfo.googleListId
-                        });
-                    }
-                }
-            } else {
-                // Regular task - complete in owner's Google Tasks
-                const member = settings.teamMembers.find(m => m.initials === todo.owner) || settings.teamMembers[0];
-                if (member && member.webAppUrl) {
-                    tasksToComplete.push({
-                        member,
+            if (!member?.webAppUrl) {
+                console.log('No Web App URL configured for sync');
+                return;
+            }
+            
+            try {
+                const response = await fetch(member.webAppUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    redirect: 'follow',
+                    body: JSON.stringify({
+                        secretKey: member.webAppSecret || '',
+                        action: 'completeTask',
                         taskId: todo.googleTaskId,
-                        listId: todo.googleListId
-                    });
-                }
-            }
-            
-            // Execute completions
-            for (const {member, taskId, listId} of tasksToComplete) {
-                if (!member?.webAppUrl || !taskId) continue;
+                        listId: todo.googleListId || '@default'
+                    })
+                });
                 
-                try {
-                    const response = await fetch(member.webAppUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'text/plain' },
-                        redirect: 'follow',
-                        body: JSON.stringify({
-                            secretKey: member.webAppSecret || '',
-                            action: 'completeTask',
-                            taskId: taskId,
-                            listId: listId || '@default'
-                        })
-                    });
-                    
-                    const data = await response.json();
-                    if (data.success) {
-                        console.log(`Task completed in ${member.initials}'s Google Tasks: ${todo.text?.substring(0, 30)}`);
-                        addLogEntry(`Synced completion to ${member.initials}'s Google Tasks: ${todo.text?.substring(0, 25)}...`);
-                    } else {
-                        console.warn(`Failed to complete in ${member.initials}'s Google Tasks:`, data.error);
-                    }
-                } catch (error) {
-                    console.error(`Error syncing completion to ${member.initials}'s Google Tasks:`, error);
+                const data = await response.json();
+                if (data.success) {
+                    console.log('Task synced as complete in Google Tasks:', todo.text?.substring(0, 30));
+                    addLogEntry(`Synced completion to Google Tasks: ${todo.text?.substring(0, 25)}...`);
+                    showToast('Completed in Google Tasks', 'success');
+                } else {
+                    console.warn('Failed to sync completion:', data.error);
+                    showToast('Failed to sync completion: ' + (data.error || 'Unknown error'), 'error');
                 }
+            } catch (error) {
+                console.error('Error syncing task completion:', error);
+                showToast('Could not sync completion (network error)', 'warning');
             }
-            
-            showToast('Task marked complete in Google Tasks', 'success');
         }
         
         // Sync an uncompleted task back to Google Tasks
         async function syncTaskUncompleteToGoogle(todo) {
             const settings = getSettings();
-            const tasksToUncomplete = [];
+            const member = settings.teamMembers.find(m => m.initials === todo.owner) || settings.teamMembers[0];
             
-            if (todo.owner === 'Both' && todo.bothTaskIds) {
-                // For Both tasks, mark uncomplete in all mapped members' Google Tasks
-                for (const [memberInitials, taskInfo] of Object.entries(todo.bothTaskIds)) {
-                    const member = settings.teamMembers.find(m => m.initials === memberInitials);
-                    if (member && member.webAppUrl) {
-                        tasksToUncomplete.push({
-                            member,
-                            taskId: taskInfo.googleTaskId,
-                            listId: taskInfo.googleListId
-                        });
-                    }
-                }
-            } else {
-                // Regular task - uncomplete in owner's Google Tasks
-                const member = settings.teamMembers.find(m => m.initials === todo.owner) || settings.teamMembers[0];
-                if (member && member.webAppUrl) {
-                    tasksToUncomplete.push({
-                        member,
+            if (!member?.webAppUrl) {
+                console.log('No Web App URL configured for sync');
+                return;
+            }
+            
+            try {
+                const response = await fetch(member.webAppUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    redirect: 'follow',
+                    body: JSON.stringify({
+                        secretKey: member.webAppSecret || '',
+                        action: 'uncompleteTask',
                         taskId: todo.googleTaskId,
-                        listId: todo.googleListId
-                    });
-                }
-            }
-            
-            // Execute uncompletions
-            for (const {member, taskId, listId} of tasksToUncomplete) {
-                if (!member?.webAppUrl || !taskId) continue;
+                        listId: todo.googleListId || '@default'
+                    })
+                });
                 
-                try {
-                    const response = await fetch(member.webAppUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'text/plain' },
-                        redirect: 'follow',
-                        body: JSON.stringify({
-                            secretKey: member.webAppSecret || '',
-                            action: 'uncompleteTask',
-                            taskId: taskId,
-                            listId: listId || '@default'
-                        })
-                    });
-                    
-                    const data = await response.json();
-                    if (data.success) {
-                        console.log(`Task uncompleted in ${member.initials}'s Google Tasks: ${todo.text?.substring(0, 30)}`);
-                        addLogEntry(`Synced uncomplete to ${member.initials}'s Google Tasks: ${todo.text?.substring(0, 25)}...`);
-                    } else {
-                        console.warn(`Failed to uncomplete in ${member.initials}'s Google Tasks:`, data.error);
-                    }
-                } catch (error) {
-                    console.error(`Error syncing uncomplete to ${member.initials}'s Google Tasks:`, error);
+                const data = await response.json();
+                if (data.success) {
+                    console.log('Task synced as incomplete in Google Tasks:', todo.text?.substring(0, 30));
+                    addLogEntry(`Synced uncomplete to Google Tasks: ${todo.text?.substring(0, 25)}...`);
+                    showToast('Task uncompleted in Google Tasks', 'success');
+                } else {
+                    console.warn('Failed to sync uncomplete:', data.error);
+                    showToast('Failed to sync uncomplete: ' + (data.error || 'Unknown error'), 'error');
                 }
-            }
-            
-            showToast('Task marked incomplete in Google Tasks', 'success');
-        }
-        
-        // Delete a task from Google Tasks
-        async function deleteTaskFromGoogle(todo) {
-            const settings = getSettings();
-            const tasksToDelete = [];
-            
-            if (todo.owner === 'Both' && todo.bothTaskIds) {
-                // For Both tasks, delete from all mapped members
-                for (const [memberInitials, taskInfo] of Object.entries(todo.bothTaskIds)) {
-                    const member = settings.teamMembers.find(m => m.initials === memberInitials);
-                    if (member && member.webAppUrl) {
-                        tasksToDelete.push({
-                            member,
-                            taskId: taskInfo.googleTaskId,
-                            listId: taskInfo.googleListId
-                        });
-                    }
-                }
-            } else {
-                // Regular task - delete from owner's Google Tasks
-                const owner = todo.owner || settings.teamMembers[0]?.initials;
-                const member = settings.teamMembers.find(m => m.initials === owner);
-                if (member && member.webAppUrl && todo.googleTaskId) {
-                    tasksToDelete.push({
-                        member,
-                        taskId: todo.googleTaskId,
-                        listId: todo.googleListId
-                    });
-                }
-            }
-            
-            // Execute deletions
-            for (const {member, taskId, listId} of tasksToDelete) {
-                if (!taskId) continue;
-                
-                try {
-                    const response = await fetch(member.webAppUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'text/plain' },
-                        redirect: 'follow',
-                        body: JSON.stringify({
-                            secretKey: member.webAppSecret || '',
-                            action: 'deleteTask',
-                            taskId: taskId,
-                            listId: listId || '@default'
-                        })
-                    });
-                    
-                    const data = await response.json();
-                    if (data.success) {
-                        console.log(`Task deleted from ${member.initials}'s Google Tasks: ${todo.text?.substring(0, 30)}`);
-                    } else {
-                        console.warn(`Failed to delete from ${member.initials}'s Google Tasks:`, data.error);
-                    }
-                } catch (error) {
-                    console.log(`Could not delete from ${member.initials}'s Google Tasks (network error)`, error);
-                }
+            } catch (error) {
+                console.error('Error syncing task uncomplete:', error);
+                showToast('Could not sync uncomplete (network error)', 'warning');
             }
         }
         
-        // Batch delete multiple tasks from Google Tasks
-        async function deleteTasksFromGoogle(todos) {
-            for (const todo of todos) {
-                await deleteTaskFromGoogle(todo);
-            }
-        }
-        
-                // Batch sync multiple completed tasks to Google Tasks
+        // Batch sync multiple completed tasks to Google Tasks
         async function syncCompletedTasksToGoogle(todos) {
             const settings = getSettings();
             const tasksByOwner = {};
@@ -6239,9 +6084,6 @@ Build Date: ${EOS_BUILD_DATE}
             // Show filter context in confirmation
             const filterName = ownerFilter === 'all' ? 'all team members' : ownerFilter;
             if (!confirm('Delete ' + toDelete.length + ' selected item(s) for ' + filterName + ' permanently?\n\n(They will not be archived)')) return;
-            
-            // Delete tasks from Google Tasks BEFORE removing locally
-            deleteTasksFromGoogle(toDelete);
             
             // Track Google Task IDs so they don't get re-pulled
             const settings = getSettings();
