@@ -5777,18 +5777,7 @@ Build Date: ${EOS_BUILD_DATE}
             const oldGoogleTaskId = todo.googleTaskId;
             const oldGoogleListId = todo.googleListId;
             
-            // Store the task for removal from old owner's EOS
-            const todos = yearData.quarters[currentQuarter].todos || [];
-            const taskIndex = todos.indexOf(todo);
-            
             try {
-                // IMPORTANT: When reassigning, remove task from old owner's EOS
-                // It will appear in new owner's EOS on their next sync
-                if (oldOwner && oldOwner !== newOwner && taskIndex >= 0) {
-                    console.log('Removing reassigned task from ' + oldOwner + "'s EOS view");
-                    todos.splice(taskIndex, 1);  // Remove from array
-                }
-                
                 // Create task in new owner's Google Tasks
                 const today = new Date();
                 const payload = {
