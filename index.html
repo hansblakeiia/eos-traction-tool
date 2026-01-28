@@ -4174,7 +4174,7 @@ Example:
                 console.log('Sync - Pull response:', pullData);
                 
                 if (pullData.status === 'ok' && pullData.tasks) {
-                    const existingTasks = yearData.quarters[currentQuarter].todos || [];
+                    let existingTasks = yearData.quarters[currentQuarter].todos || [];
                     const existingById = new Map(existingTasks.filter(t => t.googleTaskId).map(t => [t.googleTaskId, t]));
                     const existingTexts = new Set(existingTasks.map(t => t.text?.toLowerCase().trim()));
                     const ignoredIds = new Set(settings.ignoredGoogleTaskIds || []);
