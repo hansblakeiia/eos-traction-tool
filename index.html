@@ -2026,7 +2026,7 @@
         
         <header>
             <h1>📊 EOS Traction Tool</h1>
-            <div class="header-subtitle">Intelligent Investing LLC <span id="versionBadge" style="font-size: 0.7rem; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 10px; margin-left: 8px; cursor: pointer;" onclick="showVersionInfo()" title="Click for version info">v3.11.2</span></div>
+            <div class="header-subtitle">Intelligent Investing LLC <span id="versionBadge" style="font-size: 0.7rem; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 10px; margin-left: 8px; cursor: pointer;" onclick="showVersionInfo()" title="Click for version info">v2.8.0</span></div>
             <div class="header-controls">
                 <div class="version-selector">
                     <label>Year:</label>
@@ -3253,8 +3253,8 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.11.2';
-        const EOS_BUILD_DATE = '2026-01-28';
+        const EOS_VERSION = '3.11.1';
+        const EOS_BUILD_DATE = '2026-01-27';
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -3830,7 +3830,7 @@ Example:
                         return true;  // It's truly new
                     });
                     
-                    // Check for reassigned tasks (text exists but different owner) and Both tasks
+                    // Check for reassigned tasks (text exists but different owner)
                     let reassignedCount = 0;
                     data.tasks.forEach(task => {
                         if (task.status === 'completed') return;
@@ -3846,31 +3846,19 @@ Example:
                                 t.text?.toLowerCase().trim() === taskTitle.toLowerCase().trim()
                             );
                             if (existingByText) {
-                                // Check if this is a Both task
-                                if (existingByText.owner === 'Both' && existingByText.bothTaskIds) {
-                                    console.log('Auto-pull: Both task detected - "' + taskTitle + '" updating ' + currentUser + '\'s ID');
-                                    // Update the current user's ID in bothTaskIds
-                                    existingByText.bothTaskIds[currentUser] = {
-                                        googleTaskId: task.id,
-                                        googleListId: task.listId,
-                                        googleListName: task.listName
-                                    };
+                                // Check if task has been reassigned to current user
+                                const isDifferentOwner = existingByText.owner !== currentUser;
+                                const hasReassignmentPending = existingByText.reassignmentPending === true;
+                                
+                                if (isDifferentOwner || hasReassignmentPending) {
+                                    console.log('Auto-pull: Reassigned task detected - "' + taskTitle + '" owner was ' + existingByText.owner + ', now ' + currentUser);
+                                    existingByText.owner = currentUser;
+                                    existingByText.originalOwner = currentUser;  // Update original owner too
+                                    existingByText.googleTaskId = task.id;  // Update to new task ID
+                                    existingByText.googleListId = task.listId;
+                                    existingByText.googleListName = task.listName;
+                                    existingByText.reassignmentPending = false;  // Clear the flag
                                     reassignedCount++;
-                                } else {
-                                    // Check if task has been reassigned to current user (single owner)
-                                    const isDifferentOwner = existingByText.owner !== currentUser;
-                                    const hasReassignmentPending = existingByText.reassignmentPending === true;
-                                    
-                                    if (isDifferentOwner || hasReassignmentPending) {
-                                        console.log('Auto-pull: Reassigned task detected - "' + taskTitle + '" owner was ' + existingByText.owner + ', now ' + currentUser);
-                                        existingByText.owner = currentUser;
-                                        existingByText.originalOwner = currentUser;  // Update original owner too
-                                        existingByText.googleTaskId = task.id;  // Update to new task ID
-                                        existingByText.googleListId = task.listId;
-                                        existingByText.googleListName = task.listName;
-                                        existingByText.reassignmentPending = false;  // Clear the flag
-                                        reassignedCount++;
-                                    }
                                 }
                             }
                         }
@@ -3977,7 +3965,6 @@ Example:
             const todos = yearData.quarters[currentQuarter].todos || [];
             
             // Find tasks that need pushing (new tasks without googleTaskId)
-            // Both tasks have googleTaskId=null initially
             const newTasks = todos.filter(t => !t.googleTaskId && t.text && !t.done);
             
             if (newTasks.length === 0) {
@@ -3988,71 +3975,15 @@ Example:
             syncState.isSyncing = true;
             updateSyncStatus('syncing', `Pushing ${newTasks.length} task(s)...`);
             
-            // Separate Both tasks from single-owner tasks
-            const bothTasks = newTasks.filter(t => t.owner === 'Both');
-            const singleOwnerTasks = newTasks.filter(t => t.owner !== 'Both');
-            
-            let totalPushed = 0;
-            
-            // Handle Both tasks - push to all members
-            for (const task of bothTasks) {
-                const bothTaskIds = {};
-                console.log('Pushing Both task to all members: ' + task.text);
-                
-                for (const member of settings.teamMembers || []) {
-                    if (!member.webAppUrl) continue;
-                    
-                    try {
-                        const listId = member.pushListId || '@default';
-                        const payload = {
-                            secretKey: member.webAppSecret || '',
-                            action: 'createTask',
-                            listId: listId,
-                            title: task.text,
-                            notes: 'Shared task (Both) from EOS Tool',
-                            dueDate: task.dueDate ? new Date(task.dueDate).toISOString() : ''
-                        };
-                        
-                        const response = await fetch(member.webAppUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'text/plain' },
-                            redirect: 'follow',
-                            body: JSON.stringify(payload)
-                        });
-                        
-                        const data = await response.json();
-                        
-                        if (data.success && data.taskId) {
-                            bothTaskIds[member.initials] = {
-                                id: data.taskId,
-                                listId: listId,
-                                listName: member.taskLists?.find(l => l.id === listId)?.title || 'Tasks'
-                            };
-                            console.log('Both task pushed to ' + member.initials + ': ID=' + data.taskId);
-                            totalPushed++;
-                        }
-                    } catch (error) {
-                        console.error(`Both task push error for ${member.initials}:`, error);
-                    }
-                }
-                
-                // Update task with both IDs
-                if (Object.keys(bothTaskIds).length > 0) {
-                    task.owner = 'Both';
-                    task.bothTaskIds = bothTaskIds;
-                    task.googleTaskId = null;
-                    task.googleListId = null;
-                }
-            }
-            
-            // Handle single-owner tasks
             // Group by owner
             const tasksByOwner = {};
-            singleOwnerTasks.forEach(t => {
+            newTasks.forEach(t => {
                 const owner = t.owner || settings.teamMembers?.[0]?.initials;
                 if (!tasksByOwner[owner]) tasksByOwner[owner] = [];
                 tasksByOwner[owner].push(t);
             });
+            
+            let totalPushed = 0;
             
             for (const [owner, ownerTasks] of Object.entries(tasksByOwner)) {
                 const member = settings.teamMembers?.find(m => m.initials === owner);
@@ -4268,39 +4199,23 @@ Example:
                                 );
                                 console.log('  Checking reassignment: existingByText found=' + (existingByText ? 'YES' : 'NO'));
                                 if (existingByText) {
-                                    // Check if this is a Both task
-                                    if (existingByText.owner === 'Both' && existingByText.bothTaskIds) {
-                                        console.log(`  Both task detected - updating ${currentUser}'s ID`);
-                                        // Update the current user's ID in bothTaskIds
-                                        existingByText.bothTaskIds[currentUser] = {
-                                            googleTaskId: task.id,
-                                            googleListId: task.listId,
-                                            googleListName: task.listName
-                                        };
-                                        // Update general fields if changed
-                                        if (taskTitle !== existingByText.text && taskTitle) existingByText.text = taskTitle;
-                                        if (dueDate && dueDate !== existingByText.dueDate) existingByText.dueDate = dueDate;
-                                        if (task.notes && task.notes !== existingByText.notes) existingByText.notes = task.notes;
+                                    const isDifferentOwner = existingByText.owner !== currentUser;
+                                    const hasReassignmentPending = existingByText.reassignmentPending === true;
+                                    
+                                    console.log(`  Reassignment check: owner="${existingByText.owner}" vs currentUser="${currentUser}", isDifferent=${isDifferentOwner}, pending=${hasReassignmentPending}`);
+                                    
+                                    if (isDifferentOwner || hasReassignmentPending) {
+                                        console.log('  -> REASSIGNED task detected! Updating owner from ' + existingByText.owner + ' to ' + currentUser);
+                                        existingByText.owner = currentUser;
+                                        existingByText.originalOwner = currentUser;
+                                        existingByText.googleTaskId = task.id;
+                                        existingByText.googleListId = task.listId;
+                                        existingByText.googleListName = task.listName;
+                                        existingByText.reassignmentPending = false;
+                                        if (dueDate) existingByText.dueDate = dueDate;
+                                        if (task.notes) existingByText.notes = task.notes;
                                         pullResults.updated++;
                                     } else {
-                                        // Check if task has been reassigned to current user (single owner)
-                                        const isDifferentOwner = existingByText.owner !== currentUser;
-                                        const hasReassignmentPending = existingByText.reassignmentPending === true;
-                                        
-                                        console.log(`  Reassignment check: owner="${existingByText.owner}" vs currentUser="${currentUser}", isDifferent=${isDifferentOwner}, pending=${hasReassignmentPending}`);
-                                        
-                                        if (isDifferentOwner || hasReassignmentPending) {
-                                            console.log('  -> REASSIGNED task detected! Updating owner from ' + existingByText.owner + ' to ' + currentUser);
-                                            existingByText.owner = currentUser;
-                                            existingByText.originalOwner = currentUser;
-                                            existingByText.googleTaskId = task.id;
-                                            existingByText.googleListId = task.listId;
-                                            existingByText.googleListName = task.listName;
-                                            existingByText.reassignmentPending = false;
-                                            if (dueDate) existingByText.dueDate = dueDate;
-                                            if (task.notes) existingByText.notes = task.notes;
-                                            pullResults.updated++;
-                                        } else {
                                         console.log('  -> Skipping (text already exists for same owner)');
                                     }
                                 } else {
@@ -5781,59 +5696,6 @@ Build Date: ${EOS_BUILD_DATE}
         // Sync task updates (due date, title) to Google Tasks
         async function syncTaskUpdateToGoogle(todo, updates) {
             const settings = getSettings();
-            
-            // Handle Both tasks - update in both users' Google Tasks
-            if (todo.owner === 'Both' && todo.bothTaskIds) {
-                console.log('Updating Both task in all users Google Tasks:', Object.keys(updates).join(', '));
-                let updatedCount = 0;
-                let failedCount = 0;
-                
-                for (const [member, taskInfo] of Object.entries(todo.bothTaskIds)) {
-                    const memberSettings = settings.teamMembers.find(m => m.initials === member);
-                    if (!memberSettings?.webAppUrl) {
-                        failedCount++;
-                        continue;
-                    }
-                    
-                    try {
-                        const response = await fetch(memberSettings.webAppUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'text/plain' },
-                            redirect: 'follow',
-                            body: JSON.stringify({
-                                secretKey: memberSettings.webAppSecret || '',
-                                action: 'updateTask',
-                                taskId: taskInfo.googleTaskId,
-                                listId: taskInfo.googleListId || '@default',
-                                updates: updates
-                            })
-                        });
-                        
-                        const data = await response.json();
-                        if (data.success) {
-                            console.log('Both task updated for ' + member + ':', Object.keys(updates).join(', '));
-                            updatedCount++;
-                        } else {
-                            console.warn('Failed to update Both task for ' + member + ':', data.error);
-                            failedCount++;
-                        }
-                    } catch (error) {
-                        console.error('Error updating Both task for ' + member + ':', error);
-                        failedCount++;
-                    }
-                }
-                
-                if (updatedCount > 0 && failedCount === 0) {
-                    showToast('Both task updated in all Google Tasks', 'success');
-                } else if (updatedCount > 0) {
-                    showToast('Both task updated (partial sync)', 'warning');
-                } else {
-                    showToast('Failed to update Both task', 'error');
-                }
-                return;
-            }
-            
-            // Single owner task
             const member = settings.teamMembers.find(m => m.initials === todo.owner) || settings.teamMembers[0];
             
             if (!member?.webAppUrl || !todo.googleTaskId) return;
@@ -5872,40 +5734,19 @@ Build Date: ${EOS_BUILD_DATE}
             
             // Special handling for "Both" - send to all team members
             if (newOwner === 'Both') {
-                let bothTaskIds = {};
-                
-                // Store original task info for the old owner
-                if (oldOwner && todo.googleTaskId) {
-                    bothTaskIds[oldOwner] = {
-                        googleTaskId: todo.googleTaskId,
-                        googleListId: todo.googleListId,
-                        googleListName: todo.googleListName
-                    };
-                    console.log('Both task tracking: Keeping original ' + oldOwner + ' task with ID=' + todo.googleTaskId);
-                }
-                
-                // Create new tasks for other team members
+                let sentCount = 0;
                 for (const member of settings.teamMembers) {
                     if (!member.webAppUrl) continue;
                     
-                    // Skip the original owner (already in bothTaskIds)
-                    if (member.initials === oldOwner) {
-                        console.log('Skipping task creation for ' + oldOwner + ' (original owner - task already exists)');
-                        continue;
-                    }
-                    
                     try {
-                        const listId = member.pushListId || '@default';
                         const payload = {
                             secretKey: member.webAppSecret || '',
                             action: 'createTask',
-                            listId: listId,
+                            listId: member.pushListId || '@default',
                             title: todo.text,
                             notes: `Shared task (Both) from ${oldOwner || 'Traction Meeting'} on ${new Date().toLocaleDateString()}`,
                             due: todo.dueDate ? new Date(todo.dueDate).toISOString() : null
                         };
-                        
-                        console.log('Creating Both task for ' + member.initials + ' in list=' + listId);
                         
                         const response = await fetch(member.webAppUrl, {
                             method: 'POST',
@@ -5916,38 +5757,21 @@ Build Date: ${EOS_BUILD_DATE}
                         
                         const data = await response.json();
                         if (data.success && data.taskId) {
-                            bothTaskIds[member.initials] = {
-                                googleTaskId: data.taskId,
-                                googleListId: listId,
-                                googleListName: member.taskLists?.find(l => l.id === listId)?.title || 'Tasks'
-                            };
-                            console.log('Both task created for ' + member.initials + ': ID=' + data.taskId + ', list=' + listId);
-                        } else {
-                            console.log('Failed to create Both task for ' + member.initials + ':', data.error);
+                            sentCount++;
                         }
                     } catch (error) {
                         console.log('Could not sync to ' + member.initials, error);
                     }
                 }
                 
-                // Update EOS task with Both tracking
-                if (Object.keys(bothTaskIds).length > 0) {
-                    todo.owner = 'Both';
-                    todo.originalOwner = 'Both';
-                    todo.bothTaskIds = bothTaskIds;
-                    
-                    // Clear single-owner fields
-                    todo.googleTaskId = null;
-                    todo.googleListId = null;
-                    
-                    console.log('Both task saved with IDs:', bothTaskIds);
-                    
+                if (sentCount > 0) {
                     showToast('Task marked as Both - syncing to all team members', 'success');
                     addLogEntry('Task marked as Both: "' + todo.text.substring(0, 30) + '..."');
-                } else {
+                } else if (settings.teamMembers.length > 0) {
                     showToast('Task marked as Both - no Web App URLs configured yet', 'info');
                 }
                 
+                todo.originalOwner = 'Both';
                 autoSave();
                 sortAndRenderTodos();
                 return;
@@ -5958,52 +5782,6 @@ Build Date: ${EOS_BUILD_DATE}
             if (!newMember?.webAppUrl) {
                 console.log('No Web App URL for ' + newOwner + ' - task not synced');
                 showToast('Task assigned to ' + newOwner + ' but not synced (no URL configured)', 'warning');
-                return;
-            }
-            
-            // Handle reassignment FROM "Both" to single user
-            if (oldOwner === 'Both' && todo.bothTaskIds) {
-                console.log('Reassigning from Both to single user: ' + newOwner);
-                
-                // Get the task info from the new owner (should already exist)
-                const newOwnerTaskInfo = todo.bothTaskIds[newOwner];
-                const oldGoogleTaskId = newOwnerTaskInfo?.googleTaskId;
-                const oldGoogleListId = newOwnerTaskInfo?.googleListId;
-                
-                // Delete from the non-assigned user's Google Tasks
-                for (const [member, taskInfo] of Object.entries(todo.bothTaskIds)) {
-                    if (member !== newOwner) {
-                        console.log('Deleting Both task from ' + member + "'s Google Tasks (reassigning to single user)");
-                        const memberSettings = settings.teamMembers.find(m => m.initials === member);
-                        if (memberSettings?.webAppUrl) {
-                            fetch(memberSettings.webAppUrl, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'text/plain' },
-                                redirect: 'follow',
-                                body: JSON.stringify({
-                                    secretKey: memberSettings.webAppSecret || '',
-                                    action: 'deleteTask',
-                                    taskId: taskInfo.googleTaskId,
-                                    listId: taskInfo.googleListId || '@default'
-                                })
-                            }).then(r => r.json()).then(d => {
-                                console.log('Deleted Both task from ' + member + ':', d);
-                            }).catch(e => console.log('Could not delete from ' + member, e));
-                        }
-                    }
-                }
-                
-                // Convert back to single-owner task
-                todo.owner = newOwner;
-                todo.googleTaskId = oldGoogleTaskId;
-                todo.googleListId = oldGoogleListId;
-                todo.googleListName = newOwnerTaskInfo?.googleListName || 'Tasks';
-                todo.bothTaskIds = null;  // Clear dual tracking
-                
-                autoSave();
-                showToast('Task reassigned to ' + newOwner + ' (removed from Both)', 'success');
-                addLogEntry('Task reassigned from Both to ' + newOwner);
-                sortAndRenderTodos();
                 return;
             }
             
@@ -6100,60 +5878,7 @@ Build Date: ${EOS_BUILD_DATE}
         // Sync a completed task back to Google Tasks
         async function syncTaskCompletionToGoogle(todo) {
             const settings = getSettings();
-            
-            // Handle Both tasks - complete in both users' Google Tasks
-            if (todo.owner === 'Both' && todo.bothTaskIds) {
-                console.log('Completing Both task in all users Google Tasks:', todo.text?.substring(0, 30));
-                let completedCount = 0;
-                let failedCount = 0;
-                
-                for (const [member, taskInfo] of Object.entries(todo.bothTaskIds)) {
-                    const memberSettings = settings.teamMembers.find(m => m.initials === member);
-                    if (!memberSettings?.webAppUrl) {
-                        failedCount++;
-                        continue;
-                    }
-                    
-                    try {
-                        const response = await fetch(memberSettings.webAppUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'text/plain' },
-                            redirect: 'follow',
-                            body: JSON.stringify({
-                                secretKey: memberSettings.webAppSecret || '',
-                                action: 'completeTask',
-                                taskId: taskInfo.googleTaskId,
-                                listId: taskInfo.googleListId || '@default'
-                            })
-                        });
-                        
-                        const data = await response.json();
-                        if (data.success) {
-                            console.log('Both task completed for ' + member);
-                            completedCount++;
-                        } else {
-                            console.warn('Failed to complete Both task for ' + member + ':', data.error);
-                            failedCount++;
-                        }
-                    } catch (error) {
-                        console.error('Error completing Both task for ' + member + ':', error);
-                        failedCount++;
-                    }
-                }
-                
-                if (completedCount > 0 && failedCount === 0) {
-                    addLogEntry(`Both task completed in all users' Google Tasks: ${todo.text?.substring(0, 25)}...`);
-                    showToast('Both task completed in all Google Tasks', 'success');
-                } else if (completedCount > 0) {
-                    addLogEntry(`Both task completed (partial - ' + completedCount + ' users): ${todo.text?.substring(0, 25)}...`);
-                    showToast('Both task completed (partial sync)', 'warning');
-                } else {
-                    showToast('Failed to complete Both task', 'error');
-                }
-                return;
-            }
-            
-            // Single owner task
+            // Find the team member who owns this task
             const member = settings.teamMembers.find(m => m.initials === todo.owner) || settings.teamMembers[0];
             
             if (!member?.webAppUrl) {
@@ -6192,60 +5917,6 @@ Build Date: ${EOS_BUILD_DATE}
         // Sync an uncompleted task back to Google Tasks
         async function syncTaskUncompleteToGoogle(todo) {
             const settings = getSettings();
-            
-            // Handle Both tasks - uncomplete in both users' Google Tasks
-            if (todo.owner === 'Both' && todo.bothTaskIds) {
-                console.log('Uncompleting Both task in all users Google Tasks:', todo.text?.substring(0, 30));
-                let uncompletedCount = 0;
-                let failedCount = 0;
-                
-                for (const [member, taskInfo] of Object.entries(todo.bothTaskIds)) {
-                    const memberSettings = settings.teamMembers.find(m => m.initials === member);
-                    if (!memberSettings?.webAppUrl) {
-                        failedCount++;
-                        continue;
-                    }
-                    
-                    try {
-                        const response = await fetch(memberSettings.webAppUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'text/plain' },
-                            redirect: 'follow',
-                            body: JSON.stringify({
-                                secretKey: memberSettings.webAppSecret || '',
-                                action: 'uncompleteTask',
-                                taskId: taskInfo.googleTaskId,
-                                listId: taskInfo.googleListId || '@default'
-                            })
-                        });
-                        
-                        const data = await response.json();
-                        if (data.success) {
-                            console.log('Both task uncompleted for ' + member);
-                            uncompletedCount++;
-                        } else {
-                            console.warn('Failed to uncomplete Both task for ' + member + ':', data.error);
-                            failedCount++;
-                        }
-                    } catch (error) {
-                        console.error('Error uncompleting Both task for ' + member + ':', error);
-                        failedCount++;
-                    }
-                }
-                
-                if (uncompletedCount > 0 && failedCount === 0) {
-                    addLogEntry(`Both task marked incomplete in all users' Google Tasks: ${todo.text?.substring(0, 25)}...`);
-                    showToast('Both task marked incomplete in all Google Tasks', 'success');
-                } else if (uncompletedCount > 0) {
-                    addLogEntry(`Both task marked incomplete (partial - ' + uncompletedCount + ' users): ${todo.text?.substring(0, 25)}...`);
-                    showToast('Both task marked incomplete (partial sync)', 'warning');
-                } else {
-                    showToast('Failed to mark Both task incomplete', 'error');
-                }
-                return;
-            }
-            
-            // Single owner task
             const member = settings.teamMembers.find(m => m.initials === todo.owner) || settings.teamMembers[0];
             
             if (!member?.webAppUrl) {
@@ -6450,15 +6121,7 @@ Build Date: ${EOS_BUILD_DATE}
             const settings = getSettings();
             settings.ignoredGoogleTaskIds = settings.ignoredGoogleTaskIds || [];
             toDelete.forEach(todo => {
-                // For Both tasks, add all IDs to ignored list
-                if (todo.owner === 'Both' && todo.bothTaskIds) {
-                    for (const [member, taskInfo] of Object.entries(todo.bothTaskIds)) {
-                        if (taskInfo.id && !settings.ignoredGoogleTaskIds.includes(taskInfo.id)) {
-                            settings.ignoredGoogleTaskIds.push(taskInfo.id);
-                        }
-                    }
-                } else if (todo.googleTaskId && !settings.ignoredGoogleTaskIds.includes(todo.googleTaskId)) {
-                    // Single owner task
+                if (todo.googleTaskId && !settings.ignoredGoogleTaskIds.includes(todo.googleTaskId)) {
                     settings.ignoredGoogleTaskIds.push(todo.googleTaskId);
                 }
             });
