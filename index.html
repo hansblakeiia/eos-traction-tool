@@ -3805,17 +3805,42 @@ Example:
                     const pulledTaskIds = new Set(data.tasks.map(t => t.id));
                     let deletedCount = 0;
                     
+                    console.log('Auto-pull: Found', existingTasks.length, 'local tasks, pulled', pulledTaskIds.size, 'from Google Tasks');
+                    
                     existingTasks = existingTasks.filter(task => {
                         // Keep tasks that don't have Google Task IDs or are ignored
-                        if (!task.googleTaskId || ignoredIds.has(task.googleTaskId)) return true;
+                        if (!task.googleTaskId && !task.bothTaskIds) return true;
                         
-                        // If this task's Google Task ID is NOT in the pulled list, it was deleted
-                        if (!pulledTaskIds.has(task.googleTaskId)) {
-                            console.log('Task deleted in Google Tasks, removing from EOS:', task.text);
-                            addLogEntry(`Deleted from Google Tasks (auto-synced): ${task.text?.substring(0, 25)}...`);
-                            deletedCount++;
-                            return false;  // Remove this task
+                        // Check primary googleTaskId
+                        if (task.googleTaskId && !ignoredIds.has(task.googleTaskId)) {
+                            if (!pulledTaskIds.has(task.googleTaskId)) {
+                                console.log('Task deleted in Google Tasks, removing from EOS:', task.text, '(ID:', task.googleTaskId + ')');
+                                addLogEntry(`Deleted from Google Tasks (auto-synced): ${task.text?.substring(0, 25)}...`);
+                                deletedCount++;
+                                return false;  // Remove this task
+                            }
                         }
+                        
+                        // Check bothTaskIds for Both tasks
+                        if (task.bothTaskIds && Object.keys(task.bothTaskIds).length > 0) {
+                            // Check if ANY of the task IDs in bothTaskIds are still in Google Tasks
+                            let hasAnyTaskInGoogle = false;
+                            for (const [member, taskInfo] of Object.entries(task.bothTaskIds)) {
+                                if (taskInfo.googleTaskId && pulledTaskIds.has(taskInfo.googleTaskId)) {
+                                    hasAnyTaskInGoogle = true;
+                                    break;
+                                }
+                            }
+                            
+                            // If NONE of the Both task IDs are in Google Tasks, the task was fully deleted
+                            if (!hasAnyTaskInGoogle && !ignoredIds.has(task.googleTaskId)) {
+                                console.log('Both task fully deleted from Google Tasks, removing from EOS:', task.text);
+                                addLogEntry(`Both task deleted from Google Tasks (all instances): ${task.text?.substring(0, 25)}...`);
+                                deletedCount++;
+                                return false;  // Remove this task
+                            }
+                        }
+                        
                         return true;  // Keep this task
                     });
                     
