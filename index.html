@@ -4959,7 +4959,7 @@ Build Date: ${EOS_BUILD_DATE}
                     ${!isCompleted ? `
                         <div class="status-toggle">
                             <button class="status-btn on-track ${r.status === 'on' ? 'active' : ''}" onclick="setRockStatus(${idx}, 'on')">✔ On</button>
-                            <button class="status-btn off-track ${r.status === 'off' ? 'active' : ''}" onclick="setRockStatus(${idx}, 'off')">âš  Off</button>
+<button class="status-btn off-track ${r.status === 'off' ? 'active' : ''}" onclick="setRockStatus(${idx}, 'off')">  Off</button>
                         </div>
                     ` : `
                         <button class="btn btn-secondary" onclick="uncompleteRock(${idx})" style="padding: 4px 8px; font-size: 0.75rem;" title="Mark as incomplete">↩ Undo</button>
@@ -5762,11 +5762,27 @@ Build Date: ${EOS_BUILD_DATE}
         async function syncTaskToNewOwner(todo, oldOwner, newOwner) {
             const settings = getSettings();
             
-            // Special handling for "Both" - send to all team members
+            // Special handling for "Both" - track dual task IDs
             if (newOwner === 'Both') {
-                let sentCount = 0;
+                // Initialize bothTaskIds if not present
+                if (!todo.bothTaskIds) {
+                    todo.bothTaskIds = {};
+                }
+                
+                // If task currently belongs to a single owner, preserve their task ID
+                if (oldOwner && oldOwner !== 'Both' && todo.googleTaskId) {
+                    todo.bothTaskIds[oldOwner] = {
+                        googleTaskId: todo.googleTaskId,
+                        googleListId: todo.googleListId || '@default'
+                    };
+                }
+                
+                // Create NEW tasks ONLY for OTHER team members (not the oldOwner)
+                let createdCount = 0;
                 for (const member of settings.teamMembers) {
                     if (!member.webAppUrl) continue;
+                    // Skip the oldOwner - we're keeping their existing task
+                    if (member.initials === oldOwner) continue;
                     
                     try {
                         const payload = {
@@ -5787,20 +5803,26 @@ Build Date: ${EOS_BUILD_DATE}
                         
                         const data = await response.json();
                         if (data.success && data.taskId) {
-                            sentCount++;
+                            // Track the new task ID for this member
+                            todo.bothTaskIds[member.initials] = {
+                                googleTaskId: data.taskId,
+                                googleListId: member.pushListId || '@default'
+                            };
+                            createdCount++;
                         }
                     } catch (error) {
                         console.log('Could not sync to ' + member.initials, error);
                     }
                 }
                 
-                if (sentCount > 0) {
-                    showToast('Task marked as Both - syncing to all team members', 'success');
-                    addLogEntry('Task marked as Both: "' + todo.text.substring(0, 30) + '..."');
+                if (createdCount > 0 || oldOwner) {
+                    showToast(`Task marked as Both - syncing to all team members`, 'success');
+                    addLogEntry(`Task marked as Both: "${todo.text.substring(0, 30)}..."`);
                 } else if (settings.teamMembers.length > 0) {
                     showToast('Task marked as Both - no Web App URLs configured yet', 'info');
                 }
                 
+                todo.owner = 'Both';
                 todo.originalOwner = 'Both';
                 autoSave();
                 sortAndRenderTodos();
@@ -6691,7 +6713,7 @@ Make sure your suggestions directly address the specific root cause and discussi
         function displaySuggestions(el, suggestions) {
             el.innerHTML = `
                 <div style="margin-bottom: 12px;">
-                    <strong style="color: var(--success);">âš¡ Quick Win:</strong>
+                    <strong style="color: var(--success);"> Quick Win:</strong>
                     <p style="margin: 4px 0;">${suggestions.quick || 'No suggestion available'}</p>
                 </div>
                 <div style="margin-bottom: 12px;">
