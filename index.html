@@ -3253,8 +3253,8 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.11.1';
-        const EOS_BUILD_DATE = '2026-01-27';
+        const EOS_VERSION = '3.11.3';
+        const EOS_BUILD_DATE = '2026-01-28';
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -4726,9 +4726,29 @@ Example:
         
         // ==================== VERSION INFO ====================
         function showVersionInfo() {
-            const changelog = `
-📊 EOS Traction Tool v${EOS_VERSION}
-Build Date: ${EOS_BUILD_DATE}
+            const versionInfo = `
+═══════════════════════════════════════════════════
+  EOS TRACTION TOOL - VERSION INFORMATION
+═══════════════════════════════════════════════════
+
+VERSION: v${EOS_VERSION}
+BUILD DATE: ${EOS_BUILD_DATE}
+BUILD TIMESTAMP: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}
+
+Current System Date/Time:
+${new Date().toString()}
+
+═══════════════════════════════════════════════════
+
+This information helps verify you have the correct version deployed.
+
+✓ Use this to confirm your browser is running the latest code
+✓ If version doesn't match, try a hard refresh: Ctrl+Shift+R
+
+═══════════════════════════════════════════════════
+`;
+            alert(versionInfo);
+        }
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
