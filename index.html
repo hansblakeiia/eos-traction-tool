@@ -4182,6 +4182,35 @@ Example:
                     console.log('Sync Debug: Local tasks with googleTaskId:', existingById.size);
                     console.log('Sync Debug: Google tasks received:', pullData.tasks.length);
                     
+                    // DETECT DELETED TASKS - Find tasks that no longer exist in Google Tasks
+                    const pulledTaskIds = new Set(pullData.tasks.map(t => t.id));
+                    let deletedCount = 0;
+                    
+                    console.log('Sync Debug: Checking for deleted tasks...');
+                    console.log('Sync Debug: Pulled task IDs from Google:', Array.from(pulledTaskIds).slice(0, 3), '... (' + pulledTaskIds.size + ' total)');
+                    
+                    existingTasks.forEach((task, idx) => {
+                        if (task.googleTaskId && !ignoredIds.has(task.googleTaskId)) {
+                            if (!pulledTaskIds.has(task.googleTaskId)) {
+                                console.log(`Sync Debug: DELETING task not found in Google Tasks: "${task.text}" (${task.googleTaskId})`);
+                                // Mark task for deletion by setting a flag
+                                task._markedForDeletion = true;
+                                deletedCount++;
+                            }
+                        }
+                    });
+                    
+                    if (deletedCount > 0) {
+                        console.log('Sync Debug: Found', deletedCount, 'task(s) to delete (no longer in Google Tasks)');
+                        // Remove marked tasks
+                        yearData.quarters[currentQuarter].todos = existingTasks.filter(t => !t._markedForDeletion);
+                        addLogEntry(`${deletedCount} task(s) deleted from Google Tasks (synced)`);
+                    }
+                    
+                    // Refresh the existing lists after deletion
+                    const refreshedTasks = yearData.quarters[currentQuarter].todos || [];
+                    const refreshedExistingById = new Map(refreshedTasks.filter(t => t.googleTaskId).map(t => [t.googleTaskId, t]));
+                    
                     for (const task of pullData.tasks) {
                         if (ignoredIds.has(task.id)) continue;
                         
@@ -4214,7 +4243,7 @@ Example:
                         }
                         
                         // Check for existing task
-                        const existing = existingById.get(task.id);
+                        const existing = refreshedExistingById.get(task.id);
                         console.log(`Sync Debug: Task "${taskTitle}" (${task.id}) - Local match: ${existing ? 'YES' : 'NO'}`);
                         
                         if (existing) {
@@ -4244,6 +4273,13 @@ Example:
                                 updated = true;
                             }
                             
+                            // Sync list info (but not @default)
+                            if (task.listId && task.listId !== '@default' && existing.googleListId !== task.listId) {
+                                existing.googleListId = task.listId;
+                                existing.googleListName = task.listName || '';
+                                updated = true;
+                            }
+                            
                             // Sync completion
                             console.log(`  Completion compare: local done=${existing.done} vs google completed=${isCompleted}`);
                             if (isCompleted && !existing.done) {
@@ -4263,14 +4299,18 @@ Example:
                             if (!isCompleted && !textExists) {
                                 // New task
                                 console.log('  -> Adding as NEW task');
+                                // Don't store "@default" as the list name - it's a Google internal ID
+                                const taskListId = task.listId === '@default' ? '' : task.listId;
+                                const taskListName = task.listName === '@default' ? '' : (task.listName || '');
+                                
                                 existingTasks.push({
                                     text: taskTitle,
                                     owner: currentUser,
                                     originalOwner: currentUser,
                                     done: false,
                                     googleTaskId: task.id,
-                                    googleListId: task.listId,
-                                    googleListName: task.listName,
+                                    googleListId: taskListId,  // Don't store @default
+                                    googleListName: taskListName,  // Don't store @default
                                     dueDate: dueDate,
                                     notes: task.notes || '',
                                     pulledAt: new Date().toISOString()
@@ -4295,8 +4335,9 @@ Example:
                                         existingByText.owner = currentUser;
                                         existingByText.originalOwner = currentUser;
                                         existingByText.googleTaskId = task.id;
-                                        existingByText.googleListId = task.listId;
-                                        existingByText.googleListName = task.listName;
+                                        // Don't store "@default" as the list ID
+                                        existingByText.googleListId = task.listId === '@default' ? '' : task.listId;
+                                        existingByText.googleListName = task.listName === '@default' ? '' : (task.listName || '');
                                         existingByText.reassignmentPending = false;
                                         if (dueDate) existingByText.dueDate = dueDate;
                                         if (task.notes) existingByText.notes = task.notes;
