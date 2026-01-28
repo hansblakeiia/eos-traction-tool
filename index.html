@@ -4197,17 +4197,29 @@ Example:
                                 const existingByText = existingTasks.find(t => 
                                     t.text?.toLowerCase().trim() === taskTitle.toLowerCase().trim()
                                 );
-                                if (existingByText && existingByText.owner !== currentUser) {
-                                    console.log('  -> REASSIGNED task detected! Updating owner from ' + existingByText.owner + ' to ' + currentUser);
-                                    existingByText.owner = currentUser;
-                                    existingByText.googleTaskId = task.id;
-                                    existingByText.googleListId = task.listId;
-                                    existingByText.googleListName = task.listName;
-                                    if (dueDate) existingByText.dueDate = dueDate;
-                                    if (task.notes) existingByText.notes = task.notes;
-                                    pullResults.updated++;
+                                console.log('  Checking reassignment: existingByText found=' + (existingByText ? 'YES' : 'NO'));
+                                if (existingByText) {
+                                    const isDifferentOwner = existingByText.owner !== currentUser;
+                                    const hasReassignmentPending = existingByText.reassignmentPending === true;
+                                    
+                                    console.log(`  Reassignment check: owner="${existingByText.owner}" vs currentUser="${currentUser}", isDifferent=${isDifferentOwner}, pending=${hasReassignmentPending}`);
+                                    
+                                    if (isDifferentOwner || hasReassignmentPending) {
+                                        console.log('  -> REASSIGNED task detected! Updating owner from ' + existingByText.owner + ' to ' + currentUser);
+                                        existingByText.owner = currentUser;
+                                        existingByText.originalOwner = currentUser;
+                                        existingByText.googleTaskId = task.id;
+                                        existingByText.googleListId = task.listId;
+                                        existingByText.googleListName = task.listName;
+                                        existingByText.reassignmentPending = false;
+                                        if (dueDate) existingByText.dueDate = dueDate;
+                                        if (task.notes) existingByText.notes = task.notes;
+                                        pullResults.updated++;
+                                    } else {
+                                        console.log('  -> Skipping (text already exists for same owner)');
+                                    }
                                 } else {
-                                    console.log('  -> Skipping (text already exists for same owner)');
+                                    console.log('  -> No existing task by text, will add as new below');
                                 }
                             } else if (isCompleted) {
                                 console.log('  -> Skipping (completed task)');
@@ -5780,10 +5792,13 @@ Build Date: ${EOS_BUILD_DATE}
             try {
                 // Create task in new owner's Google Tasks
                 const today = new Date();
+                const targetListId = newMember.pushListId || '@default';
+                console.log('Reassignment debug: newMember=' + newMember.initials + ', pushListId=' + newMember.pushListId + ', using=' + targetListId);
+                
                 const payload = {
                     secretKey: newMember.webAppSecret || '',
                     action: 'createTask',
-                    listId: newMember.pushListId || '@default',
+                    listId: targetListId,
                     title: todo.text,
                     notes: 'Assigned from ' + (oldOwner || 'Traction Meeting') + ' on ' + today.toLocaleDateString(),
                     due: todo.dueDate ? new Date(todo.dueDate).toISOString() : null
