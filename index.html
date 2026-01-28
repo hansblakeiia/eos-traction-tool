@@ -3762,10 +3762,37 @@ Example:
                 
                 if (data.status === 'ok' && data.tasks) {
                     // Get existing task IDs to avoid duplicates
-                    const existingTasks = yearData.quarters[currentQuarter].todos || [];
-                    const existingById = new Map(existingTasks.filter(t => t.googleTaskId).map(t => [t.googleTaskId, t]));
+                    let existingTasks = yearData.quarters[currentQuarter].todos || [];
+                    let existingById = new Map(existingTasks.filter(t => t.googleTaskId).map(t => [t.googleTaskId, t]));
                     const existingTexts = new Set(existingTasks.map(t => t.text?.toLowerCase().trim()));
                     const ignoredIds = new Set(settings.ignoredGoogleTaskIds || []);
+                    
+                    // DETECT DELETED TASKS - Find tasks with googleTaskIds that no longer exist in Google Tasks
+                    const pulledTaskIds = new Set(data.tasks.map(t => t.id));
+                    let deletedCount = 0;
+                    
+                    existingTasks = existingTasks.filter(task => {
+                        // Keep tasks that don't have Google Task IDs or are ignored
+                        if (!task.googleTaskId || ignoredIds.has(task.googleTaskId)) return true;
+                        
+                        // If this task's Google Task ID is NOT in the pulled list, it was deleted
+                        if (!pulledTaskIds.has(task.googleTaskId)) {
+                            console.log('Task deleted in Google Tasks, removing from EOS:', task.text);
+                            addLogEntry(`Deleted from Google Tasks (auto-synced): ${task.text?.substring(0, 25)}...`);
+                            deletedCount++;
+                            return false;  // Remove this task
+                        }
+                        return true;  // Keep this task
+                    });
+                    
+                    // Update the map with the filtered tasks
+                    existingById = new Map(existingTasks.filter(t => t.googleTaskId).map(t => [t.googleTaskId, t]));
+                    
+                    // Save if we deleted any tasks
+                    if (deletedCount > 0) {
+                        yearData.quarters[currentQuarter].todos = existingTasks;
+                        autoSave();
+                    }
                     
                     // Track changes
                     let completionsSynced = 0;
@@ -3863,7 +3890,7 @@ Example:
                         }
                     });
                     
-                    if (newTasks.length > 0 || updatedCount > 0 || reassignedCount > 0) {
+                    if (newTasks.length > 0 || updatedCount > 0 || reassignedCount > 0 || deletedCount > 0) {
                         // Add new tasks
                         newTasks.forEach(task => {
                             let taskTitle = task.title || '';
@@ -3892,6 +3919,7 @@ Example:
                         if (newTasks.length > 0) msg.push(newTasks.length + ' new');
                         if (updatedCount > 0) msg.push(updatedCount + ' updated');
                         if (reassignedCount > 0) msg.push(reassignedCount + ' reassigned');
+                        if (deletedCount > 0) msg.push(deletedCount + ' deleted');
                         showToast('Synced: ' + msg.join(', '), 'success');
                         updateSyncStatus('success', 'Synced - ' + msg.join(', '));
                     } else {
@@ -6104,6 +6132,63 @@ Build Date: ${EOS_BUILD_DATE}
             }
         }
         
+        // Delete a task from Google Tasks
+        async function deleteTaskFromGoogle(todo) {
+            const settings = getSettings();
+            
+            // Handle Both tasks - delete from ALL members' Google Tasks
+            if (todo.owner === 'Both' && todo.bothTaskIds) {
+                let deleteCount = 0;
+                for (const [member, taskInfo] of Object.entries(todo.bothTaskIds)) {
+                    const memberSettings = settings.teamMembers.find(m => m.initials === member);
+                    if (!memberSettings?.webAppUrl) continue;
+                    try {
+                        const response = await fetch(memberSettings.webAppUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain' },
+                            redirect: 'follow',
+                            body: JSON.stringify({
+                                secretKey: memberSettings.webAppSecret || '',
+                                action: 'deleteTask',
+                                taskId: taskInfo.googleTaskId,
+                                listId: taskInfo.googleListId || '@default'
+                            })
+                        });
+                        const data = await response.json();
+                        if (data.success) deleteCount++;
+                    } catch (error) { }
+                }
+                addLogEntry(`Deleted from ${deleteCount} user(s)' Google Tasks: ${todo.text?.substring(0, 25)}...`);
+                return;
+            }
+            
+            // Handle single-owner tasks
+            if (!todo.googleTaskId) return;
+            
+            const member = settings.teamMembers.find(m => m.initials === todo.owner) || settings.teamMembers[0];
+            if (!member?.webAppUrl) return;
+            
+            try {
+                const response = await fetch(member.webAppUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    redirect: 'follow',
+                    body: JSON.stringify({
+                        secretKey: member.webAppSecret || '',
+                        action: 'deleteTask',
+                        taskId: todo.googleTaskId,
+                        listId: todo.googleListId || '@default'
+                    })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    addLogEntry(`Deleted from Google Tasks: ${todo.text?.substring(0, 25)}...`);
+                }
+            } catch (error) {
+                console.error('Error deleting task from Google Tasks:', error);
+            }
+        }
+        
         function sortAndRenderTodos(filteredTodos = null) {
             const sortOrder = document.getElementById('todoSortOrder')?.value || 'manual';
             const ownerFilter = document.getElementById('todoOwnerFilter')?.value || 'all';
@@ -6223,7 +6308,12 @@ Build Date: ${EOS_BUILD_DATE}
             
             // Show filter context in confirmation
             const filterName = ownerFilter === 'all' ? 'all team members' : ownerFilter;
-            if (!confirm('Delete ' + toDelete.length + ' selected item(s) for ' + filterName + ' permanently?\n\n(They will not be archived)')) return;
+            if (!confirm('Delete ' + toDelete.length + ' selected item(s) for ' + filterName + ' permanently?\n\n(They will also be deleted from Google Tasks)')) return;
+            
+            // Sync deletion to Google Tasks for each task
+            toDelete.forEach(todo => {
+                deleteTaskFromGoogle(todo);
+            });
             
             // Track Google Task IDs so they don't get re-pulled
             const settings = getSettings();
@@ -6231,6 +6321,14 @@ Build Date: ${EOS_BUILD_DATE}
             toDelete.forEach(todo => {
                 if (todo.googleTaskId && !settings.ignoredGoogleTaskIds.includes(todo.googleTaskId)) {
                     settings.ignoredGoogleTaskIds.push(todo.googleTaskId);
+                }
+                // Also add Both task IDs to ignored list
+                if (todo.bothTaskIds) {
+                    for (const [member, taskInfo] of Object.entries(todo.bothTaskIds)) {
+                        if (taskInfo.googleTaskId && !settings.ignoredGoogleTaskIds.includes(taskInfo.googleTaskId)) {
+                            settings.ignoredGoogleTaskIds.push(taskInfo.googleTaskId);
+                        }
+                    }
                 }
             });
             saveSettings(settings);
