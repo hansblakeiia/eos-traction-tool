@@ -2867,6 +2867,18 @@
                 </div>
             </div>
             
+            <!-- SETTINGS BACKUP/RESTORE SECTION -->
+            <div style="margin-bottom: 20px; padding: 12px; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 6px;">
+                <h4 style="color: #92400e; margin: 0 0 10px 0; font-size: 0.95rem;">💾 Backup & Restore Settings</h4>
+                <p style="font-size: 0.8rem; color: #78350f; margin: 0 0 10px 0;">
+                    Export your settings to a file, then import them later or share with team members. Settings persist across version updates!
+                </p>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="btn btn-secondary" onclick="exportSettings()" style="padding: 8px 14px; font-size: 0.85rem; flex: 1; min-width: 140px;">📥 Export Settings</button>
+                    <button class="btn btn-secondary" onclick="showImportSettingsModal()" style="padding: 8px 14px; font-size: 0.85rem; flex: 1; min-width: 140px;">📤 Import Settings</button>
+                </div>
+            </div>
+            
             <div class="modal-actions">
                 <button class="btn btn-secondary" onclick="closeModal('settingsModal')">Cancel</button>
                 <button class="btn btn-success" onclick="saveSettings()">Save Settings</button>
@@ -2874,7 +2886,29 @@
         </div>
     </div>
     
-    <!-- Backup Reminder Modal -->
+    <!-- Import Settings Modal -->
+    <div class="modal-overlay" id="importSettingsModal">
+        <div class="modal" style="max-width: 600px;">
+            <h2>📤 Import Settings</h2>
+            <p style="font-size: 0.9rem; color: var(--gray-600); margin-bottom: 15px;">
+                Paste the settings JSON from an exported file below. This will restore all saved settings (Web App URLs, API keys, team members, etc.).
+            </p>
+            
+            <textarea id="importSettingsJson" placeholder="Paste your exported settings JSON here..." style="width: 100%; min-height: 200px; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-family: monospace; font-size: 0.85rem; margin-bottom: 15px;"></textarea>
+            
+            <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 10px; margin-bottom: 15px;">
+                <p style="font-size: 0.8rem; margin: 0; color: #166534;">
+                    <strong>What this imports:</strong> Team members, Web App URLs, Secret Keys, API keys, meeting schedule, preferences, and all other saved settings.
+                </p>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('importSettingsModal')">Cancel</button>
+                <button class="btn btn-success" onclick="importSettings()">Import Settings</button>
+            </div>
+        </div>
+    </div>
+    
     <div class="modal-overlay" id="backupReminderModal">
         <div class="modal" style="max-width: 450px;">
             <h2>⚠️ Backup Reminder</h2>
@@ -8705,6 +8739,115 @@ Make sure your suggestions directly address the specific root cause and discussi
             // Re-render to update dropdowns
             renderQuarter();
             renderMeeting();
+        }
+        
+        // EXPORT SETTINGS - Download settings as JSON file
+        function exportSettings() {
+            const settings = getSettings();
+            
+            // Create a clean export object with only the important settings
+            const exportData = {
+                exportVersion: '1.0',
+                exportDate: new Date().toISOString(),
+                teamMembers: settings.teamMembers || [],
+                geminiApiKey: settings.geminiApiKey || '',
+                otterSheetUrl: settings.otterSheetUrl || '',
+                ntfyTopic: settings.ntfyTopic || '',
+                meetingDay: settings.meetingDay || 'Mondays',
+                meetingTime: settings.meetingTime || '9am',
+                meetingDuration: settings.meetingDuration || '45',
+                quarterStarts: settings.quarterStarts || { Q1: '01/01', Q2: '04/01', Q3: '07/01', Q4: '10/01' },
+                enableDelegate: settings.enableDelegate || false,
+                pomoFocusMin: settings.pomoFocusMin || 25,
+                pomoShortMin: settings.pomoShortMin || 5,
+                pomoLongMin: settings.pomoLongMin || 15,
+                pomoBrowserNotify: settings.pomoBrowserNotify || false,
+                backupReminderDays: settings.backupReminderDays || 7
+            };
+            
+            // Create JSON string
+            const jsonString = JSON.stringify(exportData, null, 2);
+            
+            // Create blob and download
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `EOS-Settings-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showToast('Settings exported successfully!', 'success');
+            addLogEntry('Settings exported to file');
+        }
+        
+        // SHOW IMPORT MODAL
+        function showImportSettingsModal() {
+            openModal('importSettingsModal');
+        }
+        
+        // IMPORT SETTINGS - Parse JSON and restore settings
+        function importSettings() {
+            const jsonText = document.getElementById('importSettingsJson').value.trim();
+            
+            if (!jsonText) {
+                alert('Please paste the settings JSON first');
+                return;
+            }
+            
+            try {
+                // Parse the JSON
+                const importedData = JSON.parse(jsonText);
+                
+                // Validate it has the expected structure
+                if (!importedData.exportVersion) {
+                    alert('Invalid settings file - missing export version');
+                    return;
+                }
+                
+                // Get current settings
+                const settings = getSettings();
+                
+                // Restore imported settings
+                if (importedData.teamMembers) settings.teamMembers = importedData.teamMembers;
+                if (importedData.geminiApiKey) settings.geminiApiKey = importedData.geminiApiKey;
+                if (importedData.otterSheetUrl) settings.otterSheetUrl = importedData.otterSheetUrl;
+                if (importedData.ntfyTopic) settings.ntfyTopic = importedData.ntfyTopic;
+                if (importedData.meetingDay) settings.meetingDay = importedData.meetingDay;
+                if (importedData.meetingTime) settings.meetingTime = importedData.meetingTime;
+                if (importedData.meetingDuration) settings.meetingDuration = importedData.meetingDuration;
+                if (importedData.quarterStarts) settings.quarterStarts = importedData.quarterStarts;
+                if (importedData.enableDelegate !== undefined) settings.enableDelegate = importedData.enableDelegate;
+                if (importedData.pomoFocusMin) settings.pomoFocusMin = importedData.pomoFocusMin;
+                if (importedData.pomoShortMin) settings.pomoShortMin = importedData.pomoShortMin;
+                if (importedData.pomoLongMin) settings.pomoLongMin = importedData.pomoLongMin;
+                if (importedData.pomoBrowserNotify !== undefined) settings.pomoBrowserNotify = importedData.pomoBrowserNotify;
+                if (importedData.backupReminderDays) settings.backupReminderDays = importedData.backupReminderDays;
+                
+                // Save restored settings
+                seededData._settings = settings;
+                localStorage.setItem('eos_traction_data', JSON.stringify(seededData));
+                
+                // Close modal and refresh
+                closeModal('importSettingsModal');
+                
+                // Clear the textarea
+                document.getElementById('importSettingsJson').value = '';
+                
+                // Reload the page to reflect new settings
+                showToast('Settings imported successfully! Reloading...', 'success');
+                addLogEntry('Settings imported from file');
+                
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+                
+            } catch (error) {
+                console.error('Import error:', error);
+                alert('Error importing settings: ' + error.message + '\n\nMake sure you pasted valid JSON from an exported settings file.');
+            }
         }
         
         function updateMeetingTimeBadge() {
