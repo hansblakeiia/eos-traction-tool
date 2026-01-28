@@ -4186,24 +4186,34 @@ Example:
                     const pulledTaskIds = new Set(pullData.tasks.map(t => t.id));
                     let deletedCount = 0;
                     
-                    console.log('Sync Debug: Checking for deleted tasks...');
-                    console.log('Sync Debug: Pulled task IDs from Google:', Array.from(pulledTaskIds).slice(0, 3), '... (' + pulledTaskIds.size + ' total)');
+                    console.log('Sync Debug: ========== DELETION DETECTION START ==========');
+                    console.log('Sync Debug: Local tasks to check:', existingTasks.length);
+                    console.log('Sync Debug: Tasks pulled from Google:', pulledTaskIds.size);
+                    console.log('Sync Debug: Pulled task IDs:', Array.from(pulledTaskIds));
                     
-                    existingTasks.forEach((task, idx) => {
-                        if (task.googleTaskId && !ignoredIds.has(task.googleTaskId)) {
-                            if (!pulledTaskIds.has(task.googleTaskId)) {
-                                console.log(`Sync Debug: DELETING task not found in Google Tasks: "${task.text}" (${task.googleTaskId})`);
-                                // Mark task for deletion by setting a flag
-                                task._markedForDeletion = true;
-                                deletedCount++;
-                            }
+                    const tasksToCheck = existingTasks.filter(t => t.googleTaskId && !ignoredIds.has(t.googleTaskId));
+                    console.log('Sync Debug: Tasks to check for deletion (with googleTaskId):', tasksToCheck.length);
+                    
+                    tasksToCheck.forEach(task => {
+                        const isInGoogle = pulledTaskIds.has(task.googleTaskId);
+                        console.log(`Sync Debug:   - "${task.text}" (ID: ${task.googleTaskId}) - In Google? ${isInGoogle}`);
+                        
+                        if (!isInGoogle) {
+                            console.log(`Sync Debug: *** MARKING FOR DELETION: "${task.text}" (${task.googleTaskId})`);
+                            task._markedForDeletion = true;
+                            deletedCount++;
                         }
                     });
                     
+                    console.log('Sync Debug: Total tasks marked for deletion:', deletedCount);
+                    console.log('Sync Debug: ========== DELETION DETECTION END ==========');
+                    
                     if (deletedCount > 0) {
-                        console.log('Sync Debug: Found', deletedCount, 'task(s) to delete (no longer in Google Tasks)');
-                        // Remove marked tasks
-                        yearData.quarters[currentQuarter].todos = existingTasks.filter(t => !t._markedForDeletion);
+                        console.log('Sync Debug: BEFORE filter - existingTasks.length:', existingTasks.length);
+                        existingTasks = existingTasks.filter(t => !t._markedForDeletion);
+                        console.log('Sync Debug: AFTER filter - existingTasks.length:', existingTasks.length);
+                        yearData.quarters[currentQuarter].todos = existingTasks;
+                        autoSave();
                         addLogEntry(`${deletedCount} task(s) deleted from Google Tasks (synced)`);
                     }
                     
