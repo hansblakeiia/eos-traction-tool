@@ -1966,7 +1966,6 @@
                 font-size: 10pt !important;
                 border: 1px solid #ccc !important;
             }
-        }
         
         .print-header { display: none; }
         .print-header .print-date { display: none; }
@@ -2026,7 +2025,7 @@
         
         <header>
             <h1>📊 EOS Traction Tool</h1>
-            <div class="header-subtitle">Intelligent Investing LLC <span id="versionBadge" style="font-size: 0.7rem; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 10px; margin-left: 8px; cursor: pointer;" onclick="showVersionInfo()" title="Click for version info">v2.8.0</span></div>
+            <div class="header-subtitle">Intelligent Investing LLC <span id="versionBadge" style="font-size: 0.7rem; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 10px; margin-left: 8px; cursor: pointer;" onclick="showVersionInfo()" title="Click for version info">v3.11.2</span></div>
             <div class="header-controls">
                 <div class="version-selector">
                     <label>Year:</label>
@@ -3253,8 +3252,8 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.11.1';
-        const EOS_BUILD_DATE = '2026-01-27';
+        const EOS_VERSION = '3.11.2';
+        const EOS_BUILD_DATE = '2026-01-28';
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -5696,6 +5695,37 @@ Build Date: ${EOS_BUILD_DATE}
         // Sync task updates (due date, title) to Google Tasks
         async function syncTaskUpdateToGoogle(todo, updates) {
             const settings = getSettings();
+            
+            // Handle Both tasks - update in ALL members' Google Tasks
+            if (todo.owner === 'Both' && todo.bothTaskIds) {
+                let updateCount = 0;
+                for (const [member, taskInfo] of Object.entries(todo.bothTaskIds)) {
+                    const memberSettings = settings.teamMembers.find(m => m.initials === member);
+                    if (!memberSettings?.webAppUrl || !taskInfo.googleTaskId) continue;
+                    try {
+                        const response = await fetch(memberSettings.webAppUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain' },
+                            redirect: 'follow',
+                            body: JSON.stringify({
+                                secretKey: memberSettings.webAppSecret || '',
+                                action: 'updateTask',
+                                taskId: taskInfo.googleTaskId,
+                                listId: taskInfo.googleListId || '@default',
+                                updates: updates
+                            })
+                        });
+                        const data = await response.json();
+                        if (data.success) updateCount++;
+                    } catch (error) { }
+                }
+                if (updateCount > 0) {
+                    showToast(`Updated in ${updateCount} user(s)' Google Tasks`, 'success');
+                    addLogEntry(`Both task updated: ${Object.keys(updates).join(', ')}`);
+                }
+                return;
+            }
+            
             const member = settings.teamMembers.find(m => m.initials === todo.owner) || settings.teamMembers[0];
             
             if (!member?.webAppUrl || !todo.googleTaskId) return;
@@ -5878,6 +5908,34 @@ Build Date: ${EOS_BUILD_DATE}
         // Sync a completed task back to Google Tasks
         async function syncTaskCompletionToGoogle(todo) {
             const settings = getSettings();
+            
+            // Handle Both tasks - complete in ALL members' Google Tasks
+            if (todo.owner === 'Both' && todo.bothTaskIds) {
+                let completedCount = 0;
+                for (const [member, taskInfo] of Object.entries(todo.bothTaskIds)) {
+                    const memberSettings = settings.teamMembers.find(m => m.initials === member);
+                    if (!memberSettings?.webAppUrl) continue;
+                    try {
+                        const response = await fetch(memberSettings.webAppUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain' },
+                            redirect: 'follow',
+                            body: JSON.stringify({
+                                secretKey: memberSettings.webAppSecret || '',
+                                action: 'completeTask',
+                                taskId: taskInfo.googleTaskId,
+                                listId: taskInfo.googleListId || '@default'
+                            })
+                        });
+                        const data = await response.json();
+                        if (data.success) completedCount++;
+                    } catch (error) { }
+                }
+                showToast(`Completed in ${completedCount} user(s)' Google Tasks`, completedCount > 0 ? 'success' : 'error');
+                addLogEntry(`Both task completed: ${todo.text?.substring(0, 25)}...`);
+                return;
+            }
+            
             // Find the team member who owns this task
             const member = settings.teamMembers.find(m => m.initials === todo.owner) || settings.teamMembers[0];
             
@@ -5917,6 +5975,34 @@ Build Date: ${EOS_BUILD_DATE}
         // Sync an uncompleted task back to Google Tasks
         async function syncTaskUncompleteToGoogle(todo) {
             const settings = getSettings();
+            
+            // Handle Both tasks - uncomplete in ALL members' Google Tasks
+            if (todo.owner === 'Both' && todo.bothTaskIds) {
+                let uncompleteCount = 0;
+                for (const [member, taskInfo] of Object.entries(todo.bothTaskIds)) {
+                    const memberSettings = settings.teamMembers.find(m => m.initials === member);
+                    if (!memberSettings?.webAppUrl) continue;
+                    try {
+                        const response = await fetch(memberSettings.webAppUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain' },
+                            redirect: 'follow',
+                            body: JSON.stringify({
+                                secretKey: memberSettings.webAppSecret || '',
+                                action: 'uncompleteTask',
+                                taskId: taskInfo.googleTaskId,
+                                listId: taskInfo.googleListId || '@default'
+                            })
+                        });
+                        const data = await response.json();
+                        if (data.success) uncompleteCount++;
+                    } catch (error) { }
+                }
+                showToast(`Uncompleted in ${uncompleteCount} user(s)' Google Tasks`, uncompleteCount > 0 ? 'success' : 'error');
+                addLogEntry(`Both task uncompleted: ${todo.text?.substring(0, 25)}...`);
+                return;
+            }
+            
             const member = settings.teamMembers.find(m => m.initials === todo.owner) || settings.teamMembers[0];
             
             if (!member?.webAppUrl) {
