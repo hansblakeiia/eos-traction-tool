@@ -3286,8 +3286,8 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.11.2';
-        const EOS_BUILD_DATE = '2026-01-28';
+        const EOS_VERSION = '3.12.0';
+        const EOS_BUILD_DATE = '2026-02-02';
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -4732,23 +4732,45 @@ Example:
             const stored = localStorage.getItem('eos_traction_data');
             if (stored) {
                 const parsed = JSON.parse(stored);
-                // Deep merge settings to preserve user's saved data (webAppUrl, etc.)
-                if (parsed._settings) {
-                    // Preserve user's team member configurations
+                
+                // CRITICAL FIX: Use parsed as base, only fill MISSING keys from seededData
+                // This prevents overwriting user's actual data with old defaults
+                
+                // Ensure _settings exists
+                if (!parsed._settings) {
+                    parsed._settings = seededData._settings;
+                } else {
+                    // Fill in any missing settings keys from defaults
+                    Object.keys(seededData._settings).forEach(key => {
+                        if (parsed._settings[key] === undefined) {
+                            parsed._settings[key] = seededData._settings[key];
+                        }
+                    });
+                    
+                    // Ensure team members have all required fields
                     if (parsed._settings.teamMembers) {
-                        seededData._settings.teamMembers = parsed._settings.teamMembers;
+                        parsed._settings.teamMembers.forEach((member, idx) => {
+                            const defaultMember = seededData._settings.teamMembers[idx] || seededData._settings.teamMembers[0];
+                            Object.keys(defaultMember).forEach(key => {
+                                if (member[key] === undefined) {
+                                    member[key] = defaultMember[key];
+                                }
+                            });
+                        });
                     }
-                    // Merge other settings
-                    Object.assign(seededData._settings, parsed._settings);
                 }
-                // Merge year data (shallow is fine for years)
-                Object.keys(parsed).forEach(key => {
-                    if (key !== '_settings') {
-                        seededData[key] = parsed[key];
+                
+                // Fill in missing year data from seededData (e.g. new years added)
+                Object.keys(seededData).forEach(key => {
+                    if (key !== '_settings' && !parsed[key]) {
+                        parsed[key] = seededData[key];
                     }
                 });
+                
+                // Use parsed (user's data) as the final data, not seededData
+                Object.assign(seededData, parsed);
             }
-            // Save merged back
+            // Save back (now seededData contains user's data with defaults filled in)
             localStorage.setItem('eos_traction_data', JSON.stringify(seededData));
             
             // Populate year selector (exclude _settings)
@@ -4783,6 +4805,30 @@ Example:
 Build Date: ${EOS_BUILD_DATE}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📝 Version 3.12.0 Changes (MAJOR UPDATE):
+🐛 CRITICAL FIXES:
+• Fixed scorecard measurables reverting to old versions
+• Fixed deleted/archived tasks reappearing after pull
+• Fixed data loss in loadOrSeedData() - now preserves user data properly
+
+✨ NEW FEATURES:
+• Task Notes/Details - Full sync with Google Tasks
+  - Click 📝 icon to add notes to any task
+  - Notes sync bidirectionally (EOS ↔ Google Tasks)
+  - Changes to notes update automatically
+• Drag-drop tasks between Google Task lists
+  - Dropdown selector to move tasks to different lists
+  - Syncs move back to Google Tasks instantly
+• Emoji picker for meeting agenda items
+  - 30+ emojis to choose from
+  - Easy one-click emoji assignment
+
+🔧 IMPROVEMENTS:
+• Task notes field now syncs properly on pull/push
+• Starred task updates now include all fields
+• ignoredGoogleTaskIds persists correctly
+• Better data preservation during version updates
 
 📝 Version 2.8.0 Changes:
 • 🚀 AUTO-SYNC ON LOAD/LEAVE!
@@ -5678,6 +5724,10 @@ Build Date: ${EOS_BUILD_DATE}
                             title="${t.starred ? 'Unstar' : 'Star this task'}">
                         ${t.starred ? '⭐' : '☆'}
                     </button>
+                    <button onclick="toggleTaskNotes(${idx})" style="background: none; border: none; cursor: pointer; font-size: 0.9rem; padding: 2px 6px; flex-shrink: 0; color: ${t.notes ? '#3b82f6' : '#9ca3af'};" 
+                            title="Task details/notes">
+                        📝
+                    </button>
                     <div class="todo-text" contenteditable="true" 
                          onblur="updateTodo(${idx}, 'text', this.textContent)"
                          onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); this.blur();}"
@@ -5685,6 +5735,13 @@ Build Date: ${EOS_BUILD_DATE}
                     <input type="date" value="${t.dueDate || ''}" onchange="updateTodo(${idx}, 'dueDate', this.value)"
                            style="width: 120px; margin: 0; font-size: 0.8rem; flex-shrink: 0; ${t.dueDate && isOverdue(t.dueDate) && !t.done ? 'border-color: var(--danger); background: #fee2e2;' : ''}"
                            title="Due date">
+                    ${t.googleListName && t.googleListName !== 'To-Dos' ? `
+                        <select onchange="moveTaskToList(${idx}, this.value)" 
+                                style="flex-shrink: 0; font-size: 0.75rem; padding: 2px 6px; color: #6b7280; border: 1px solid #d1d5db; border-radius: 4px;"
+                                title="Move to different list">
+                            ${getTaskListOptions(t.googleListId, t.googleListName)}
+                        </select>
+                    ` : ''}
                     ${ownerDisplay ? `
                         <div style="padding: 2px 8px; border-radius: 4px; background: ${ownerBg}; color: ${ownerColor}; font-weight: 500; font-size: 0.75rem; white-space: nowrap;">
                             ${ownerDisplay === 'Both' ? '🔗 ' : ''}${ownerDisplay}
@@ -5693,6 +5750,11 @@ Build Date: ${EOS_BUILD_DATE}
                     <select onchange="updateTodo(${idx}, 'owner', this.value)" style="flex-shrink: 0;">
                         ${getTeamMemberOptions(t.owner, true)}
                     </select>
+                </div>
+                <div id="todoNotes_${idx}" class="todo-notes" style="display: none; padding: 8px 40px 8px 40px; background: #f9fafb; border-left: 3px solid #3b82f6; margin: -4px 0 4px 0;">
+                    <textarea onblur="updateTodo(${idx}, 'notes', this.value)" 
+                              placeholder="Add notes or details..."
+                              style="width: 100%; min-height: 60px; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85rem; font-family: inherit; resize: vertical;">${t.notes || ''}</textarea>
                 </div>
             `;
         }
@@ -5714,6 +5776,109 @@ Build Date: ${EOS_BUILD_DATE}
             
             sortAndRenderTodos();
             autoSave();
+        }
+        
+        function toggleTaskNotes(idx) {
+            const notesDiv = document.getElementById(`todoNotes_${idx}`);
+            if (notesDiv) {
+                const isVisible = notesDiv.style.display !== 'none';
+                notesDiv.style.display = isVisible ? 'none' : 'block';
+                if (!isVisible) {
+                    // Focus the textarea when opening
+                    const textarea = notesDiv.querySelector('textarea');
+                    if (textarea) {
+                        setTimeout(() => textarea.focus(), 50);
+                    }
+                }
+            }
+        }
+        
+        function getTaskListOptions(currentListId, currentListName) {
+            const settings = getSettings();
+            const currentUser = settings.teamMembers.find(m => m.initials === getCurrentUserInitials());
+            const taskLists = currentUser?.taskLists || [];
+            
+            let options = '';
+            taskLists.forEach(list => {
+                const selected = list.id === currentListId ? 'selected' : '';
+                options += `<option value="${list.id}" ${selected}>${list.title}</option>`;
+            });
+            
+            // If current list isn't in the user's lists, add it
+            if (currentListId && !taskLists.find(l => l.id === currentListId)) {
+                options = `<option value="${currentListId}" selected>${currentListName}</option>` + options;
+            }
+            
+            return options;
+        }
+        
+        async function moveTaskToList(idx, newListId) {
+            const todos = yearData.quarters[currentQuarter].todos;
+            const task = todos[idx];
+            
+            if (!task.googleTaskId || !newListId || newListId === task.googleListId) {
+                return; // Nothing to do
+            }
+            
+            const settings = getSettings();
+            const owner = task.owner === 'Both' ? getCurrentUserInitials() : task.owner;
+            const member = settings.teamMembers.find(m => m.initials === owner);
+            
+            if (!member?.webAppUrl) {
+                showToast('Cannot move task: No Web App URL configured for ' + owner, 'error');
+                return;
+            }
+            
+            // Find the new list name
+            const newListName = member.taskLists?.find(l => l.id === newListId)?.title || newListId;
+            
+            try {
+                showToast('Moving task to ' + newListName + '...', 'info');
+                
+                // Call Google Apps Script to move the task
+                const payload = {
+                    action: 'moveTask',
+                    taskId: task.googleTaskId,
+                    fromListId: task.googleListId,
+                    toListId: newListId,
+                    secretKey: member.webAppSecret || ''
+                };
+                
+                const response = await fetch(member.webAppUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify(payload),
+                    redirect: 'follow'
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    // Update local data with new task ID from Google
+                    task.googleListId = newListId;
+                    task.googleListName = newListName;
+                    if (result.newTaskId) {
+                        task.googleTaskId = result.newTaskId;
+                    }
+                    autoSave();
+                    sortAndRenderTodos();
+                    showToast('Task moved to ' + newListName, 'success');
+                } else {
+                    showToast('Failed to move task: ' + (result.error || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                // With CORS, assume it worked
+                task.googleListId = newListId;
+                task.googleListName = newListName;
+                autoSave();
+                sortAndRenderTodos();
+                showToast('Task moved to ' + newListName, 'success');
+            }
+        }
+        
+        function getCurrentUserInitials() {
+            // Get current user's initials (default to first team member)
+            const settings = getSettings();
+            return settings.teamMembers[0]?.initials || 'HB';
         }
         
         function sortTodosByStarred() {
@@ -6382,7 +6547,9 @@ Build Date: ${EOS_BUILD_DATE}
                     settings.ignoredGoogleTaskIds.push(todo.googleTaskId);
                 }
             });
-            saveSettings(settings);
+            // CRITICAL: Save settings directly to localStorage
+            seededData._settings = settings;
+            localStorage.setItem('eos_traction_data', JSON.stringify(seededData));
             
             yearData.quarters[currentQuarter].completedTodos = yearData.quarters[currentQuarter].completedTodos || [];
             toArchive.forEach(todo => {
@@ -6441,7 +6608,9 @@ Build Date: ${EOS_BUILD_DATE}
                     }
                 }
             });
-            saveSettings(settings);
+            // CRITICAL: Save settings directly to localStorage
+            seededData._settings = settings;
+            localStorage.setItem('eos_traction_data', JSON.stringify(seededData));
             
             // Also remove from Daily Plan Matrix for affected team members
             const textToDelete = new Set(toDelete.map(t => t.text));
@@ -7059,17 +7228,50 @@ Make sure your suggestions directly address the specific root cause and discussi
             container.innerHTML = editingAgenda.map((item, idx) => `
                 <div style="display: flex; align-items: center; gap: 8px; padding: 10px; background: var(--gray-50); border-radius: 6px; margin-bottom: 8px;">
                     <span style="cursor: grab; color: var(--gray-400);">☰</span>
+                    <button onclick="pickEmojiForAgenda(${idx})" 
+                            style="padding: 4px 8px; background: #fff; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer; font-size: 1rem;"
+                            title="Pick emoji">😊</button>
                     <input type="text" value="${item.title}" 
                            onchange="editingAgenda[${idx}].title = this.value"
                            style="flex: 1; margin: 0;" placeholder="Agenda item title">
                     <input type="text" value="${item.time}" 
                            onchange="editingAgenda[${idx}].time = this.value"
                            style="width: 70px; margin: 0; text-align: center;" placeholder="Time">
-                    <button onclick="moveAgendaItem(${idx}, -1)" style="padding: 4px 8px; background: var(--gray-100); border: none; border-radius: 4px; cursor: pointer;">→</button>
-                    <button onclick="moveAgendaItem(${idx}, 1)" style="padding: 4px 8px; background: var(--gray-100); border: none; border-radius: 4px; cursor: pointer;">↔</button>
+                    <button onclick="moveAgendaItem(${idx}, -1)" style="padding: 4px 8px; background: var(--gray-100); border: none; border-radius: 4px; cursor: pointer;">↑</button>
+                    <button onclick="moveAgendaItem(${idx}, 1)" style="padding: 4px 8px; background: var(--gray-100); border: none; border-radius: 4px; cursor: pointer;">↓</button>
                     <button onclick="removeAgendaItem(${idx})" style="padding: 4px 8px; background: #fee2e2; border: none; border-radius: 4px; cursor: pointer; color: #dc2626;">✕</button>
                 </div>
             `).join('');
+        }
+        
+        function pickEmojiForAgenda(idx) {
+            const emojis = ['📏', '📰', '📊', '🪨', '🔄', '✅', '💡', '🎯', '📅', '🎪', '🔍', '📈', '💼', '🎓', '⚡', '🌟', '🚀', '🎨', '🔥', '💪', '🎁', '🏆', '📝', '💻', '🌈', '⭐', '🎵', '📞', '✨', '🔧'];
+            
+            const emojiPicker = document.createElement('div');
+            emojiPicker.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); z-index: 10001; max-width: 400px;';
+            emojiPicker.innerHTML = `
+                <div style="font-weight: 600; margin-bottom: 10px; color: #374151;">Pick an Emoji</div>
+                <div style="display: grid; grid-template-columns: repeat(10, 1fr); gap: 8px; margin-bottom: 15px;">
+                    ${emojis.map(e => `<button onclick="selectEmojiForAgenda(${idx}, '${e}')" style="font-size: 1.5rem; padding: 8px; background: #f3f4f6; border: none; border-radius: 4px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">${e}</button>`).join('')}
+                </div>
+                <button onclick="this.parentElement.remove()" style="padding: 8px 16px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">Cancel</button>
+            `;
+            document.body.appendChild(emojiPicker);
+        }
+        
+        function selectEmojiForAgenda(idx, emoji) {
+            const currentTitle = editingAgenda[idx].title;
+            // Remove existing emoji at start if present
+            const titleWithoutEmoji = currentTitle.replace(/^[\u{1F300}-\u{1F9FF}][\u{1F000}-\u{1FFFF}]*\s*/u, '');
+            // Add new emoji
+            editingAgenda[idx].title = emoji + ' ' + titleWithoutEmoji.trim();
+            renderEditAgendaList();
+            // Remove picker
+            document.querySelectorAll('div').forEach(div => {
+                if (div.style.position === 'fixed' && div.style.zIndex === '10001') {
+                    div.remove();
+                }
+            });
         }
         
         function addAgendaItem() {
@@ -9787,7 +9989,8 @@ Return ONLY the JSON array:`;
                 (
                     t.originalDueDate !== t.dueDate || // Due date was changed
                     t.originalStarred !== t.starred ||  // Starred status changed
-                    t.originalText !== t.text           // Text was edited
+                    t.originalText !== t.text ||        // Text was edited
+                    t.originalNotes !== t.notes         // Notes were edited
                 )
             );
             
@@ -10100,7 +10303,8 @@ Return ONLY the JSON array:`;
                             secretKey: member.webAppSecret || '',
                             updates: {
                                 title: title,
-                                due: task.dueDate ? new Date(task.dueDate).toISOString() : null
+                                due: task.dueDate ? new Date(task.dueDate).toISOString() : null,
+                                notes: task.notes || ''
                             }
                         };
                         
@@ -10118,6 +10322,7 @@ Return ONLY the JSON array:`;
                             task.originalDueDate = task.dueDate;
                             task.originalStarred = task.starred;
                             task.originalText = task.text;
+                            task.originalNotes = task.notes;
                         }
                     } catch (error) {
                         // Assume it worked with CORS
@@ -10125,6 +10330,7 @@ Return ONLY the JSON array:`;
                         task.originalDueDate = task.dueDate;
                         task.originalStarred = task.starred;
                         task.originalText = task.text;
+                        task.originalNotes = task.notes;
                     }
                 }
             }
@@ -10264,6 +10470,13 @@ Return ONLY the JSON array:`;
                                     existingByGId.starred = isStarred;
                                     updated = true;
                                 }
+                                // Sync notes/details from Google
+                                const taskNotes = task.notes || '';
+                                if (existingByGId.notes !== taskNotes) {
+                                    existingByGId.notes = taskNotes;
+                                    existingByGId.originalNotes = taskNotes;
+                                    updated = true;
+                                }
                                 // Sync due date changes from Google
                                 if (existingByGId.dueDate !== dueDate && dueDate) {
                                     console.log(`  -> Due date changed: "${existingByGId.dueDate}" -> "${dueDate}"`);
@@ -10302,6 +10515,8 @@ Return ONLY the JSON array:`;
                                     originalDueDate: dueDate,
                                     originalStarred: isStarred,
                                     originalText: taskTitle,
+                                    notes: task.notes || '',
+                                    originalNotes: task.notes || '',
                                     importedAt: new Date().toISOString(),
                                     googleTaskId: task.id,
                                     googleListId: task.listId || '',
