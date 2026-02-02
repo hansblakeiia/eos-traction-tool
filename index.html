@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EOS Traction Tool - Intelligent Investing LLC</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%231a365d' width='100' height='100' rx='15'/%3E%3Ctext x='50' y='50' font-family='Arial, sans-serif' font-size='45' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='central'%3EEOS%3C/text%3E%3Ccircle cx='85' cy='15' r='8' fill='%233182ce'/%3E%3C/svg%3E">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         
@@ -2691,7 +2692,7 @@
                     
                     <!-- Weekly Meeting -->
                     <div style="margin-bottom: 16px;">
-                        <h4 style="color: #047857; margin-bottom: 8px; font-size: 0.95rem;">📦 Weekly Meeting Schedule</h4>
+                        <h4 style="color: #047857; margin-bottom: 8px; font-size: 0.95rem;">📋 Weekly Meeting Schedule</h4>
                         <div class="input-row">
                             <div>
                                 <label style="font-size: 0.8rem;">Day</label>
@@ -2717,6 +2718,19 @@
                                 </select>
                             </div>
                         </div>
+                    </div>
+                    
+                    <!-- Default Tab -->
+                    <div style="margin-bottom: 16px; padding-top: 16px; border-top: 1px solid #a7f3d0;">
+                        <h4 style="color: #047857; margin-bottom: 8px; font-size: 0.95rem;">🏠 Default Landing Tab</h4>
+                        <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 10px;">Choose which tab appears when you open the EOS Tool</p>
+                        <select id="defaultTab" style="font-size: 0.85rem; width: 100%;">
+                            <option value="vision">Vision/Traction Organizer</option>
+                            <option value="quarterlyRocks">Quarterly Rocks</option>
+                            <option value="scorecard">Scorecard</option>
+                            <option value="weeklyMeeting" selected>Weekly Meeting (Default)</option>
+                            <option value="dailyPlan">My Daily Plan</option>
+                        </select>
                     </div>
                     
                     <!-- Quarter Start Dates -->
@@ -3286,8 +3300,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.12.0';
+        const EOS_VERSION = '3.13.0';
         const EOS_BUILD_DATE = '2026-02-02';
+        const EOS_BUILD_TIME = '14:30'; // Added timestamp for same-day versions
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -3407,6 +3422,11 @@ Example:
             // Populate owner filter dropdown
             populateOwnerFilter();
             
+            // Show default tab based on user preference
+            const settings = getSettings();
+            const defaultTab = settings.defaultTab || 'weeklyMeeting'; // Default to Weekly Meeting instead of Vision
+            showPage(defaultTab);
+            
             // Check if backup reminder is needed (after a short delay to let page load)
             setTimeout(checkBackupReminder, 1000);
             
@@ -3423,7 +3443,7 @@ Example:
                 });
             }, 1500);
             
-            console.log(`EOS Traction Tool v${EOS_VERSION} (${EOS_BUILD_DATE}): Ready`);
+            console.log(`EOS Traction Tool v${EOS_VERSION} (${EOS_BUILD_DATE} ${EOS_BUILD_TIME}): Ready`);
         });
         
         // ==================== AUTO-SYNC SYSTEM ====================
@@ -4718,14 +4738,17 @@ Example:
         function initVersionDisplay() {
             // Update header badge
             const badge = document.getElementById('versionBadge');
-            if (badge) badge.textContent = `v${EOS_VERSION}`;
+            if (badge) {
+                badge.textContent = `v${EOS_VERSION}`;
+                badge.title = `Build: ${EOS_BUILD_DATE} ${EOS_BUILD_TIME}`;
+            }
             
             // Update settings version
             const settingsVer = document.getElementById('settingsVersion');
             if (settingsVer) settingsVer.textContent = `v${EOS_VERSION}`;
             
             const settingsBuild = document.getElementById('settingsBuildDate');
-            if (settingsBuild) settingsBuild.textContent = EOS_BUILD_DATE;
+            if (settingsBuild) settingsBuild.textContent = `${EOS_BUILD_DATE} ${EOS_BUILD_TIME}`;
         }
         
         function loadOrSeedData() {
@@ -7223,25 +7246,75 @@ Make sure your suggestions directly address the specific root cause and discussi
             document.getElementById('editAgendaModal').classList.add('active');
         }
         
+        let draggedAgendaIdx = null;
+        
         function renderEditAgendaList() {
             const container = document.getElementById('editAgendaList');
             container.innerHTML = editingAgenda.map((item, idx) => `
-                <div style="display: flex; align-items: center; gap: 8px; padding: 10px; background: var(--gray-50); border-radius: 6px; margin-bottom: 8px;">
-                    <span style="cursor: grab; color: var(--gray-400);">☰</span>
-                    <button onclick="pickEmojiForAgenda(${idx})" 
+                <div draggable="true" 
+                     ondragstart="dragAgendaStart(event, ${idx})" 
+                     ondragover="dragAgendaOver(event)" 
+                     ondrop="dropAgenda(event, ${idx})"
+                     ondragend="dragAgendaEnd(event)"
+                     style="display: flex; align-items: center; gap: 8px; padding: 10px; background: var(--gray-50); border-radius: 6px; margin-bottom: 8px; cursor: move; transition: all 0.2s;"
+                     class="agenda-edit-item">
+                    <span style="cursor: grab; color: var(--gray-400); user-select: none;">☰</span>
+                    <button onclick="pickEmojiForAgenda(${idx}); event.stopPropagation();" 
                             style="padding: 4px 8px; background: #fff; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer; font-size: 1rem;"
                             title="Pick emoji">😊</button>
                     <input type="text" value="${item.title}" 
                            onchange="editingAgenda[${idx}].title = this.value"
+                           onclick="event.stopPropagation()"
                            style="flex: 1; margin: 0;" placeholder="Agenda item title">
                     <input type="text" value="${item.time}" 
                            onchange="editingAgenda[${idx}].time = this.value"
+                           onclick="event.stopPropagation()"
                            style="width: 70px; margin: 0; text-align: center;" placeholder="Time">
-                    <button onclick="moveAgendaItem(${idx}, -1)" style="padding: 4px 8px; background: var(--gray-100); border: none; border-radius: 4px; cursor: pointer;">↑</button>
-                    <button onclick="moveAgendaItem(${idx}, 1)" style="padding: 4px 8px; background: var(--gray-100); border: none; border-radius: 4px; cursor: pointer;">↓</button>
-                    <button onclick="removeAgendaItem(${idx})" style="padding: 4px 8px; background: #fee2e2; border: none; border-radius: 4px; cursor: pointer; color: #dc2626;">✕</button>
+                    <button onclick="moveAgendaItem(${idx}, -1); event.stopPropagation();" style="padding: 4px 8px; background: var(--gray-100); border: none; border-radius: 4px; cursor: pointer;" title="Move up">↑</button>
+                    <button onclick="moveAgendaItem(${idx}, 1); event.stopPropagation();" style="padding: 4px 8px; background: var(--gray-100); border: none; border-radius: 4px; cursor: pointer;" title="Move down">↓</button>
+                    <button onclick="removeAgendaItem(${idx}); event.stopPropagation();" style="padding: 4px 8px; background: #fee2e2; border: none; border-radius: 4px; cursor: pointer; color: #dc2626;">✕</button>
                 </div>
             `).join('');
+        }
+        
+        function dragAgendaStart(event, idx) {
+            draggedAgendaIdx = idx;
+            event.currentTarget.style.opacity = '0.4';
+        }
+        
+        function dragAgendaOver(event) {
+            event.preventDefault();
+            const item = event.currentTarget;
+            if (item && item.classList.contains('agenda-edit-item')) {
+                item.style.borderTop = '3px solid #3b82f6';
+            }
+        }
+        
+        function dropAgenda(event, targetIdx) {
+            event.preventDefault();
+            event.currentTarget.style.borderTop = '';
+            
+            if (draggedAgendaIdx === null || draggedAgendaIdx === targetIdx) return;
+            
+            // Reorder the array
+            const draggedItem = editingAgenda[draggedAgendaIdx];
+            editingAgenda.splice(draggedAgendaIdx, 1);
+            
+            // If dragging down, adjust target index
+            const adjustedTarget = draggedAgendaIdx < targetIdx ? targetIdx - 1 : targetIdx;
+            editingAgenda.splice(adjustedTarget, 0, draggedItem);
+            
+            draggedAgendaIdx = null;
+            renderEditAgendaList();
+        }
+        
+        function dragAgendaEnd(event) {
+            event.currentTarget.style.opacity = '1';
+            draggedAgendaIdx = null;
+            // Clear all border highlights
+            document.querySelectorAll('.agenda-edit-item').forEach(item => {
+                item.style.borderTop = '';
+            });
         }
         
         function pickEmojiForAgenda(idx) {
@@ -8696,6 +8769,7 @@ Make sure your suggestions directly address the specific root cause and discussi
             document.getElementById('meetingTime').value = settings.meetingTime || '9am';
             document.getElementById('meetingDuration').value = settings.meetingDuration || '45';
             document.getElementById('enableDelegate').checked = settings.enableDelegate || false;
+            document.getElementById('defaultTab').value = settings.defaultTab || 'weeklyMeeting';
             
             // Quarter dates
             document.getElementById('q1Start').value = settings.quarterStarts?.Q1 || '01/01';
@@ -8970,6 +9044,7 @@ Make sure your suggestions directly address the specific root cause and discussi
             settings.meetingTime = document.getElementById('meetingTime').value;
             settings.meetingDuration = document.getElementById('meetingDuration').value;
             settings.enableDelegate = document.getElementById('enableDelegate').checked;
+            settings.defaultTab = document.getElementById('defaultTab').value;
             
             // Quarter dates
             settings.quarterStarts = {
