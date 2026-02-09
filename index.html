@@ -3300,9 +3300,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.13.0';
-        const EOS_BUILD_DATE = '2026-02-02';
-        const EOS_BUILD_TIME = '14:30'; // Added timestamp for same-day versions
+        const EOS_VERSION = '3.14.1';
+        const EOS_BUILD_DATE = '2026-02-09';
+        const EOS_BUILD_TIME = '10:45'; // Full Sub-tasks Support!
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -5625,6 +5625,56 @@ Build Date: ${EOS_BUILD_DATE}
             }
         }
         
+        // Build hierarchical structure from flat task list
+        function buildTaskHierarchy(tasks) {
+            // Create a map of tasks by their googleTaskId
+            const taskMap = new Map();
+            tasks.forEach(t => {
+                if (t.googleTaskId) {
+                    taskMap.set(t.googleTaskId, { ...t, subtasks: [] });
+                }
+            });
+            
+            // Build parent-child relationships
+            const rootTasks = [];
+            tasks.forEach(t => {
+                const task = taskMap.get(t.googleTaskId);
+                if (!task) {
+                    // Task without googleTaskId - treat as root
+                    rootTasks.push({ ...t, subtasks: [] });
+                    return;
+                }
+                
+                if (t.parentTaskId && taskMap.has(t.parentTaskId)) {
+                    // This is a subtask - add to parent's subtasks array
+                    const parent = taskMap.get(t.parentTaskId);
+                    parent.subtasks.push(task);
+                } else {
+                    // Root level task
+                    rootTasks.push(task);
+                }
+            });
+            
+            return rootTasks;
+        }
+        
+        // Recursively render task hierarchy
+        function renderTaskHierarchy(tasks, depth) {
+            return tasks.map(t => {
+                const hasSubtasks = t.subtasks && t.subtasks.length > 0;
+                const isExpanded = t.subtasksExpanded !== false; // Default to expanded
+                
+                let html = renderTodoItem(t, t.originalIndex, depth, hasSubtasks, isExpanded);
+                
+                // Render subtasks if they exist and parent is expanded
+                if (hasSubtasks && isExpanded) {
+                    html += renderTaskHierarchy(t.subtasks, depth + 1);
+                }
+                
+                return html;
+            }).join('');
+        }
+        
         function renderTodos(todos, useOriginalIndex = false) {
             const container = document.getElementById('todosContainer');
             
@@ -5689,6 +5739,9 @@ Build Date: ${EOS_BUILD_DATE}
             if (hasMultipleLists) {
                 for (const listName of sortedListNames) {
                     const listNameEscaped = listName.replace(/"/g, '&quot;');
+                    const tasksInList = todosByList[listName];
+                    const hierarchicalTasks = buildTaskHierarchy(tasksInList);
+                    
                     todosHtml += `
                         <div class="todo-list-group" draggable="true" 
                              data-list-name="${listNameEscaped}"
@@ -5701,22 +5754,24 @@ Build Date: ${EOS_BUILD_DATE}
                                  title="Drag to reorder task lists">
                                 ⋮⋮ ${listName}
                             </div>
-                            ${todosByList[listName].map(t => renderTodoItem(t, t.originalIndex)).join('')}
+                            ${renderTaskHierarchy(hierarchicalTasks, 0)}
                         </div>
                     `;
                 }
             } else {
-                todosHtml = todos.map((t, idx) => {
-                    if (t.archived) return '';
+                const tasksInList = todos.map((t, idx) => {
+                    if (t.archived) return null;
                     const origIdx = useOriginalIndex && t._originalIndex !== undefined ? t._originalIndex : idx;
-                    return renderTodoItem(t, origIdx);
-                }).join('');
+                    return { ...t, originalIndex: origIdx };
+                }).filter(t => t !== null);
+                const hierarchicalTasks = buildTaskHierarchy(tasksInList);
+                todosHtml = renderTaskHierarchy(hierarchicalTasks, 0);
             }
             
             container.innerHTML = headerRow + todosHtml;
         }
         
-        function renderTodoItem(t, idx) {
+        function renderTodoItem(t, idx, depth = 0, hasSubtasks = false, isExpanded = true) {
             // Determine owner display and color
             let ownerDisplay = '';
             let ownerColor = '#9ca3af';
@@ -5740,8 +5795,21 @@ Build Date: ${EOS_BUILD_DATE}
                 }
             }
             
+            // Calculate indentation (20px per level)
+            const indentPx = depth * 20;
+            
+            // Expand/collapse button for parent tasks
+            const expandButton = hasSubtasks ? `
+                <button onclick="toggleSubtasks('${t.googleTaskId}')" 
+                        style="background: none; border: none; cursor: pointer; font-size: 0.85rem; padding: 2px 6px; flex-shrink: 0; color: #6b7280;"
+                        title="${isExpanded ? 'Collapse' : 'Expand'} subtasks">
+                    ${isExpanded ? '▼' : '▶'}
+                </button>
+            ` : '<span style="width: 28px; flex-shrink: 0;"></span>';
+            
             return `
-                <div class="todo-item ${t.done ? 'completed' : ''} ${t.starred ? 'starred' : ''}">
+                <div class="todo-item ${t.done ? 'completed' : ''} ${t.starred ? 'starred' : ''}" style="margin-left: ${indentPx}px; ${depth > 0 ? 'border-left: 2px solid #d1d5db; background: #f9fafb;' : ''}">
+                    ${expandButton}
                     <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTodo(${idx})">
                     <button onclick="toggleStarred(${idx})" style="background: none; border: none; cursor: pointer; font-size: 1rem; padding: 2px 4px; flex-shrink: 0;" 
                             title="${t.starred ? 'Unstar' : 'Star this task'}">
@@ -5751,6 +5819,13 @@ Build Date: ${EOS_BUILD_DATE}
                             title="Task details/notes">
                         📝
                     </button>
+                    ${depth === 0 && t.googleTaskId ? `
+                        <button onclick="addSubtask(${idx})" 
+                                style="background: none; border: none; cursor: pointer; font-size: 0.75rem; padding: 2px 6px; flex-shrink: 0; color: #10b981;"
+                                title="Add subtask">
+                            ➕
+                        </button>
+                    ` : ''}
                     <div class="todo-text" contenteditable="true" 
                          onblur="updateTodo(${idx}, 'text', this.textContent)"
                          onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); this.blur();}"
@@ -5774,12 +5849,67 @@ Build Date: ${EOS_BUILD_DATE}
                         ${getTeamMemberOptions(t.owner, true)}
                     </select>
                 </div>
-                <div id="todoNotes_${idx}" class="todo-notes" style="display: none; padding: 8px 40px 8px 40px; background: #f9fafb; border-left: 3px solid #3b82f6; margin: -4px 0 4px 0;">
+                <div id="todoNotes_${idx}" class="todo-notes" style="display: none; padding: 8px 40px 8px ${40 + indentPx}px; background: #f9fafb; border-left: 3px solid #3b82f6; margin: -4px 0 4px 0;">
                     <textarea onblur="updateTodo(${idx}, 'notes', this.value)" 
                               placeholder="Add notes or details..."
                               style="width: 100%; min-height: 60px; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85rem; font-family: inherit; resize: vertical;">${t.notes || ''}</textarea>
                 </div>
             `;
+        }
+        
+        function toggleSubtasks(googleTaskId) {
+            const todos = yearData.quarters[currentQuarter].todos;
+            const task = todos.find(t => t.googleTaskId === googleTaskId);
+            if (task) {
+                task.subtasksExpanded = !task.subtasksExpanded;
+                autoSave();
+                sortAndRenderTodos();
+            }
+        }
+        
+        function addSubtask(parentIdx) {
+            const todos = yearData.quarters[currentQuarter].todos;
+            const parentTask = todos[parentIdx];
+            
+            if (!parentTask || !parentTask.googleTaskId) {
+                alert('⚠️ Cannot add subtask: Parent task must be synced to Google Tasks first!\n\nPlease:\n1. Push this task to Google Tasks\n2. Wait for success\n3. Then create subtasks');
+                return;
+            }
+            
+            // Additional check: make sure parent has a real Google Task ID, not a temp one
+            if (parentTask.googleTaskId.startsWith('synced_') || parentTask.googleTaskId.startsWith('pull_')) {
+                alert('⚠️ Parent task is not fully synced yet!\n\nPlease:\n1. Push parent task to Google Tasks\n2. Pull to get the real Google Task ID\n3. Then create subtasks');
+                return;
+            }
+            
+            const subtaskText = prompt('Enter subtask description:');
+            if (!subtaskText || !subtaskText.trim()) return;
+            
+            // Add subtask to the array
+            const newSubtask = {
+                text: subtaskText.trim(),
+                owner: parentTask.owner,
+                originalOwner: parentTask.owner,
+                done: false,
+                starred: false,
+                dueDate: parentTask.dueDate || '',  // Inherit parent's due date
+                parentTaskId: parentTask.googleTaskId,
+                notes: '',
+                googleListId: parentTask.googleListId,
+                googleListName: parentTask.googleListName,
+                createdAt: new Date().toISOString()
+            };
+            
+            todos.push(newSubtask);
+            
+            // Ensure parent is expanded
+            parentTask.subtasksExpanded = true;
+            
+            autoSave();
+            sortAndRenderTodos();
+            
+            // Show toast
+            showToast('✅ Subtask added! Push to Google Tasks to sync.', 'success');
         }
         
         function isOverdue(dateStr) {
@@ -10310,8 +10440,9 @@ Return ONLY the JSON array:`;
                             return {
                                 title: title,
                                 owner: t.owner || '',
-                                notes: `Traction Meeting (${meetingDate})`,
-                                dueDate: t.dueDate ? new Date(t.dueDate).toISOString() : ''
+                                notes: t.notes || `Traction Meeting (${meetingDate})`,
+                                dueDate: t.dueDate ? new Date(t.dueDate).toISOString() : '',
+                                parent: t.parentTaskId || null  // For subtasks
                             };
                         })
                     };
@@ -10592,6 +10723,9 @@ Return ONLY the JSON array:`;
                                     originalText: taskTitle,
                                     notes: task.notes || '',
                                     originalNotes: task.notes || '',
+                                    parentTaskId: task.parent || null,  // For subtasks
+                                    position: task.position || '',       // For ordering
+                                    subtasksExpanded: true,              // UI state (default expanded)
                                     importedAt: new Date().toISOString(),
                                     googleTaskId: task.id,
                                     googleListId: task.listId || '',
