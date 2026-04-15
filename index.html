@@ -3300,9 +3300,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.14.3';
+        const EOS_VERSION = '3.14.4';
         const EOS_BUILD_DATE = '2026-04-15';
-        const EOS_BUILD_TIME = '14:30'; // Full Sub-tasks Support!
+        const EOS_BUILD_TIME = '15:15'; // Full Sub-tasks Support!
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -3818,6 +3818,20 @@ Example:
                 console.log('Auto-pull response:', data);
                 
                 if (data.status === 'ok' && data.tasks) {
+                    // Deduplicate tasks from Google: if the same ID appears as both
+                    // needsAction and completed (happens when a task is un-completed),
+                    // keep only the needsAction version so un-completion syncs correctly.
+                    const taskDedup = new Map();
+                    data.tasks.forEach(t => {
+                        const existing = taskDedup.get(t.id);
+                        if (!existing) {
+                            taskDedup.set(t.id, t);
+                        } else if (t.status === 'needsAction' && existing.status === 'completed') {
+                            taskDedup.set(t.id, t); // prefer needsAction
+                        }
+                    });
+                    data.tasks = Array.from(taskDedup.values());
+                    
                     // Get existing task IDs to avoid duplicates
                     let existingTasks = yearData.quarters[currentQuarter].todos || [];
                     let existingById = new Map(existingTasks.filter(t => t.googleTaskId).map(t => [t.googleTaskId, t]));
@@ -3999,7 +4013,7 @@ Example:
                         }
                     });
                     
-                    if (newTasks.length > 0 || updatedCount > 0 || reassignedCount > 0 || deletedCount > 0) {
+                    if (newTasks.length > 0 || updatedCount > 0 || reassignedCount > 0 || deletedCount > 0 || completionsSynced > 0) {
                         // Add new tasks
                         newTasks.forEach(task => {
                             let taskTitle = task.title || '';
@@ -4029,6 +4043,7 @@ Example:
                         if (updatedCount > 0) msg.push(updatedCount + ' updated');
                         if (reassignedCount > 0) msg.push(reassignedCount + ' reassigned');
                         if (deletedCount > 0) msg.push(deletedCount + ' deleted');
+                        if (completionsSynced > 0) msg.push(completionsSynced + ' completion(s) synced');
                         showToast('Synced: ' + msg.join(', '), 'success');
                         updateSyncStatus('success', 'Synced - ' + msg.join(', '));
                     } else {
