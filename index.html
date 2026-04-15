@@ -3300,7 +3300,7 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.14.1';
+        const EOS_VERSION = '3.14.2';
         const EOS_BUILD_DATE = '2026-02-09';
         const EOS_BUILD_TIME = '10:45'; // Full Sub-tasks Support!
         
@@ -3421,6 +3421,9 @@ Example:
             
             // Populate owner filter dropdown
             populateOwnerFilter();
+            
+            // Auto-select the current quarter based on today's date
+            autoSelectCurrentQuarter();
             
             // Show default tab based on user preference
             const settings = getSettings();
@@ -5819,6 +5822,10 @@ Build Date: ${EOS_BUILD_DATE}
                             title="Task details/notes">
                         📝
                     </button>
+                    <button onclick="snoozeTask(${idx})" style="background: none; border: none; cursor: pointer; font-size: 0.9rem; padding: 2px 6px; flex-shrink: 0; color: ${t.snoozedUntil ? '#f59e0b' : '#9ca3af'};"
+                            title="${t.snoozedUntil ? 'Snoozed until ' + t.snoozedUntil + ' — click to unsnooze' : 'Snooze this task'}">
+                        ${t.snoozedUntil ? '🔕' : '🔔'}
+                    </button>
                     ${depth === 0 && t.googleTaskId ? `
                         <button onclick="addSubtask(${idx})" 
                                 style="background: none; border: none; cursor: pointer; font-size: 0.75rem; padding: 2px 6px; flex-shrink: 0; color: #10b981;"
@@ -6625,6 +6632,13 @@ Build Date: ${EOS_BUILD_DATE}
             // Add original indices to all todos
             let todosWithIndex = allTodos.map((t, idx) => ({ ...t, _originalIndex: idx }));
             
+            // Filter out snoozed tasks (hide until snoozedUntil date has passed)
+            const todayStr = new Date().toISOString().split('T')[0];
+            todosWithIndex = todosWithIndex.filter(t => {
+                if (!t.snoozedUntil) return true;
+                return t.snoozedUntil <= todayStr; // Show again on/after the snooze date
+            });
+
             // Apply owner filter - properly filter to show only selected owner's tasks
             if (ownerFilter !== 'all') {
                 todosWithIndex = todosWithIndex.filter(t => {
@@ -6664,6 +6678,7 @@ Build Date: ${EOS_BUILD_DATE}
             }
             
             renderTodos(todosWithIndex, true);
+            updateSnoozedBadge();
         }
         
         function archiveCheckedTodos() {
@@ -10083,20 +10098,26 @@ Return ONLY the JSON array:`;
             // Create start date
             let startDate = new Date(yearNum, month - 1, day);
             
-            // Find the first Saturday (end of week 1)
-            // Saturday is day 6 (Sunday=0, Monday=1, ... Saturday=6)
-            let firstSaturday = new Date(startDate);
-            const dayOfWeek = firstSaturday.getDay();
-            const daysUntilSaturday = (6 - dayOfWeek + 7) % 7;
-            // If quarter starts on Saturday, use that Saturday (not next week)
-            firstSaturday.setDate(firstSaturday.getDate() + (daysUntilSaturday === 0 ? 0 : daysUntilSaturday));
+            // Determine the meeting day of week from settings (default: Monday)
+            // meetingDay is stored as a day name string e.g. 'Monday'
+            const meetingDayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+            const meetingDayStr = settings.meetingDay || 'Monday';
+            const targetDow = meetingDayNames.indexOf(meetingDayStr) !== -1
+                ? meetingDayNames.indexOf(meetingDayStr)
+                : 1; // Default to Monday
             
-            // Generate 13 week-ending dates (Saturdays)
+            // Find the first occurrence of the meeting day on or after the quarter start
+            let firstMeetingDay = new Date(startDate);
+            const startDow = firstMeetingDay.getDay();
+            const daysUntilMeeting = (targetDow - startDow + 7) % 7;
+            firstMeetingDay.setDate(firstMeetingDay.getDate() + daysUntilMeeting);
+            
+            // Generate 13 weekly meeting dates
             const dates = [];
             for (let i = 0; i < 13; i++) {
-                const weekEnd = new Date(firstSaturday);
-                weekEnd.setDate(firstSaturday.getDate() + (i * 7));
-                dates.push(`${weekEnd.getMonth() + 1}/${weekEnd.getDate()}`);
+                const weekDate = new Date(firstMeetingDay);
+                weekDate.setDate(firstMeetingDay.getDate() + (i * 7));
+                dates.push(`${weekDate.getMonth() + 1}/${weekDate.getDate()}`);
             }
             
             return dates;
@@ -10117,6 +10138,132 @@ Return ONLY the JSON array:`;
                 `(${startStr} - ${quarterEnds[currentQuarter]}/${currentYear})`;
         }
         
+        // ==================== SNOOZE TASK ====================
+        function snoozeTask(idx) {
+            const todos = yearData.quarters[currentQuarter].todos;
+            const todo = todos[idx];
+            if (!todo) return;
+            if (todo.snoozedUntil) {
+                if (confirm('This task is snoozed until ' + todo.snoozedUntil + '.\n\nUnsnooze it now?')) {
+                    delete todo.snoozedUntil;
+                    autoSave();
+                    sortAndRenderTodos();
+                    showToast('Task unsnoozed', 'success');
+                }
+                return;
+            }
+            const today = new Date();
+            const defaultDate = new Date(today);
+            defaultDate.setDate(defaultDate.getDate() + 7);
+            const defaultStr = defaultDate.toISOString().split('T')[0];
+            const todayMin = today.toISOString().split('T')[0];
+            const existing = document.getElementById('snoozeModal');
+            if (existing) existing.remove();
+            const taskLabel = (todo.text || '').substring(0, 50) + ((todo.text || '').length > 50 ? '...' : '');
+            const modal = document.createElement('div');
+            modal.id = 'snoozeModal';
+            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);z-index:9999;display:flex;align-items:center;justify-content:center;';
+            modal.innerHTML = `
+                <div style="background:white;border-radius:12px;padding:24px;max-width:340px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+                    <h3 style="margin:0 0 8px;color:#1f2937;">Snooze Task</h3>
+                    <p style="margin:0 0 16px;font-size:0.85rem;color:#6b7280;">${taskLabel}</p>
+                    <p style="margin:0 0 8px;font-size:0.875rem;color:#374151;">Hide until:</p>
+                    <input type="date" id="snoozeDate" value="${defaultStr}" min="${todayMin}"
+                           style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:1rem;margin-bottom:12px;box-sizing:border-box;">
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+                        <button onclick="setSnoozeQuick(1)" style="padding:6px 12px;border:1px solid #d1d5db;border-radius:6px;background:#f9fafb;cursor:pointer;font-size:0.8rem;">Tomorrow</button>
+                        <button onclick="setSnoozeQuick(7)" style="padding:6px 12px;border:1px solid #d1d5db;border-radius:6px;background:#f9fafb;cursor:pointer;font-size:0.8rem;">1 week</button>
+                        <button onclick="setSnoozeQuick(30)" style="padding:6px 12px;border:1px solid #d1d5db;border-radius:6px;background:#f9fafb;cursor:pointer;font-size:0.8rem;">1 month</button>
+                        <button onclick="setSnoozeQuick(90)" style="padding:6px 12px;border:1px solid #d1d5db;border-radius:6px;background:#f9fafb;cursor:pointer;font-size:0.8rem;">3 months</button>
+                    </div>
+                    <div style="display:flex;gap:8px;justify-content:flex-end;">
+                        <button onclick="document.getElementById('snoozeModal').remove()" style="padding:8px 16px;border:1px solid #d1d5db;border-radius:6px;background:white;cursor:pointer;">Cancel</button>
+                        <button onclick="confirmSnooze(${idx})" style="padding:8px 16px;border:none;border-radius:6px;background:#f59e0b;color:white;font-weight:600;cursor:pointer;">Snooze</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+        }
+
+        function setSnoozeQuick(days) {
+            const d = new Date();
+            d.setDate(d.getDate() + days);
+            const el = document.getElementById('snoozeDate');
+            if (el) el.value = d.toISOString().split('T')[0];
+        }
+
+        function confirmSnooze(idx) {
+            const dateEl = document.getElementById('snoozeDate');
+            if (!dateEl || !dateEl.value) return;
+            const todos = yearData.quarters[currentQuarter].todos;
+            const todo = todos[idx];
+            if (!todo) return;
+            todo.snoozedUntil = dateEl.value;
+            document.getElementById('snoozeModal').remove();
+            autoSave();
+            sortAndRenderTodos();
+            showToast('Task snoozed until ' + dateEl.value, 'success');
+        }
+
+        function updateSnoozedBadge() {
+            const todos = yearData.quarters[currentQuarter] && yearData.quarters[currentQuarter].todos || [];
+            const todayStr = new Date().toISOString().split('T')[0];
+            const snoozedCount = todos.filter(t => t.snoozedUntil && t.snoozedUntil > todayStr).length;
+            let badge = document.getElementById('snoozedTasksBadge');
+            if (snoozedCount > 0) {
+                if (!badge) {
+                    const header = document.querySelector('#todosContainer') && document.querySelector('#todosContainer').closest('.section') && document.querySelector('#todosContainer').closest('.section').querySelector('h3');
+                    if (header) {
+                        badge = document.createElement('span');
+                        badge.id = 'snoozedTasksBadge';
+                        badge.style.cssText = 'display:inline-block;margin-left:8px;padding:2px 8px;background:#fef3c7;color:#92400e;border-radius:10px;font-size:0.75rem;font-weight:600;cursor:pointer;';
+                        badge.title = 'Click to see snoozed tasks';
+                        badge.onclick = showSnoozedTasks;
+                        header.appendChild(badge);
+                    }
+                }
+                if (badge) badge.textContent = snoozedCount + ' snoozed';
+            } else if (badge) {
+                badge.remove();
+            }
+        }
+
+        function showSnoozedTasks() {
+            const todos = yearData.quarters[currentQuarter] && yearData.quarters[currentQuarter].todos || [];
+            const todayStr = new Date().toISOString().split('T')[0];
+            const snoozed = todos.filter(t => t.snoozedUntil && t.snoozedUntil > todayStr);
+            if (snoozed.length === 0) { showToast('No snoozed tasks', 'info'); return; }
+            const list = snoozed.map(t => '- ' + (t.text || '').substring(0, 50) + ' (until ' + t.snoozedUntil + ')').join('\n');
+            alert('Snoozed tasks (' + snoozed.length + '):\n\n' + list + '\n\nTo unsnooze, click the bell icon on a task.');
+        }
+
+        // ==================== AUTO-SELECT CURRENT QUARTER ====================
+        function autoSelectCurrentQuarter() {
+            const settings = getSettings();
+            const yearNum = parseInt(currentYear) || new Date().getFullYear();
+            const today = new Date();
+            if (today.getFullYear() !== yearNum) return;
+            const quarterStarts = settings.quarterStarts || { Q1: '01/01', Q2: '04/01', Q3: '07/01', Q4: '10/01' };
+            const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
+            const quarterStartDates = quarters.map(function(q) {
+                const str = quarterStarts[q] || '01/01';
+                const parts = str.split('/').map(function(n) { return parseInt(n); });
+                return new Date(yearNum, parts[0] - 1, parts[1]);
+            });
+            let currentQ = 'Q1';
+            for (let i = 0; i < quarters.length; i++) {
+                if (today >= quarterStartDates[i]) currentQ = quarters[i];
+            }
+            currentQuarter = currentQ;
+            document.querySelectorAll('.quarter-subtab').forEach(function(btn, idx) {
+                btn.classList.toggle('active', quarters[idx] === currentQ);
+            });
+            const labelEl = document.getElementById('currentQuarterLabel');
+            if (labelEl) labelEl.textContent = currentQ;
+            updateWeekDates();
+        }
+
         // ==================== COPY ROCKS FROM PREVIOUS QUARTER ====================
         function getPreviousQuarter(q) {
             const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
@@ -10690,13 +10837,21 @@ Return ONLY the JSON array:`;
                                     existingByGId.originalDueDate = dueDate;
                                     updated = true;
                                 }
-                                // Sync completion status from Google Tasks
+                                // Sync completion status from Google Tasks (bidirectional)
                                 if (isCompletedInGoogle && !existingByGId.done) {
                                     existingByGId.done = true;
                                     existingByGId.syncedCompletedAt = new Date().toISOString();
-                                    totalCompletionsSynced++;  // Use global tracker
+                                    totalCompletionsSynced++;
                                     updated = true;
                                     console.log('  -> Marked as complete in EOS:', existingByGId.text);
+                                } else if (!isCompletedInGoogle && existingByGId.done) {
+                                    // Task was un-completed in Google Tasks - reflect that in EOS
+                                    existingByGId.done = false;
+                                    delete existingByGId.completedAt;
+                                    delete existingByGId.syncedCompletedAt;
+                                    totalCompletionsSynced++;
+                                    updated = true;
+                                    console.log('  -> Marked as incomplete in EOS (un-completed in Google):', existingByGId.text);
                                 }
                                 if (updated) totalImported++;
                                 continue;
