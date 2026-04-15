@@ -3929,6 +3929,25 @@ Example:
                         if (updated) updatedCount++;
                     });
                     
+                    // UNCOMPLETE CHECK: For any locally-done task whose googleTaskId
+                    // appears in the pull as needsAction (not completed), the user
+                    // unchecked it in Google Tasks — unmark it in EOS too.
+                    const pulledNeedsActionIds = new Set(
+                        data.tasks.filter(t => t.status !== 'completed').map(t => t.id)
+                    );
+                    existingTasks.forEach(task => {
+                        if (!task.done || !task.googleTaskId) return;
+                        if (ignoredIds.has(task.googleTaskId)) return;
+                        if (pulledNeedsActionIds.has(task.googleTaskId)) {
+                            task.done = false;
+                            delete task.completedAt;
+                            delete task.syncedCompletedAt;
+                            completionsSynced++;
+                            updatedCount++;
+                            console.log('Auto-pull: Task unchecked in Google, unmarking in EOS:', task.text);
+                        }
+                    });
+                    
                     // Filter for new tasks (exclude completed tasks and reassignments)
                     const newTasks = data.tasks.filter(task => {
                         if (task.status === 'completed') return false;
