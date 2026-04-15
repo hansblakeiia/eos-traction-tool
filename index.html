@@ -3302,7 +3302,7 @@ Example:
         // ==================== VERSION ====================
         const EOS_VERSION = '3.14.4';
         const EOS_BUILD_DATE = '2026-04-15';
-        const EOS_BUILD_TIME = '15:15'; // Full Sub-tasks Support!
+        const EOS_BUILD_TIME = '16:00'; // Full Sub-tasks Support!
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -3962,6 +3962,44 @@ Example:
                         }
                     });
                     
+                    // BATCH STATUS VERIFICATION: directly check Google for every
+                    // locally-completed task. Catches tasks unchecked in Google that the
+                    // bulk pull missed because they linger in completed history.
+                    const localDoneTasks = existingTasks.filter(function(t) {
+                        return t.done && t.googleTaskId && t.googleListId && !ignoredIds.has(t.googleTaskId);
+                    });
+                    if (localDoneTasks.length > 0) {
+                        var byList = {};
+                        localDoneTasks.forEach(function(t) {
+                            var lid = t.googleListId || '@default';
+                            if (!byList[lid]) byList[lid] = [];
+                            byList[lid].push(t);
+                        });
+                        for (var lid in byList) {
+                            try {
+                                var ids = byList[lid].map(function(t) { return t.googleTaskId; }).join(',');
+                                var checkUrl = member.webAppUrl + '?action=getTaskStatuses&listId=' + encodeURIComponent(lid) + '&taskIds=' + encodeURIComponent(ids) + '&secretKey=' + encodeURIComponent(member.webAppSecret || '');
+                                var checkResp = await fetch(checkUrl);
+                                var checkData = await checkResp.json();
+                                if (checkData.success && checkData.statuses) {
+                                    byList[lid].forEach(function(task) {
+                                        var gStatus = checkData.statuses[task.googleTaskId];
+                                        if (gStatus === 'needsAction') {
+                                            task.done = false;
+                                            delete task.completedAt;
+                                            delete task.syncedCompletedAt;
+                                            completionsSynced++;
+                                            updatedCount++;
+                                            console.log('Batch check: uncompleted in Google, unmarking in EOS:', task.text);
+                                        }
+                                    });
+                                }
+                            } catch(batchErr) {
+                                console.warn('Batch status check failed:', batchErr);
+                            }
+                        }
+                    }
+
                     // Filter for new tasks (exclude completed tasks and reassignments)
                     const newTasks = data.tasks.filter(task => {
                         if (task.status === 'completed') return false;
@@ -4868,143 +4906,62 @@ Example:
         
         // ==================== VERSION INFO ====================
         function showVersionInfo() {
-            const changelog = `
-📊 EOS Traction Tool v${EOS_VERSION}
-Build Date: ${EOS_BUILD_DATE}
+            const existing = document.getElementById('changelogModal');
+            if (existing) existing.remove();
+            const modal = document.createElement('div');
+            modal.id = 'changelogModal';
+            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+            const html = '<div style="background:white;border-radius:12px;padding:0;max-width:520px;width:93%;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'
+                + '<div style="padding:20px 24px 16px;border-bottom:1px solid #e5e7eb;flex-shrink:0;">'
+                + '<div style="display:flex;justify-content:space-between;align-items:center;">'
+                + '<div><h2 style="margin:0 0 4px;font-size:1.2rem;color:#1f2937;">EOS Traction Tool</h2>'
+                + '<div style="font-size:0.85rem;color:#6b7280;">v' + EOS_VERSION + '&nbsp;|&nbsp;Built ' + EOS_BUILD_DATE + ' ' + EOS_BUILD_TIME + '</div></div>'
+                + '<button onclick="document.getElementById(\'changelogModal\').remove()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#9ca3af;line-height:1;">&times;</button>'
+                + '</div></div>'
+                + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.14.4 &mdash; 2026-04-15 (Current)</div>'
+                + '<div style="font-size:0.82rem;color:#374151;line-height:1.65;">'
+                + '&bull; Fixed: tasks unchecked in Google Tasks now correctly uncheck in EOS on sync<br>'
+                + '&bull; Fixed: sync no longer shows &ldquo;All in sync&rdquo; when completions changed<br>'
+                + '&bull; Added batch status verification &mdash; EOS directly checks Google for every locally-completed task<br>'
+                + '&bull; Improved changelog display (this modal!)'
+                + '</div></div>'
 
-📝 Version 3.12.0 Changes (MAJOR UPDATE):
-🐛 CRITICAL FIXES:
-• Fixed scorecard measurables reverting to old versions
-• Fixed deleted/archived tasks reappearing after pull
-• Fixed data loss in loadOrSeedData() - now preserves user data properly
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#1d4ed8;font-size:0.9rem;margin-bottom:6px;">v3.14.2 &mdash; 2026-04-15</div>'
+                + '<div style="font-size:0.82rem;color:#374151;line-height:1.65;">'
+                + '&bull; Scorecard dates now show Monday meeting dates instead of Saturdays<br>'
+                + '&bull; Auto-selects the current quarter on load<br>'
+                + '&bull; Task snooze/hide feature with date picker and quick presets (Tomorrow, 1 week, 1 month, 3 months)<br>'
+                + '&bull; Snoozed tasks badge in To-Dos header, auto-resurfaces on wake date'
+                + '</div></div>'
 
-✨ NEW FEATURES:
-• Task Notes/Details - Full sync with Google Tasks
-  - Click 📝 icon to add notes to any task
-  - Notes sync bidirectionally (EOS ↔ Google Tasks)
-  - Changes to notes update automatically
-• Drag-drop tasks between Google Task lists
-  - Dropdown selector to move tasks to different lists
-  - Syncs move back to Google Tasks instantly
-• Emoji picker for meeting agenda items
-  - 30+ emojis to choose from
-  - Easy one-click emoji assignment
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#1d4ed8;font-size:0.9rem;margin-bottom:6px;">v3.14.1 &mdash; 2026-02-09</div>'
+                + '<div style="font-size:0.82rem;color:#374151;line-height:1.65;">'
+                + '&bull; Full sub-task support: create, expand/collapse, bidirectional sync<br>'
+                + '&bull; Visual hierarchy with indentation and parent validation'
+                + '</div></div>'
 
-🔧 IMPROVEMENTS:
-• Task notes field now syncs properly on pull/push
-• Starred task updates now include all fields
-• ignoredGoogleTaskIds persists correctly
-• Better data preservation during version updates
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#6b7280;font-size:0.9rem;margin-bottom:6px;">v3.12.0 and earlier</div>'
+                + '<div style="font-size:0.82rem;color:#374151;line-height:1.65;">'
+                + '&bull; Task notes/details sync with Google Tasks<br>'
+                + '&bull; Drag tasks between Google Task lists<br>'
+                + '&bull; Emoji picker for agenda items<br>'
+                + '&bull; Auto-sync on load/leave, real-time sync, Pomodoro timer, Eisenhower Matrix'
+                + '</div></div>'
 
-📝 Version 2.8.0 Changes:
-• 🚀 AUTO-SYNC ON LOAD/LEAVE!
-  - Opens EOS Tool → automatically pulls new tasks from Google Tasks
-  - Leaves/switches tabs → automatically pushes pending tasks
-• Sync status bar shows last sync time and pending changes
-• Toast notifications for sync events
-• "Sync Now" button for manual sync
-• Auto-sync can be toggled on/off
-
-📝 Version 2.7.1 Changes:
-• 🔄 REAL-TIME SYNC! All task changes now sync to Google Tasks:
-  - Due date changes → synced instantly
-  - Task text changes → synced instantly  
-  - Owner changes → task pushed to new owner's Google Tasks
-• Smart list matching - tasks go back to their original list
-• Cross-user task assignment with automatic sync
-
-📝 Version 2.7.0 Changes:
-• 🎰 AUTO-SYNC COMPLETION! Completed tasks now sync back to Google Tasks
-• Check a task in EOS → automatically marks complete in Google Tasks
-• Archive tasks → batch syncs all to Google Tasks
-• Works from Weekly Meeting AND Daily Plan views
-• Per-user sync through each member's Web App
-
-📝 Version 2.6.7 Changes:
-• Fixed "Load Lists" button - was sending wrong action name
-• Multi-user Google Tasks now works correctly
-
-📝 Version 2.6.6 Changes:
-• Removed "show password" button for better security
-• Secret keys now always display as ••••••••
-
-📝 Version 2.6.5 Changes:
-• Improved connection test - shows detailed error messages
-• Better Apps Script debugging - shows actual response
-• Fixed test connection error handling
-
-📝 Version 2.6.4 Changes:
-• Scorecard: Delete measurable rows (✕ button) 
-• Scorecard: Drag to reorder measurable rows
-• Weekly Meeting: Task text now wraps (no more truncation!)
-• Daily Plan: Inline task editing (no more popup)
-• Fixed various layout issues
-
-📝 Version 2.6.3 Changes:
-• Otter.ai smart import - finds most recent "Traction" meeting
-• AI fallback - extracts tasks from Abstract Summary if no Action Items
-• Updated Otter sheet columns: Title, Action Items, URL, Abstract Summary
-• Better error messages for Otter connection issues
-
-📝 Version 2.6.2 Changes:
-• Daily Habits show goal days per week (5/6/7) with Sunday reset
-• Daily Habits included in Print Daily Plan and Print Package
-• AI task extraction UI fixed - proper task/dropdown sizing
-• Print Package now matches individual tab print layouts
-• Meeting Agenda print consistency across all print modes
-
-📝 Version 2.6.1 Changes:
-• Daily Habits tracking - Set personal habits in Settings per user
-• Habits show weekly progress percentage
-• AI Meeting Parser - Paste any meeting notes, Gemini extracts tasks
-• Fixed Google Apps Script test response
-• Improved sync to prevent duplicate tasks
-
-📝 Version 2.6.0 Changes:
-• Smart Pull - Won't re-import deleted/archived tasks
-• Starred task sync from Google Tasks
-• Better task creation UI with dropdown (no more prompts!)
-• Rule of 3 swap/reorder when all slots are full
-• Sorting options for To-Dos (Starred, Due Date, Title, Owner)
-• Larger To-Dos section (less scrolling)
-
-📝 Version 2.5.0 Changes:
-• Settings preservation fix (won't lose API keys on update)
-• Double-click to edit tasks in Daily Plan repository
-• Add To-Do with category selection (+ To-Do button)
-• Promote local tasks to Weekly Meeting (⬆️ button)
-• Task text editing tracked for sync
-• Print shows Google Task list names
-• Print includes task repository summary
-
-📝 Version 2.4.0 Changes:
-• Due date sync - Changes push back to Google Tasks
-• "Both" tasks now push to ALL team members
-• Combined Google Apps Script (Tasks + Otter.ai)
-• Otter.ai filters for "Traction" meetings
-• Task action buttons (Archive/Uncheck/Delete)
-• Rock completion flow from Daily Plan
-• Combined print package (single PDF)
-• Version tracking added
-
-📝 Version 2.3.0 Changes:
-• Task duplication prevention
-• Persistent Pomodoro timers
-• Rock deletion from Quarterly tab
-• Rule of 3 completion tracking
-• Backup reminder improvements
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-💡 Tip: Keep this version number handy when 
-   reporting issues or requesting features!
-            `.trim();
-            
-            alert(changelog);
+                + '</div>'
+                + '<div style="padding:12px 24px;border-top:1px solid #e5e7eb;flex-shrink:0;text-align:right;">'
+                + '<button onclick="document.getElementById(\'changelogModal\').remove()" style="padding:8px 20px;background:#047857;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;">Close</button>'
+                + '</div></div>';
+            modal.innerHTML = html;
+            document.body.appendChild(modal);
+            modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
         }
-        
         function getVersionString() {
             return `v${EOS_VERSION} (${EOS_BUILD_DATE})`;
         }
