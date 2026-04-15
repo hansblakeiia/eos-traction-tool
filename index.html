@@ -3918,7 +3918,6 @@ Example:
                             updated = true;
                             console.log('Auto-pull: Marked complete in EOS:', existing.text);
                         } else if (task.status !== 'completed' && existing.done) {
-                            // Task was un-completed in Google Tasks - reflect that in EOS
                             existing.done = false;
                             delete existing.completedAt;
                             delete existing.syncedCompletedAt;
