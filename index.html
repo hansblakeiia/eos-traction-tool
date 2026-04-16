@@ -2636,10 +2636,13 @@
                     <div style="margin-bottom: 16px;">
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
                             <h4 style="color: #1e40af; margin: 0; font-size: 0.95rem;">Team Members</h4>
-                            <span id="cloudSyncStatus" style="font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; background: #f3f4f6; color: #6b7280;">Local only</span>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span id="cloudSyncStatus" style="font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; background: #f3f4f6; color: #6b7280;">Local only</span>
+                                <button onclick="pullCloudSettingsManually()" style="font-size: 0.75rem; padding: 3px 10px; border-radius: 12px; background: #dbeafe; color: #1d4ed8; border: 1px solid #93c5fd; cursor: pointer;" title="Pull latest team settings from shared sheet">↓ Pull from Cloud</button>
+                            </div>
                         </div>
                         <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 10px;">
-                            Team settings sync to cloud automatically. All team members share the same configuration.
+                            Team settings sync to cloud automatically. All team members share the same configuration. Use "Pull from Cloud" if a teammate's URL is missing.
                         </p>
                         <div id="teamMembersList"></div>
                         <button class="add-btn" onclick="addTeamMember()" style="margin-top: 10px;">+ Add Team Member</button>
@@ -3315,9 +3318,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.15.0';
+        const EOS_VERSION = '3.15.1';
         const EOS_BUILD_DATE = '2026-04-15';
-        const EOS_BUILD_TIME = '23:30'; // Full Sub-tasks Support!
+        const EOS_BUILD_TIME = '23:45'; // Full Sub-tasks Support!
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -3539,6 +3542,19 @@ Example:
                 console.error('Cloud Settings: Failed to load:', error);
                 updateCloudSyncStatus('error');
                 return false;
+            }
+        }
+        
+        async function pullCloudSettingsManually() {
+            showToast('Pulling team settings from cloud...', 'info');
+            const loaded = await loadTeamSettingsFromCloud();
+            if (loaded) {
+                // Re-render the settings UI so new URLs appear immediately
+                const settings = getSettings();
+                renderTeamMembersList(settings.teamMembers);
+                showToast('Team settings updated from cloud', 'success');
+            } else {
+                showToast('Could not pull from cloud. Check your Web App URL in Settings.', 'error');
             }
         }
         
