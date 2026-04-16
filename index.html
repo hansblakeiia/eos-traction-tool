@@ -3302,7 +3302,7 @@ Example:
         // ==================== VERSION ====================
         const EOS_VERSION = '3.14.7';
         const EOS_BUILD_DATE = '2026-04-15';
-        const EOS_BUILD_TIME = '20:00'; // Full Sub-tasks Support!
+        const EOS_BUILD_TIME = '21:00'; // Full Sub-tasks Support!
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -4437,6 +4437,48 @@ Example:
                         }
                     }
                     
+                    // ── BATCH STATUS CHECK ───────────────────────────────────
+                    // Directly ask Google for the current status of every locally-
+                    // done task. This is the only reliable way to detect un-completions
+                    // because Google's bulk pull may still return a task as 'completed'
+                    // in history even after it's been unchecked, or may not return it
+                    // at all. Tasks.Tasks.get() returns ground truth.
+                    const ignoredIdSet = new Set(settings.ignoredGoogleTaskIds || []);
+                    const doneTasks = existingTasks.filter(t =>
+                        t.done && t.googleTaskId && !ignoredIdSet.has(t.googleTaskId)
+                    );
+                    console.log('Batch check: verifying', doneTasks.length, 'locally-done task(s) against Google');
+                    if (doneTasks.length > 0) {
+                        try {
+                            const taskDataArr = doneTasks.map(t => ({
+                                taskId: t.googleTaskId,
+                                listId: t.googleListId || '@default'
+                            }));
+                            const checkUrl = member.webAppUrl
+                                + '?action=getTaskStatuses'
+                                + '&taskData=' + encodeURIComponent(JSON.stringify(taskDataArr))
+                                + '&secretKey=' + encodeURIComponent(member.webAppSecret || '');
+                            const checkResp = await fetch(checkUrl);
+                            const checkData = await checkResp.json();
+                            console.log('Batch status response:', checkData);
+                            if (checkData.success && checkData.statuses) {
+                                doneTasks.forEach(task => {
+                                    const gStatus = checkData.statuses[task.googleTaskId];
+                                    console.log('  Task:', task.text?.substring(0, 40), '| EOS: done | Google:', gStatus);
+                                    if (gStatus === 'needsAction') {
+                                        task.done = false;
+                                        delete task.completedAt;
+                                        delete task.syncedCompletedAt;
+                                        pullResults.completions++;
+                                        console.log('  → Unmarked in EOS:', task.text);
+                                    }
+                                });
+                            }
+                        } catch (batchErr) {
+                            console.warn('Batch status check failed:', batchErr);
+                        }
+                    }
+
                     yearData.quarters[currentQuarter].todos = existingTasks;
                 }
                 
@@ -4639,6 +4681,42 @@ Example:
                             }
                         }
                         
+                        // ── BATCH STATUS CHECK ───────────────────────────────
+                        // Directly verify every locally-done task against Google.
+                        const ignoredIdSet = new Set(settings.ignoredGoogleTaskIds || []);
+                        const doneTasks = existingTasks.filter(t =>
+                            t.done && t.googleTaskId && !ignoredIdSet.has(t.googleTaskId)
+                            && (t.owner === member.initials || t.owner === 'Both' || t.owner === 'HB/AB')
+                        );
+                        if (doneTasks.length > 0) {
+                            try {
+                                const taskDataArr = doneTasks.map(t => ({
+                                    taskId: t.googleTaskId,
+                                    listId: t.googleListId || '@default'
+                                }));
+                                const checkUrl = member.webAppUrl
+                                    + '?action=getTaskStatuses'
+                                    + '&taskData=' + encodeURIComponent(JSON.stringify(taskDataArr))
+                                    + '&secretKey=' + encodeURIComponent(member.webAppSecret || '');
+                                const checkResp = await fetch(checkUrl);
+                                const checkData = await checkResp.json();
+                                if (checkData.success && checkData.statuses) {
+                                    doneTasks.forEach(task => {
+                                        const gStatus = checkData.statuses[task.googleTaskId];
+                                        if (gStatus === 'needsAction') {
+                                            task.done = false;
+                                            delete task.completedAt;
+                                            delete task.syncedCompletedAt;
+                                            totalResults.pulled++;
+                                            console.log('Team Sync batch check: unmarked in EOS:', task.text);
+                                        }
+                                    });
+                                }
+                            } catch (batchErr) {
+                                console.warn('Team Sync batch check failed:', batchErr);
+                            }
+                        }
+
                         yearData.quarters[currentQuarter].todos = existingTasks;
                     }
                     
@@ -10868,12 +10946,7 @@ Return ONLY the JSON array:`;
             }
             
             // ── BATCH STATUS CHECK ───────────────────────────────────────────
-            // For every locally-done task, directly ask Google its current status.
-            // This catches tasks uncompleted in Google that the bulk pull missed —
-            // either because Google's hidden-state timing kept them out of the active
-            // fetch, or because the completed-history fetch still returned them as
-            // 'completed' even though they were unchecked.
-            // This runs once per sync, grouped by list to minimise API calls.
+            // Directly verify every locally-done task against Google.
             for (const member of membersToCheck) {
                 if (!member.webAppUrl) continue;
                 try {
@@ -10881,10 +10954,8 @@ Return ONLY the JSON array:`;
                     const ignoredIdSet = new Set(settings.ignoredGoogleTaskIds || []);
                     const doneTasks = allTodos.filter(t =>
                         t.done && t.googleTaskId && !ignoredIdSet.has(t.googleTaskId)
-                        && (t.owner === member.initials || t.owner === 'Both' || t.owner === 'HB/AB')
                     );
                     if (doneTasks.length === 0) continue;
-
                     const taskDataArr = doneTasks.map(t => ({
                         taskId: t.googleTaskId,
                         listId: t.googleListId || '@default'
@@ -10895,23 +10966,20 @@ Return ONLY the JSON array:`;
                         + '&secretKey=' + encodeURIComponent(member.webAppSecret || '');
                     const checkResp = await fetch(checkUrl);
                     const checkData = await checkResp.json();
-                    console.log('Batch status check response:', checkData);
-
                     if (checkData.success && checkData.statuses) {
                         doneTasks.forEach(task => {
                             const gStatus = checkData.statuses[task.googleTaskId];
-                            console.log('  Task:', task.text?.substring(0, 40), '| EOS: done | Google:', gStatus);
                             if (gStatus === 'needsAction') {
                                 task.done = false;
                                 delete task.completedAt;
                                 delete task.syncedCompletedAt;
                                 totalCompletionsSynced++;
-                                console.log('  → Unmarked in EOS (uncompleted in Google):', task.text);
+                                console.log('pullTasksFromGoogle batch check: unmarked in EOS:', task.text);
                             }
                         });
                     }
                 } catch (batchErr) {
-                    console.warn('Batch status check failed for', member.initials, batchErr);
+                    console.warn('Batch status check failed:', batchErr);
                 }
             }
 
