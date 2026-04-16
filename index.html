@@ -3300,9 +3300,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.14.4';
+        const EOS_VERSION = '3.14.5';
         const EOS_BUILD_DATE = '2026-04-15';
-        const EOS_BUILD_TIME = '16:00'; // Full Sub-tasks Support!
+        const EOS_BUILD_TIME = '17:30'; // Full Sub-tasks Support!
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -3814,90 +3814,139 @@ Example:
                 const response = await fetch(url);
                 const data = await response.json();
                 
-                // Log for debugging
                 console.log('Auto-pull response:', data);
                 
                 if (data.status === 'ok' && data.tasks) {
-                    // Deduplicate tasks from Google: if the same ID appears as both
-                    // needsAction and completed (happens when a task is un-completed),
-                    // keep only the needsAction version so un-completion syncs correctly.
+                    // ── STEP 1: Deduplicate pulled tasks ──────────────────────────────
+                    // If same ID appears as both needsAction and completed (can happen
+                    // when a task is un-completed), prefer needsAction.
                     const taskDedup = new Map();
                     data.tasks.forEach(t => {
-                        const existing = taskDedup.get(t.id);
-                        if (!existing) {
+                        const ex = taskDedup.get(t.id);
+                        if (!ex) {
                             taskDedup.set(t.id, t);
-                        } else if (t.status === 'needsAction' && existing.status === 'completed') {
-                            taskDedup.set(t.id, t); // prefer needsAction
+                        } else if (t.status === 'needsAction' && ex.status === 'completed') {
+                            taskDedup.set(t.id, t);
                         }
                     });
                     data.tasks = Array.from(taskDedup.values());
                     
-                    // Get existing task IDs to avoid duplicates
                     let existingTasks = yearData.quarters[currentQuarter].todos || [];
-                    let existingById = new Map(existingTasks.filter(t => t.googleTaskId).map(t => [t.googleTaskId, t]));
-                    const existingTexts = new Set(existingTasks.map(t => t.text?.toLowerCase().trim()));
                     const ignoredIds = new Set(settings.ignoredGoogleTaskIds || []);
-                    
-                    // DETECT DELETED TASKS - Find tasks with googleTaskIds that no longer exist in Google Tasks
-                    const pulledTaskIds = new Set(data.tasks.map(t => t.id));
+                    let completionsSynced = 0;
+                    let updatedCount = 0;
                     let deletedCount = 0;
                     
+                    // ── STEP 2: BATCH STATUS CHECK (runs FIRST before delete detection) ──
+                    // For every locally-done task, directly ask Google its current status.
+                    // This is the most reliable way to detect un-completions because:
+                    // - Google's bulk pull may not include recently-uncompleted tasks
+                    // - The completed history API lags and may still return old status
+                    // Tasks.Tasks.get() returns ground truth regardless of hidden/history state.
+                    updateSyncStatus('syncing', 'Verifying task statuses...');
+                    const localDoneTasks = existingTasks.filter(t =>
+                        t.done && t.googleTaskId && !ignoredIds.has(t.googleTaskId)
+                    );
+                    console.log('Batch check: verifying', localDoneTasks.length, 'locally-completed task(s) against Google');
+                    
+                    if (localDoneTasks.length > 0) {
+                        // Build array of {taskId, listId} for the batch call
+                        const taskDataArr = localDoneTasks.map(t => ({
+                            taskId: t.googleTaskId,
+                            listId: t.googleListId || '@default'
+                        }));
+                        try {
+                            const checkUrl = member.webAppUrl
+                                + '?action=getTaskStatuses'
+                                + '&taskData=' + encodeURIComponent(JSON.stringify(taskDataArr))
+                                + '&secretKey=' + encodeURIComponent(member.webAppSecret || '');
+                            const checkResp = await fetch(checkUrl);
+                            const checkData = await checkResp.json();
+                            console.log('Batch status response:', checkData);
+                            
+                            if (checkData.success && checkData.statuses) {
+                                localDoneTasks.forEach(task => {
+                                    const gStatus = checkData.statuses[task.googleTaskId];
+                                    console.log('  Task:', task.text?.substring(0,40), '| Local: done | Google:', gStatus);
+                                    if (gStatus === 'needsAction') {
+                                        // Google says active → unmark in EOS
+                                        task.done = false;
+                                        delete task.completedAt;
+                                        delete task.syncedCompletedAt;
+                                        completionsSynced++;
+                                        updatedCount++;
+                                        console.log('  → Unmarked as complete in EOS:', task.text);
+                                    } else if (gStatus === 'notFound') {
+                                        // Task doesn't exist in Google at that listId — mark for deletion
+                                        task._pendingDelete = true;
+                                        console.log('  → Task not found in Google, will remove from EOS:', task.text);
+                                    }
+                                });
+                            } else {
+                                console.warn('Batch status check returned no statuses:', checkData);
+                            }
+                        } catch(batchErr) {
+                            console.error('Batch status check failed:', batchErr);
+                            // Non-fatal - continue with regular sync
+                        }
+                    }
+                    
+                    // ── STEP 3: DELETE DETECTION ──────────────────────────────────────
+                    // Remove tasks that no longer exist in Google.
+                    // IMPORTANT: Skip locally-done tasks here — they were already handled
+                    // by batch check above. Only delete tasks flagged by batch check
+                    // (_pendingDelete) or tasks that were never done and are missing.
+                    const pulledTaskIds = new Set(data.tasks.map(t => t.id));
                     console.log('Auto-pull: Found', existingTasks.length, 'local tasks, pulled', pulledTaskIds.size, 'from Google Tasks');
                     
                     existingTasks = existingTasks.filter(task => {
-                        // Keep tasks that don't have Google Task IDs or are ignored
                         if (!task.googleTaskId && !task.bothTaskIds) return true;
                         
-                        // Check primary googleTaskId
+                        // Tasks flagged by batch check as truly not found → delete
+                        if (task._pendingDelete) {
+                            delete task._pendingDelete;
+                            deletedCount++;
+                            addLogEntry(`Deleted from Google Tasks: ${task.text?.substring(0, 25)}...`);
+                            return false;
+                        }
+                        
+                        // Locally-done tasks: SKIP delete detection — batch check above
+                        // already determined their fate. If they weren't flagged, keep them.
+                        if (task.done && task.googleTaskId) return true;
+                        
+                        // Active (not done) tasks: remove if ID not in pull
                         if (task.googleTaskId && !ignoredIds.has(task.googleTaskId)) {
                             if (!pulledTaskIds.has(task.googleTaskId)) {
-                                console.log('Task deleted in Google Tasks, removing from EOS:', task.text, '(ID:', task.googleTaskId + ')');
+                                console.log('Task deleted in Google Tasks, removing from EOS:', task.text);
                                 addLogEntry(`Deleted from Google Tasks (auto-synced): ${task.text?.substring(0, 25)}...`);
                                 deletedCount++;
-                                return false;  // Remove this task
+                                return false;
                             }
                         }
                         
-                        // Check bothTaskIds for Both tasks
+                        // Both tasks
                         if (task.bothTaskIds && Object.keys(task.bothTaskIds).length > 0) {
-                            // Check if ANY of the task IDs in bothTaskIds are still in Google Tasks
-                            let hasAnyTaskInGoogle = false;
-                            for (const [member, taskInfo] of Object.entries(task.bothTaskIds)) {
+                            let hasAny = false;
+                            for (const [m, taskInfo] of Object.entries(task.bothTaskIds)) {
                                 if (taskInfo.googleTaskId && pulledTaskIds.has(taskInfo.googleTaskId)) {
-                                    hasAnyTaskInGoogle = true;
-                                    break;
+                                    hasAny = true; break;
                                 }
                             }
-                            
-                            // If NONE of the Both task IDs are in Google Tasks, the task was fully deleted
-                            if (!hasAnyTaskInGoogle && !ignoredIds.has(task.googleTaskId)) {
-                                console.log('Both task fully deleted from Google Tasks, removing from EOS:', task.text);
-                                addLogEntry(`Both task deleted from Google Tasks (all instances): ${task.text?.substring(0, 25)}...`);
+                            if (!hasAny && !ignoredIds.has(task.googleTaskId)) {
                                 deletedCount++;
-                                return false;  // Remove this task
+                                addLogEntry(`Both task deleted from Google Tasks: ${task.text?.substring(0, 25)}...`);
+                                return false;
                             }
                         }
                         
-                        return true;  // Keep this task
+                        return true;
                     });
                     
-                    // Update the map with the filtered tasks
-                    existingById = new Map(existingTasks.filter(t => t.googleTaskId).map(t => [t.googleTaskId, t]));
+                    // ── STEP 4: UPDATE EXISTING TASKS ────────────────────────────────
+                    const existingById = new Map(existingTasks.filter(t => t.googleTaskId).map(t => [t.googleTaskId, t]));
                     
-                    // Save if we deleted any tasks
-                    if (deletedCount > 0) {
-                        yearData.quarters[currentQuarter].todos = existingTasks;
-                        autoSave();
-                    }
-                    
-                    // Track changes
-                    let completionsSynced = 0;
-                    let updatedCount = 0;
-                    
-                    // Sync changes for existing tasks
                     data.tasks.forEach(task => {
                         if (ignoredIds.has(task.id)) return;
-                        
                         const existing = existingById.get(task.id);
                         if (!existing) return;
                         
@@ -3905,12 +3954,10 @@ Example:
                         
                         // Sync title
                         let taskTitle = task.title || '';
-                        if (taskTitle.startsWith('\u2B50 ')) taskTitle = taskTitle.substring(2).trim();
-                        else if (taskTitle.startsWith('\u2B50')) taskTitle = taskTitle.substring(1).trim();
-                        
+                        if (taskTitle.startsWith('⭐ ')) taskTitle = taskTitle.substring(2).trim();
+                        else if (taskTitle.startsWith('⭐')) taskTitle = taskTitle.substring(1).trim();
                         if (existing.text !== taskTitle && taskTitle) {
-                            existing.text = taskTitle;
-                            updated = true;
+                            existing.text = taskTitle; updated = true;
                         }
                         
                         // Sync due date
@@ -3920,144 +3967,69 @@ Example:
                             if (!isNaN(d.getTime())) dueDate = d.toISOString().split('T')[0];
                         }
                         if (existing.dueDate !== dueDate && dueDate) {
-                            existing.dueDate = dueDate;
-                            updated = true;
+                            existing.dueDate = dueDate; updated = true;
                         }
                         
-                        // Sync completion (bidirectional)
+                        // Sync completion — Google → EOS (only mark complete here;
+                        // un-completion is handled by batch check in Step 2)
                         if (task.status === 'completed' && !existing.done) {
                             existing.done = true;
                             existing.syncedCompletedAt = new Date().toISOString();
                             completionsSynced++;
                             updated = true;
-                            console.log('Auto-pull: Marked complete in EOS:', existing.text);
-                        } else if (task.status !== 'completed' && existing.done) {
-                            existing.done = false;
-                            delete existing.completedAt;
-                            delete existing.syncedCompletedAt;
-                            completionsSynced++;
-                            updated = true;
-                            console.log('Auto-pull: Marked incomplete in EOS (un-completed in Google):', existing.text);
+                            console.log('Sync: Marked complete in EOS:', existing.text);
                         }
                         
                         if (updated) updatedCount++;
                     });
                     
-                    // UNCOMPLETE CHECK: For any locally-done task whose googleTaskId
-                    // appears in the pull as needsAction (not completed), the user
-                    // unchecked it in Google Tasks — unmark it in EOS too.
-                    const pulledNeedsActionIds = new Set(
-                        data.tasks.filter(t => t.status !== 'completed').map(t => t.id)
-                    );
-                    existingTasks.forEach(task => {
-                        if (!task.done || !task.googleTaskId) return;
-                        if (ignoredIds.has(task.googleTaskId)) return;
-                        if (pulledNeedsActionIds.has(task.googleTaskId)) {
-                            task.done = false;
-                            delete task.completedAt;
-                            delete task.syncedCompletedAt;
-                            completionsSynced++;
-                            updatedCount++;
-                            console.log('Auto-pull: Task unchecked in Google, unmarking in EOS:', task.text);
-                        }
-                    });
+                    // ── STEP 5: IMPORT NEW TASKS ─────────────────────────────────────
+                    const existingTexts = new Set(existingTasks.map(t => t.text?.toLowerCase().trim()));
                     
-                    // BATCH STATUS VERIFICATION: directly check Google for every
-                    // locally-completed task. Catches tasks unchecked in Google that the
-                    // bulk pull missed because they linger in completed history.
-                    const localDoneTasks = existingTasks.filter(function(t) {
-                        return t.done && t.googleTaskId && t.googleListId && !ignoredIds.has(t.googleTaskId);
-                    });
-                    if (localDoneTasks.length > 0) {
-                        var byList = {};
-                        localDoneTasks.forEach(function(t) {
-                            var lid = t.googleListId || '@default';
-                            if (!byList[lid]) byList[lid] = [];
-                            byList[lid].push(t);
-                        });
-                        for (var lid in byList) {
-                            try {
-                                var ids = byList[lid].map(function(t) { return t.googleTaskId; }).join(',');
-                                var checkUrl = member.webAppUrl + '?action=getTaskStatuses&listId=' + encodeURIComponent(lid) + '&taskIds=' + encodeURIComponent(ids) + '&secretKey=' + encodeURIComponent(member.webAppSecret || '');
-                                var checkResp = await fetch(checkUrl);
-                                var checkData = await checkResp.json();
-                                if (checkData.success && checkData.statuses) {
-                                    byList[lid].forEach(function(task) {
-                                        var gStatus = checkData.statuses[task.googleTaskId];
-                                        if (gStatus === 'needsAction') {
-                                            task.done = false;
-                                            delete task.completedAt;
-                                            delete task.syncedCompletedAt;
-                                            completionsSynced++;
-                                            updatedCount++;
-                                            console.log('Batch check: uncompleted in Google, unmarking in EOS:', task.text);
-                                        }
-                                    });
-                                }
-                            } catch(batchErr) {
-                                console.warn('Batch status check failed:', batchErr);
-                            }
-                        }
-                    }
-
-                    // Filter for new tasks (exclude completed tasks and reassignments)
                     const newTasks = data.tasks.filter(task => {
                         if (task.status === 'completed') return false;
-                        if (existingById.has(task.id)) return false;  // Already have this ID
+                        if (existingById.has(task.id)) return false;
                         if (ignoredIds.has(task.id)) return false;
-                        
                         const taskText = task.title?.toLowerCase().trim();
-                        const hasTextMatch = existingTexts.has(taskText);
-                        
-                        // If text matches, it might be a reassignment - skip it (let reassignment logic handle it)
-                        if (hasTextMatch) {
-                            return false;  // Will be handled by reassignment detection
-                        }
-                        
-                        return true;  // It's truly new
+                        if (existingTexts.has(taskText)) return false;
+                        return true;
                     });
                     
-                    // Check for reassigned tasks (text exists but different owner)
+                    // Reassignment detection
                     let reassignedCount = 0;
                     data.tasks.forEach(task => {
                         if (task.status === 'completed') return;
                         if (existingById.has(task.id)) return;
                         if (ignoredIds.has(task.id)) return;
-                        
                         let taskTitle = task.title || '';
-                        if (taskTitle.startsWith('\u2B50 ')) taskTitle = taskTitle.substring(2).trim();
-                        else if (taskTitle.startsWith('\u2B50')) taskTitle = taskTitle.substring(1).trim();
-                        
+                        if (taskTitle.startsWith('⭐ ')) taskTitle = taskTitle.substring(2).trim();
+                        else if (taskTitle.startsWith('⭐')) taskTitle = taskTitle.substring(1).trim();
                         if (existingTexts.has(taskTitle.toLowerCase().trim())) {
-                            const existingByText = existingTasks.find(t => 
+                            const existingByText = existingTasks.find(t =>
                                 t.text?.toLowerCase().trim() === taskTitle.toLowerCase().trim()
                             );
                             if (existingByText) {
-                                // Check if task has been reassigned to current user
                                 const isDifferentOwner = existingByText.owner !== currentUser;
                                 const hasReassignmentPending = existingByText.reassignmentPending === true;
-                                
                                 if (isDifferentOwner || hasReassignmentPending) {
-                                    console.log('Auto-pull: Reassigned task detected - "' + taskTitle + '" owner was ' + existingByText.owner + ', now ' + currentUser);
                                     existingByText.owner = currentUser;
-                                    existingByText.originalOwner = currentUser;  // Update original owner too
-                                    existingByText.googleTaskId = task.id;  // Update to new task ID
+                                    existingByText.originalOwner = currentUser;
+                                    existingByText.googleTaskId = task.id;
                                     existingByText.googleListId = task.listId;
                                     existingByText.googleListName = task.listName;
-                                    existingByText.reassignmentPending = false;  // Clear the flag
+                                    existingByText.reassignmentPending = false;
                                     reassignedCount++;
                                 }
                             }
                         }
                     });
                     
+                    // ── STEP 6: SAVE & REPORT ────────────────────────────────────────
                     if (newTasks.length > 0 || updatedCount > 0 || reassignedCount > 0 || deletedCount > 0 || completionsSynced > 0) {
-                        // Add new tasks
                         newTasks.forEach(task => {
                             let taskTitle = task.title || '';
-                            if (taskTitle.startsWith('\u2B50 ')) taskTitle = taskTitle.substring(2).trim();
-                            else if (taskTitle.startsWith('\u2B50')) taskTitle = taskTitle.substring(1).trim();
-                            
+                            if (taskTitle.startsWith('⭐ ')) taskTitle = taskTitle.substring(2).trim();
+                            else if (taskTitle.startsWith('⭐')) taskTitle = taskTitle.substring(1).trim();
                             existingTasks.push({
                                 text: taskTitle,
                                 owner: currentUser,
@@ -4074,14 +4046,14 @@ Example:
                         
                         yearData.quarters[currentQuarter].todos = existingTasks;
                         autoSave();
-                        sortAndRenderTodos();  // Respect current filter
+                        sortAndRenderTodos();
                         
-                        let msg = [];
+                        const msg = [];
                         if (newTasks.length > 0) msg.push(newTasks.length + ' new');
+                        if (completionsSynced > 0) msg.push(completionsSynced + ' completion(s) synced');
                         if (updatedCount > 0) msg.push(updatedCount + ' updated');
                         if (reassignedCount > 0) msg.push(reassignedCount + ' reassigned');
                         if (deletedCount > 0) msg.push(deletedCount + ' deleted');
-                        if (completionsSynced > 0) msg.push(completionsSynced + ' completion(s) synced');
                         showToast('Synced: ' + msg.join(', '), 'success');
                         updateSyncStatus('success', 'Synced - ' + msg.join(', '));
                     } else {
@@ -4099,7 +4071,6 @@ Example:
             
             syncState.isSyncing = false;
             
-            // Reset status after 5 seconds
             setTimeout(() => {
                 if (!syncState.isSyncing) {
                     const lastSync = syncState.lastPull ? formatTimeAgo(syncState.lastPull) : 'never';
@@ -4107,7 +4078,6 @@ Example:
                 }
             }, 5000);
         }
-        
         // Push a single task immediately to Google Tasks
         async function pushSingleTask(task, member, listId) {
             try {
