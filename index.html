@@ -3315,9 +3315,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.14.9';
+        const EOS_VERSION = '3.15.0';
         const EOS_BUILD_DATE = '2026-04-15';
-        const EOS_BUILD_TIME = '23:00'; // Full Sub-tasks Support!
+        const EOS_BUILD_TIME = '23:30'; // Full Sub-tasks Support!
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -5110,12 +5110,19 @@ Example:
                 };
             }
             
-            // Copy rocks from previous quarter if this quarter is empty
-            if (yearData.quarters[q].rocks.length === 0) {
+            // Copy rocks from previous quarter only if this quarter has never
+            // had rocks initialized. Uses a 'rocksInitialized' flag to prevent
+            // re-copying every time the user manually clears rocks or switches tabs.
+            if (yearData.quarters[q].rocks.length === 0 && !yearData.quarters[q].rocksInitialized) {
                 const copied = copyRocksFromPreviousQuarter();
                 if (copied) {
+                    yearData.quarters[q].rocksInitialized = true;
                     autoSave();
                 }
+            } else if (yearData.quarters[q].rocks.length > 0 && !yearData.quarters[q].rocksInitialized) {
+                // Quarter already has rocks - mark as initialized so we never auto-copy
+                yearData.quarters[q].rocksInitialized = true;
+                autoSave();
             }
             
             // Update week dates based on quarter
@@ -5294,6 +5301,7 @@ Example:
         
         function addRock() {
             yearData.quarters[currentQuarter].rocks.push({ text: '', owner: 'HB', status: '' });
+            yearData.quarters[currentQuarter].rocksInitialized = true;
             renderRocks(yearData.quarters[currentQuarter].rocks);
             autoSave();
         }
@@ -10375,6 +10383,8 @@ Return ONLY the JSON array:`;
             const labelEl = document.getElementById('currentQuarterLabel');
             if (labelEl) labelEl.textContent = currentQ;
             updateWeekDates();
+            // Re-render so Quarterly page shows the correct quarter's data
+            if (typeof renderQuarter === 'function') renderQuarter();
         }
 
         // ==================== COPY ROCKS FROM PREVIOUS QUARTER ====================
