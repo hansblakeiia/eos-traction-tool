@@ -2733,6 +2733,21 @@
                         </select>
                     </div>
                     
+                    <!-- Auto-Sync Interval -->
+                    <div style="margin-bottom: 16px; padding-top: 16px; border-top: 1px solid #a7f3d0;">
+                        <h4 style="color: #047857; margin-bottom: 8px; font-size: 0.95rem;">⏱ Auto-Sync Interval</h4>
+                        <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 10px;">How often to automatically sync with Google Tasks while the app is open</p>
+                        <select id="syncIntervalSetting" style="font-size: 0.85rem; width: 100%;" onchange="saveSyncIntervalSetting(this.value)">
+                            <option value="0">Off (manual sync only)</option>
+                            <option value="1">Every 1 minute</option>
+                            <option value="2">Every 2 minutes</option>
+                            <option value="5" selected>Every 5 minutes</option>
+                            <option value="10">Every 10 minutes</option>
+                            <option value="30">Every 30 minutes</option>
+                        </select>
+                        <p id="syncIntervalStatus" style="font-size: 0.75rem; color: #6b7280; margin-top: 6px;"></p>
+                    </div>
+
                     <!-- Quarter Start Dates -->
                     <div style="padding-top: 16px; border-top: 1px solid #a7f3d0;">
                         <h4 style="color: #047857; margin-bottom: 8px; font-size: 0.95rem;">📠 Quarter Start Dates</h4>
@@ -3300,9 +3315,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.14.7';
+        const EOS_VERSION = '3.14.9';
         const EOS_BUILD_DATE = '2026-04-15';
-        const EOS_BUILD_TIME = '21:00'; // Full Sub-tasks Support!
+        const EOS_BUILD_TIME = '23:00'; // Full Sub-tasks Support!
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -3455,7 +3470,9 @@ Example:
             lastPush: null,
             pendingChanges: 0,
             isSyncing: false,
-            autoSyncEnabled: true
+            autoSyncEnabled: true,
+            intervalTimer: null,
+            intervalMinutes: 5
         };
         
         // ==================== SHARED SETTINGS (CLOUD SYNC) ====================
@@ -3622,6 +3639,20 @@ Example:
             
             const checkbox = document.getElementById('autoSyncEnabled');
             if (checkbox) checkbox.checked = syncState.autoSyncEnabled;
+
+            // Load and apply saved sync interval (default 5 minutes)
+            const savedInterval = localStorage.getItem('eos_syncInterval');
+            const intervalMins = savedInterval !== null ? parseInt(savedInterval) : 5;
+            syncState.intervalMinutes = intervalMins;
+            const intervalSelect = document.getElementById('syncIntervalSetting');
+            if (intervalSelect) intervalSelect.value = String(intervalMins);
+            const statusEl = document.getElementById('syncIntervalStatus');
+            if (statusEl) {
+                statusEl.textContent = intervalMins > 0
+                    ? 'Auto-syncing every ' + intervalMins + ' minute' + (intervalMins === 1 ? '' : 's')
+                    : 'Auto-sync timer off - use Sync Now to sync manually';
+            }
+            if (syncState.autoSyncEnabled) startSyncInterval(intervalMins);
             
             // Check sync configuration
             const settings = getSettings();
@@ -3662,12 +3693,41 @@ Example:
             window.addEventListener('beforeunload', handleBeforeUnload);
         }
         
+        function saveSyncIntervalSetting(minutes) {
+            const mins = parseInt(minutes) || 0;
+            syncState.intervalMinutes = mins;
+            localStorage.setItem('eos_syncInterval', mins);
+            startSyncInterval(mins);
+            const statusEl = document.getElementById('syncIntervalStatus');
+            if (statusEl) {
+                statusEl.textContent = mins > 0
+                    ? 'Auto-syncing every ' + mins + ' minute' + (mins === 1 ? '' : 's')
+                    : 'Auto-sync timer off - use Sync Now to sync manually';
+            }
+        }
+
+        function startSyncInterval(minutes) {
+            if (syncState.intervalTimer) {
+                clearInterval(syncState.intervalTimer);
+                syncState.intervalTimer = null;
+            }
+            if (!minutes || minutes <= 0) return;
+            syncState.intervalTimer = setInterval(function() {
+                if (!syncState.isSyncing && syncState.autoSyncEnabled) {
+                    console.log('Auto-sync interval triggered (' + minutes + ' min)');
+                    autoPullFromGoogleTasks();
+                }
+            }, minutes * 60 * 1000);
+            console.log('Auto-sync interval started: every', minutes, 'minute(s)');
+        }
+
         function toggleAutoSync(enabled) {
             syncState.autoSyncEnabled = enabled;
             localStorage.setItem('eos_autoSync', enabled);
             
             if (enabled) {
                 updateSyncStatus('ready', 'Auto-sync enabled');
+                startSyncInterval(syncState.intervalMinutes);
                 // Do an immediate sync check
                 setTimeout(autoPullFromGoogleTasks, 500);
             } else {
@@ -4040,6 +4100,7 @@ Example:
                                 googleListName: task.listName,
                                 dueDate: task.due ? task.due.split('T')[0] : '',
                                 notes: task.notes || '',
+                                parentTaskId: task.parent || null,
                                 pulledAt: new Date().toISOString()
                             });
                         });
@@ -4363,6 +4424,13 @@ Example:
                                 updated = true;
                             }
                             
+                            // Sync parentTaskId (subtask relationship)
+                            const googleParent = task.parent || null;
+                            if (existing.parentTaskId !== googleParent) {
+                                existing.parentTaskId = googleParent;
+                                updated = true;
+                            }
+
                             // Sync completion
                             console.log(`  Completion compare: local done=${existing.done} vs google completed=${isCompleted}`);
                             if (isCompleted && !existing.done) {
@@ -4392,10 +4460,11 @@ Example:
                                     originalOwner: currentUser,
                                     done: false,
                                     googleTaskId: task.id,
-                                    googleListId: taskListId,  // Don't store @default
-                                    googleListName: taskListName,  // Don't store @default
+                                    googleListId: taskListId,
+                                    googleListName: taskListName,
                                     dueDate: dueDate,
                                     notes: task.notes || '',
+                                    parentTaskId: task.parent || null,
                                     pulledAt: new Date().toISOString()
                                 });
                                 existingTexts.add(taskTitle.toLowerCase().trim());
@@ -4438,11 +4507,7 @@ Example:
                     }
                     
                     // ── BATCH STATUS CHECK ───────────────────────────────────
-                    // Directly ask Google for the current status of every locally-
-                    // done task. This is the only reliable way to detect un-completions
-                    // because Google's bulk pull may still return a task as 'completed'
-                    // in history even after it's been unchecked, or may not return it
-                    // at all. Tasks.Tasks.get() returns ground truth.
+                    // Directly verify every locally-done task against Google.
                     const ignoredIdSet = new Set(settings.ignoredGoogleTaskIds || []);
                     const doneTasks = existingTasks.filter(t =>
                         t.done && t.googleTaskId && !ignoredIdSet.has(t.googleTaskId)
@@ -4470,7 +4535,7 @@ Example:
                                         delete task.completedAt;
                                         delete task.syncedCompletedAt;
                                         pullResults.completions++;
-                                        console.log('  → Unmarked in EOS:', task.text);
+                                        console.log('  Unmarked in EOS:', task.text);
                                     }
                                 });
                             }
@@ -4660,6 +4725,7 @@ Example:
                                     googleListId: task.listId,
                                     googleListName: task.listName,
                                     dueDate: dueDate,
+                                    parentTaskId: task.parent || null,
                                     pulledAt: new Date().toISOString()
                                 });
                                 existingTexts.add(taskTitle.toLowerCase().trim());
@@ -4682,39 +4748,28 @@ Example:
                         }
                         
                         // ── BATCH STATUS CHECK ───────────────────────────────
-                        // Directly verify every locally-done task against Google.
-                        const ignoredIdSet = new Set(settings.ignoredGoogleTaskIds || []);
-                        const doneTasks = existingTasks.filter(t =>
-                            t.done && t.googleTaskId && !ignoredIdSet.has(t.googleTaskId)
+                        const ignoredIdSet2 = new Set(settings.ignoredGoogleTaskIds || []);
+                        const doneTasks2 = existingTasks.filter(t =>
+                            t.done && t.googleTaskId && !ignoredIdSet2.has(t.googleTaskId)
                             && (t.owner === member.initials || t.owner === 'Both' || t.owner === 'HB/AB')
                         );
-                        if (doneTasks.length > 0) {
+                        if (doneTasks2.length > 0) {
                             try {
-                                const taskDataArr = doneTasks.map(t => ({
-                                    taskId: t.googleTaskId,
-                                    listId: t.googleListId || '@default'
-                                }));
-                                const checkUrl = member.webAppUrl
-                                    + '?action=getTaskStatuses'
-                                    + '&taskData=' + encodeURIComponent(JSON.stringify(taskDataArr))
-                                    + '&secretKey=' + encodeURIComponent(member.webAppSecret || '');
-                                const checkResp = await fetch(checkUrl);
-                                const checkData = await checkResp.json();
-                                if (checkData.success && checkData.statuses) {
-                                    doneTasks.forEach(task => {
-                                        const gStatus = checkData.statuses[task.googleTaskId];
-                                        if (gStatus === 'needsAction') {
+                                const taskDataArr2 = doneTasks2.map(t => ({ taskId: t.googleTaskId, listId: t.googleListId || '@default' }));
+                                const checkUrl2 = member.webAppUrl + '?action=getTaskStatuses&taskData=' + encodeURIComponent(JSON.stringify(taskDataArr2)) + '&secretKey=' + encodeURIComponent(member.webAppSecret || '');
+                                const checkResp2 = await fetch(checkUrl2);
+                                const checkData2 = await checkResp2.json();
+                                if (checkData2.success && checkData2.statuses) {
+                                    doneTasks2.forEach(task => {
+                                        if (checkData2.statuses[task.googleTaskId] === 'needsAction') {
                                             task.done = false;
                                             delete task.completedAt;
                                             delete task.syncedCompletedAt;
                                             totalResults.pulled++;
-                                            console.log('Team Sync batch check: unmarked in EOS:', task.text);
                                         }
                                     });
                                 }
-                            } catch (batchErr) {
-                                console.warn('Team Sync batch check failed:', batchErr);
-                            }
+                            } catch (batchErr) { console.warn('Team sync batch check failed:', batchErr); }
                         }
 
                         yearData.quarters[currentQuarter].todos = existingTasks;
@@ -5677,7 +5732,7 @@ Example:
         
         // Build hierarchical structure from flat task list
         function buildTaskHierarchy(tasks) {
-            // Create a map of tasks by their googleTaskId
+            // Map by googleTaskId for tasks that have one
             const taskMap = new Map();
             tasks.forEach(t => {
                 if (t.googleTaskId) {
@@ -5688,20 +5743,31 @@ Example:
             // Build parent-child relationships
             const rootTasks = [];
             tasks.forEach(t => {
-                const task = taskMap.get(t.googleTaskId);
-                if (!task) {
-                    // Task without googleTaskId - treat as root
-                    rootTasks.push({ ...t, subtasks: [] });
-                    return;
-                }
-                
-                if (t.parentTaskId && taskMap.has(t.parentTaskId)) {
-                    // This is a subtask - add to parent's subtasks array
-                    const parent = taskMap.get(t.parentTaskId);
-                    parent.subtasks.push(task);
+                // Case 1: Task has its own googleTaskId (synced task)
+                if (t.googleTaskId) {
+                    const task = taskMap.get(t.googleTaskId);
+                    if (t.parentTaskId && taskMap.has(t.parentTaskId)) {
+                        // Synced subtask - attach to synced parent
+                        const parent = taskMap.get(t.parentTaskId);
+                        parent.subtasks.push(task);
+                    } else if (!t.parentTaskId) {
+                        // Root level synced task
+                        rootTasks.push(task);
+                    } else {
+                        // Has parentTaskId but parent not in map - treat as root
+                        rootTasks.push(task);
+                    }
                 } else {
-                    // Root level task
-                    rootTasks.push(task);
+                    // Case 2: Task has no googleTaskId (created in EOS, not yet pushed)
+                    const task = { ...t, subtasks: [] };
+                    if (t.parentTaskId && taskMap.has(t.parentTaskId)) {
+                        // EOS-created subtask whose parent IS synced - attach to parent
+                        const parent = taskMap.get(t.parentTaskId);
+                        parent.subtasks.push(task);
+                    } else {
+                        // No parent match - treat as root
+                        rootTasks.push(task);
+                    }
                 }
             });
             
@@ -5858,7 +5924,7 @@ Example:
             ` : '<span style="width: 28px; flex-shrink: 0;"></span>';
             
             return `
-                <div class="todo-item ${t.done ? 'completed' : ''} ${t.starred ? 'starred' : ''}" style="margin-left: ${indentPx}px; ${depth > 0 ? 'border-left: 2px solid #d1d5db; background: #f9fafb;' : ''}">
+                <div class="todo-item ${t.done ? 'completed' : ''} ${t.starred ? 'starred' : ''}" style="margin-left: ${indentPx}px; ${depth > 0 ? 'border-left: 3px solid #c4b5fd; background: #faf5ff; border-radius: 0 6px 6px 0;' : ''}">
                     ${expandButton}
                     <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTodo(${idx})">
                     <button onclick="toggleStarred(${idx})" style="background: none; border: none; cursor: pointer; font-size: 1rem; padding: 2px 4px; flex-shrink: 0;" 
@@ -10945,8 +11011,7 @@ Return ONLY the JSON array:`;
                 }
             }
             
-            // ── BATCH STATUS CHECK ───────────────────────────────────────────
-            // Directly verify every locally-done task against Google.
+            // ── BATCH STATUS CHECK ──────────────────────────────────────────
             for (const member of membersToCheck) {
                 if (!member.webAppUrl) continue;
                 try {
@@ -10956,31 +11021,21 @@ Return ONLY the JSON array:`;
                         t.done && t.googleTaskId && !ignoredIdSet.has(t.googleTaskId)
                     );
                     if (doneTasks.length === 0) continue;
-                    const taskDataArr = doneTasks.map(t => ({
-                        taskId: t.googleTaskId,
-                        listId: t.googleListId || '@default'
-                    }));
-                    const checkUrl = member.webAppUrl
-                        + '?action=getTaskStatuses'
-                        + '&taskData=' + encodeURIComponent(JSON.stringify(taskDataArr))
-                        + '&secretKey=' + encodeURIComponent(member.webAppSecret || '');
+                    const taskDataArr = doneTasks.map(t => ({ taskId: t.googleTaskId, listId: t.googleListId || '@default' }));
+                    const checkUrl = member.webAppUrl + '?action=getTaskStatuses&taskData=' + encodeURIComponent(JSON.stringify(taskDataArr)) + '&secretKey=' + encodeURIComponent(member.webAppSecret || '');
                     const checkResp = await fetch(checkUrl);
                     const checkData = await checkResp.json();
                     if (checkData.success && checkData.statuses) {
                         doneTasks.forEach(task => {
-                            const gStatus = checkData.statuses[task.googleTaskId];
-                            if (gStatus === 'needsAction') {
+                            if (checkData.statuses[task.googleTaskId] === 'needsAction') {
                                 task.done = false;
                                 delete task.completedAt;
                                 delete task.syncedCompletedAt;
                                 totalCompletionsSynced++;
-                                console.log('pullTasksFromGoogle batch check: unmarked in EOS:', task.text);
                             }
                         });
                     }
-                } catch (batchErr) {
-                    console.warn('Batch status check failed:', batchErr);
-                }
+                } catch (batchErr) { console.warn('Batch check failed:', batchErr); }
             }
 
             // Use the tracked completion count (not recounted)
