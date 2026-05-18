@@ -3322,9 +3322,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.15.6';
+        const EOS_VERSION = '3.15.8';
         const EOS_BUILD_DATE = '2026-05-18';
-        const EOS_BUILD_TIME = '11:30'; // Otter: Unselect All, fix action item splitting on period-comma
+        const EOS_BUILD_TIME = '12:30'; // Otter: owner-driven Google Task list dropdown
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -5044,7 +5044,36 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.14.4 &mdash; 2026-04-15 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.15.8 &mdash; 2026-05-18 (Current)</div>'
+                + '<div style="font-size:0.82rem;color:#374151;line-height:1.65;">'
+                + '&bull; Otter import: task list dropdown now driven by owner selection<br>'
+                + '&bull; Otter import: choosing HB shows Hans&rsquo;s lists, AB shows Amanda&rsquo;s, Both defaults to HB&rsquo;s lists<br>'
+                + '&bull; Otter import: imported tasks stamped with googleListId for immediate sync routing'
+                + '</div></div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#1d4ed8;font-size:0.9rem;margin-bottom:6px;">v3.15.7 &mdash; 2026-05-18</div>'
+                + '<div style="font-size:0.82rem;color:#374151;line-height:1.65;">'
+                + '&bull; Fixed: Otter import now reads correct column (B=Action Items, not URL)<br>'
+                + '&bull; Fixed: Action items split on period-comma delimiter, preserving full sentences<br>'
+                + '&bull; Fixed: Otter import filters by &ldquo;Traction&rdquo; meeting title, most recent only<br>'
+                + '&bull; Added: Otter import dismissal tracking &mdash; skipped items don&rsquo;t re-appear<br>'
+                + '&bull; Added: Unselect All button in Otter import modal<br>'
+                + '&bull; Added: Category selector per item (To-Dos, Rocks, Issues) in Otter import<br>'
+                + '&bull; Added: Editable action item text before importing'
+                + '</div></div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#1d4ed8;font-size:0.9rem;margin-bottom:6px;">v3.15.1&ndash;3.15.5 &mdash; 2026-05-18</div>'
+                + '<div style="font-size:0.82rem;color:#374151;line-height:1.65;">'
+                + '&bull; Fixed: Otter &ldquo;Refresh&rdquo; button now works when using Web App URL<br>'
+                + '&bull; Fixed: Removed redundant otterSheetId guard blocking import modal<br>'
+                + '&bull; Fixed: Import now calls getOtterTasks (matching actual Apps Script action)<br>'
+                + '&bull; Fixed: Apps Script syntax error from unicode escape in regex'
+                + '</div></div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#1d4ed8;font-size:0.9rem;margin-bottom:6px;">v3.14.4 &mdash; 2026-04-15</div>'
                 + '<div style="font-size:0.82rem;color:#374151;line-height:1.65;">'
                 + '&bull; Fixed: tasks unchecked in Google Tasks now correctly uncheck in EOS on sync<br>'
                 + '&bull; Fixed: sync no longer shows &ldquo;All in sync&rdquo; when completions changed<br>'
@@ -9893,34 +9922,78 @@ Return ONLY the JSON array:`;
             }
         }
         
+        function getListsForOwner(ownerInitials) {
+            const settings = getSettings();
+            const members = settings.teamMembers || [];
+            const target = members.find(m => m.initials === ownerInitials) || members[0];
+            return target?.taskLists || [];
+        }
+
+        function buildListDropdown(idx, ownerInitials, selectedListId) {
+            const settings = getSettings();
+            const lists = getListsForOwner(ownerInitials);
+            const m = (settings.teamMembers || []).find(m => m.initials === ownerInitials) || settings.teamMembers?.[0];
+            const defaultId = m?.pushListId || '@default';
+            const resolvedSelected = selectedListId || defaultId;
+            if (lists.length === 0) {
+                return `<select id="otterList_${idx}" onchange="otterItems[${idx}].googleListId=this.value"
+                            style="padding:4px 6px;font-size:0.8rem;border-radius:4px;border:1px solid #e5e7eb;max-width:160px;">
+                            <option value="@default">Default List</option>
+                        </select>`;
+            }
+            const options = lists.map(l =>
+                `<option value="${l.id}" ${l.id === resolvedSelected ? 'selected' : ''}>${l.title}</option>`
+            ).join('');
+            return `<select id="otterList_${idx}" onchange="otterItems[${idx}].googleListId=this.value"
+                        style="padding:4px 6px;font-size:0.8rem;border-radius:4px;border:1px solid #e5e7eb;max-width:160px;">
+                        ${options}
+                    </select>`;
+        }
+
+        function updateOtterItemOwner(idx, ownerInitials) {
+            otterItems[idx].owner = ownerInitials;
+            const settings = getSettings();
+            const m = (settings.teamMembers || []).find(m => m.initials === ownerInitials) || settings.teamMembers?.[0];
+            otterItems[idx].googleListId = m?.pushListId || '@default';
+            const el = document.getElementById('otterListWrap_' + idx);
+            if (el) el.innerHTML = buildListDropdown(idx, ownerInitials, otterItems[idx].googleListId);
+        }
+
         function displayOtterItems() {
             const previewEl = document.getElementById('parsedTasksPreview');
             const listEl = document.getElementById('parsedTasksList');
             const settings = getSettings();
-            
-            listEl.innerHTML = otterItems.map((item, idx) => `
-                <div style="display: flex; align-items: center; gap: 10px; padding: 10px; background: white; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid var(--primary);">
-                    <input type="checkbox" ${item.selected ? 'checked' : ''} 
-                           onchange="otterItems[${idx}].selected = this.checked" 
-                           style="width: 18px; height: 18px; flex-shrink: 0;">
-                    <div style="flex: 1; min-width: 0;">
-                        <div style="font-weight: 500;">${item.text}</div>
-                        <div style="font-size: 0.75rem; color: var(--gray-500); margin-top: 2px;">
-                            From: ${item.meetingTitle || 'Otter Meeting'}
-                        </div>
+
+            listEl.innerHTML = otterItems.map((item, idx) => {
+                const ownerVal = item.owner || '';
+                const bothVal = settings.teamMembers.length >= 2
+                    ? settings.teamMembers.slice(0,2).map(m => m.initials).join('/') : '';
+                return `
+                <div style="padding:10px;background:white;border-radius:6px;margin-bottom:8px;border-left:3px solid var(--primary);">
+                    <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;">
+                        <input type="checkbox" ${item.selected ? 'checked' : ''}
+                               onchange="otterItems[${idx}].selected=this.checked"
+                               style="width:18px;height:18px;flex-shrink:0;margin-top:3px;">
+                        <textarea rows="2"
+                            style="flex:1;font-size:0.88rem;font-weight:500;border:1px solid #e5e7eb;border-radius:4px;padding:4px 6px;resize:vertical;font-family:inherit;line-height:1.4;"
+                            onchange="otterItems[${idx}].text=this.value">${item.text}</textarea>
                     </div>
-                    <select onchange="otterItems[${idx}].owner = this.value" 
-                            style="width: 80px; padding: 6px; flex-shrink: 0; font-weight: 500;">
-                        <option value="">Owner</option>
-                        ${settings.teamMembers.map(m => 
-                            `<option value="${m.initials}">${m.initials}</option>`
-                        ).join('')}
-                        ${settings.teamMembers.length >= 2 ? 
-                            `<option value="${settings.teamMembers.slice(0,2).map(m => m.initials).join('/')}">Both</option>` : ''}
-                    </select>
-                </div>
-            `).join('');
-            
+                    <div style="display:flex;gap:8px;padding-left:28px;align-items:center;flex-wrap:wrap;">
+                        <div style="font-size:0.75rem;color:var(--gray-500);white-space:nowrap;">From: ${item.meetingTitle || 'Otter'}</div>
+                        <div style="flex:1;"></div>
+                        <select onchange="updateOtterItemOwner(${idx}, this.value)"
+                                style="padding:4px 6px;font-size:0.8rem;border-radius:4px;border:1px solid #e5e7eb;font-weight:500;">
+                            <option value="">Owner</option>
+                            ${settings.teamMembers.map(m =>
+                                `<option value="${m.initials}" ${ownerVal===m.initials?'selected':''}>${m.initials}</option>`
+                            ).join('')}
+                            ${bothVal ? `<option value="${bothVal}" ${ownerVal===bothVal?'selected':''}>Both</option>` : ''}
+                        </select>
+                        <div id="otterListWrap_${idx}">${buildListDropdown(idx, ownerVal, item.googleListId)}</div>
+                    </div>
+                </div>`;
+            }).join('');
+
             previewEl.style.display = 'block';
             document.getElementById('addParsedTasksBtn').style.display = 'inline-block';
             const skipBtn = document.getElementById('skipAllOtterBtn');
@@ -9929,32 +10002,41 @@ Return ONLY the JSON array:`;
         
         function addOtterItemsToTodos() {
             const selectedItems = otterItems.filter(item => item.selected);
-            
             if (selectedItems.length === 0) {
                 alert('Please select at least one item to add.');
                 return;
             }
-            
-            yearData.quarters[currentQuarter].todos = yearData.quarters[currentQuarter].todos || [];
+
+            const q = yearData.quarters[currentQuarter];
+            q.todos = q.todos || [];
             const settings = getSettings();
             const rowsToMark = new Set();
-            
+
             selectedItems.forEach(item => {
-                yearData.quarters[currentQuarter].todos.push({
-                    text: item.text,
-                    owner: item.owner || '',
+                // Resolve googleListId and name from the selected list dropdown
+                const owner = item.owner || '';
+                const listId = item.googleListId || '@default';
+                const lists = getListsForOwner(owner);
+                const listObj = lists.find(l => l.id === listId);
+                const listName = listObj ? listObj.title : '';
+
+                q.todos.push({
+                    text: item.text.trim(),
+                    owner: owner,
                     done: false,
                     fromOtter: true,
                     meetingTitle: item.meetingTitle,
-                    importedAt: new Date().toISOString()
+                    importedAt: new Date().toISOString(),
+                    googleListId: listId !== '@default' ? listId : '',
+                    googleListName: listName
                 });
                 if (item.row) rowsToMark.add(item.row);
             });
-            
+
             autoSave();
             sortAndRenderTodos();
 
-            // Dismiss ALL shown items (selected + unselected) so they don't re-appear
+            // Dismiss ALL shown items so they don't re-appear
             addOtterDismissed(otterItems.map(i => i.text));
 
             // Mark the sheet row as imported via Apps Script
