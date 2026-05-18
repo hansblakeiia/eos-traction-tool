@@ -3318,9 +3318,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.15.2';
+        const EOS_VERSION = '3.15.3';
         const EOS_BUILD_DATE = '2026-05-18';
-        const EOS_BUILD_TIME = '10:00'; // Fix Otter refresh via Web App URL
+        const EOS_BUILD_TIME = '10:15'; // Fix Otter import otterSheetId guard
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -9614,7 +9614,7 @@ Make sure your suggestions directly address the specific root cause and discussi
             const otterUrl = settings.otterSheetUrl;
             const firstMember = settings.teamMembers?.[0];
             
-            if (otterUrl || (firstMember?.webAppUrl && settings.otterSheetId)) {
+            if (otterUrl || firstMember?.webAppUrl) {
                 await fetchFromOtterSheet();
             }
         }
@@ -9630,15 +9630,11 @@ Make sure your suggestions directly address the specific root cause and discussi
             try {
                 // Check if Otter is configured
                 const firstMember = settings.teamMembers?.[0];
-                if (!firstMember?.webAppUrl || !settings.otterSheetId) {
+                if (!firstMember?.webAppUrl) {
                     statusEl.style.background = '#fff3cd';
                     statusEl.style.color = '#856404';
-                    statusEl.innerHTML = `⚠️ <strong>Otter.ai integration not fully configured</strong><br><br>
-                        <strong>Setup steps:</strong><br>
-                        1. In Settings (⚙️), enter your <strong>Otter.ai Sheet ID</strong><br>
-                        2. Ensure each team member has a <strong>Web App URL</strong> configured<br>
-                        3. In your Google Apps Script, set:<br>
-                        &nbsp;&nbsp;&nbsp;&nbsp;<code>const OTTER_SHEET_ID = '${settings.otterSheetId || 'YOUR_SHEET_ID'}';</code><br><br>
+                    statusEl.innerHTML = `⚠️ <strong>Otter.ai integration not configured</strong><br><br>
+                        Ensure each team member has a <strong>Web App URL</strong> configured in Settings (⚙️).<br><br>
                         <strong>Note:</strong> Otter meetings must have "Traction" in the title to be imported.`;
                     return;
                 }
