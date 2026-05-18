@@ -3250,7 +3250,8 @@ Example:
             
             <div class="modal-actions">
                 <button class="btn btn-secondary" onclick="closeModal('parseMeetingModal')">Cancel</button>
-                <button class="btn btn-primary" onclick="refreshOtterFetch()">🔄 Refresh</button>
+                <button class="btn btn-secondary" onclick="refreshOtterFetch()">🔄 Refresh</button>
+                <button class="btn" style="background:#f59e0b;color:white;" id="skipAllOtterBtn" onclick="skipAllOtterItems()" style="display:none;" title="Dismiss all items — they won't appear again">⊘ Skip All</button>
                 <button class="btn btn-success" id="addParsedTasksBtn" onclick="addOtterItemsToTodos()" style="display: none;">✔ Add Selected to To-Dos</button>
             </div>
         </div>
@@ -3318,9 +3319,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.15.4';
+        const EOS_VERSION = '3.15.5';
         const EOS_BUILD_DATE = '2026-05-18';
-        const EOS_BUILD_TIME = '10:30'; // Fix Otter import to use getOtterTasks action
+        const EOS_BUILD_TIME = '11:00'; // Otter: filter by Traction title, column C action items, dismissal tracking
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -9619,6 +9620,20 @@ Make sure your suggestions directly address the specific root cause and discussi
             }
         }
         
+        // ---- Otter dismissed-item tracking ----
+        function getOtterDismissed() {
+            try { return JSON.parse(localStorage.getItem('eos_otter_dismissed') || '[]'); }
+            catch(e) { return []; }
+        }
+        function addOtterDismissed(texts) {
+            const existing = new Set(getOtterDismissed());
+            texts.forEach(t => existing.add(t));
+            localStorage.setItem('eos_otter_dismissed', JSON.stringify([...existing]));
+        }
+        function clearOtterDismissed() {
+            localStorage.removeItem('eos_otter_dismissed');
+        }
+
         async function fetchFromOtterSheet() {
             const settings = getSettings();
             const statusEl = document.getElementById('otterFetchStatus');
@@ -9648,24 +9663,33 @@ Make sure your suggestions directly address the specific root cause and discussi
                     data = await response.json();
 
                     if (data.success) {
-                        const tasks = data.tasks || [];
-                        if (tasks.length === 0) {
+                        const allTasks = data.tasks || [];
+                        if (allTasks.length === 0) {
                             statusEl.style.background = '#fff3cd';
                             statusEl.style.color = '#856404';
-                            statusEl.innerHTML = '📭 No Otter tasks found in the sheet. Make sure Zapier is sending data.';
+                            statusEl.innerHTML = data.message
+                                ? `📭 ${data.message}`
+                                : '📭 No action items found in any Traction meeting. Make sure Zapier is running and meetings include "Traction" in the title.';
                             return;
                         }
-                        // Map rows to otterItems format
-                        otterItems = tasks.map(t => ({
-                            text: t.text,
-                            owner: '',
-                            selected: true,
-                            meetingTitle: t.source || 'Otter Meeting',
-                            row: null
-                        }));
+                        // Filter out previously dismissed items
+                        const dismissed = new Set(getOtterDismissed());
+                        const newTasks = allTasks.filter(t => !dismissed.has(t.text));
+                        const hiddenCount = allTasks.length - newTasks.length;
+
+                        if (newTasks.length === 0) {
+                            statusEl.style.background = '#e6f4ea';
+                            statusEl.style.color = '#1e8e3e';
+                            statusEl.innerHTML = `✅ All items from <strong>${data.meetingTitle || 'Traction Meeting'}</strong> have already been imported or skipped.`
+                                + ` <a href="#" onclick="clearOtterDismissed(); refreshOtterFetch(); return false;" style="color:#1a73e8;">Reset dismissed items</a>`;
+                            return;
+                        }
+
+                        otterItems = newTasks.map(t => ({ ...t, selected: true }));
                         statusEl.style.background = '#e6f4ea';
                         statusEl.style.color = '#1e8e3e';
-                        statusEl.innerHTML = `✅ Found ${otterItems.length} item(s) from Otter. Select items to import below.`;
+                        statusEl.innerHTML = `✅ <strong>${data.meetingTitle || 'Traction Meeting'}</strong> — ${otterItems.length} action item(s) ready to import`
+                            + (hiddenCount > 0 ? ` <span style="color:#6b7280;">(${hiddenCount} previously skipped hidden)</span>` : '');
                         displayOtterItems();
                         return;
 
@@ -9896,6 +9920,8 @@ Return ONLY the JSON array:`;
             
             previewEl.style.display = 'block';
             document.getElementById('addParsedTasksBtn').style.display = 'inline-block';
+            const skipBtn = document.getElementById('skipAllOtterBtn');
+            if (skipBtn) skipBtn.style.display = 'inline-block';
         }
         
         function addOtterItemsToTodos() {
@@ -9908,7 +9934,6 @@ Return ONLY the JSON array:`;
             
             yearData.quarters[currentQuarter].todos = yearData.quarters[currentQuarter].todos || [];
             const settings = getSettings();
-            const url = settings.otterSheetUrl;
             const rowsToMark = new Set();
             
             selectedItems.forEach(item => {
@@ -9925,15 +9950,29 @@ Return ONLY the JSON array:`;
             
             autoSave();
             sortAndRenderTodos();
-            closeModal('parseMeetingModal');
-            
-            // Mark rows as imported in the sheet
-            if (url && rowsToMark.size > 0) {
-                fetch(url + '?action=markImported&rows=' + Array.from(rowsToMark).join(','))
-                    .catch(e => console.log('Could not mark as imported:', e));
+
+            // Dismiss ALL shown items (selected + unselected) so they don't re-appear
+            addOtterDismissed(otterItems.map(i => i.text));
+
+            // Mark the sheet row as imported via Apps Script
+            const firstMember = settings.teamMembers?.[0];
+            if (firstMember?.webAppUrl && rowsToMark.size > 0) {
+                rowsToMark.forEach(row => {
+                    fetch(`${firstMember.webAppUrl}?action=markOtterImported&row=${row}&secretKey=${encodeURIComponent(firstMember.webAppSecret || '')}`)
+                        .catch(e => console.log('Could not mark as imported:', e));
+                });
             }
-            
-            alert(`✅ Added ${selectedItems.length} action item(s) to To-Dos!`);
+
+            closeModal('parseMeetingModal');
+            showToast(`Added ${selectedItems.length} action item(s) to To-Dos!`, 'success');
+        }
+
+        function skipAllOtterItems() {
+            if (otterItems.length === 0) { closeModal('parseMeetingModal'); return; }
+            addOtterDismissed(otterItems.map(i => i.text));
+            otterItems = [];
+            closeModal('parseMeetingModal');
+            showToast('Items skipped — they won\'t appear again for this meeting.', 'success');
         }
         
         function selectAllOtterItems() {
