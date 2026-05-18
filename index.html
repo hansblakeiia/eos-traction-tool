@@ -3205,7 +3205,10 @@
             <div id="parsedTasksPreview" style="display: none; margin-bottom: 15px;">
                 <label style="display: flex; justify-content: space-between; align-items: center;">
                     <span>Action Items (assign owners, then add to To-Dos)</span>
-                    <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="selectAllOtterItems()">Select All</button>
+                    <div style="display:flex; gap:6px;">
+                        <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="selectAllOtterItems()">Select All</button>
+                        <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="unselectAllOtterItems()">Unselect All</button>
+                    </div>
                 </label>
                 <div id="parsedTasksList" style="max-height: 350px; overflow-y: auto; background: var(--gray-50); border-radius: 6px; padding: 10px;"></div>
             </div>
@@ -3319,9 +3322,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.15.5';
+        const EOS_VERSION = '3.15.6';
         const EOS_BUILD_DATE = '2026-05-18';
-        const EOS_BUILD_TIME = '11:00'; // Otter: filter by Traction title, column C action items, dismissal tracking
+        const EOS_BUILD_TIME = '11:30'; // Otter: Unselect All, fix action item splitting on period-comma
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -9976,12 +9979,12 @@ Return ONLY the JSON array:`;
         }
         
         function selectAllOtterItems() {
-            otterItems.forEach((item, idx) => {
-                item.selected = true;
-                const checkbox = document.querySelector(`#parsedTasksList input[type="checkbox"]:nth-of-type(${idx + 1})`);
-                if (checkbox) checkbox.checked = true;
-            });
-            // Re-render to update checkboxes
+            otterItems.forEach(item => { item.selected = true; });
+            displayOtterItems();
+        }
+
+        function unselectAllOtterItems() {
+            otterItems.forEach(item => { item.selected = false; });
             displayOtterItems();
         }
         
