@@ -3318,9 +3318,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.15.3';
+        const EOS_VERSION = '3.15.4';
         const EOS_BUILD_DATE = '2026-05-18';
-        const EOS_BUILD_TIME = '10:15'; // Fix Otter import otterSheetId guard
+        const EOS_BUILD_TIME = '10:30'; // Fix Otter import to use getOtterTasks action
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -9642,74 +9642,37 @@ Make sure your suggestions directly address the specific root cause and discussi
                 let response, data;
                 
                 if (firstMember?.webAppUrl) {
-                    // Use combined script endpoint
-                    const url = `${firstMember.webAppUrl}?action=getOtterMeeting&secretKey=${encodeURIComponent(firstMember.webAppSecret || '')}`;
+                    // Use getOtterTasks action (supported by current Apps Script)
+                    const url = `${firstMember.webAppUrl}?action=getOtterTasks&secretKey=${encodeURIComponent(firstMember.webAppSecret || '')}`;
                     response = await fetch(url);
                     data = await response.json();
-                    
+
                     if (data.success) {
-                        const meetingTitle = data.title || 'Traction Meeting';
-                        
-                        // Check if we have action items OR need to use AI on abstract summary
-                        if (data.hasActionItems && data.actionItems) {
-                            // We have action items - parse them directly
-                            statusEl.innerHTML = `✅ Found action items in "${meetingTitle}" - parsing...`;
-                            
-                            const parsedItems = parseOtterActionItems(data.actionItems);
-                            await processOtterItems(parsedItems, meetingTitle, data.transcriptUrl, statusEl);
-                            
-                        } else if (data.abstractSummary) {
-                            // No action items, but we have abstract summary - use AI
-                            statusEl.style.background = '#f5f3ff';
-                            statusEl.style.color = '#7c3aed';
-                            statusEl.innerHTML = `🤖 No action items found. Using AI to extract tasks from summary of "${meetingTitle}"...`;
-                            
-                            // Check if Gemini is configured
-                            if (!settings.geminiApiKey) {
-                                statusEl.style.background = '#fff3cd';
-                                statusEl.style.color = '#856404';
-                                statusEl.innerHTML = `⚠️ No action items in "${meetingTitle}". Configure Gemini API key in Settings to extract tasks from summary.`;
-                                return;
-                            }
-                            
-                            // Use Gemini to extract tasks from abstract summary
-                            const aiTasks = await extractTasksWithAI(data.abstractSummary, settings.geminiApiKey);
-                            
-                            if (aiTasks && aiTasks.length > 0) {
-                                statusEl.innerHTML = `🤖 AI extracted ${aiTasks.length} potential task(s) from summary`;
-                                await processOtterItems(aiTasks, meetingTitle + ' (AI-extracted)', data.transcriptUrl, statusEl);
-                            } else {
-                                statusEl.style.background = '#fff3cd';
-                                statusEl.style.color = '#856404';
-                                statusEl.innerHTML = `📭 No action items found and AI couldn't extract tasks from "${meetingTitle}"`;
-                            }
-                            
-                        } else {
-                            // No action items and no abstract summary
+                        const tasks = data.tasks || [];
+                        if (tasks.length === 0) {
                             statusEl.style.background = '#fff3cd';
                             statusEl.style.color = '#856404';
-                            statusEl.innerHTML = `📭 No action items or summary found in "${meetingTitle}" or meeting doesn't have "Traction" in the title`;
+                            statusEl.innerHTML = '📭 No Otter tasks found in the sheet. Make sure Zapier is sending data.';
+                            return;
                         }
+                        // Map rows to otterItems format
+                        otterItems = tasks.map(t => ({
+                            text: t.text,
+                            owner: '',
+                            selected: true,
+                            meetingTitle: t.source || 'Otter Meeting',
+                            row: null
+                        }));
+                        statusEl.style.background = '#e6f4ea';
+                        statusEl.style.color = '#1e8e3e';
+                        statusEl.innerHTML = `✅ Found ${otterItems.length} item(s) from Otter. Select items to import below.`;
+                        displayOtterItems();
                         return;
-                        
+
                     } else if (data.error) {
-                        // Check for common error messages
-                        if (data.error.includes('Unknown action') || data.error.includes('getOtterMeeting')) {
-                            statusEl.style.background = '#fff3cd';
-                            statusEl.style.color = '#856404';
-                            statusEl.innerHTML = `⚠️ <strong>Otter.ai script not updated</strong><br><br>
-                                Your Google Apps Script needs to be redeployed with the latest code.<br><br>
-                                <strong>To fix:</strong><br>
-                                1. Open your Google Apps Script<br>
-                                2. Paste the latest Google_Tasks_Sync.gs code<br>
-                                3. Create a NEW deployment (don't just save)<br>
-                                4. Copy the new Web App URL to Settings<br><br>
-                                <strong>Note:</strong> Recent Otter meetings must have "Traction" in the title.`;
-                        } else {
-                            statusEl.style.background = '#fce8e6';
-                            statusEl.style.color = '#d93025';
-                            statusEl.innerHTML = '⚠️ Error: ' + data.error;
-                        }
+                        statusEl.style.background = '#fce8e6';
+                        statusEl.style.color = '#d93025';
+                        statusEl.innerHTML = '⚠️ Error: ' + data.error;
                         return;
                     }
                 }
