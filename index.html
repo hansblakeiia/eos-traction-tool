@@ -3318,9 +3318,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.15.1';
-        const EOS_BUILD_DATE = '2026-04-15';
-        const EOS_BUILD_TIME = '23:45'; // Full Sub-tasks Support!
+        const EOS_VERSION = '3.15.2';
+        const EOS_BUILD_DATE = '2026-05-18';
+        const EOS_BUILD_TIME = '10:00'; // Fix Otter refresh via Web App URL
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -9988,17 +9988,7 @@ Return ONLY the JSON array:`;
         }
         
         function refreshOtterFetch() {
-            const settings = getSettings();
-            const url = settings.otterSheetUrl;
-            if (url) {
-                fetchFromOtterSheet(url);
-            } else {
-                const statusEl = document.getElementById('otterFetchStatus');
-                statusEl.style.display = 'block';
-                statusEl.style.background = '#fff3cd';
-                statusEl.style.color = '#856404';
-                statusEl.innerHTML = '⚠️ No Otter Sheet URL configured. Go to Settings to add one.';
-            }
+            fetchFromOtterSheet();
         }
         
         function parseManualInput() {
