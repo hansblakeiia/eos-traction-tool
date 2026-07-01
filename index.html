@@ -2834,7 +2834,7 @@
                                 <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #3b82f6; font-weight: 400; font-size: 0.78rem; margin-left: 6px;">Get free API key →</a>
                             </div>
                             <input type="password" id="geminiApiKey" placeholder="AIza..." style="font-size: 0.85rem;">
-                            <input type="text" id="geminiModel" placeholder="Model (default: gemini-2.0-flash)" style="font-size: 0.78rem; margin-top: 6px; color: var(--gray-600);">
+                            <input type="text" id="geminiModel" placeholder="Model (default: gemini-2.5-flash, auto-falls back if retired)" style="font-size: 0.78rem; margin-top: 6px; color: var(--gray-600);">
                             <div id="geminiTestStatus" style="margin-top: 6px; padding: 6px; border-radius: 4px; display: none; font-size: 0.8rem;"></div>
                             <button class="btn btn-secondary" onclick="testGeminiConnection()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">🔔 Test Connection</button>
                         </div>
@@ -3533,7 +3533,7 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.18.1';
+        const EOS_VERSION = '3.18.2';
         const EOS_BUILD_DATE = '2026-07-01';
         const EOS_BUILD_TIME = '12:30'; // Otter: owner-driven Google Task list dropdown
         
@@ -5304,7 +5304,15 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.18.1 &mdash; 2026-07-01 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.18.2 &mdash; 2026-07-01 (Current)</div>'
+                + '<div style="font-size:0.82rem;color:#374151;line-height:1.65;">'
+                + '&bull; Fixed: Gemini &ldquo;Test Connection&rdquo; error &mdash; gemini-2.0-flash was retired by Google; default model updated to gemini-2.5-flash<br>'
+                + '&bull; Added: Automatic Gemini model fallback &mdash; if your configured/default model is ever retired again, the app now detects the &ldquo;no longer available&rdquo; error and automatically steps down through gemini-2.5-flash &rarr; gemini-2.5-flash-lite &rarr; gemini-flash-latest instead of failing outright<br>'
+                + '&bull; Fixed: Otter.ai AI task-extraction helper had its own separate hardcoded gemini-2.0-flash call that the earlier fix missed &mdash; now routes through the same shared, self-healing AI helper as everything else'
+                + '</div></div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#1d4ed8;font-size:0.9rem;margin-bottom:6px;">v3.18.1 &mdash; 2026-07-01</div>'
                 + '<div style="font-size:0.82rem;color:#374151;line-height:1.65;">'
                 + '&bull; Fixed: Setup Wizard now pushes team member emails to the shared cloud sheet immediately after finishing, instead of only saving locally &mdash; this was causing Google Sign-In to fail on other devices with &ldquo;email isn&rsquo;t set up as a team member yet&rdquo; even after adding it in the wizard<br>'
                 + '&bull; Added: Wizard now confirms whether the cloud push succeeded before closing'
@@ -8420,20 +8428,55 @@ Make sure your suggestions directly address the specific root cause and discussi
             return { provider: provider, apiKey: keyMap[provider], model: modelMap[provider] };
         }
 
+        // Google periodically retires older Gemini models; when that happens the API
+        // returns an error like "model X is no longer available" instead of a normal
+        // response. Rather than hardcoding one model name that eventually breaks, we
+        // detect that specific failure and automatically step down this list until one
+        // works — so a future retirement degrades gracefully instead of erroring out.
+        const GEMINI_FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-flash-latest'];
+
+        function isGeminiModelUnavailableError(message) {
+            if (!message) return false;
+            const m = message.toLowerCase();
+            return m.includes('no longer available') || m.includes('not found') || m.includes('deprecated') || m.includes('not supported');
+        }
+
+        async function callGeminiOnce(apiKey, model, promptText, opts) {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: promptText }] }],
+                    generationConfig: { temperature: opts.temperature ?? 0.7, maxOutputTokens: opts.maxTokens || 1024 }
+                })
+            });
+            const data = await response.json();
+            if (data.error) throw new Error(data.error.message || 'Gemini API error');
+            return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        }
+
+        async function callGeminiWithFallback(apiKey, model, promptText, opts) {
+            const requested = (model || '').trim();
+            const chain = requested ? [requested, ...GEMINI_FALLBACK_MODELS.filter(m => m !== requested)] : GEMINI_FALLBACK_MODELS;
+            let lastError = null;
+            for (let i = 0; i < chain.length; i++) {
+                try {
+                    const text = await callGeminiOnce(apiKey, chain[i], promptText, opts);
+                    if (i > 0) console.warn(`Gemini model "${chain[0]}" is unavailable; auto-fell back to "${chain[i]}". Consider updating the Model field in Settings.`);
+                    return text;
+                } catch (error) {
+                    lastError = error;
+                    if (!isGeminiModelUnavailableError(error.message)) throw error; // real error (bad key, quota, safety block) - surface it immediately
+                    // else: this model was retired/renamed - try the next one in the chain
+                }
+            }
+            throw lastError || new Error('Gemini API error');
+        }
+
         async function callAIText(provider, apiKey, model, promptText, opts) {
             opts = opts || {};
             if (provider === 'gemini') {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model || 'gemini-2.0-flash'}:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: promptText }] }],
-                        generationConfig: { temperature: opts.temperature ?? 0.7, maxOutputTokens: opts.maxTokens || 1024 }
-                    })
-                });
-                const data = await response.json();
-                if (data.error) throw new Error(data.error.message || 'Gemini API error');
-                return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                return await callGeminiWithFallback(apiKey, model, promptText, opts);
             }
             if (provider === 'claude') {
                 const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -10713,7 +10756,7 @@ Make sure your suggestions directly address the specific root cause and discussi
         
         async function testGeminiConnection() {
             const apiKey = document.getElementById('geminiApiKey').value.trim();
-            const model = document.getElementById('geminiModel').value.trim() || 'gemini-2.0-flash';
+            const model = document.getElementById('geminiModel').value.trim() || 'gemini-2.5-flash';
             const statusEl = document.getElementById('geminiTestStatus');
             
             if (!apiKey) {
@@ -11076,24 +11119,8 @@ ${summaryText}
 Return ONLY the JSON array:`;
 
             try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }],
-                        generationConfig: { temperature: 0.3 }
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.error) {
-                    console.error('Gemini API error:', data.error);
-                    return [];
-                }
-                
-                const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                
+                const aiResponse = await callAIText('gemini', apiKey, null, prompt, { temperature: 0.3 });
+
                 // Parse the JSON array from the response
                 try {
                     const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
