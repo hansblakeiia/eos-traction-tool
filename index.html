@@ -2046,6 +2046,7 @@
         .kanban-col-head .kanban-col-name { font-weight: 700; font-size: 0.92rem; outline: none; border-radius: 4px; padding: 2px 4px; }
         .kanban-col-head .kanban-col-name:focus { background: white; box-shadow: 0 0 0 2px var(--accent); }
         .kanban-col-count { font-size: 0.78rem; font-weight: 600; opacity: 0.7; }
+        .kanban-col-count-limit { color: #dc2626; opacity: 1; background: #fee2e2; padding: 1px 7px; border-radius: 9px; }
         .kanban-col-menu-btn { background: none; border: none; cursor: pointer; color: var(--gray-500); font-size: 0.95rem; padding: 2px 5px; border-radius: 4px; }
         .kanban-col-menu-btn:hover { background: rgba(0,0,0,0.08); }
         .kanban-add-col { width: 44px; flex-shrink: 0; display: flex; align-items: flex-start; justify-content: center; padding-top: 8px; }
@@ -2660,7 +2661,9 @@
         <div id="kanban" class="page">
             <div class="kanban-toolbar">
                 <div class="kanban-board-tabs" id="kanbanBoardTabs"></div>
-                <div style="display:flex; gap:8px;">
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <span id="kanbanSyncStatus" style="font-size:0.72rem; padding:3px 10px; border-radius:12px; background:#f3f4f6; color:#6b7280; white-space:nowrap;">Local only</span>
+                    <button class="btn btn-secondary" onclick="pullKanbanFromCloud(true)" style="padding:7px 12px; font-size:0.85rem;" title="Pull the latest board from the shared sheet">↓ Sync</button>
                     <button class="btn btn-secondary" onclick="renameKanbanBoard()" style="padding:7px 12px; font-size:0.85rem;">✏️ Rename Board</button>
                     <button class="btn btn-secondary" onclick="deleteKanbanBoard()" style="padding:7px 12px; font-size:0.85rem;">🗑️ Delete Board</button>
                 </div>
@@ -3533,7 +3536,7 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.18.2';
+        const EOS_VERSION = '3.19.0';
         const EOS_BUILD_DATE = '2026-07-01';
         const EOS_BUILD_TIME = '12:30'; // Otter: owner-driven Google Task list dropdown
         
@@ -3697,6 +3700,10 @@ Example:
                     }
                 });
             }, 1500);
+
+            // Pull the Kanban board from cloud too (staggered slightly after team
+            // settings so both requests don't hit Apps Script at the exact same moment)
+            setTimeout(() => { pullKanbanFromCloud(false); }, 1900);
             
             console.log(`EOS Traction Tool v${EOS_VERSION} (${EOS_BUILD_DATE} ${EOS_BUILD_TIME}): Ready`);
         });
@@ -4029,6 +4036,11 @@ Example:
                     if (timeSinceLastPull > 120000) {
                         autoPullFromGoogleTasks();
                     }
+                }
+                // Also refresh the Kanban board silently, throttled the same way
+                if (Date.now() - kanbanLastPullAttempt > 120000) {
+                    kanbanLastPullAttempt = Date.now();
+                    pullKanbanFromCloud(false);
                 }
             }
         }
@@ -5304,7 +5316,17 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.18.2 &mdash; 2026-07-01 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.19.0 &mdash; 2026-07-01 (Current)</div>'
+                + '<div style="font-size:0.82rem;color:#374151;line-height:1.65;">'
+                + '&bull; New: Kanban board now syncs across the team &mdash; boards, columns, and cards are saved to the shared cloud sheet (same mechanism as Team Settings) and pulled automatically on load, on tab switch, and when the app regains focus<br>'
+                + '&bull; New: &ldquo;\u2193 Sync&rdquo; button and status badge on the Kanban toolbar for a manual pull/push and to see sync state at a glance<br>'
+                + '&bull; New: WIP (Work-in-Progress) limits &mdash; set a max card count per column from the column&rsquo;s &ldquo;\u22ee&rdquo; menu; the column badge turns red at the limit and new cards/drags into a full column are blocked with an explanation<br>'
+                + '&bull; Architecture: Kanban sync reuses the existing generic SharedEOSData endpoint (built for Rocks/Scorecard/Vision) under a new &ldquo;kanban&rdquo; key &mdash; no new backend infrastructure, no Apps Script changes required<br>'
+                + '&bull; Note: cloud sync requires at least one team member to have a Web App URL configured in Settings, same as Team Settings sync'
+                + '</div></div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#1d4ed8;font-size:0.9rem;margin-bottom:6px;">v3.18.2 &mdash; 2026-07-01</div>'
                 + '<div style="font-size:0.82rem;color:#374151;line-height:1.65;">'
                 + '&bull; Fixed: Gemini &ldquo;Test Connection&rdquo; error &mdash; gemini-2.0-flash was retired by Google; default model updated to gemini-2.5-flash<br>'
                 + '&bull; Added: Automatic Gemini model fallback &mdash; if your configured/default model is ever retired again, the app now detects the &ldquo;no longer available&rdquo; error and automatically steps down through gemini-2.5-flash &rarr; gemini-2.5-flash-lite &rarr; gemini-flash-latest instead of failing outright<br>'
@@ -5728,6 +5750,7 @@ Example:
                 loadDailyPlan();
             } else if (pageId === 'kanban') {
                 renderKanban();
+                pullKanbanFromCloud(false); // silent background refresh; re-renders only if cloud has newer data
             }
         }
 
@@ -5746,6 +5769,8 @@ Example:
         let kanbanActiveBoardId = null;
         let kanbanDragCardId = null;
         let kanbanEditingCardId = null;
+        let kanbanPushDebounceTimer = null;
+        let kanbanLastPullAttempt = 0;
 
         const KANBAN_TAG_PALETTE = [
             { bg: '#fde68a', fg: '#78350f' }, // amber
@@ -5802,15 +5827,163 @@ Example:
                 kanbanData = { boards: [board] };
             }
             kanbanActiveBoardId = kanbanData.boards[0].id;
-            saveKanbanData();
+            // Local-only persist at boot time - deliberately does NOT trigger a cloud
+            // push (see saveKanbanData below). Pushing here would race the cloud pull
+            // that runs a moment later on startup and could clobber real cloud data
+            // with a freshly-seeded local board.
+            persistKanbanLocal();
+        }
+
+        function persistKanbanLocal() {
+            kanbanData.updatedAt = kanbanData.updatedAt || new Date().toISOString();
+            localStorage.setItem(KANBAN_STORAGE_KEY, JSON.stringify(kanbanData));
         }
 
         function saveKanbanData() {
+            kanbanData.updatedAt = new Date().toISOString();
             localStorage.setItem(KANBAN_STORAGE_KEY, JSON.stringify(kanbanData));
+            // Debounce the cloud push so rapid edits (dragging several cards in a row,
+            // typing a card title) fire one request instead of one per keystroke/drop.
+            clearTimeout(kanbanPushDebounceTimer);
+            kanbanPushDebounceTimer = setTimeout(() => pushKanbanToCloud(false), 1500);
         }
 
         function getActiveKanbanBoard() {
             return kanbanData.boards.find(b => b.id === kanbanActiveBoardId) || kanbanData.boards[0];
+        }
+
+        // ==================== KANBAN CLOUD SYNC ====================
+        // Reuses the existing generic "SharedEOSData" key-value store on the Apps
+        // Script backend (the same one Rocks/Scorecard/Vision are meant to use) under
+        // the key "kanban", instead of standing up new backend infrastructure.
+
+        function getPrimaryWebAppUrl() {
+            const settings = getSettings();
+            const cfg = window.EOS_CONFIG || {};
+            return (settings.teamMembers?.find(m => m.webAppUrl)?.webAppUrl) || cfg.bootstrapWebAppUrl || null;
+        }
+
+        function updateKanbanSyncStatus(status) {
+            const badge = document.getElementById('kanbanSyncStatus');
+            if (!badge) return;
+            switch (status) {
+                case 'synced':
+                    badge.textContent = 'Synced to cloud';
+                    badge.style.background = '#d1fae5';
+                    badge.style.color = '#047857';
+                    break;
+                case 'loading':
+                    badge.textContent = 'Syncing...';
+                    badge.style.background = '#fef3c7';
+                    badge.style.color = '#92400e';
+                    break;
+                case 'saving':
+                    badge.textContent = 'Saving...';
+                    badge.style.background = '#dbeafe';
+                    badge.style.color = '#1e40af';
+                    break;
+                case 'error':
+                    badge.textContent = 'Sync error';
+                    badge.style.background = '#fee2e2';
+                    badge.style.color = '#dc2626';
+                    break;
+                case 'empty':
+                    badge.textContent = 'No cloud data yet';
+                    badge.style.background = '#f3f4f6';
+                    badge.style.color = '#6b7280';
+                    break;
+                case 'none':
+                default:
+                    badge.textContent = 'Local only';
+                    badge.style.background = '#f3f4f6';
+                    badge.style.color = '#6b7280';
+                    break;
+            }
+        }
+
+        async function pushKanbanToCloud(showFeedback) {
+            const webAppUrl = getPrimaryWebAppUrl();
+            if (!webAppUrl) {
+                updateKanbanSyncStatus('none');
+                if (showFeedback) showToast('No Web App URL configured - add one in Settings to sync Kanban', 'error');
+                return false;
+            }
+            if (!kanbanData) loadKanbanData();
+            try {
+                updateKanbanSyncStatus('saving');
+                const payload = { action: 'saveSharedEOSData', data: { kanban: kanbanData } };
+                const response = await fetch(webAppUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    redirect: 'follow',
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                if (data.success) {
+                    updateKanbanSyncStatus('synced');
+                    if (showFeedback) showToast('Kanban board saved to cloud', 'success');
+                    return true;
+                }
+                updateKanbanSyncStatus('error');
+                if (showFeedback) showToast('Kanban cloud save failed: ' + (data.error || 'unknown error'), 'error');
+                return false;
+            } catch (error) {
+                console.error('Kanban Cloud: push failed', error);
+                updateKanbanSyncStatus('error');
+                if (showFeedback) showToast('Kanban cloud save failed: ' + error.message, 'error');
+                return false;
+            }
+        }
+
+        async function pullKanbanFromCloud(showFeedback) {
+            const webAppUrl = getPrimaryWebAppUrl();
+            if (!webAppUrl) {
+                updateKanbanSyncStatus('none');
+                if (showFeedback) showToast('No Web App URL configured - add one in Settings to sync Kanban', 'error');
+                return false;
+            }
+            if (!kanbanData) loadKanbanData();
+            try {
+                updateKanbanSyncStatus('loading');
+                const response = await fetch(webAppUrl + '?action=getSharedEOSData');
+                const data = await response.json();
+                if (!data.success) {
+                    updateKanbanSyncStatus('error');
+                    if (showFeedback) showToast('Kanban cloud sync failed: ' + (data.error || 'unknown error'), 'error');
+                    return false;
+                }
+                const cloudKanban = data.data && data.data.kanban;
+                if (cloudKanban && Array.isArray(cloudKanban.boards) && cloudKanban.boards.length) {
+                    const cloudUpdatedAt = cloudKanban.updatedAt || '';
+                    const localUpdatedAt = kanbanData.updatedAt || '';
+                    if (cloudUpdatedAt > localUpdatedAt) {
+                        kanbanData = cloudKanban;
+                        kanbanActiveBoardId = kanbanData.boards[0].id;
+                        localStorage.setItem(KANBAN_STORAGE_KEY, JSON.stringify(kanbanData));
+                        if (document.getElementById('kanbanGroups')) renderKanban();
+                        if (showFeedback) showToast('Kanban board synced from cloud', 'success');
+                    } else if (showFeedback) {
+                        showToast('Kanban board already up to date', 'success');
+                    }
+                    updateKanbanSyncStatus('synced');
+                    return true;
+                } else {
+                    // Nothing in the cloud yet - bootstrap it from whatever we have locally
+                    // so the very first sync doesn't just sit there waiting for someone
+                    // else to push first.
+                    updateKanbanSyncStatus('empty');
+                    if (kanbanData && Array.isArray(kanbanData.boards) && kanbanData.boards.length) {
+                        await pushKanbanToCloud(false);
+                    }
+                    if (showFeedback) showToast('No Kanban data in the cloud yet - pushed your local board up', 'info');
+                    return true;
+                }
+            } catch (error) {
+                console.error('Kanban Cloud: pull failed', error);
+                updateKanbanSyncStatus('error');
+                if (showFeedback) showToast('Kanban cloud sync failed: ' + error.message, 'error');
+                return false;
+            }
         }
 
         function renderKanban() {
@@ -5874,10 +6047,13 @@ Example:
             const board = getActiveKanbanBoard();
             const headerWrap = document.getElementById('kanbanColumnsHeader');
             headerWrap.innerHTML = board.columns.map(col => {
+                const count = board.cards.filter(c => c.columnId === col.id).length;
+                const atLimit = !!(col.wipLimit && count >= col.wipLimit);
+                const countLabel = col.wipLimit ? (count + '/' + col.wipLimit) : String(count);
                 return `<div class="kanban-col-head" style="background:${col.color || '#e5e7eb'};">
                     <span class="kanban-col-name" contenteditable="true" onblur="renameKanbanColumn('${col.id}', this.textContent)">${escapeHtml(col.name)}</span>
                     <span style="display:flex; align-items:center; gap:4px;">
-                        <span class="kanban-col-count">${board.cards.filter(c => c.columnId === col.id).length}</span>
+                        <span class="kanban-col-count${atLimit ? ' kanban-col-count-limit' : ''}" title="${col.wipLimit ? 'WIP limit: ' + col.wipLimit : 'No WIP limit set'}">${countLabel}</span>
                         <button class="kanban-col-menu-btn" onclick="kanbanColumnMenu('${col.id}')" title="Column options">&#8942;</button>
                     </span>
                 </div>`;
@@ -5981,11 +6157,17 @@ Example:
             const board = getActiveKanbanBoard();
             const card = board.cards.find(c => c.id === kanbanDragCardId);
             if (!card) return;
+            const colChanged = card.columnId !== columnId;
+            if (colChanged && kanbanWipLimitBlocking(board, columnId, card.id)) {
+                const targetCol = board.columns.find(c => c.id === columnId);
+                kanbanDragCardId = null;
+                showToast(`"${targetCol.name}" is at its WIP limit (${targetCol.wipLimit}). Finish or move something out first.`, 'error');
+                return;
+            }
             const fromColName = (board.columns.find(c => c.id === card.columnId) || {}).name || '?';
             const toColName = (board.columns.find(c => c.id === columnId) || {}).name || '?';
             const newOwner = groupName === 'No Owner' ? '' : groupName;
             const ownerChanged = (card.owner || '') !== newOwner;
-            const colChanged = card.columnId !== columnId;
             card.columnId = columnId;
             card.owner = newOwner;
             const siblings = board.cards.filter(c => c.columnId === columnId && (c.owner || '') === newOwner);
@@ -6019,19 +6201,37 @@ Example:
             }
             renderKanbanColumns();
         }
+        function kanbanWipLimitBlocking(board, columnId, excludeCardId) {
+            const col = board.columns.find(c => c.id === columnId);
+            if (!col || !col.wipLimit) return false;
+            const count = board.cards.filter(c => c.columnId === columnId && c.id !== excludeCardId).length;
+            return count >= col.wipLimit;
+        }
+
         function kanbanColumnMenu(colId) {
             const board = getActiveKanbanBoard();
             const col = board.columns.find(c => c.id === colId);
             if (!col) return;
-            const choice = prompt(`Column "${col.name}"\nType a new color (hex, e.g. #fecaca) or type DELETE to remove this column:`, col.color || '#e5e7eb');
+            const choice = prompt(
+                `Column "${col.name}"\n\n` +
+                `\u2022 Enter a hex color (e.g. #fecaca) to recolor\n` +
+                `\u2022 Enter a number (e.g. 3) to set a WIP limit, or 0 to clear it\n` +
+                `\u2022 Type DELETE to remove this column\n\n` +
+                `Current WIP limit: ${col.wipLimit || 'none'}`,
+                col.color || '#e5e7eb'
+            );
             if (!choice) return;
-            if (choice.trim().toUpperCase() === 'DELETE') {
+            const trimmed = choice.trim();
+            if (trimmed.toUpperCase() === 'DELETE') {
                 const hasCards = board.cards.some(c => c.columnId === colId);
                 if (hasCards && !confirm('This column has cards in it. Deleting it will also delete those cards. Continue?')) return;
                 board.cards = board.cards.filter(c => c.columnId !== colId);
                 board.columns = board.columns.filter(c => c.id !== colId);
-            } else if (/^#[0-9a-fA-F]{3,6}$/.test(choice.trim())) {
-                col.color = choice.trim();
+            } else if (/^#[0-9a-fA-F]{3,6}$/.test(trimmed)) {
+                col.color = trimmed;
+            } else if (/^\d+$/.test(trimmed)) {
+                const n = parseInt(trimmed, 10);
+                col.wipLimit = n > 0 ? n : null;
             }
             saveKanbanData();
             renderKanban();
@@ -6071,6 +6271,13 @@ Example:
                 const title = input.value.trim();
                 if (title) {
                     const board = getActiveKanbanBoard();
+                    if (kanbanWipLimitBlocking(board, columnId, null)) {
+                        const targetCol = board.columns.find(c => c.id === columnId);
+                        showToast(`"${targetCol.name}" is at its WIP limit (${targetCol.wipLimit}). Finish or move something out first.`, 'error');
+                        input.remove();
+                        btn.style.display = '';
+                        return;
+                    }
                     const owner = groupName === 'No Owner' ? '' : groupName;
                     const siblings = board.cards.filter(c => c.columnId === columnId && (c.owner || '') === owner);
                     board.cards.push({
@@ -6133,6 +6340,10 @@ Example:
             const fromColName = (board.columns.find(c => c.id === card.columnId) || {}).name || '?';
             const toColName = (board.columns.find(c => c.id === newColId) || {}).name || '?';
             const colChanged = newColId !== card.columnId;
+            if (colChanged && kanbanWipLimitBlocking(board, newColId, card.id)) {
+                showToast(`"${toColName}" is at its WIP limit. Finish or move something out first, or pick a different column.`, 'error');
+                return;
+            }
             const ownerChanged = newOwner !== (card.owner || '');
             const otherChanged = newTitle !== card.title || newDesc !== (card.description || '') ||
                 newDue !== (card.dueDate || null) || JSON.stringify(newLabels) !== JSON.stringify(card.labels || []);
