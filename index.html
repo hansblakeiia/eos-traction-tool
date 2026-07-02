@@ -2126,6 +2126,64 @@
             letter-spacing: 0.03em; color: #92400e; background: #fef3c7; padding: 2px 8px;
             border-radius: 5px; margin-left: 8px; vertical-align: middle;
         }
+        /* ---- Filter / Sort / Search toolbar ---- */
+        .kanban-filter-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+        .kanban-search-wrap { position: relative; display: flex; align-items: center; }
+        .kanban-search-icon { position: absolute; left: 10px; font-size: 0.8rem; opacity: 0.5; pointer-events: none; }
+        .kanban-search-input {
+            padding: 7px 30px 7px 30px; border: 1px solid var(--gray-200); border-radius: 8px;
+            font-size: 0.85rem; width: 200px; box-sizing: border-box;
+        }
+        .kanban-search-input:focus { outline: none; border-color: var(--accent); width: 240px; }
+        .kanban-search-clear {
+            position: absolute; right: 6px; background: none; border: none; cursor: pointer;
+            color: var(--gray-400); font-size: 1rem; line-height: 1; padding: 2px 4px;
+        }
+        .kanban-search-clear:hover { color: var(--gray-700); }
+        .kanban-filter-btn {
+            padding: 7px 12px; border-radius: 8px; border: 1px solid var(--gray-200);
+            background: white; cursor: pointer; font-weight: 600; font-size: 0.82rem;
+            color: var(--gray-700); white-space: nowrap; display: inline-flex; align-items: center; gap: 5px;
+        }
+        .kanban-filter-btn:hover { background: var(--gray-50); }
+        .kanban-filter-badge {
+            background: var(--primary); color: white; font-size: 0.68rem; font-weight: 700;
+            padding: 1px 6px; border-radius: 9px; margin-left: 2px;
+        }
+        .kanban-filter-clear-all { color: var(--gray-500); border-style: dashed; }
+        .kanban-filter-section { margin-bottom: 16px; }
+        .kanban-filter-section-title { font-size: 0.78rem; font-weight: 700; color: var(--gray-600); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 8px; }
+        .kanban-filter-chip-list { display: flex; flex-wrap: wrap; gap: 6px; }
+        .kanban-filter-chip {
+            padding: 6px 12px; border-radius: 16px; border: 1px solid var(--gray-200);
+            background: white; cursor: pointer; font-size: 0.8rem; font-weight: 600; color: var(--gray-600);
+        }
+        .kanban-filter-chip:hover { border-color: var(--accent); }
+        .kanban-filter-chip.active { border-width: 1px; font-weight: 700; }
+        .kanban-sort-options { display: flex; flex-direction: column; gap: 3px; }
+        .kanban-sort-option {
+            display: flex; align-items: center; justify-content: space-between; width: 100%;
+            padding: 9px 12px; border-radius: 7px; border: 1px solid transparent; background: none;
+            cursor: pointer; font-size: 0.87rem; font-weight: 600; color: var(--gray-700); text-align: left;
+        }
+        .kanban-sort-option:hover { background: var(--gray-50); }
+        .kanban-sort-option.active { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+        .kanban-sort-dir { font-size: 0.76rem; font-weight: 700; opacity: 0.8; }
+        /* ---- Column options modal (click-based, replaces the old prompt() menu) ---- */
+        .kanban-col-opt-label { font-size: 0.78rem; font-weight: 700; color: var(--gray-600); text-transform: uppercase; letter-spacing: 0.03em; margin: 14px 0 8px; }
+        .kanban-col-opt-label:first-child { margin-top: 0; }
+        .kanban-col-opt-swatches { display: flex; gap: 6px; flex-wrap: wrap; }
+        .kanban-col-opt-swatch { width: 24px; height: 24px; border-radius: 6px; cursor: pointer; border: 2px solid transparent; flex-shrink: 0; }
+        .kanban-col-opt-swatch.selected { border-color: var(--gray-700); }
+        .kanban-col-opt-wip-row { display: flex; align-items: center; gap: 8px; }
+        .kanban-col-opt-wip-row input { width: 70px; padding: 7px 8px; border: 1px solid var(--gray-200); border-radius: 6px; }
+        .kanban-col-opt-action-btn {
+            width: 100%; text-align: left; padding: 9px 12px; border-radius: 7px; border: 1px solid var(--gray-200);
+            background: white; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--gray-700); margin-top: 8px;
+        }
+        .kanban-col-opt-action-btn:hover { background: var(--gray-50); }
+        .kanban-col-opt-action-btn.danger { color: var(--danger); border-color: #fecaca; }
+        .kanban-col-opt-action-btn.danger:hover { background: #fee2e2; }
     </style>
 </head>
 <body>
@@ -2714,6 +2772,16 @@
                 </div>
             </div>
             <div class="kanban-view-tabs" id="kanbanViewTabs"></div>
+            <div class="kanban-filter-toolbar" id="kanbanFilterToolbar">
+                <div class="kanban-search-wrap">
+                    <span class="kanban-search-icon">&#128269;</span>
+                    <input type="text" id="kanbanSearchInput" class="kanban-search-input" placeholder="Search cards..." oninput="kanbanSetSearch(this.value)">
+                    <button class="kanban-search-clear" id="kanbanSearchClearBtn" onclick="kanbanClearSearch()" style="display:none;" title="Clear search">&times;</button>
+                </div>
+                <button class="kanban-filter-btn" id="kanbanFilterBtn" onclick="openKanbanFilterModal()">&#9662; Filter</button>
+                <button class="kanban-filter-btn" id="kanbanSortBtn" onclick="openKanbanSortModal()">&#8597;&#65039; Sort</button>
+                <button class="kanban-filter-btn kanban-filter-clear-all" id="kanbanClearAllBtn" onclick="kanbanClearAllViewPrefs()" style="display:none;">Clear filters</button>
+            </div>
             <div class="kanban-scroll" id="kanbanScroll">
                 <div id="kanbanBoardView">
                     <div class="kanban-columns-header" id="kanbanColumnsHeader"></div>
@@ -2762,6 +2830,77 @@
                     <button class="btn btn-secondary" onclick="deleteKanbanCard()" style="color:var(--danger);">🗑️ Delete Card</button>
                     <button class="btn btn-secondary" id="kcArchiveBtn">🗄 Archive</button>
                     <button class="btn btn-primary" onclick="saveKanbanCardModal()">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- KANBAN FILTER MODAL -->
+        <div class="modal-overlay" id="kanbanFilterModal">
+            <div class="modal" style="max-width:400px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <h2 style="margin-bottom:0;">Filter Cards</h2>
+                    <button onclick="closeModal('kanbanFilterModal')" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray-500);">&times;</button>
+                </div>
+                <p style="font-size:0.8rem; color:var(--gray-500); margin:0 0 14px;">Click to toggle. Applies to Full Board, Simple Triage, and Shipped Archive. This is a personal view setting - it doesn't sync to your teammate.</p>
+                <div style="max-height:55vh; overflow-y:auto;">
+                    <div class="kanban-filter-section">
+                        <div class="kanban-filter-section-title">Owner</div>
+                        <div id="kanbanFilterOwnerList" class="kanban-filter-chip-list"></div>
+                    </div>
+                    <div class="kanban-filter-section">
+                        <div class="kanban-filter-section-title">Label</div>
+                        <div id="kanbanFilterLabelList" class="kanban-filter-chip-list"></div>
+                    </div>
+                    <div class="kanban-filter-section">
+                        <div class="kanban-filter-section-title">Due Date</div>
+                        <div class="kanban-filter-chip-list">
+                            <button class="kanban-filter-chip" id="kanbanFilterChipOverdue" onclick="kanbanToggleDueFilter('overdue')">Overdue</button>
+                            <button class="kanban-filter-chip" id="kanbanFilterChipDueSoon" onclick="kanbanToggleDueFilter('dueSoon')">Due within 7 days</button>
+                            <button class="kanban-filter-chip" id="kanbanFilterChipNoDue" onclick="kanbanToggleDueFilter('noDue')">No due date</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="kanbanClearFilters()">Clear filters</button>
+                    <button class="btn btn-primary" onclick="closeModal('kanbanFilterModal')">Done</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- KANBAN SORT MODAL -->
+        <div class="modal-overlay" id="kanbanSortModal">
+            <div class="modal" style="max-width:320px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <h2 style="margin-bottom:0;">Sort Cards</h2>
+                    <button onclick="closeModal('kanbanSortModal')" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray-500);">&times;</button>
+                </div>
+                <p style="font-size:0.8rem; color:var(--gray-500); margin:0 0 10px;">Click a property again to flip Asc/Desc. &ldquo;Manual&rdquo; respects your drag order.</p>
+                <div id="kanbanSortOptionsList" class="kanban-sort-options"></div>
+                <div class="modal-actions">
+                    <button class="btn btn-primary" onclick="closeModal('kanbanSortModal')">Done</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- KANBAN COLUMN OPTIONS MODAL (click-based; replaces the old text-command prompt) -->
+        <div class="modal-overlay" id="kanbanColOptionsModal">
+            <div class="modal" style="max-width:340px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <h2 style="margin-bottom:0;" id="kanbanColOptionsTitle">Column Options</h2>
+                    <button onclick="closeModal('kanbanColOptionsModal')" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray-500);">&times;</button>
+                </div>
+                <div class="kanban-col-opt-label">Color</div>
+                <div class="kanban-col-opt-swatches" id="kanbanColOptSwatches"></div>
+                <div class="kanban-col-opt-label">WIP Limit</div>
+                <div class="kanban-col-opt-wip-row">
+                    <input type="number" id="kanbanColOptWipInput" min="0" placeholder="None" onchange="kanbanColOptSetWip(this.value)">
+                    <button class="kanban-filter-btn" onclick="kanbanColOptSetWip(0)">No limit</button>
+                </div>
+                <div class="kanban-col-opt-label">Actions</div>
+                <button class="kanban-col-opt-action-btn" id="kanbanColOptArchiveBtn" onclick="kanbanColOptArchiveAll()">&#128451;&#65039; Archive all cards in this column</button>
+                <button class="kanban-col-opt-action-btn danger" onclick="kanbanColOptDelete()">&#128465;&#65039; Delete this column</button>
+                <div class="modal-actions">
+                    <button class="btn btn-primary" onclick="closeModal('kanbanColOptionsModal')">Done</button>
                 </div>
             </div>
         </div>
@@ -3629,9 +3768,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.21.0';
+        const EOS_VERSION = '3.22.0';
         const EOS_BUILD_DATE = '2026-07-02';
-        const EOS_BUILD_TIME = '09:00'; // Kanban: Views + Archive (Full Board / Simple Triage / Shipped Archive)
+        const EOS_BUILD_TIME = '14:00'; // Kanban: Filter/Sort/Search + click-based column options (replaced the prompt() menu)
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -5409,7 +5548,17 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.21.0 &mdash; 2026-07-02 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.22.0 &mdash; 2026-07-02 (Current)</div>'
+                + '<div style="font-size:0.82rem;color:#374151;line-height:1.65;">'
+                + '&bull; New: Kanban Filter/Sort/Search toolbar &mdash; a search box, a &ldquo;Filter&rdquo; button (click-to-toggle owner/label chips + Overdue / Due within 7 days / No due date), and a &ldquo;Sort&rdquo; button (Manual / Title / Owner / Due Date / Last Updated, click again to flip Asc/Desc), all above the board<br>'
+                + '&bull; Changed: the column &ldquo;\u22ee&rdquo; menu is no longer a text-command prompt &mdash; it&rsquo;s now a proper panel with color swatches, a WIP limit number field, and one-click &ldquo;Archive all cards&rdquo; / &ldquo;Delete column&rdquo; buttons<br>'
+                + '&bull; Applies to: Full Kanban Board (sorts within each column/swimlane cell, hides empty swimlanes while a filter is active), Simple Triage (sorts within each column group), and Shipped Archive (search + owner/label filters)<br>'
+                + '&bull; Important: Filter/Sort/Search is a personal view setting stored locally per device/browser, not part of the synced board data &mdash; so your filters never override what your teammate sees<br>'
+                + '&bull; Note: WIP limits and column card counts always reflect the true total, never the filtered count, so a limit still means what it says regardless of your current filter'
+                + '</div></div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#1d4ed8;font-size:0.9rem;margin-bottom:6px;">v3.21.0 &mdash; 2026-07-02</div>'
                 + '<div style="font-size:0.82rem;color:#374151;line-height:1.65;">'
                 + '&bull; New: Kanban board views &mdash; &ldquo;Full Kanban Board&rdquo;, &ldquo;Simple Triage&rdquo;, and &ldquo;Shipped Archive&rdquo; tabs above the board, mirroring the Notion-style view switcher<br>'
                 + '&bull; New: &ldquo;Simple Triage&rdquo; view &mdash; a flat, no-swimlane list of every active card with an inline column dropdown, for quickly processing a backlog without full drag-and-drop<br>'
@@ -5879,9 +6028,12 @@ Example:
                 .replace(/'/g, '&#39;');
         }
         const KANBAN_STORAGE_KEY = 'eos_kanban_data';
+        const KANBAN_VIEW_PREFS_KEY = 'eos_kanban_view_prefs'; // local-only: search/filter/sort is a personal view setting, deliberately NOT part of kanbanData so it never syncs to a teammate's browser
         let kanbanData = null;
         let kanbanActiveBoardId = null;
         let kanbanViewMode = 'board'; // 'board' | 'triage' | 'archive' - a view lens, not persisted/synced
+        let kanbanViewPrefs = {}; // { [boardId]: { search, filterOwners[], filterLabels[], filterOverdue, filterDueSoon, filterNoDue, sortBy, sortDir } }
+        let kanbanColOptionsColId = null;
         let kanbanDragCardId = null;
         let kanbanEditingCardId = null;
         let kanbanPushDebounceTimer = null;
@@ -6228,6 +6380,7 @@ Example:
                 kanbanData = { boards: [board] };
             }
             kanbanActiveBoardId = kanbanData.boards[0].id;
+            loadKanbanViewPrefs();
             // Local-only persist at boot time - deliberately does NOT trigger a cloud
             // push (see saveKanbanData below). Pushing here would race the cloud pull
             // that runs a moment later on startup and could clobber real cloud data
@@ -6238,6 +6391,75 @@ Example:
         function persistKanbanLocal() {
             kanbanData.updatedAt = kanbanData.updatedAt || new Date().toISOString();
             localStorage.setItem(KANBAN_STORAGE_KEY, JSON.stringify(kanbanData));
+        }
+
+        // ---- View prefs (search/filter/sort): local-only, per-device, never synced ----
+        function loadKanbanViewPrefs() {
+            try { kanbanViewPrefs = JSON.parse(localStorage.getItem(KANBAN_VIEW_PREFS_KEY)) || {}; }
+            catch (e) { kanbanViewPrefs = {}; }
+        }
+        function saveKanbanViewPrefs() {
+            localStorage.setItem(KANBAN_VIEW_PREFS_KEY, JSON.stringify(kanbanViewPrefs));
+        }
+        function getKanbanViewPrefs(boardId) {
+            if (!kanbanViewPrefs[boardId]) {
+                kanbanViewPrefs[boardId] = {
+                    search: '', filterOwners: [], filterLabels: [],
+                    filterOverdue: false, filterDueSoon: false, filterNoDue: false,
+                    sortBy: 'manual', sortDir: 'asc'
+                };
+            }
+            return kanbanViewPrefs[boardId];
+        }
+        function kanbanFilterActive(board) {
+            const p = getKanbanViewPrefs(board.id);
+            return !!((p.search && p.search.trim()) || p.filterOwners.length || p.filterLabels.length || p.filterOverdue || p.filterDueSoon || p.filterNoDue);
+        }
+        function kanbanApplyFilterSearch(board, cards) {
+            const prefs = getKanbanViewPrefs(board.id);
+            let result = cards;
+            if (prefs.search && prefs.search.trim()) {
+                const q = prefs.search.trim().toLowerCase();
+                result = result.filter(c => (c.title || '').toLowerCase().includes(q) || (c.description || '').toLowerCase().includes(q));
+            }
+            if (prefs.filterOwners && prefs.filterOwners.length) {
+                result = result.filter(c => prefs.filterOwners.includes((c.owner || '').trim() || '__NO_OWNER__'));
+            }
+            if (prefs.filterLabels && prefs.filterLabels.length) {
+                result = result.filter(c => (c.labels || []).some(l => prefs.filterLabels.includes(l)));
+            }
+            if (prefs.filterOverdue || prefs.filterDueSoon || prefs.filterNoDue) {
+                const today = new Date(); today.setHours(0, 0, 0, 0);
+                result = result.filter(c => {
+                    if (!c.dueDate) return !!prefs.filterNoDue;
+                    const due = new Date(c.dueDate + 'T00:00:00');
+                    const diffDays = Math.round((due - today) / 86400000);
+                    if (prefs.filterOverdue && diffDays < 0) return true;
+                    if (prefs.filterDueSoon && diffDays >= 0 && diffDays <= 7) return true;
+                    return false;
+                });
+            }
+            return result;
+        }
+        function kanbanSortCards(board, cards) {
+            const prefs = getKanbanViewPrefs(board.id);
+            if (!prefs.sortBy || prefs.sortBy === 'manual') {
+                return cards.slice().sort((a, b) => (a.position || 0) - (b.position || 0));
+            }
+            const dir = prefs.sortDir === 'desc' ? -1 : 1;
+            return cards.slice().sort((a, b) => {
+                let av = '', bv = '';
+                if (prefs.sortBy === 'title') { av = (a.title || '').toLowerCase(); bv = (b.title || '').toLowerCase(); }
+                else if (prefs.sortBy === 'owner') { av = (a.owner || '').toLowerCase(); bv = (b.owner || '').toLowerCase(); }
+                else if (prefs.sortBy === 'dueDate') { av = a.dueDate || '9999-99-99'; bv = b.dueDate || '9999-99-99'; }
+                else if (prefs.sortBy === 'updated') {
+                    const aLast = (a.history || []).slice(-1)[0], bLast = (b.history || []).slice(-1)[0];
+                    av = aLast ? aLast.at : ''; bv = bLast ? bLast.at : '';
+                }
+                if (av < bv) return -1 * dir;
+                if (av > bv) return 1 * dir;
+                return 0;
+            });
         }
 
         function saveKanbanData() {
@@ -6391,6 +6613,7 @@ Example:
             if (!kanbanData) loadKanbanData();
             renderKanbanBoardTabs();
             renderKanbanViewTabs();
+            renderKanbanFilterToolbar();
             const boardViewEl = document.getElementById('kanbanBoardView');
             const triageViewEl = document.getElementById('kanbanTriageView');
             const archiveViewEl = document.getElementById('kanbanArchiveView');
@@ -6398,18 +6621,181 @@ Example:
                 boardViewEl.style.display = 'none';
                 archiveViewEl.style.display = 'none';
                 triageViewEl.style.display = '';
-                renderKanbanTriageView();
             } else if (kanbanViewMode === 'archive') {
                 boardViewEl.style.display = 'none';
                 triageViewEl.style.display = 'none';
                 archiveViewEl.style.display = '';
-                renderKanbanArchiveView();
             } else {
                 triageViewEl.style.display = 'none';
                 archiveViewEl.style.display = 'none';
                 boardViewEl.style.display = '';
-                renderKanbanColumns();
             }
+            renderKanbanActiveView();
+        }
+
+        function renderKanbanActiveView() {
+            if (kanbanViewMode === 'triage') renderKanbanTriageView();
+            else if (kanbanViewMode === 'archive') renderKanbanArchiveView();
+            else renderKanbanColumns();
+        }
+
+        // ==================== KANBAN FILTER / SORT / SEARCH (v3.22.0) ====================
+        function renderKanbanFilterToolbar() {
+            const board = getActiveKanbanBoard();
+            const prefs = getKanbanViewPrefs(board.id);
+            const searchInput = document.getElementById('kanbanSearchInput');
+            if (searchInput && document.activeElement !== searchInput) searchInput.value = prefs.search || '';
+            updateKanbanFilterToolbarBadges();
+        }
+        function updateKanbanFilterToolbarBadges() {
+            const board = getActiveKanbanBoard();
+            const prefs = getKanbanViewPrefs(board.id);
+            const filterCount = prefs.filterOwners.length + prefs.filterLabels.length + (prefs.filterOverdue ? 1 : 0) + (prefs.filterDueSoon ? 1 : 0) + (prefs.filterNoDue ? 1 : 0);
+            const filterBtn = document.getElementById('kanbanFilterBtn');
+            if (filterBtn) filterBtn.innerHTML = filterCount ? `&#9662; Filter <span class="kanban-filter-badge">${filterCount}</span>` : '&#9662; Filter';
+            const sortLabels = { manual: 'Manual', title: 'Title', owner: 'Owner', dueDate: 'Due Date', updated: 'Last Updated' };
+            const sortBtn = document.getElementById('kanbanSortBtn');
+            if (sortBtn) sortBtn.innerHTML = (prefs.sortBy && prefs.sortBy !== 'manual') ? `&#8597;&#65039; Sort: ${sortLabels[prefs.sortBy]}` : '&#8597;&#65039; Sort';
+            const clearBtn = document.getElementById('kanbanClearAllBtn');
+            const anyActive = filterCount > 0 || (prefs.search && prefs.search.trim()) || (prefs.sortBy && prefs.sortBy !== 'manual');
+            if (clearBtn) clearBtn.style.display = anyActive ? '' : 'none';
+            const clearSearchBtn = document.getElementById('kanbanSearchClearBtn');
+            if (clearSearchBtn) clearSearchBtn.style.display = (prefs.search && prefs.search.trim()) ? '' : 'none';
+        }
+        function kanbanSetSearch(value) {
+            const board = getActiveKanbanBoard();
+            getKanbanViewPrefs(board.id).search = value;
+            saveKanbanViewPrefs();
+            renderKanbanActiveView();
+            updateKanbanFilterToolbarBadges();
+        }
+        function kanbanClearSearch() {
+            const board = getActiveKanbanBoard();
+            getKanbanViewPrefs(board.id).search = '';
+            saveKanbanViewPrefs();
+            const input = document.getElementById('kanbanSearchInput');
+            if (input) input.value = '';
+            renderKanbanActiveView();
+            updateKanbanFilterToolbarBadges();
+        }
+        function kanbanClearAllViewPrefs() {
+            const board = getActiveKanbanBoard();
+            kanbanViewPrefs[board.id] = { search: '', filterOwners: [], filterLabels: [], filterOverdue: false, filterDueSoon: false, filterNoDue: false, sortBy: 'manual', sortDir: 'asc' };
+            saveKanbanViewPrefs();
+            renderKanbanFilterToolbar();
+            renderKanbanActiveView();
+        }
+
+        // ---- Filter modal (click-based owner/label chips + due-date chips) ----
+        function openKanbanFilterModal() {
+            renderKanbanFilterModal();
+            openModal('kanbanFilterModal');
+        }
+        function renderKanbanFilterModal() {
+            const board = getActiveKanbanBoard();
+            const prefs = getKanbanViewPrefs(board.id);
+            const ownerRegistry = kanbanEnsureOwnerRegistry(board);
+            const ownerWrap = document.getElementById('kanbanFilterOwnerList');
+            const options = ownerRegistry.map(o => o.name).concat(['__NO_OWNER__']);
+            ownerWrap.innerHTML = options.map(name => {
+                const display = name === '__NO_OWNER__' ? 'No Owner' : name;
+                const active = prefs.filterOwners.includes(name);
+                const color = name === '__NO_OWNER__' ? kanbanColorFor('') : kanbanOwnerColor(board, name);
+                const style = active ? `background:${color.bg}; color:${color.fg}; border-color:${color.bg};` : '';
+                const safeName = name.replace(/'/g, "\\'");
+                return `<button class="kanban-filter-chip ${active ? 'active' : ''}" style="${style}" onclick="kanbanToggleOwnerFilter('${safeName}')">${escapeHtml(display)}</button>`;
+            }).join('') || '<div style="font-size:0.8rem; color:var(--gray-400);">No owners yet</div>';
+
+            const labelRegistry = kanbanEnsureLabelRegistry(board);
+            const labelWrap = document.getElementById('kanbanFilterLabelList');
+            labelWrap.innerHTML = labelRegistry.map(l => {
+                const active = prefs.filterLabels.includes(l.name);
+                const style = active ? `background:${l.color.bg}; color:${l.color.fg}; border-color:${l.color.bg};` : '';
+                const safeName = l.name.replace(/'/g, "\\'");
+                return `<button class="kanban-filter-chip ${active ? 'active' : ''}" style="${style}" onclick="kanbanToggleLabelFilter('${safeName}')">${escapeHtml(l.name)}</button>`;
+            }).join('') || '<div style="font-size:0.8rem; color:var(--gray-400);">No labels yet</div>';
+
+            document.getElementById('kanbanFilterChipOverdue').classList.toggle('active', !!prefs.filterOverdue);
+            document.getElementById('kanbanFilterChipDueSoon').classList.toggle('active', !!prefs.filterDueSoon);
+            document.getElementById('kanbanFilterChipNoDue').classList.toggle('active', !!prefs.filterNoDue);
+        }
+        function kanbanToggleOwnerFilter(name) {
+            const board = getActiveKanbanBoard();
+            const prefs = getKanbanViewPrefs(board.id);
+            const idx = prefs.filterOwners.indexOf(name);
+            if (idx >= 0) prefs.filterOwners.splice(idx, 1); else prefs.filterOwners.push(name);
+            saveKanbanViewPrefs();
+            renderKanbanFilterModal();
+            renderKanbanActiveView();
+            updateKanbanFilterToolbarBadges();
+        }
+        function kanbanToggleLabelFilter(name) {
+            const board = getActiveKanbanBoard();
+            const prefs = getKanbanViewPrefs(board.id);
+            const idx = prefs.filterLabels.indexOf(name);
+            if (idx >= 0) prefs.filterLabels.splice(idx, 1); else prefs.filterLabels.push(name);
+            saveKanbanViewPrefs();
+            renderKanbanFilterModal();
+            renderKanbanActiveView();
+            updateKanbanFilterToolbarBadges();
+        }
+        function kanbanToggleDueFilter(kind) {
+            const board = getActiveKanbanBoard();
+            const prefs = getKanbanViewPrefs(board.id);
+            if (kind === 'overdue') prefs.filterOverdue = !prefs.filterOverdue;
+            else if (kind === 'dueSoon') prefs.filterDueSoon = !prefs.filterDueSoon;
+            else if (kind === 'noDue') prefs.filterNoDue = !prefs.filterNoDue;
+            saveKanbanViewPrefs();
+            renderKanbanFilterModal();
+            renderKanbanActiveView();
+            updateKanbanFilterToolbarBadges();
+        }
+        function kanbanClearFilters() {
+            const board = getActiveKanbanBoard();
+            const prefs = getKanbanViewPrefs(board.id);
+            prefs.filterOwners = []; prefs.filterLabels = [];
+            prefs.filterOverdue = false; prefs.filterDueSoon = false; prefs.filterNoDue = false;
+            saveKanbanViewPrefs();
+            renderKanbanFilterModal();
+            renderKanbanActiveView();
+            updateKanbanFilterToolbarBadges();
+        }
+
+        // ---- Sort modal (click a property; click again to flip Asc/Desc) ----
+        function openKanbanSortModal() {
+            renderKanbanSortModal();
+            openModal('kanbanSortModal');
+        }
+        function renderKanbanSortModal() {
+            const board = getActiveKanbanBoard();
+            const prefs = getKanbanViewPrefs(board.id);
+            const options = [
+                { id: 'manual', label: 'Manual (drag order)' },
+                { id: 'title', label: 'Title' },
+                { id: 'owner', label: 'Owner' },
+                { id: 'dueDate', label: 'Due Date' },
+                { id: 'updated', label: 'Last Updated' }
+            ];
+            const wrap = document.getElementById('kanbanSortOptionsList');
+            wrap.innerHTML = options.map(o => {
+                const active = prefs.sortBy === o.id;
+                const dirHtml = (active && o.id !== 'manual') ? `<span class="kanban-sort-dir">${prefs.sortDir === 'desc' ? '\u2193 Desc' : '\u2191 Asc'}</span>` : '';
+                return `<button class="kanban-sort-option ${active ? 'active' : ''}" onclick="kanbanSetSortBy('${o.id}')"><span>${o.label}</span>${dirHtml}</button>`;
+            }).join('');
+        }
+        function kanbanSetSortBy(sortId) {
+            const board = getActiveKanbanBoard();
+            const prefs = getKanbanViewPrefs(board.id);
+            if (prefs.sortBy === sortId && sortId !== 'manual') {
+                prefs.sortDir = prefs.sortDir === 'desc' ? 'asc' : 'desc';
+            } else {
+                prefs.sortBy = sortId;
+                prefs.sortDir = 'asc';
+            }
+            saveKanbanViewPrefs();
+            renderKanbanSortModal();
+            renderKanbanActiveView();
+            updateKanbanFilterToolbarBadges();
         }
 
         function renderKanbanViewTabs() {
@@ -6500,16 +6886,26 @@ Example:
                     <span class="kanban-col-name" contenteditable="true" onblur="renameKanbanColumn('${col.id}', this.textContent)">${escapeHtml(col.name)}</span>
                     <span style="display:flex; align-items:center; gap:4px;">
                         <span class="kanban-col-count${atLimit ? ' kanban-col-count-limit' : ''}" title="${col.wipLimit ? 'WIP limit: ' + col.wipLimit : 'No WIP limit set'}">${countLabel}</span>
-                        <button class="kanban-col-menu-btn" onclick="kanbanColumnMenu('${col.id}')" title="Column options">&#8942;</button>
+                        <button class="kanban-col-menu-btn" onclick="openKanbanColumnOptions('${col.id}')" title="Column options">&#8942;</button>
                     </span>
                 </div>`;
             }).join('') + `<div class="kanban-add-col"><button class="kanban-add-col-btn" onclick="addKanbanColumn()" title="Add column">+</button></div>`;
 
-            const groups = kanbanOwnerGroups(board);
+            const filterActive = kanbanFilterActive(board);
+            const groups = kanbanOwnerGroups(board).filter(groupName => {
+                if (!filterActive) return true;
+                const raw = board.cards.filter(c => !c.archived && (c.owner || '').trim() === (groupName === 'No Owner' ? '' : groupName));
+                return kanbanApplyFilterSearch(board, raw).length > 0;
+            });
             const groupsWrap = document.getElementById('kanbanGroups');
+            if (!groups.length) {
+                groupsWrap.innerHTML = '<div style="padding:30px; text-align:center; color:var(--gray-400); font-size:0.9rem;">No cards match your current filters/search. <button class="kanban-add-group-btn" onclick="kanbanClearAllViewPrefs()">Clear filters</button></div>';
+                return;
+            }
             groupsWrap.innerHTML = groups.map(groupName => {
                 const collapsed = (board.collapsedGroups || []).includes(groupName);
-                const groupCards = board.cards.filter(c => !c.archived && (c.owner || '').trim() === (groupName === 'No Owner' ? '' : groupName));
+                const rawGroupCards = board.cards.filter(c => !c.archived && (c.owner || '').trim() === (groupName === 'No Owner' ? '' : groupName));
+                const groupCards = kanbanApplyFilterSearch(board, rawGroupCards);
                 const tagColor = kanbanOwnerColor(board, groupName === 'No Owner' ? '' : groupName);
                 const isAgent = /agent|ai\b/i.test(groupName);
                 const safeGroup = groupName.replace(/'/g, "\\'");
@@ -6527,9 +6923,10 @@ Example:
         }
 
         function renderKanbanCell(board, col, groupName) {
-            const cards = board.cards
-                .filter(c => !c.archived && c.columnId === col.id && (c.owner || '').trim() === (groupName === 'No Owner' ? '' : groupName))
-                .sort((a, b) => (a.position || 0) - (b.position || 0));
+            let cards = board.cards
+                .filter(c => !c.archived && c.columnId === col.id && (c.owner || '').trim() === (groupName === 'No Owner' ? '' : groupName));
+            cards = kanbanApplyFilterSearch(board, cards);
+            cards = kanbanSortCards(board, cards);
             const cardsHtml = cards.map(c => renderKanbanCard(c)).join('');
             const safeGroup = groupName.replace(/'/g, "\\'");
             return `<div class="kanban-col-cell"
@@ -6655,37 +7052,59 @@ Example:
             return count >= col.wipLimit;
         }
 
-        function kanbanColumnMenu(colId) {
+        // ---- Column options modal (click-based: swatches, WIP number input, action buttons) ----
+        function openKanbanColumnOptions(colId) {
+            kanbanColOptionsColId = colId;
+            renderKanbanColOptionsModal();
+            openModal('kanbanColOptionsModal');
+        }
+        function renderKanbanColOptionsModal() {
             const board = getActiveKanbanBoard();
-            const col = board.columns.find(c => c.id === colId);
+            const col = board.columns.find(c => c.id === kanbanColOptionsColId);
             if (!col) return;
-            const activeCount = board.cards.filter(c => c.columnId === colId && !c.archived).length;
-            const choice = prompt(
-                `Column "${col.name}"\n\n` +
-                `\u2022 Enter a hex color (e.g. #fecaca) to recolor\n` +
-                `\u2022 Enter a number (e.g. 3) to set a WIP limit, or 0 to clear it\n` +
-                `\u2022 Type ARCHIVE to archive all ${activeCount} card(s) in this column (moves to Shipped Archive view, not deleted)\n` +
-                `\u2022 Type DELETE to remove this column\n\n` +
-                `Current WIP limit: ${col.wipLimit || 'none'}`,
-                col.color || '#e5e7eb'
-            );
-            if (!choice) return;
-            const trimmed = choice.trim();
-            if (trimmed.toUpperCase() === 'DELETE') {
-                const hasCards = board.cards.some(c => c.columnId === colId);
-                if (hasCards && !confirm('This column has cards in it. Deleting it will also delete those cards. Continue?')) return;
-                board.cards = board.cards.filter(c => c.columnId !== colId);
-                board.columns = board.columns.filter(c => c.id !== colId);
-            } else if (trimmed.toUpperCase() === 'ARCHIVE') {
-                kanbanArchiveAllInColumn(colId);
-                return;
-            } else if (/^#[0-9a-fA-F]{3,6}$/.test(trimmed)) {
-                col.color = trimmed;
-            } else if (/^\d+$/.test(trimmed)) {
-                const n = parseInt(trimmed, 10);
-                col.wipLimit = n > 0 ? n : null;
-            }
+            document.getElementById('kanbanColOptionsTitle').textContent = 'Column: ' + col.name;
+            const swatchWrap = document.getElementById('kanbanColOptSwatches');
+            swatchWrap.innerHTML = KANBAN_TAG_PALETTE.map(c => {
+                const selected = col.color && col.color.toLowerCase() === c.bg.toLowerCase();
+                return `<span class="kanban-col-opt-swatch${selected ? ' selected' : ''}" style="background:${c.bg};" onclick="kanbanColOptSetColor('${c.bg}')" title="${c.bg}"></span>`;
+            }).join('');
+            document.getElementById('kanbanColOptWipInput').value = col.wipLimit || '';
+            const activeCount = board.cards.filter(c => c.columnId === col.id && !c.archived).length;
+            document.getElementById('kanbanColOptArchiveBtn').innerHTML = `&#128451;&#65039; Archive all ${activeCount} card(s) in this column`;
+        }
+        function kanbanColOptSetColor(hex) {
+            const board = getActiveKanbanBoard();
+            const col = board.columns.find(c => c.id === kanbanColOptionsColId);
+            if (!col) return;
+            col.color = hex;
             saveKanbanData();
+            renderKanbanColOptionsModal();
+            renderKanban();
+        }
+        function kanbanColOptSetWip(value) {
+            const board = getActiveKanbanBoard();
+            const col = board.columns.find(c => c.id === kanbanColOptionsColId);
+            if (!col) return;
+            const n = parseInt(value, 10);
+            col.wipLimit = (n && n > 0) ? n : null;
+            saveKanbanData();
+            renderKanbanColOptionsModal();
+            renderKanban();
+        }
+        function kanbanColOptArchiveAll() {
+            kanbanArchiveAllInColumn(kanbanColOptionsColId);
+            renderKanbanColOptionsModal();
+        }
+        function kanbanColOptDelete() {
+            const board = getActiveKanbanBoard();
+            const col = board.columns.find(c => c.id === kanbanColOptionsColId);
+            if (!col) return;
+            const hasCards = board.cards.some(c => c.columnId === col.id);
+            if (hasCards && !confirm(`This column has cards in it. Deleting "${col.name}" will also delete those cards. Continue?`)) return;
+            board.cards = board.cards.filter(c => c.columnId !== col.id);
+            board.columns = board.columns.filter(c => c.id !== col.id);
+            saveKanbanData();
+            closeModal('kanbanColOptionsModal');
             renderKanban();
         }
 
@@ -6936,14 +7355,16 @@ Example:
             if (!wrap) return;
             const colOrder = {};
             board.columns.forEach((c, i) => { colOrder[c.id] = i; });
-            const cards = kanbanVisibleCards(board).slice().sort((a, b) => {
-                const ac = colOrder[a.columnId] !== undefined ? colOrder[a.columnId] : 999;
-                const bc = colOrder[b.columnId] !== undefined ? colOrder[b.columnId] : 999;
-                if (ac !== bc) return ac - bc;
-                return (a.position || 0) - (b.position || 0);
-            });
+            let visible = kanbanApplyFilterSearch(board, kanbanVisibleCards(board));
+            const byColumn = {};
+            board.columns.forEach(col => { byColumn[col.id] = []; });
+            visible.forEach(c => { if (byColumn[c.columnId]) byColumn[c.columnId].push(c); });
+            let cards = [];
+            board.columns.forEach(col => { cards = cards.concat(kanbanSortCards(board, byColumn[col.id])); });
             if (!cards.length) {
-                wrap.innerHTML = '<div style="padding:30px; text-align:center; color:var(--gray-400); font-size:0.9rem;">Nothing to triage - every card here is either archived or this board is empty.</div>';
+                wrap.innerHTML = kanbanFilterActive(board)
+                    ? '<div style="padding:30px; text-align:center; color:var(--gray-400); font-size:0.9rem;">No cards match your current filters/search. <button class="kanban-add-group-btn" onclick="kanbanClearAllViewPrefs()">Clear filters</button></div>'
+                    : '<div style="padding:30px; text-align:center; color:var(--gray-400); font-size:0.9rem;">Nothing to triage - every card here is either archived or this board is empty.</div>';
                 return;
             }
             wrap.innerHTML = '<div class="kanban-triage-list">' + cards.map(c => {
@@ -6999,9 +7420,12 @@ Example:
             const board = getActiveKanbanBoard();
             const wrap = document.getElementById('kanbanArchiveView');
             if (!wrap) return;
-            const cards = kanbanArchivedCards(board).slice().sort((a, b) => new Date(b.archivedAt || 0) - new Date(a.archivedAt || 0));
+            let cards = kanbanApplyFilterSearch(board, kanbanArchivedCards(board));
+            cards = cards.slice().sort((a, b) => new Date(b.archivedAt || 0) - new Date(a.archivedAt || 0));
             if (!cards.length) {
-                wrap.innerHTML = '<div style="padding:30px; text-align:center; color:var(--gray-400); font-size:0.9rem;">No archived cards yet. Archive a card from its details, from Simple Triage, or bulk-archive a whole column from that column\'s &ldquo;\u22ee&rdquo; menu.</div>';
+                wrap.innerHTML = kanbanFilterActive(board)
+                    ? '<div style="padding:30px; text-align:center; color:var(--gray-400); font-size:0.9rem;">No archived cards match your current filters/search. <button class="kanban-add-group-btn" onclick="kanbanClearAllViewPrefs()">Clear filters</button></div>'
+                    : '<div style="padding:30px; text-align:center; color:var(--gray-400); font-size:0.9rem;">No archived cards yet. Archive a card from its details, from Simple Triage, or bulk-archive a whole column from that column\'s &ldquo;\u22ee&rdquo; menu.</div>';
                 return;
             }
             wrap.innerHTML = '<div class="kanban-archive-list">' + cards.map(c => {
