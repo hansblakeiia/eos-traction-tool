@@ -2037,6 +2037,14 @@
         }
         .kanban-board-pill.active { background: var(--primary); color: white; border-color: var(--primary); }
         .kanban-board-pill.add-board { background: var(--gray-50); color: var(--gray-500); border-style: dashed; }
+        .kanban-view-tabs { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--gray-200); margin-bottom: 14px; padding-bottom: 2px; }
+        .kanban-view-tab {
+            padding: 8px 12px; border: none; border-bottom: 2px solid transparent;
+            background: none; cursor: pointer; font-weight: 600; font-size: 0.85rem;
+            color: var(--gray-500); white-space: nowrap; margin-bottom: -1px;
+        }
+        .kanban-view-tab:hover { color: var(--gray-700); }
+        .kanban-view-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
         .kanban-scroll { overflow-x: auto; padding-bottom: 10px; }
         .kanban-columns-header { display: flex; gap: 12px; min-width: max-content; }
         .kanban-col-head {
@@ -2074,6 +2082,16 @@
         .kanban-add-card-btn { width: 100%; text-align: left; background: none; border: none; color: var(--gray-500); font-size: 0.85rem; padding: 6px 8px; cursor: pointer; border-radius: 6px; }
         .kanban-add-card-btn:hover { background: var(--gray-100); color: var(--gray-700); }
         .kanban-add-group-btn { background: none; border: none; color: var(--gray-500); font-size: 0.85rem; padding: 8px 4px; cursor: pointer; }
+        .kanban-registry-row { display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-radius: 6px; border: 1px solid transparent; }
+        .kanban-registry-row:hover { background: var(--gray-50); }
+        .kanban-registry-row.kanban-registry-drag-over { border-color: var(--accent); background: var(--gray-50); }
+        .kanban-registry-handle { cursor: grab; color: var(--gray-400); font-size: 0.9rem; user-select: none; flex-shrink: 0; }
+        .kanban-registry-swatches { display: flex; gap: 3px; flex-wrap: wrap; max-width: 108px; flex-shrink: 0; }
+        .kanban-swatch { width: 14px; height: 14px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; flex-shrink: 0; }
+        .kanban-swatch-selected { border-color: var(--gray-700); }
+        .kanban-registry-name { flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid var(--gray-200); border-radius: 6px; font-size: 0.85rem; }
+        .kanban-registry-icon-btn { background: none; border: none; cursor: pointer; font-size: 0.95rem; padding: 2px 4px; border-radius: 4px; flex-shrink: 0; }
+        .kanban-registry-icon-btn:hover { background: rgba(0,0,0,0.08); }
         .kanban-add-group-btn:hover { color: var(--gray-700); }
         .kanban-quick-add-input { width: 100%; border: 1px solid var(--accent); border-radius: 6px; padding: 8px 10px; font-size: 0.85rem; margin-bottom: 8px; box-sizing: border-box; }
         .kanban-modal-body label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--gray-600); margin: 14px 0 5px; text-transform: uppercase; letter-spacing: 0.03em; }
@@ -2081,6 +2099,33 @@
         .kanban-activity-item { font-size: 0.8rem; color: var(--gray-600); padding: 5px 0; border-bottom: 1px solid var(--gray-100); }
         .kanban-activity-item:last-child { border-bottom: none; }
         .kanban-agent-icon { margin-right: 3px; }
+        .kanban-triage-list, .kanban-archive-list { display: flex; flex-direction: column; gap: 6px; max-width: 900px; }
+        .kanban-triage-row, .kanban-archive-row {
+            display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+            background: white; border: 1px solid var(--gray-200); border-radius: 8px;
+        }
+        .kanban-triage-row:hover, .kanban-archive-row:hover { border-color: var(--accent); }
+        .kanban-triage-col-select {
+            flex-shrink: 0; padding: 5px 8px; border: 1px solid var(--gray-200); border-radius: 6px;
+            font-size: 0.78rem; font-weight: 600; color: var(--gray-700); background: var(--gray-50);
+        }
+        .kanban-triage-title, .kanban-archive-title {
+            flex: 1; min-width: 0; font-size: 0.88rem; font-weight: 600; color: var(--gray-800);
+            cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .kanban-triage-title:hover, .kanban-archive-title:hover { color: var(--primary); }
+        .kanban-triage-archive-btn {
+            flex-shrink: 0; background: none; border: 1px solid var(--gray-200); cursor: pointer;
+            font-size: 0.78rem; padding: 5px 9px; border-radius: 6px; color: var(--gray-600); white-space: nowrap;
+        }
+        .kanban-triage-archive-btn:hover { background: var(--gray-100); }
+        .kanban-archive-delete:hover { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
+        .kanban-archive-meta { flex-shrink: 0; font-size: 0.75rem; color: var(--gray-500); white-space: nowrap; }
+        .kanban-archived-badge {
+            display: inline-block; font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.03em; color: #92400e; background: #fef3c7; padding: 2px 8px;
+            border-radius: 5px; margin-left: 8px; vertical-align: middle;
+        }
     </style>
 </head>
 <body>
@@ -2668,10 +2713,19 @@
                     <button class="btn btn-secondary" onclick="deleteKanbanBoard()" style="padding:7px 12px; font-size:0.85rem;">🗑️ Delete Board</button>
                 </div>
             </div>
+            <div class="kanban-view-tabs" id="kanbanViewTabs"></div>
             <div class="kanban-scroll" id="kanbanScroll">
-                <div class="kanban-columns-header" id="kanbanColumnsHeader"></div>
-                <div id="kanbanGroups"></div>
-                <button class="kanban-add-group-btn" onclick="addKanbanGroup()">+ New group</button>
+                <div id="kanbanBoardView">
+                    <div class="kanban-columns-header" id="kanbanColumnsHeader"></div>
+                    <div id="kanbanGroups"></div>
+                    <div style="display:flex; gap:4px; align-items:center; flex-wrap:wrap;">
+                        <button class="kanban-add-group-btn" onclick="addKanbanGroup()">+ New group</button>
+                        <button class="kanban-add-group-btn" onclick="openManageOwnersModal()">🎨 Manage Owners</button>
+                        <button class="kanban-add-group-btn" onclick="openManageLabelsModal()">🏷️ Manage Labels</button>
+                    </div>
+                </div>
+                <div id="kanbanTriageView" style="display:none;"></div>
+                <div id="kanbanArchiveView" style="display:none;"></div>
             </div>
         </div>
 
@@ -2679,7 +2733,7 @@
         <div class="modal-overlay" id="kanbanCardModal">
             <div class="modal" style="max-width:520px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <h2 style="margin-bottom:0;">Card Details</h2>
+                    <h2 style="margin-bottom:0;">Card Details<span id="kcArchivedBadge" class="kanban-archived-badge" style="display:none;">Archived</span></h2>
                     <button onclick="closeModal('kanbanCardModal')" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray-500);">&times;</button>
                 </div>
                 <div class="kanban-modal-body">
@@ -2706,7 +2760,46 @@
                 </div>
                 <div class="modal-actions">
                     <button class="btn btn-secondary" onclick="deleteKanbanCard()" style="color:var(--danger);">🗑️ Delete Card</button>
+                    <button class="btn btn-secondary" id="kcArchiveBtn">🗄 Archive</button>
                     <button class="btn btn-primary" onclick="saveKanbanCardModal()">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MANAGE OWNERS MODAL -->
+        <div class="modal-overlay" id="kanbanManageOwnersModal">
+            <div class="modal" style="max-width:480px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <h2 style="margin-bottom:0;">Manage Owners</h2>
+                    <button onclick="closeModal('kanbanManageOwnersModal')" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray-500);">&times;</button>
+                </div>
+                <p style="font-size:0.8rem; color:var(--gray-500); margin:0 0 12px;">Drag to reorder, click a color to recolor, rename to fix a typo (updates every card), or hide a lane from the board. Works the same for internal team members and outside collaborators.</p>
+                <div id="kanbanOwnerRegistryList"></div>
+                <div style="display:flex; gap:8px; margin-top:12px;">
+                    <input type="text" id="kanbanNewOwnerName" placeholder="Add an owner (e.g. a contractor's name)..." style="flex:1; padding:8px; border:1px solid var(--gray-200); border-radius:6px; box-sizing:border-box;" onkeydown="if(event.key==='Enter'){event.preventDefault();addOwnerRegistryEntry();}">
+                    <button class="btn btn-secondary" onclick="addOwnerRegistryEntry()">+ Add</button>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-primary" onclick="closeModal('kanbanManageOwnersModal')">Done</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MANAGE LABELS MODAL -->
+        <div class="modal-overlay" id="kanbanManageLabelsModal">
+            <div class="modal" style="max-width:480px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <h2 style="margin-bottom:0;">Manage Labels</h2>
+                    <button onclick="closeModal('kanbanManageLabelsModal')" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray-500);">&times;</button>
+                </div>
+                <p style="font-size:0.8rem; color:var(--gray-500); margin:0 0 12px;">Drag to reorder, click a color to recolor, or rename to update the label everywhere it's used.</p>
+                <div id="kanbanLabelRegistryList"></div>
+                <div style="display:flex; gap:8px; margin-top:12px;">
+                    <input type="text" id="kanbanNewLabelName" placeholder="Add a label (e.g. Trust / Quotes)..." style="flex:1; padding:8px; border:1px solid var(--gray-200); border-radius:6px; box-sizing:border-box;" onkeydown="if(event.key==='Enter'){event.preventDefault();addLabelRegistryEntry();}">
+                    <button class="btn btn-secondary" onclick="addLabelRegistryEntry()">+ Add</button>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-primary" onclick="closeModal('kanbanManageLabelsModal')">Done</button>
                 </div>
             </div>
         </div>
@@ -3536,9 +3629,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.19.0';
-        const EOS_BUILD_DATE = '2026-07-01';
-        const EOS_BUILD_TIME = '12:30'; // Otter: owner-driven Google Task list dropdown
+        const EOS_VERSION = '3.21.0';
+        const EOS_BUILD_DATE = '2026-07-02';
+        const EOS_BUILD_TIME = '09:00'; // Kanban: Views + Archive (Full Board / Simple Triage / Shipped Archive)
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -5316,7 +5409,28 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.19.0 &mdash; 2026-07-01 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.21.0 &mdash; 2026-07-02 (Current)</div>'
+                + '<div style="font-size:0.82rem;color:#374151;line-height:1.65;">'
+                + '&bull; New: Kanban board views &mdash; &ldquo;Full Kanban Board&rdquo;, &ldquo;Simple Triage&rdquo;, and &ldquo;Shipped Archive&rdquo; tabs above the board, mirroring the Notion-style view switcher<br>'
+                + '&bull; New: &ldquo;Simple Triage&rdquo; view &mdash; a flat, no-swimlane list of every active card with an inline column dropdown, for quickly processing a backlog without full drag-and-drop<br>'
+                + '&bull; New: Card archiving &mdash; any card can be archived (via its detail modal or Simple Triage) so it leaves the Full Board and Simple Triage views without being deleted<br>'
+                + '&bull; New: &ldquo;Shipped Archive&rdquo; view &mdash; browse every archived card, newest first, with one-click Restore or permanent delete<br>'
+                + '&bull; New: bulk &ldquo;Archive all cards in this column&rdquo; from a column&rsquo;s &ldquo;\u22ee&rdquo; menu &mdash; built for exactly the &ldquo;Shipped&rdquo; column pile-up problem<br>'
+                + '&bull; Note: archiving is local to each board and syncs to the team the same way as everything else on the Kanban board (no Apps Script changes)'
+                + '</div></div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#1d4ed8;font-size:0.9rem;margin-bottom:6px;">v3.20.0 &mdash; 2026-07-01</div>'
+                + '<div style="font-size:0.82rem;color:#374151;line-height:1.65;">'
+                + '&bull; New: &ldquo;Manage Owners&rdquo; panel &mdash; rename an owner (updates every card, fixes typos/duplicates in one place), pick a custom color, hide a swimlane from the board, drag to reorder, or add an outside collaborator&rsquo;s name, all from one place<br>'
+                + '&bull; New: &ldquo;Manage Labels&rdquo; panel &mdash; same idea for labels/categories: rename, recolor, drag to reorder, delete<br>'
+                + '&bull; Changed: owner and label colors are now stable and user-assigned (stored per board) instead of purely auto-generated from a hash of the name<br>'
+                + '&bull; Added: typing a brand-new owner or label directly on a card (as before) still works exactly the same, and now also auto-registers it into the new managed list with a color, so it immediately shows up in Manage Owners/Labels<br>'
+                + '&bull; Note: hiding an owner in Manage Owners removes that swimlane (and its cards) from view until unhidden - nothing is deleted, just filtered'
+                + '</div></div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#1d4ed8;font-size:0.9rem;margin-bottom:6px;">v3.19.0 &mdash; 2026-07-01</div>'
                 + '<div style="font-size:0.82rem;color:#374151;line-height:1.65;">'
                 + '&bull; New: Kanban board now syncs across the team &mdash; boards, columns, and cards are saved to the shared cloud sheet (same mechanism as Team Settings) and pulled automatically on load, on tab switch, and when the app regains focus<br>'
                 + '&bull; New: &ldquo;\u2193 Sync&rdquo; button and status badge on the Kanban toolbar for a manual pull/push and to see sync state at a glance<br>'
@@ -5767,10 +5881,13 @@ Example:
         const KANBAN_STORAGE_KEY = 'eos_kanban_data';
         let kanbanData = null;
         let kanbanActiveBoardId = null;
+        let kanbanViewMode = 'board'; // 'board' | 'triage' | 'archive' - a view lens, not persisted/synced
         let kanbanDragCardId = null;
         let kanbanEditingCardId = null;
         let kanbanPushDebounceTimer = null;
         let kanbanLastPullAttempt = 0;
+        let kanbanRegistryDragIndex = null;
+        let kanbanRegistryDragKind = null;
 
         const KANBAN_TAG_PALETTE = [
             { bg: '#fde68a', fg: '#78350f' }, // amber
@@ -5797,6 +5914,290 @@ Example:
             return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
         }
 
+        // ==================== KANBAN OWNER & LABEL REGISTRIES ====================
+        // Gives every board a managed, colorable, reorderable, renameable list of
+        // owners (swimlanes) and labels/categories, instead of colors being purely
+        // auto-hashed and names living only as loose strings scattered across cards.
+
+        function kanbanEnsureOwnerRegistry(board) {
+            if (!Array.isArray(board.ownerRegistry)) {
+                const seen = new Set();
+                const registry = [];
+                (board.groupOrder || []).forEach(name => {
+                    if (name && name !== 'No Owner' && !seen.has(name)) {
+                        seen.add(name);
+                        registry.push({ name: name, color: kanbanColorFor(name), hidden: false });
+                    }
+                });
+                board.cards.forEach(c => {
+                    const o = (c.owner || '').trim();
+                    if (o && !seen.has(o)) {
+                        seen.add(o);
+                        registry.push({ name: o, color: kanbanColorFor(o), hidden: false });
+                    }
+                });
+                board.ownerRegistry = registry;
+            }
+            return board.ownerRegistry;
+        }
+
+        function kanbanEnsureLabelRegistry(board) {
+            if (!Array.isArray(board.labelOptions)) {
+                const seen = new Set();
+                const registry = [];
+                board.cards.forEach(c => {
+                    (c.labels || []).forEach(l => {
+                        if (l && !seen.has(l)) {
+                            seen.add(l);
+                            registry.push({ id: kanbanUid('lbl'), name: l, color: kanbanColorFor(l) });
+                        }
+                    });
+                });
+                board.labelOptions = registry;
+            }
+            return board.labelOptions;
+        }
+
+        function kanbanOwnerColor(board, name) {
+            if (!name) return kanbanColorFor('');
+            const registry = kanbanEnsureOwnerRegistry(board);
+            const entry = registry.find(o => o.name === name);
+            return (entry && entry.color) || kanbanColorFor(name);
+        }
+
+        function kanbanLabelColor(board, name) {
+            const registry = kanbanEnsureLabelRegistry(board);
+            const entry = registry.find(l => l.name === name);
+            return (entry && entry.color) || kanbanColorFor(name);
+        }
+
+        function kanbanSwatchesHtml(currentColor, kind, index) {
+            const fn = kind === 'owner' ? 'setOwnerRegistryColor' : 'setLabelRegistryColor';
+            return KANBAN_TAG_PALETTE.map((c, ci) => {
+                const selected = currentColor && currentColor.bg === c.bg;
+                return `<span class="kanban-swatch${selected ? ' kanban-swatch-selected' : ''}" style="background:${c.bg};" onclick="${fn}(${index}, ${ci})" title="${selected ? 'Current color' : 'Set color'}"></span>`;
+            }).join('');
+        }
+
+        // ---- Owners: modal + CRUD + reorder ----
+        function openManageOwnersModal() {
+            renderOwnerRegistryModal();
+            document.getElementById('kanbanManageOwnersModal').classList.add('active');
+        }
+
+        function renderOwnerRegistryModal() {
+            const board = getActiveKanbanBoard();
+            const registry = kanbanEnsureOwnerRegistry(board);
+            const wrap = document.getElementById('kanbanOwnerRegistryList');
+            wrap.innerHTML = registry.map((entry, i) => {
+                return `<div class="kanban-registry-row" draggable="true"
+                        ondragstart="kanbanRegistryDragStart(event, 'owner', ${i})"
+                        ondragover="kanbanRegistryDragOver(event, this)"
+                        ondragleave="kanbanRegistryDragLeave(this)"
+                        ondrop="kanbanRegistryDrop(event, 'owner', ${i})">
+                    <span class="kanban-registry-handle" title="Drag to reorder">&#9776;</span>
+                    <span class="kanban-registry-swatches">${kanbanSwatchesHtml(entry.color, 'owner', i)}</span>
+                    <input type="text" class="kanban-registry-name" value="${escapeHtml(entry.name)}" onblur="renameOwnerRegistryEntry(${i}, this.value)">
+                    <button class="kanban-registry-icon-btn" onclick="toggleOwnerRegistryHidden(${i})" title="${entry.hidden ? 'Show this owner on the board' : 'Hide this owner from the board'}">${entry.hidden ? '\u{1F648}' : '\u{1F441}\uFE0F'}</button>
+                    <button class="kanban-registry-icon-btn" onclick="deleteOwnerRegistryEntry(${i})" title="Delete owner">&#128465;&#65039;</button>
+                </div>`;
+            }).join('') || '<div style="font-size:0.85rem; color:var(--gray-400); padding:8px 0;">No owners yet - add one below.</div>';
+        }
+
+        function addOwnerRegistryEntry() {
+            const input = document.getElementById('kanbanNewOwnerName');
+            const name = input.value.trim();
+            if (!name) return;
+            const board = getActiveKanbanBoard();
+            const registry = kanbanEnsureOwnerRegistry(board);
+            if (registry.find(o => o.name === name)) {
+                showToast('That owner already exists', 'error');
+                return;
+            }
+            registry.push({ name: name, color: kanbanColorFor(name), hidden: false });
+            input.value = '';
+            saveKanbanData();
+            renderOwnerRegistryModal();
+            renderKanban();
+        }
+
+        function renameOwnerRegistryEntry(index, newName) {
+            const board = getActiveKanbanBoard();
+            const registry = kanbanEnsureOwnerRegistry(board);
+            const entry = registry[index];
+            if (!entry) return;
+            const trimmed = (newName || '').trim();
+            if (!trimmed || trimmed === entry.name) { renderOwnerRegistryModal(); return; }
+            if (registry.some((o, i) => i !== index && o.name === trimmed)) {
+                showToast('An owner with that name already exists', 'error');
+                renderOwnerRegistryModal();
+                return;
+            }
+            const oldName = entry.name;
+            entry.name = trimmed;
+            board.cards.forEach(c => { if ((c.owner || '') === oldName) c.owner = trimmed; });
+            if (Array.isArray(board.groupOrder)) board.groupOrder = board.groupOrder.map(g => g === oldName ? trimmed : g);
+            if (Array.isArray(board.collapsedGroups)) board.collapsedGroups = board.collapsedGroups.map(g => g === oldName ? trimmed : g);
+            saveKanbanData();
+            renderOwnerRegistryModal();
+            renderKanban();
+            showToast(`Renamed "${oldName}" to "${trimmed}" on every card`, 'success');
+        }
+
+        function setOwnerRegistryColor(index, paletteIndex) {
+            const board = getActiveKanbanBoard();
+            const registry = kanbanEnsureOwnerRegistry(board);
+            const entry = registry[index];
+            if (!entry) return;
+            entry.color = KANBAN_TAG_PALETTE[paletteIndex];
+            saveKanbanData();
+            renderOwnerRegistryModal();
+            renderKanban();
+        }
+
+        function toggleOwnerRegistryHidden(index) {
+            const board = getActiveKanbanBoard();
+            const registry = kanbanEnsureOwnerRegistry(board);
+            const entry = registry[index];
+            if (!entry) return;
+            entry.hidden = !entry.hidden;
+            saveKanbanData();
+            renderOwnerRegistryModal();
+            renderKanban();
+        }
+
+        function deleteOwnerRegistryEntry(index) {
+            const board = getActiveKanbanBoard();
+            const registry = kanbanEnsureOwnerRegistry(board);
+            const entry = registry[index];
+            if (!entry) return;
+            const cardCount = board.cards.filter(c => (c.owner || '') === entry.name).length;
+            if (cardCount > 0 && !confirm(`${cardCount} card(s) are assigned to "${entry.name}". Remove this owner? Those cards will move to "No Owner" - they will not be deleted.`)) return;
+            board.cards.forEach(c => { if ((c.owner || '') === entry.name) c.owner = ''; });
+            registry.splice(index, 1);
+            saveKanbanData();
+            renderOwnerRegistryModal();
+            renderKanban();
+        }
+
+        // ---- Labels: modal + CRUD + reorder ----
+        function openManageLabelsModal() {
+            renderLabelRegistryModal();
+            document.getElementById('kanbanManageLabelsModal').classList.add('active');
+        }
+
+        function renderLabelRegistryModal() {
+            const board = getActiveKanbanBoard();
+            const registry = kanbanEnsureLabelRegistry(board);
+            const wrap = document.getElementById('kanbanLabelRegistryList');
+            wrap.innerHTML = registry.map((entry, i) => {
+                return `<div class="kanban-registry-row" draggable="true"
+                        ondragstart="kanbanRegistryDragStart(event, 'label', ${i})"
+                        ondragover="kanbanRegistryDragOver(event, this)"
+                        ondragleave="kanbanRegistryDragLeave(this)"
+                        ondrop="kanbanRegistryDrop(event, 'label', ${i})">
+                    <span class="kanban-registry-handle" title="Drag to reorder">&#9776;</span>
+                    <span class="kanban-registry-swatches">${kanbanSwatchesHtml(entry.color, 'label', i)}</span>
+                    <input type="text" class="kanban-registry-name" value="${escapeHtml(entry.name)}" onblur="renameLabelRegistryEntry(${i}, this.value)">
+                    <button class="kanban-registry-icon-btn" onclick="deleteLabelRegistryEntry(${i})" title="Delete label">&#128465;&#65039;</button>
+                </div>`;
+            }).join('') || '<div style="font-size:0.85rem; color:var(--gray-400); padding:8px 0;">No labels yet - add one below.</div>';
+        }
+
+        function addLabelRegistryEntry() {
+            const input = document.getElementById('kanbanNewLabelName');
+            const name = input.value.trim();
+            if (!name) return;
+            const board = getActiveKanbanBoard();
+            const registry = kanbanEnsureLabelRegistry(board);
+            if (registry.find(l => l.name === name)) {
+                showToast('That label already exists', 'error');
+                return;
+            }
+            registry.push({ id: kanbanUid('lbl'), name: name, color: kanbanColorFor(name) });
+            input.value = '';
+            saveKanbanData();
+            renderLabelRegistryModal();
+            renderKanban();
+        }
+
+        function renameLabelRegistryEntry(index, newName) {
+            const board = getActiveKanbanBoard();
+            const registry = kanbanEnsureLabelRegistry(board);
+            const entry = registry[index];
+            if (!entry) return;
+            const trimmed = (newName || '').trim();
+            if (!trimmed || trimmed === entry.name) { renderLabelRegistryModal(); return; }
+            if (registry.some((l, i) => i !== index && l.name === trimmed)) {
+                showToast('A label with that name already exists', 'error');
+                renderLabelRegistryModal();
+                return;
+            }
+            const oldName = entry.name;
+            entry.name = trimmed;
+            board.cards.forEach(c => {
+                if (Array.isArray(c.labels) && c.labels.includes(oldName)) {
+                    c.labels = c.labels.map(l => l === oldName ? trimmed : l);
+                }
+            });
+            saveKanbanData();
+            renderLabelRegistryModal();
+            renderKanban();
+            showToast(`Renamed "${oldName}" to "${trimmed}" on every card`, 'success');
+        }
+
+        function setLabelRegistryColor(index, paletteIndex) {
+            const board = getActiveKanbanBoard();
+            const registry = kanbanEnsureLabelRegistry(board);
+            const entry = registry[index];
+            if (!entry) return;
+            entry.color = KANBAN_TAG_PALETTE[paletteIndex];
+            saveKanbanData();
+            renderLabelRegistryModal();
+            renderKanban();
+        }
+
+        function deleteLabelRegistryEntry(index) {
+            const board = getActiveKanbanBoard();
+            const registry = kanbanEnsureLabelRegistry(board);
+            const entry = registry[index];
+            if (!entry) return;
+            const cardCount = board.cards.filter(c => Array.isArray(c.labels) && c.labels.includes(entry.name)).length;
+            if (cardCount > 0 && !confirm(`${cardCount} card(s) have the "${entry.name}" label. Delete it? It will be removed from those cards, not the cards themselves.`)) return;
+            board.cards.forEach(c => { if (Array.isArray(c.labels)) c.labels = c.labels.filter(l => l !== entry.name); });
+            registry.splice(index, 1);
+            saveKanbanData();
+            renderLabelRegistryModal();
+            renderKanban();
+        }
+
+        // ---- Shared drag-to-reorder for both registry lists ----
+        function kanbanRegistryDragStart(e, kind, index) {
+            kanbanRegistryDragIndex = index;
+            kanbanRegistryDragKind = kind;
+            e.dataTransfer.effectAllowed = 'move';
+        }
+        function kanbanRegistryDragOver(e, el) {
+            e.preventDefault();
+            el.classList.add('kanban-registry-drag-over');
+        }
+        function kanbanRegistryDragLeave(el) {
+            el.classList.remove('kanban-registry-drag-over');
+        }
+        function kanbanRegistryDrop(e, kind, index) {
+            e.preventDefault();
+            if (kanbanRegistryDragIndex === null || kanbanRegistryDragKind !== kind || kanbanRegistryDragIndex === index) return;
+            const board = getActiveKanbanBoard();
+            const registry = kind === 'owner' ? kanbanEnsureOwnerRegistry(board) : kanbanEnsureLabelRegistry(board);
+            const [moved] = registry.splice(kanbanRegistryDragIndex, 1);
+            registry.splice(index, 0, moved);
+            kanbanRegistryDragIndex = null;
+            kanbanRegistryDragKind = null;
+            saveKanbanData();
+            if (kind === 'owner') { renderOwnerRegistryModal(); } else { renderLabelRegistryModal(); }
+            renderKanban();
+        }
+
         function kanbanDefaultBoard(name) {
             const cols = ['Backlog', 'Ready', 'In Progress', 'Reviewing', 'Shipped'];
             const colColors = ['#e5e7eb', '#fecaca', '#bfdbfe', '#e9d5ff', '#bbf7d0'];
@@ -5820,9 +6221,9 @@ Example:
                 const bl = board.columns[0], rd = board.columns[1], ip = board.columns[2];
                 board.groupOrder = ['Hans', 'No Owner'];
                 board.cards = [
-                    { id: kanbanUid('card'), columnId: bl.id, owner: 'Hans', labels: ['Final CTA'], title: 'Calendly login: new meeting type for 20 minutes for Intelligrations', description: '', dueDate: null, position: 0, history: [{ action: 'created', at: new Date().toISOString() }] },
-                    { id: kanbanUid('card'), columnId: rd.id, owner: 'Hans', labels: ['Ready'], title: 'Need a crisp GIF from Trevor for hero section', description: '', dueDate: null, position: 0, history: [{ action: 'created', at: new Date().toISOString() }] },
-                    { id: kanbanUid('card'), columnId: ip.id, owner: 'Hans', labels: ['Trust / Quotes'], title: 'Kitces + Klein permission emails: 2 to send', description: '', dueDate: null, position: 0, history: [{ action: 'created', at: new Date().toISOString() }] }
+                    { id: kanbanUid('card'), columnId: bl.id, owner: 'Hans', labels: ['Final CTA'], title: 'Calendly login: new meeting type for 20 minutes for Intelligrations', description: '', dueDate: null, position: 0, archived: false, archivedAt: null, history: [{ action: 'created', at: new Date().toISOString() }] },
+                    { id: kanbanUid('card'), columnId: rd.id, owner: 'Hans', labels: ['Ready'], title: 'Need a crisp GIF from Trevor for hero section', description: '', dueDate: null, position: 0, archived: false, archivedAt: null, history: [{ action: 'created', at: new Date().toISOString() }] },
+                    { id: kanbanUid('card'), columnId: ip.id, owner: 'Hans', labels: ['Trust / Quotes'], title: 'Kitces + Klein permission emails: 2 to send', description: '', dueDate: null, position: 0, archived: false, archivedAt: null, history: [{ action: 'created', at: new Date().toISOString() }] }
                 ];
                 kanbanData = { boards: [board] };
             }
@@ -5989,7 +6390,47 @@ Example:
         function renderKanban() {
             if (!kanbanData) loadKanbanData();
             renderKanbanBoardTabs();
-            renderKanbanColumns();
+            renderKanbanViewTabs();
+            const boardViewEl = document.getElementById('kanbanBoardView');
+            const triageViewEl = document.getElementById('kanbanTriageView');
+            const archiveViewEl = document.getElementById('kanbanArchiveView');
+            if (kanbanViewMode === 'triage') {
+                boardViewEl.style.display = 'none';
+                archiveViewEl.style.display = 'none';
+                triageViewEl.style.display = '';
+                renderKanbanTriageView();
+            } else if (kanbanViewMode === 'archive') {
+                boardViewEl.style.display = 'none';
+                triageViewEl.style.display = 'none';
+                archiveViewEl.style.display = '';
+                renderKanbanArchiveView();
+            } else {
+                triageViewEl.style.display = 'none';
+                archiveViewEl.style.display = 'none';
+                boardViewEl.style.display = '';
+                renderKanbanColumns();
+            }
+        }
+
+        function renderKanbanViewTabs() {
+            const wrap = document.getElementById('kanbanViewTabs');
+            if (!wrap) return;
+            const board = getActiveKanbanBoard();
+            const archivedCount = (board.cards || []).filter(c => c.archived).length;
+            const views = [
+                { id: 'board', icon: '\u{1F4CB}', label: 'Full Kanban Board' },
+                { id: 'triage', icon: '\u2705', label: 'Simple Triage' },
+                { id: 'archive', icon: '\u{1F5C4}\uFE0F', label: 'Shipped Archive (history)' }
+            ];
+            wrap.innerHTML = views.map(v => {
+                const countBadge = v.id === 'archive' ? ` (${archivedCount})` : '';
+                return `<button class="kanban-view-tab ${kanbanViewMode === v.id ? 'active' : ''}" onclick="setKanbanViewMode('${v.id}')">${v.icon} ${v.label}${countBadge}</button>`;
+            }).join('');
+        }
+
+        function setKanbanViewMode(mode) {
+            kanbanViewMode = mode;
+            renderKanban();
         }
 
         function renderKanbanBoardTabs() {
@@ -6034,11 +6475,16 @@ Example:
         }
 
         function kanbanOwnerGroups(board) {
+            const registry = kanbanEnsureOwnerRegistry(board);
             const owners = new Set();
             board.cards.forEach(c => owners.add((c.owner || '').trim()));
+            const hiddenNames = new Set(registry.filter(o => o.hidden).map(o => o.name));
             const groups = [];
-            (board.groupOrder || []).forEach(g => { if (g !== 'No Owner' && !groups.includes(g)) groups.push(g); });
-            owners.forEach(o => { if (o && !groups.includes(o)) groups.push(o); });
+            // Registry order first - this is what the Manage Owners panel controls
+            registry.forEach(o => { if (!hiddenNames.has(o.name) && !groups.includes(o.name)) groups.push(o.name); });
+            // Then anything not yet registered (e.g. a brand-new name typed directly on a card)
+            (board.groupOrder || []).forEach(g => { if (g !== 'No Owner' && !hiddenNames.has(g) && !groups.includes(g)) groups.push(g); });
+            owners.forEach(o => { if (o && !hiddenNames.has(o) && !groups.includes(o)) groups.push(o); });
             groups.push('No Owner');
             return groups;
         }
@@ -6047,7 +6493,7 @@ Example:
             const board = getActiveKanbanBoard();
             const headerWrap = document.getElementById('kanbanColumnsHeader');
             headerWrap.innerHTML = board.columns.map(col => {
-                const count = board.cards.filter(c => c.columnId === col.id).length;
+                const count = board.cards.filter(c => c.columnId === col.id && !c.archived).length;
                 const atLimit = !!(col.wipLimit && count >= col.wipLimit);
                 const countLabel = col.wipLimit ? (count + '/' + col.wipLimit) : String(count);
                 return `<div class="kanban-col-head" style="background:${col.color || '#e5e7eb'};">
@@ -6063,8 +6509,8 @@ Example:
             const groupsWrap = document.getElementById('kanbanGroups');
             groupsWrap.innerHTML = groups.map(groupName => {
                 const collapsed = (board.collapsedGroups || []).includes(groupName);
-                const groupCards = board.cards.filter(c => (c.owner || '').trim() === (groupName === 'No Owner' ? '' : groupName));
-                const tagColor = kanbanColorFor(groupName === 'No Owner' ? '' : groupName);
+                const groupCards = board.cards.filter(c => !c.archived && (c.owner || '').trim() === (groupName === 'No Owner' ? '' : groupName));
+                const tagColor = kanbanOwnerColor(board, groupName === 'No Owner' ? '' : groupName);
                 const isAgent = /agent|ai\b/i.test(groupName);
                 const safeGroup = groupName.replace(/'/g, "\\'");
                 return `<div class="kanban-group">
@@ -6082,7 +6528,7 @@ Example:
 
         function renderKanbanCell(board, col, groupName) {
             const cards = board.cards
-                .filter(c => c.columnId === col.id && (c.owner || '').trim() === (groupName === 'No Owner' ? '' : groupName))
+                .filter(c => !c.archived && c.columnId === col.id && (c.owner || '').trim() === (groupName === 'No Owner' ? '' : groupName))
                 .sort((a, b) => (a.position || 0) - (b.position || 0));
             const cardsHtml = cards.map(c => renderKanbanCard(c)).join('');
             const safeGroup = groupName.replace(/'/g, "\\'");
@@ -6096,8 +6542,9 @@ Example:
         }
 
         function renderKanbanCard(c) {
+            const board = getActiveKanbanBoard();
             const labels = (c.labels || []).map(l => {
-                const col = kanbanColorFor(l);
+                const col = kanbanLabelColor(board, l);
                 return `<span class="kanban-tag" style="background:${col.bg}; color:${col.fg};">${escapeHtml(l)}</span>`;
             }).join('');
             let dueHtml = '';
@@ -6204,7 +6651,7 @@ Example:
         function kanbanWipLimitBlocking(board, columnId, excludeCardId) {
             const col = board.columns.find(c => c.id === columnId);
             if (!col || !col.wipLimit) return false;
-            const count = board.cards.filter(c => c.columnId === columnId && c.id !== excludeCardId).length;
+            const count = board.cards.filter(c => c.columnId === columnId && c.id !== excludeCardId && !c.archived).length;
             return count >= col.wipLimit;
         }
 
@@ -6212,10 +6659,12 @@ Example:
             const board = getActiveKanbanBoard();
             const col = board.columns.find(c => c.id === colId);
             if (!col) return;
+            const activeCount = board.cards.filter(c => c.columnId === colId && !c.archived).length;
             const choice = prompt(
                 `Column "${col.name}"\n\n` +
                 `\u2022 Enter a hex color (e.g. #fecaca) to recolor\n` +
                 `\u2022 Enter a number (e.g. 3) to set a WIP limit, or 0 to clear it\n` +
+                `\u2022 Type ARCHIVE to archive all ${activeCount} card(s) in this column (moves to Shipped Archive view, not deleted)\n` +
                 `\u2022 Type DELETE to remove this column\n\n` +
                 `Current WIP limit: ${col.wipLimit || 'none'}`,
                 col.color || '#e5e7eb'
@@ -6227,6 +6676,9 @@ Example:
                 if (hasCards && !confirm('This column has cards in it. Deleting it will also delete those cards. Continue?')) return;
                 board.cards = board.cards.filter(c => c.columnId !== colId);
                 board.columns = board.columns.filter(c => c.id !== colId);
+            } else if (trimmed.toUpperCase() === 'ARCHIVE') {
+                kanbanArchiveAllInColumn(colId);
+                return;
             } else if (/^#[0-9a-fA-F]{3,6}$/.test(trimmed)) {
                 col.color = trimmed;
             } else if (/^\d+$/.test(trimmed)) {
@@ -6250,9 +6702,14 @@ Example:
         function addKanbanGroup() {
             const name = prompt('New group name (usually an owner, e.g. "Amanda" or "Hermes AI Agent"):');
             if (!name || !name.trim()) return;
+            const trimmed = name.trim();
             const board = getActiveKanbanBoard();
             board.groupOrder = board.groupOrder || [];
-            if (!board.groupOrder.includes(name.trim())) board.groupOrder.push(name.trim());
+            if (!board.groupOrder.includes(trimmed)) board.groupOrder.push(trimmed);
+            const registry = kanbanEnsureOwnerRegistry(board);
+            if (!registry.find(o => o.name === trimmed)) {
+                registry.push({ name: trimmed, color: kanbanColorFor(trimmed), hidden: false });
+            }
             saveKanbanData();
             renderKanban();
         }
@@ -6282,7 +6739,7 @@ Example:
                     const siblings = board.cards.filter(c => c.columnId === columnId && (c.owner || '') === owner);
                     board.cards.push({
                         id: kanbanUid('card'), columnId: columnId, owner: owner, labels: [], title: title,
-                        description: '', dueDate: null,
+                        description: '', dueDate: null, archived: false, archivedAt: null,
                         position: siblings.length ? Math.max(...siblings.map(c => c.position || 0)) + 1 : 0,
                         history: [{ action: 'created', at: new Date().toISOString() }]
                     });
@@ -6321,8 +6778,22 @@ Example:
                 else if (h.action === 'moved') text = 'Moved ' + escapeHtml(h.from) + ' &rarr; ' + escapeHtml(h.to);
                 else if (h.action === 'reassigned') text = 'Reassigned to ' + escapeHtml(h.to);
                 else if (h.action === 'edited') text = 'Details edited';
+                else if (h.action === 'archived') text = 'Archived';
+                else if (h.action === 'restored') text = 'Restored to board';
                 return `<div class="kanban-activity-item">${text} &middot; ${kanbanRelativeTime(h.at)}</div>`;
             }).join('') : '<div class="kanban-activity-item">No activity yet</div>';
+            const archivedBadge = document.getElementById('kcArchivedBadge');
+            if (archivedBadge) archivedBadge.style.display = card.archived ? '' : 'none';
+            const archiveBtn = document.getElementById('kcArchiveBtn');
+            if (archiveBtn) {
+                if (card.archived) {
+                    archiveBtn.textContent = '\u21A9 Restore to Board';
+                    archiveBtn.onclick = function() { kanbanUnarchiveCard(card.id); closeModal('kanbanCardModal'); };
+                } else {
+                    archiveBtn.textContent = '\u{1F5C4}\uFE0F Archive';
+                    archiveBtn.onclick = function() { kanbanArchiveCard(card.id); closeModal('kanbanCardModal'); };
+                }
+            }
             document.getElementById('kanbanCardModal').classList.add('active');
         }
 
@@ -6348,6 +6819,24 @@ Example:
             const otherChanged = newTitle !== card.title || newDesc !== (card.description || '') ||
                 newDue !== (card.dueDate || null) || JSON.stringify(newLabels) !== JSON.stringify(card.labels || []);
 
+            // Auto-register any brand-new owner/labels typed directly on the card, so
+            // they immediately show up in Manage Owners / Manage Labels with a color
+            // assigned, rather than existing only as loose strings.
+            if (newOwner) {
+                const ownerRegistry = kanbanEnsureOwnerRegistry(board);
+                if (!ownerRegistry.find(o => o.name === newOwner)) {
+                    ownerRegistry.push({ name: newOwner, color: kanbanColorFor(newOwner), hidden: false });
+                }
+            }
+            if (newLabels.length) {
+                const labelRegistry = kanbanEnsureLabelRegistry(board);
+                newLabels.forEach(l => {
+                    if (!labelRegistry.find(r => r.name === l)) {
+                        labelRegistry.push({ id: kanbanUid('lbl'), name: l, color: kanbanColorFor(l) });
+                    }
+                });
+            }
+
             card.title = newTitle || card.title;
             card.owner = newOwner;
             card.labels = newLabels;
@@ -6371,6 +6860,167 @@ Example:
             saveKanbanData();
             closeModal('kanbanCardModal');
             renderKanban();
+        }
+
+        // ==================== KANBAN ARCHIVE (v3.21.0) ====================
+        // A card leaves the visible board via an `archived` flag rather than
+        // deletion, so shipped/done work stops cluttering Full Board / Simple
+        // Triage but stays fully recoverable in the Shipped Archive view.
+        function kanbanVisibleCards(board) {
+            return board.cards.filter(c => !c.archived);
+        }
+        function kanbanArchivedCards(board) {
+            return board.cards.filter(c => c.archived);
+        }
+
+        function kanbanArchiveCard(cardId) {
+            const board = getActiveKanbanBoard();
+            const card = board.cards.find(c => c.id === cardId);
+            if (!card) return;
+            const colName = (board.columns.find(c => c.id === card.columnId) || {}).name || '?';
+            card.archived = true;
+            card.archivedAt = new Date().toISOString();
+            card.archivedFromColumn = colName;
+            card.history = card.history || [];
+            card.history.push({ action: 'archived', at: card.archivedAt });
+            saveKanbanData();
+            renderKanban();
+            showToast('Card archived', 'success');
+        }
+
+        function kanbanUnarchiveCard(cardId) {
+            const board = getActiveKanbanBoard();
+            const card = board.cards.find(c => c.id === cardId);
+            if (!card) return;
+            card.archived = false;
+            card.archivedAt = null;
+            card.history = card.history || [];
+            card.history.push({ action: 'restored', at: new Date().toISOString() });
+            saveKanbanData();
+            renderKanban();
+            showToast('Card restored to the board', 'success');
+        }
+
+        function kanbanDeleteArchivedCard(cardId) {
+            if (!confirm('Permanently delete this archived card? This cannot be undone.')) return;
+            const board = getActiveKanbanBoard();
+            board.cards = board.cards.filter(c => c.id !== cardId);
+            saveKanbanData();
+            renderKanban();
+        }
+
+        function kanbanArchiveAllInColumn(colId) {
+            const board = getActiveKanbanBoard();
+            const col = board.columns.find(c => c.id === colId);
+            if (!col) return;
+            const toArchive = board.cards.filter(c => c.columnId === colId && !c.archived);
+            if (!toArchive.length) { showToast('No cards to archive in this column', 'info'); return; }
+            if (!confirm(`Archive all ${toArchive.length} card(s) in "${col.name}"? They move to the Archive view, not deleted.`)) return;
+            const now = new Date().toISOString();
+            toArchive.forEach(c => {
+                c.archived = true;
+                c.archivedAt = now;
+                c.archivedFromColumn = col.name;
+                c.history = c.history || [];
+                c.history.push({ action: 'archived', at: now });
+            });
+            saveKanbanData();
+            renderKanban();
+            showToast(`Archived ${toArchive.length} card(s) from "${col.name}"`, 'success');
+        }
+
+        // ---- Simple Triage view: a flat, no-swimlane list for quickly processing cards ----
+        function renderKanbanTriageView() {
+            const board = getActiveKanbanBoard();
+            const wrap = document.getElementById('kanbanTriageView');
+            if (!wrap) return;
+            const colOrder = {};
+            board.columns.forEach((c, i) => { colOrder[c.id] = i; });
+            const cards = kanbanVisibleCards(board).slice().sort((a, b) => {
+                const ac = colOrder[a.columnId] !== undefined ? colOrder[a.columnId] : 999;
+                const bc = colOrder[b.columnId] !== undefined ? colOrder[b.columnId] : 999;
+                if (ac !== bc) return ac - bc;
+                return (a.position || 0) - (b.position || 0);
+            });
+            if (!cards.length) {
+                wrap.innerHTML = '<div style="padding:30px; text-align:center; color:var(--gray-400); font-size:0.9rem;">Nothing to triage - every card here is either archived or this board is empty.</div>';
+                return;
+            }
+            wrap.innerHTML = '<div class="kanban-triage-list">' + cards.map(c => {
+                const owner = c.owner || '';
+                const ownerColor = kanbanOwnerColor(board, owner);
+                const labels = (c.labels || []).map(l => {
+                    const lc = kanbanLabelColor(board, l);
+                    return `<span class="kanban-tag" style="background:${lc.bg}; color:${lc.fg};">${escapeHtml(l)}</span>`;
+                }).join('');
+                let dueHtml = '';
+                if (c.dueDate) {
+                    const due = new Date(c.dueDate + 'T00:00:00');
+                    const today = new Date(); today.setHours(0,0,0,0);
+                    const diffDays = Math.round((due - today) / 86400000);
+                    let cls = 'future';
+                    if (diffDays < 0) cls = 'overdue'; else if (diffDays <= 2) cls = 'soon';
+                    dueHtml = `<span class="kanban-due-badge ${cls}">&#128197; ${due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>`;
+                }
+                const colOptions = board.columns.map(col => `<option value="${col.id}" ${col.id === c.columnId ? 'selected' : ''}>${escapeHtml(col.name)}</option>`).join('');
+                return `<div class="kanban-triage-row" data-card-id="${c.id}">
+                    <select class="kanban-triage-col-select" onclick="event.stopPropagation();" onchange="kanbanTriageSetColumn('${c.id}', this.value)">${colOptions}</select>
+                    <span class="kanban-triage-title" onclick="openKanbanCard('${c.id}')">${escapeHtml(c.title)}</span>
+                    ${owner ? `<span class="kanban-tag" style="background:${ownerColor.bg}; color:${ownerColor.fg};">${escapeHtml(owner)}</span>` : ''}
+                    ${labels}
+                    ${dueHtml}
+                    <button class="kanban-triage-archive-btn" onclick="kanbanArchiveCard('${c.id}')" title="Archive this card">&#128451;&#65039; Archive</button>
+                </div>`;
+            }).join('') + '</div>';
+        }
+
+        function kanbanTriageSetColumn(cardId, newColId) {
+            const board = getActiveKanbanBoard();
+            const card = board.cards.find(c => c.id === cardId);
+            if (!card || newColId === card.columnId) return;
+            if (kanbanWipLimitBlocking(board, newColId, card.id)) {
+                const targetCol = board.columns.find(c => c.id === newColId);
+                showToast(`"${targetCol.name}" is at its WIP limit (${targetCol.wipLimit}). Finish or move something out first.`, 'error');
+                renderKanbanTriageView();
+                return;
+            }
+            const fromColName = (board.columns.find(c => c.id === card.columnId) || {}).name || '?';
+            const toColName = (board.columns.find(c => c.id === newColId) || {}).name || '?';
+            card.columnId = newColId;
+            card.history = card.history || [];
+            card.history.push({ action: 'moved', from: fromColName, to: toColName, at: new Date().toISOString() });
+            saveKanbanData();
+            renderKanbanTriageView();
+            renderKanbanViewTabs();
+        }
+
+        // ---- Shipped Archive view: history of archived cards, newest first ----
+        function renderKanbanArchiveView() {
+            const board = getActiveKanbanBoard();
+            const wrap = document.getElementById('kanbanArchiveView');
+            if (!wrap) return;
+            const cards = kanbanArchivedCards(board).slice().sort((a, b) => new Date(b.archivedAt || 0) - new Date(a.archivedAt || 0));
+            if (!cards.length) {
+                wrap.innerHTML = '<div style="padding:30px; text-align:center; color:var(--gray-400); font-size:0.9rem;">No archived cards yet. Archive a card from its details, from Simple Triage, or bulk-archive a whole column from that column\'s &ldquo;\u22ee&rdquo; menu.</div>';
+                return;
+            }
+            wrap.innerHTML = '<div class="kanban-archive-list">' + cards.map(c => {
+                const owner = c.owner || '';
+                const ownerColor = kanbanOwnerColor(board, owner);
+                const labels = (c.labels || []).map(l => {
+                    const lc = kanbanLabelColor(board, l);
+                    return `<span class="kanban-tag" style="background:${lc.bg}; color:${lc.fg};">${escapeHtml(l)}</span>`;
+                }).join('');
+                const archivedLabel = c.archivedAt ? new Date(c.archivedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '?';
+                return `<div class="kanban-archive-row">
+                    <span class="kanban-archive-title" onclick="openKanbanCard('${c.id}')">${escapeHtml(c.title)}</span>
+                    ${owner ? `<span class="kanban-tag" style="background:${ownerColor.bg}; color:${ownerColor.fg};">${escapeHtml(owner)}</span>` : ''}
+                    ${labels}
+                    <span class="kanban-archive-meta" title="Was in: ${escapeHtml(c.archivedFromColumn || '?')}">Archived ${archivedLabel}</span>
+                    <button class="kanban-triage-archive-btn" onclick="kanbanUnarchiveCard('${c.id}')" title="Restore to board">&#8630; Restore</button>
+                    <button class="kanban-triage-archive-btn kanban-archive-delete" onclick="kanbanDeleteArchivedCard('${c.id}')" title="Delete forever">&#128465;&#65039;</button>
+                </div>`;
+            }).join('') + '</div>';
         }
 
         
