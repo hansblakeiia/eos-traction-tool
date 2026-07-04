@@ -3794,9 +3794,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.26.0';
-        const EOS_BUILD_DATE = '2026-07-03';
-        const EOS_BUILD_TIME = '10:30'; // Add-to-Kanban button on Quarterly Rocks: one-directional promotion of a rock to a Kanban card (Backlog, owner-mapped, labeled Rock), with duplicate guard
+        const EOS_VERSION = '3.27.0';
+        const EOS_BUILD_DATE = '2026-07-04';
+        const EOS_BUILD_TIME = '00:00'; // Eisenhower Matrix task actions restored: delete + complete always visible; snooze bell added for to-dos (delegates to To-Dos snooze flow); archive/uncheck still gated to completed tasks
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -5577,7 +5577,15 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.26.0 &mdash; 2026-07-03 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.27.0 &mdash; 2026-07-04 (Current)</div>'
+                + '<div style="font-size:0.82rem;color:#374151;line-height:1.65;">'
+                + '&bull; Fixed: the Eisenhower Matrix lost its per-task action buttons in a recent version &mdash; Delete and Complete are now always available on every matrix task again, not just after a task is checked off<br>'
+                + '&bull; New: Snooze bell on matrix to-dos &mdash; click the bell to open the same snooze picker used on the To-Dos tab (Tomorrow / 1 week / 1 month / 3 months, or a custom date). Snoozing sets the to-do&rsquo;s wake date and removes it from every daily-plan matrix until then, exactly like snoozing from the To-Dos tab (to-dos only &mdash; rocks and local tasks aren&rsquo;t snoozable, matching v3.25.0)<br>'
+                + '&bull; Unchanged: Archive and Uncheck still appear only after a task is completed (they act on a done task); the &ldquo;&times;&rdquo; still removes a task from the matrix only, without touching the source'
+                + '</div></div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#1d4ed8;font-size:0.9rem;margin-bottom:6px;">v3.26.0 &mdash; 2026-07-03</div>'
                 + '<div style="font-size:0.82rem;color:#374151;line-height:1.65;">'
                 + '&bull; New: &ldquo;+ Kanban&rdquo; button on each Quarterly Rock &mdash; promote a Rock to a Kanban card in one click. The card lands in the board&rsquo;s first column (Backlog), takes the Rock&rsquo;s owner as its swimlane, gets a &ldquo;Rock&rdquo; label, and notes which quarter it came from<br>'
                 + '&bull; One-directional by design: the Rock stays the source of truth. Promoting doesn&rsquo;t set up two-way sync &mdash; editing the Rock later won&rsquo;t change the card, and vice versa (matches how Tasks and Kanban are kept as separate surfaces on purpose)<br>'
@@ -15123,14 +15131,15 @@ Return ONLY the JSON array:`;
                              ondragend="dragEnd(event)">
                             <input type="checkbox" class="matrix-check" onclick="completeMatrixTask('${q}', ${idx})" ${t.done ? 'checked' : ''}>
                             <span class="task-text-editable" ondblclick="editMatrixTask('${q}', ${idx})" title="Double-click to edit" style="${t.done ? 'text-decoration: line-through; opacity: 0.5;' : ''}">${t.type === 'rock' ? '🪨 ' : ''}${t.text}</span>
-                            ${t.done ? `
-                                <div class="task-actions" style="display: flex; gap: 4px; margin-left: 8px;">
+                            <div class="task-actions" style="display: flex; gap: 4px; margin-left: 8px;">
+                                ${t.type === 'todo' ? `<button class="action-btn snooze" onclick="snoozeMatrixTask('${q}', ${idx})" title="Snooze this to-do">🔔</button>` : ''}
+                                ${t.done ? `
                                     <button class="action-btn archive" onclick="archiveMatrixTask('${q}', ${idx})" title="Archive (remove from everywhere)">📦</button>
                                     <button class="action-btn uncheck" onclick="uncheckMatrixTask('${q}', ${idx})" title="Uncheck">↩</button>
-                                    <button class="action-btn delete" onclick="deleteMatrixTask('${q}', ${idx})" title="Delete permanently">🗑</button>
-                                </div>
-                            ` : ''}
-                            <button class="remove-btn" onclick="removeFromMatrix('${q}', ${idx})">✕</button>
+                                ` : ''}
+                                <button class="action-btn delete" onclick="deleteMatrixTask('${q}', ${idx})" title="Delete permanently">🗑</button>
+                            </div>
+                            <button class="remove-btn" onclick="removeFromMatrix('${q}', ${idx})" title="Remove from matrix only">✕</button>
                         </div>
                     `).join('');
                 }
@@ -15215,6 +15224,25 @@ Return ONLY the JSON array:`;
             }
         }
         
+        function snoozeMatrixTask(quadrant, idx) {
+            const task = dailyPlanData.matrix[quadrant][idx];
+            if (!task) return;
+            // Snooze applies to to-dos only (matches To-Dos tab behavior; rocks/local tasks not snoozable)
+            if (task.type !== 'todo') {
+                showToast('Only to-dos can be snoozed', 'error');
+                return;
+            }
+            const todos = yearData.quarters[currentQuarter].todos;
+            const todoIdx = todos.findIndex(t => t.text === task.text);
+            if (todoIdx < 0) {
+                showToast('Could not find source to-do to snooze', 'error');
+                return;
+            }
+            // Delegate to the existing snooze flow. confirmSnooze() sets snoozedUntil,
+            // then calls removeTodoFromAllDailyPlans(), which strips this task from the matrix.
+            snoozeTask(todoIdx);
+        }
+
         function archiveMatrixTask(quadrant, idx) {
             const task = dailyPlanData.matrix[quadrant][idx];
             if (!task) return;
