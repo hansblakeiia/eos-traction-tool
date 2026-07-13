@@ -2219,6 +2219,24 @@
         .kanban-col-opt-action-btn:hover { background: var(--gray-50); }
         .kanban-col-opt-action-btn.danger { color: var(--danger); border-color: #fecaca; }
         .kanban-col-opt-action-btn.danger:hover { background: #fee2e2; }
+
+        /* ==================== MARKETING PIPELINE (v3.28.0) ==================== */
+        .mkt-board { display:flex; gap:12px; overflow-x:auto; padding-bottom:12px; align-items:flex-start; }
+        .mkt-col { flex:0 0 230px; background:var(--gray-50, #f9fafb); border:1px solid var(--gray-200); border-radius:8px; padding:10px; min-height:120px; }
+        .mkt-col-review { border-color:#047857; background:#ecfdf5; box-shadow:0 0 0 1px #a7f3d0; }
+        .mkt-col-head { display:flex; align-items:center; gap:6px; font-weight:700; font-size:0.85rem; margin-bottom:10px; color:var(--gray-700, #374151); }
+        .mkt-who { font-weight:500; font-size:0.7rem; color:var(--gray-500); background:#fff; border:1px solid var(--gray-200); border-radius:10px; padding:1px 7px; }
+        .mkt-count { margin-left:auto; font-weight:500; font-size:0.75rem; color:var(--gray-500); }
+        .mkt-card { background:#fff; border:1px solid var(--gray-200); border-radius:6px; padding:9px 10px; margin-bottom:8px; cursor:pointer; transition:box-shadow .12s; }
+        .mkt-card:hover { box-shadow:0 2px 6px rgba(0,0,0,0.09); }
+        .mkt-card-title { font-size:0.85rem; font-weight:600; line-height:1.3; margin-bottom:6px; }
+        .mkt-badges { display:flex; flex-wrap:wrap; gap:4px; }
+        .mkt-badge { font-size:0.64rem; padding:1px 6px; border-radius:9px; border:1px solid transparent; white-space:nowrap; }
+        .mkt-badge-none { background:#f3f4f6; color:#9ca3af; border-color:#e5e7eb; }
+        .mkt-badge-draft { background:#fef3c7; color:#92400e; border-color:#fde68a; }
+        .mkt-badge-approved { background:#dbeafe; color:#1e40af; border-color:#bfdbfe; }
+        .mkt-badge-sent { background:#d1fae5; color:#065f46; border-color:#a7f3d0; }
+        .mkt-empty { font-size:0.75rem; color:var(--gray-400, #9ca3af); text-align:center; padding:14px 0; font-style:italic; }
     </style>
 </head>
 <body>
@@ -2254,6 +2272,7 @@
             <button class="tab-btn" onclick="showPage('meeting')">Weekly Meeting</button>
             <button class="tab-btn daily-plan-tab" onclick="showPage('dailyPlan')">📅 My Daily Plan</button>
             <button class="tab-btn" onclick="showPage('kanban')">🗂️ Kanban</button>
+            <button class="tab-btn" onclick="showPage('marketing')">Marketing</button>
             <button class="tab-btn" onclick="showPage('history')">Compare Years</button>
         </div>
         
@@ -2971,6 +2990,80 @@
         </div>
 
         <!-- COMPARE/HISTORY PAGE -->
+        <!-- ==================== MARKETING PIPELINE (v3.28.0) ==================== -->
+        <div id="marketing" class="page">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:16px;">
+                <div>
+                    <h2 style="margin:0;">Marketing Pipeline</h2>
+                    <p style="margin:4px 0 0; font-size:0.85rem; color:var(--gray-500);">
+                        The column tells you whose turn it is. Check <strong>My Review</strong> daily; if it is empty, you are done.
+                    </p>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn btn-secondary" onclick="mktNewCard('standalone')">+ Social / Quote</button>
+                    <button class="btn btn-primary" onclick="mktNewCard('blog')">+ New Blog</button>
+                </div>
+            </div>
+            <div id="mktBoard" class="mkt-board"></div>
+        </div>
+
+        <!-- Marketing Card Modal -->
+        <div class="modal-overlay" id="mktCardModal">
+            <div class="modal" style="max-width:760px;">
+                <div class="modal-header">
+                    <h2 id="mktModalTitle">Content Card</h2>
+                    <button onclick="closeModal('mktCardModal')" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray-500);">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <label style="font-size:0.8rem;font-weight:600;color:var(--gray-500);">Title / Headline</label>
+                    <input type="text" id="mktTitle" style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-size:0.95rem; box-sizing:border-box; margin-bottom:12px;">
+
+                    <div id="mktBlogFields">
+                        <label style="font-size:0.8rem;font-weight:600;color:var(--gray-500);">
+                            Your Take
+                            <span style="font-weight:400;color:var(--gray-500);">&mdash; press Win+H and just talk. Stories, opinions, what clients ask you. This is what makes it sound like you.</span>
+                        </label>
+                        <textarea id="mktTake" rows="5" placeholder="What do you actually think about this? What do clients get wrong? What have you seen?"
+                            style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; box-sizing:border-box; resize:vertical; margin-bottom:12px;"></textarea>
+
+                        <label style="font-size:0.8rem;font-weight:600;color:var(--gray-500);">Blog Draft</label>
+                        <textarea id="mktBlog" rows="10" placeholder="Markdown. This is what gets sent to WordPress."
+                            style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; box-sizing:border-box; resize:vertical; margin-bottom:12px;"></textarea>
+                    </div>
+
+                    <label style="font-size:0.8rem;font-weight:600;color:var(--gray-500);">Social Post Copy</label>
+                    <textarea id="mktSocial" rows="4" placeholder="LinkedIn / Facebook wording. Generated from the final blog, or written directly for a standalone post."
+                        style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; box-sizing:border-box; resize:vertical; margin-bottom:12px;"></textarea>
+
+                    <label style="font-size:0.8rem;font-weight:600;color:var(--gray-500);">Quote (for IntelliQuotes)</label>
+                    <textarea id="mktQuote" rows="2" placeholder="The line from the blog worth turning into a branded image."
+                        style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; box-sizing:border-box; resize:vertical; margin-bottom:12px;"></textarea>
+
+                    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                        <div style="flex:1; min-width:180px;">
+                            <label style="font-size:0.8rem;font-weight:600;color:var(--gray-500);">Column</label>
+                            <select id="mktColumn" style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; box-sizing:border-box;"></select>
+                        </div>
+                        <div style="flex:1; min-width:180px;">
+                            <label style="font-size:0.8rem;font-weight:600;color:var(--gray-500);">Artifact Status</label>
+                            <div style="display:flex; gap:6px; margin-top:6px;">
+                                <select id="mktBlogStatus" style="flex:1; padding:6px; border:1px solid var(--gray-200); border-radius:6px; font-size:0.8rem;"></select>
+                                <select id="mktSocialStatus" style="flex:1; padding:6px; border:1px solid var(--gray-200); border-radius:6px; font-size:0.8rem;"></select>
+                                <select id="mktQuoteStatus" style="flex:1; padding:6px; border:1px solid var(--gray-200); border-radius:6px; font-size:0.8rem;"></select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="mktWpInfo" style="display:none; margin-top:12px; padding:8px 10px; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:6px; font-size:0.82rem;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="mktDeleteCard()" style="color:var(--danger);">Delete</button>
+                    <button class="btn btn-secondary" id="mktWpBtn" onclick="mktSendToWordPress()" style="color:var(--primary);">Send Blog to WordPress</button>
+                    <button class="btn btn-primary" onclick="mktSaveCard()">Save</button>
+                </div>
+            </div>
+        </div>
+
         <div id="history" class="page">
             <h2 class="page-title">Compare Years</h2>
             
@@ -3795,7 +3888,7 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.27.0';
+        const EOS_VERSION = '3.28.0';
         const EOS_BUILD_DATE = '2026-07-13';
         const EOS_BUILD_TIME = '10:30'; // Add-to-Kanban button on Quarterly Rocks: one-directional promotion of a rock to a Kanban card (Backlog, owner-mapped, labeled Rock), with duplicate guard
         
@@ -5578,7 +5671,16 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.27.0 &mdash; 2026-07-13 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.28.0 &mdash; 2026-07-13 (Current)</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>New Marketing tab.</strong> A dedicated content pipeline board, separate from the EOS Kanban.</li>'
+                + '<li><strong>Six columns, by owner:</strong> Ideas, Approved (Hans), Drafting (AI), My Review (Hans), With Trevor, Done. The column tells you whose turn it is.</li>'
+                + '<li><strong>Your Take field.</strong> Dictate with Win+H. This is the raw material that makes a draft sound like you.</li>'
+                + '<li><strong>Artifact badges.</strong> Blog / Social / Quote each carry their own status, so a blog can be in WordPress while its social post is still unwritten.</li>'
+                + '<li><strong>Send Blog to WordPress</strong> from the card. Draft-only, enforced server-side. Card auto-moves to With Trevor.</li>'
+                + '<li>Standalone Social / Quote cards for posts not tied to a blog.</li>'
+                + '</ul>'
+                + '<div style="font-weight:700;color:#1d4ed8;font-size:0.9rem;margin-bottom:6px;">v3.27.0 &mdash; 2026-07-13</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>WordPress draft handoff.</strong> New <em>WP Draft</em> button on Kanban cards creates a draft post on the website from the card title and description.</li>'
                 + '<li><strong>Draft-only by design.</strong> Post status is hardcoded server-side in Apps Script. Nothing sent from this tool can publish to the live site.</li>'
@@ -6103,6 +6205,281 @@ Example:
             } else if (pageId === 'kanban') {
                 renderKanban();
                 pullKanbanFromCloud(false); // silent background refresh; re-renders only if cloud has newer data
+            } else if (pageId === 'marketing') {
+                mktRender();
+            }
+        }
+
+        // ==================== MARKETING PIPELINE (v3.28.0) ====================
+        //
+        // Design principle: the COLUMN tells you whose turn it is.
+        //   Ideas      -> nobody yet (topics on the table)
+        //   Approved   -> HANS (pick it, record your take)
+        //   Drafting   -> AI (being written)
+        //   My Review  -> HANS  <-- the only column that requires a daily look
+        //   With Trevor-> TREVOR (images, publish, schedule)
+        //   Done       -> archived
+        //
+        // Badges show what EXISTS (blog / social / quote), independent of column,
+        // because a blog can be in WordPress while its social post is still unwritten.
+        //
+        const MKT_STORAGE_KEY = 'eos_marketing_data';
+
+        const MKT_COLUMNS = [
+            { id: 'ideas',    name: 'Ideas',       who: '' },
+            { id: 'approved', name: 'Approved',    who: 'Hans' },
+            { id: 'drafting', name: 'Drafting',    who: 'AI' },
+            { id: 'review',   name: 'My Review',   who: 'Hans' },
+            { id: 'trevor',   name: 'With Trevor', who: 'Trevor' },
+            { id: 'done',     name: 'Done',        who: '' }
+        ];
+
+        const MKT_STATUSES = ['none', 'draft', 'approved', 'sent'];
+        const MKT_STATUS_LABEL = { none: '\u2014', draft: 'draft', approved: 'ok', sent: 'sent' };
+
+        let mktData = { cards: [] };
+        let mktEditingId = null;
+
+        function mktLoad() {
+            try {
+                const raw = localStorage.getItem(MKT_STORAGE_KEY);
+                mktData = raw ? JSON.parse(raw) : { cards: [] };
+                if (!Array.isArray(mktData.cards)) mktData.cards = [];
+            } catch (e) {
+                console.error('Marketing load failed:', e);
+                mktData = { cards: [] };
+            }
+        }
+
+        function mktSave() {
+            try {
+                localStorage.setItem(MKT_STORAGE_KEY, JSON.stringify(mktData));
+            } catch (e) {
+                console.error('Marketing save failed:', e);
+                showToast('Could not save marketing data.');
+            }
+        }
+
+        function mktNewCard(kind) {
+            mktLoad();
+            const card = {
+                id: 'mkt_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+                kind: kind === 'standalone' ? 'standalone' : 'blog',
+                title: '',
+                take: '',
+                blog: '',
+                social: '',
+                quote: '',
+                columnId: 'ideas',
+                blogStatus: kind === 'standalone' ? 'none' : 'none',
+                socialStatus: 'none',
+                quoteStatus: 'none',
+                created: new Date().toISOString()
+            };
+            mktData.cards.push(card);
+            mktSave();
+            mktRender();
+            mktOpenCard(card.id);
+        }
+
+        function mktGetCard(id) {
+            return mktData.cards.find(function(c) { return c.id === id; });
+        }
+
+        function mktOpenCard(id) {
+            mktLoad();
+            const card = mktGetCard(id);
+            if (!card) return;
+            mktEditingId = id;
+
+            document.getElementById('mktModalTitle').textContent =
+                card.kind === 'blog' ? 'Blog Card' : 'Social / Quote Card';
+            document.getElementById('mktBlogFields').style.display =
+                card.kind === 'blog' ? 'block' : 'none';
+
+            document.getElementById('mktTitle').value  = card.title  || '';
+            document.getElementById('mktTake').value   = card.take   || '';
+            document.getElementById('mktBlog').value   = card.blog   || '';
+            document.getElementById('mktSocial').value = card.social || '';
+            document.getElementById('mktQuote').value  = card.quote  || '';
+
+            const colSel = document.getElementById('mktColumn');
+            colSel.innerHTML = MKT_COLUMNS.map(function(c) {
+                const who = c.who ? ' (' + c.who + ')' : '';
+                return '<option value="' + c.id + '">' + escapeHtml(c.name + who) + '</option>';
+            }).join('');
+            colSel.value = card.columnId || 'ideas';
+
+            const statusOpts = function(sel, prefix) {
+                return MKT_STATUSES.map(function(s) {
+                    return '<option value="' + s + '"' + (s === sel ? ' selected' : '') + '>' +
+                           prefix + ': ' + MKT_STATUS_LABEL[s] + '</option>';
+                }).join('');
+            };
+            document.getElementById('mktBlogStatus').innerHTML   = statusOpts(card.blogStatus   || 'none', 'Blog');
+            document.getElementById('mktSocialStatus').innerHTML = statusOpts(card.socialStatus || 'none', 'Social');
+            document.getElementById('mktQuoteStatus').innerHTML  = statusOpts(card.quoteStatus  || 'none', 'Quote');
+
+            const wpBtn = document.getElementById('mktWpBtn');
+            wpBtn.style.display = card.kind === 'blog' ? 'inline-block' : 'none';
+
+            const wpInfo = document.getElementById('mktWpInfo');
+            if (card.wordpressEditUrl) {
+                wpInfo.style.display = 'block';
+                wpInfo.innerHTML = 'Draft is in WordPress. ' +
+                    '<a href="' + escapeHtml(card.wordpressEditUrl) + '" target="_blank">Open it</a>';
+            } else {
+                wpInfo.style.display = 'none';
+            }
+
+            document.getElementById('mktCardModal').classList.add('active');
+        }
+
+        function mktSaveCard() {
+            const card = mktGetCard(mktEditingId);
+            if (!card) return;
+
+            card.title  = document.getElementById('mktTitle').value.trim();
+            card.take   = document.getElementById('mktTake').value;
+            card.blog   = document.getElementById('mktBlog').value;
+            card.social = document.getElementById('mktSocial').value;
+            card.quote  = document.getElementById('mktQuote').value;
+            card.columnId    = document.getElementById('mktColumn').value;
+            card.blogStatus   = document.getElementById('mktBlogStatus').value;
+            card.socialStatus = document.getElementById('mktSocialStatus').value;
+            card.quoteStatus  = document.getElementById('mktQuoteStatus').value;
+            card.updated = new Date().toISOString();
+
+            mktSave();
+            mktRender();
+            closeModal('mktCardModal');
+        }
+
+        function mktDeleteCard() {
+            const card = mktGetCard(mktEditingId);
+            if (!card) return;
+            if (!confirm('Delete "' + (card.title || 'this card') + '"? This cannot be undone.')) return;
+            mktData.cards = mktData.cards.filter(function(c) { return c.id !== mktEditingId; });
+            mktSave();
+            mktRender();
+            closeModal('mktCardModal');
+        }
+
+        function mktBadge(label, status) {
+            const s = status || 'none';
+            return '<span class="mkt-badge mkt-badge-' + s + '">' +
+                   escapeHtml(label) + ' ' + escapeHtml(MKT_STATUS_LABEL[s]) + '</span>';
+        }
+
+        function mktRender() {
+            mktLoad();
+            const board = document.getElementById('mktBoard');
+            if (!board) return;
+
+            board.innerHTML = MKT_COLUMNS.map(function(col) {
+                const cards = mktData.cards.filter(function(c) { return (c.columnId || 'ideas') === col.id; });
+                const isReview = col.id === 'review';
+
+                const cardHtml = cards.map(function(c) {
+                    let badges = '';
+                    if (c.kind === 'blog') badges += mktBadge('Blog', c.blogStatus);
+                    badges += mktBadge('Social', c.socialStatus);
+                    badges += mktBadge('Quote', c.quoteStatus);
+                    return '<div class="mkt-card" onclick="mktOpenCard(\'' + c.id + '\')">' +
+                           '<div class="mkt-card-title">' + escapeHtml(c.title || 'Untitled') + '</div>' +
+                           '<div class="mkt-badges">' + badges + '</div>' +
+                           '</div>';
+                }).join('');
+
+                return '<div class="mkt-col' + (isReview ? ' mkt-col-review' : '') + '">' +
+                       '<div class="mkt-col-head">' +
+                       '<span>' + escapeHtml(col.name) + '</span>' +
+                       (col.who ? '<span class="mkt-who">' + escapeHtml(col.who) + '</span>' : '') +
+                       '<span class="mkt-count">' + cards.length + '</span>' +
+                       '</div>' +
+                       (cardHtml || '<div class="mkt-empty">Nothing here</div>') +
+                       '</div>';
+            }).join('');
+        }
+
+        // Reuses the v3.27.0 Apps Script postToWordPress action and the mdToHtml converter.
+        // Draft status is enforced server-side; nothing here can publish.
+        async function mktSendToWordPress() {
+            const card = mktGetCard(mktEditingId);
+            if (!card) return;
+
+            const title = document.getElementById('mktTitle').value.trim();
+            const body  = document.getElementById('mktBlog').value.trim();
+
+            if (!title) { showToast('This card needs a title first.'); return; }
+            if (!body)  { showToast('The Blog Draft field is empty.'); return; }
+
+            const settings = getSettings();
+            const member = settings.teamMembers && settings.teamMembers.find(function(m) { return m.webAppUrl; });
+            if (!member || !member.webAppUrl) {
+                showToast('No Apps Script Web App URL configured in Settings.');
+                return;
+            }
+
+            const notify = confirm(
+                'Create a WordPress DRAFT of this blog?\n\n' +
+                title + '\n\n' +
+                'It saves as a draft and will NOT be published.\n\n' +
+                'OK = create draft AND email Trevor.\n' +
+                'Cancel = create draft only, no email.'
+            );
+
+            const btn = document.getElementById('mktWpBtn');
+            const original = btn.textContent;
+            btn.textContent = 'Sending...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(member.webAppUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'postToWordPress',
+                        secretKey: member.webAppSecret || '',
+                        title: title,
+                        content: mdToHtml(body),
+                        notifyEditor: notify
+                    })
+                });
+                const result = await response.json();
+
+                if (!result.success) {
+                    showToast('WordPress error: ' + (result.error || 'unknown'));
+                    console.error('postToWordPress failed:', result);
+                    return;
+                }
+
+                card.title = title;
+                card.blog = body;
+                card.wordpressPostId  = result.postId;
+                card.wordpressEditUrl = result.editUrl;
+                card.wordpressSentAt  = new Date().toISOString();
+                card.blogStatus = 'sent';
+                card.columnId = 'trevor';
+                mktSave();
+                mktRender();
+
+                let msg = 'Draft created in WordPress. Card moved to With Trevor.';
+                if (notify && result.emailSent)  msg += ' Trevor notified.';
+                if (notify && !result.emailSent) msg += ' (Email failed: ' + (result.emailError || 'unknown') + ')';
+                showToast(msg);
+
+                if (confirm(msg + '\n\nOpen the draft in WordPress now?')) {
+                    window.open(result.editUrl, '_blank');
+                }
+                closeModal('mktCardModal');
+
+            } catch (error) {
+                showToast('Could not reach Apps Script: ' + error.message);
+                console.error('mktSendToWordPress error:', error);
+            } finally {
+                btn.textContent = original;
+                btn.disabled = false;
             }
         }
 
