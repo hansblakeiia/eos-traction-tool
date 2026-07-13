@@ -3090,6 +3090,8 @@
                 <div class="modal-footer">
                     <button class="btn btn-secondary" onclick="mktDeleteCard()" style="color:var(--danger);">Delete</button>
                     <button class="btn btn-secondary" id="mktWpBtn" onclick="mktSendToWordPress()" style="color:var(--primary);">Send Blog to WordPress</button>
+                    <button class="btn btn-secondary" id="mktDraftBtn" onclick="mktDraftBlog()" style="color:var(--primary);">AI: Draft Blog</button>
+                    <button class="btn btn-secondary" id="mktPackageBtn" onclick="mktDraftPackage()" style="color:var(--primary);">AI: Social + Quote</button>
                     <button class="btn btn-primary" onclick="mktSaveCard()">Save</button>
                 </div>
             </div>
@@ -3269,7 +3271,7 @@
                                 <option value="openai">OpenAI</option>
                             </select>
 
-                            <label style="font-size: 0.8rem;">Marketing Topic Research AI</label>
+                            <label style="font-size: 0.8rem;">Marketing AI <span style="font-weight:400; color: var(--gray-500);">(topics, blog drafts, social)</span></label>
                             <select id="aiRouteMarketing">
                                 <option value="gemini">Gemini</option>
                                 <option value="claude" selected>Claude</option>
@@ -3926,7 +3928,7 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.29.0';
+        const EOS_VERSION = '3.30.0';
         const EOS_BUILD_DATE = '2026-07-13';
         const EOS_BUILD_TIME = '10:30'; // Add-to-Kanban button on Quarterly Rocks: one-directional promotion of a rock to a Kanban card (Backlog, owner-mapped, labeled Rock), with duplicate guard
         
@@ -5709,7 +5711,15 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.29.0 &mdash; 2026-07-13 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.30.0 &mdash; 2026-07-13 (Current)</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>AI: Draft Blog.</strong> Writes a full 900-1300 word draft from the headline, the angle, and Your Take. Card auto-moves to My Review.</li>'
+                + '<li><strong>Your Take drives it.</strong> The dictated Take is the heart of the prompt. Without it the model has to invent your opinions, and the draft reads generic.</li>'
+                + '<li><strong>AI: Social + Quote.</strong> Generates the social copy and the pull-quote from the FINAL blog, in one call, so nothing goes stale when you edit.</li>'
+                + '<li><strong>Voice guardrails baked in:</strong> no bragging about advisors, no hype, no fear-selling, educational not advisory.</li>'
+                + '<li>Settings consolidated to a single <em>Marketing AI</em> route (topics, drafts, social). Defaults to Claude.</li>'
+                + '</ul>'
+                + '<div style="font-weight:700;color:#1d4ed8;font-size:0.9rem;margin-bottom:6px;">v3.29.0 &mdash; 2026-07-13</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Suggest Topics.</strong> AI proposes blog topics with a specific angle and a reason the audience will click. Accept the ones you like straight into the Ideas column.</li>'
                 + '<li><strong>It knows your voice and audience.</strong> The prompt carries the firm context, so suggestions are aimed at pre-retirees and retirees, not generic finance readers.</li>'
@@ -6287,7 +6297,7 @@ Example:
             const out = document.getElementById('mktResearchOut');
             const btn = document.getElementById('mktResearchBtn');
 
-            const cfg = getAIProviderConfig('marketingResearch');
+            const cfg = getAIProviderConfig('marketing');
             if (!cfg.apiKey) {
                 out.innerHTML = '<p style="color:var(--danger);font-size:0.85rem;">No API key configured for this provider. Add one in Settings.</p>';
                 return;
@@ -6382,6 +6392,168 @@ Example:
             if (btnEl) {
                 btnEl.disabled = true;
                 btnEl.textContent = 'Added';
+            }
+        }
+
+        // ==================== AI BLOG DRAFTING (v3.30.0) ====================
+        //
+        // Same callAIText path as topic research. The single most important input is
+        // card.take -- the dictated "Your Take". Research gives the draft its facts;
+        // the Take gives it a point of view. Without a Take, the model is guessing at
+        // what Hans thinks, and the output reads like every other advisor's blog.
+        //
+        async function mktDraftBlog() {
+            const card = mktGetCard(mktEditingId);
+            if (!card) return;
+
+            const title = document.getElementById('mktTitle').value.trim();
+            const take  = document.getElementById('mktTake').value.trim();
+            const existing = document.getElementById('mktBlog').value.trim();
+
+            if (!title) { showToast('Give the card a title first.'); return; }
+
+            if (!take) {
+                if (!confirm(
+                    'You have not recorded Your Take yet.\n\n' +
+                    'The Take is what makes a draft sound like you rather than like a generic ' +
+                    'finance article. Without it the model has to invent your opinions.\n\n' +
+                    'Draft anyway?'
+                )) return;
+            }
+
+            if (existing && !confirm('This will REPLACE the existing blog draft. Continue?')) return;
+
+            const cfg = getAIProviderConfig('marketing');
+            if (!cfg.apiKey) { showToast('No API key set for the Marketing AI provider. Check Settings.'); return; }
+
+            const prompt =
+                MKT_FIRM_CONTEXT + '\n\n' +
+                'Write a blog post for his website.\n\n' +
+                'HEADLINE: ' + title + '\n\n' +
+                (card.aiAngle ? 'THE ANGLE: ' + card.aiAngle + '\n\n' : '') +
+                (take
+                    ? 'HANS\'S OWN TAKE (dictated, unedited - this is the heart of the piece. ' +
+                      'Build the article AROUND these ideas. His stories, his phrasing, his opinions ' +
+                      'take priority over anything generic you might add):\n"""\n' + take + '\n"""\n\n'
+                    : 'He did not record a take, so keep opinions modest and factual rather than ' +
+                      'inventing strong views he may not hold.\n\n') +
+                'How he writes:\n' +
+                '- Opens by earning the point through something concrete - a client question he keeps ' +
+                'getting, a story, a cultural detail - before naming the lesson.\n' +
+                '- Steelmans the other side fully and fairly before disagreeing.\n' +
+                '- Honest about uncertainty. Willing to say nobody can know.\n' +
+                '- Warm and plainspoken. Never hyped, never fear-based, never salesy.\n' +
+                '- Short paragraphs. Section headings. Occasional bold for the line that matters.\n' +
+                '- Does NOT brag about the firm or about advisors in general. No "this is where a good ' +
+                'advisor earns their keep." Show the value, do not assert it.\n' +
+                '- Often closes by inviting a conversation, and sometimes lands on the firm line: ' +
+                'minimize your financial stress so you can focus on maximizing your life.\n\n' +
+                'Rules:\n' +
+                '- 900-1300 words.\n' +
+                '- Markdown. Use ## for section headings. Do not include the H1 title.\n' +
+                '- Educational, not advice. This is a regulated RIA: no performance promises, no ' +
+                'guarantees, no specific security recommendations.\n' +
+                '- If you are unsure of a number or a rule, say so plainly rather than inventing it.\n\n' +
+                'Return ONLY the blog body in Markdown. No preamble, no commentary, no code fences.';
+
+            const btn = document.getElementById('mktDraftBtn');
+            const original = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Drafting...';
+
+            try {
+                const raw = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt,
+                                             { temperature: 0.7, maxTokens: 4000 });
+                const clean = String(raw).replace(/^```(?:markdown)?\s*/i, '').replace(/```\s*$/, '').trim();
+                if (!clean) throw new Error('The model returned nothing.');
+
+                document.getElementById('mktBlog').value = clean;
+                document.getElementById('mktBlogStatus').value = 'draft';
+
+                card.blog = clean;
+                card.take = take;
+                card.title = title;
+                card.blogStatus = 'draft';
+                card.columnId = 'review';
+                document.getElementById('mktColumn').value = 'review';
+                mktSave();
+                mktRender();
+
+                showToast('Draft written. Card moved to My Review.');
+
+            } catch (error) {
+                showToast('Drafting failed: ' + error.message);
+                console.error('mktDraftBlog error:', error);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = original;
+            }
+        }
+
+        // Generates the social copy and the pull-quote FROM THE FINAL BLOG, in one call.
+        // Deliberately not run earlier: derivatives generated before the blog is frozen
+        // go stale the moment the blog is edited.
+        async function mktDraftPackage() {
+            const card = mktGetCard(mktEditingId);
+            if (!card) return;
+
+            const title = document.getElementById('mktTitle').value.trim();
+            const blog  = document.getElementById('mktBlog').value.trim();
+
+            if (!blog) { showToast('There is no blog draft to work from yet.'); return; }
+
+            const cfg = getAIProviderConfig('marketing');
+            if (!cfg.apiKey) { showToast('No API key set for the Marketing AI provider. Check Settings.'); return; }
+
+            const prompt =
+                MKT_FIRM_CONTEXT + '\n\n' +
+                'Below is a finished blog post. Produce two things from it.\n\n' +
+                'BLOG TITLE: ' + title + '\n\nBLOG:\n"""\n' + blog + '\n"""\n\n' +
+                '1. SOCIAL: a LinkedIn/Facebook post introducing the article. 80-150 words. ' +
+                'Hook the reader with the specific problem the article solves - not a summary, ' +
+                'not "check out my new blog." No hashtag spam, at most 2-3 relevant hashtags. ' +
+                'End with a light call to action to read it.\n\n' +
+                '2. QUOTE: one sentence pulled from or distilled from the blog, suitable for a ' +
+                'branded quote image. It must stand alone without context, sound like something ' +
+                'Hans would actually say, and carry a real idea - not a platitude. Under 25 words. ' +
+                'No quotation marks.\n\n' +
+                'Return ONLY a JSON object. No fences, no preamble:\n' +
+                '{"social": "...", "quote": "..."}';
+
+            const btn = document.getElementById('mktPackageBtn');
+            const original = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Working...';
+
+            try {
+                const raw = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt,
+                                             { temperature: 0.75, maxTokens: 1200 });
+                const clean = String(raw).replace(/```json/gi, '').replace(/```/g, '').trim();
+                const s = clean.indexOf('{'), e = clean.lastIndexOf('}');
+                if (s === -1 || e === -1) throw new Error('The model did not return the expected format.');
+
+                const pkg = JSON.parse(clean.slice(s, e + 1));
+
+                document.getElementById('mktSocial').value = pkg.social || '';
+                document.getElementById('mktQuote').value  = pkg.quote  || '';
+                document.getElementById('mktSocialStatus').value = 'draft';
+                document.getElementById('mktQuoteStatus').value  = 'draft';
+
+                card.social = pkg.social || '';
+                card.quote  = pkg.quote  || '';
+                card.socialStatus = 'draft';
+                card.quoteStatus  = 'draft';
+                mktSave();
+                mktRender();
+
+                showToast('Social post and quote drafted from the final blog.');
+
+            } catch (error) {
+                showToast('Package generation failed: ' + error.message);
+                console.error('mktDraftPackage error:', error);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = original;
             }
         }
 
@@ -6507,6 +6679,7 @@ Example:
 
             const wpBtn = document.getElementById('mktWpBtn');
             wpBtn.style.display = card.kind === 'blog' ? 'inline-block' : 'none';
+            document.getElementById('mktDraftBtn').style.display = card.kind === 'blog' ? 'inline-block' : 'none';
 
             const wpInfo = document.getElementById('mktWpInfo');
             if (card.wordpressEditUrl) {
@@ -10640,7 +10813,9 @@ Make sure your suggestions directly address the specific root cause and discussi
         function getAIProviderConfig(featureKey) {
             const settings = getSettings();
             const routing = settings.aiRouting || {};
-            const provider = routing[featureKey] || 'gemini';
+            // Marketing defaults to Claude; everything else defaults to Gemini.
+            const fallback = (featureKey === 'marketing') ? 'claude' : 'gemini';
+            const provider = routing[featureKey] || fallback;
             const keyMap = { gemini: settings.geminiApiKey, claude: settings.claudeApiKey, openai: settings.openaiApiKey };
             const modelMap = { gemini: settings.geminiModel, claude: settings.claudeModel, openai: settings.openaiModel };
             return { provider: provider, apiKey: keyMap[provider], model: modelMap[provider] };
@@ -12465,7 +12640,7 @@ Make sure your suggestions directly address the specific root cause and discussi
             document.getElementById('aiRouteIds').value = routing.idsSuggestions || 'gemini';
             document.getElementById('aiRouteDailyPlanning').value = routing.dailyPlanning || 'gemini';
             document.getElementById('aiRouteKanban').value = routing.kanbanAgent || 'gemini';
-            document.getElementById('aiRouteMarketing').value = routing.marketingResearch || 'claude';
+            document.getElementById('aiRouteMarketing').value = routing.marketing || 'claude';
 
             document.getElementById('otterTestStatus').style.display = 'none';
             document.getElementById('geminiTestStatus').style.display = 'none';
@@ -12752,7 +12927,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                 idsSuggestions: document.getElementById('aiRouteIds').value,
                 dailyPlanning: document.getElementById('aiRouteDailyPlanning').value,
                 kanbanAgent: document.getElementById('aiRouteKanban').value,
-                marketingResearch: document.getElementById('aiRouteMarketing').value
+                marketing: document.getElementById('aiRouteMarketing').value
             };
             
             // Pomodoro settings
