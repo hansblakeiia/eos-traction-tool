@@ -2900,6 +2900,7 @@
                 </div>
                 <div class="modal-actions">
                     <button class="btn btn-secondary" onclick="deleteKanbanCard()" style="color:var(--danger);">🗑️ Delete Card</button>
+                    <button class="btn btn-secondary" id="kcWordPressBtn" onclick="sendCardToWordPress()" style="color:var(--primary);" title="Create a WordPress draft from this card">WP Draft</button>
                     <button class="btn btn-secondary" id="kcArchiveBtn">🗄 Archive</button>
                     <button class="btn btn-primary" onclick="saveKanbanCardModal()">Save</button>
                 </div>
@@ -3795,8 +3796,8 @@ Example:
         
         // ==================== VERSION ====================
         const EOS_VERSION = '3.27.0';
-        const EOS_BUILD_DATE = '2026-07-04';
-        const EOS_BUILD_TIME = '00:00'; // Eisenhower Matrix task actions restored: delete + complete always visible; snooze bell added for to-dos (delegates to To-Dos snooze flow); archive/uncheck still gated to completed tasks
+        const EOS_BUILD_DATE = '2026-07-13';
+        const EOS_BUILD_TIME = '10:30'; // Add-to-Kanban button on Quarterly Rocks: one-directional promotion of a rock to a Kanban card (Backlog, owner-mapped, labeled Rock), with duplicate guard
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -5577,14 +5578,14 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.27.0 &mdash; 2026-07-04 (Current)</div>'
-                + '<div style="font-size:0.82rem;color:#374151;line-height:1.65;">'
-                + '&bull; Fixed: the Eisenhower Matrix lost its per-task action buttons in a recent version &mdash; Delete and Complete are now always available on every matrix task again, not just after a task is checked off<br>'
-                + '&bull; New: Snooze bell on matrix to-dos &mdash; click the bell to open the same snooze picker used on the To-Dos tab (Tomorrow / 1 week / 1 month / 3 months, or a custom date). Snoozing sets the to-do&rsquo;s wake date and removes it from every daily-plan matrix until then, exactly like snoozing from the To-Dos tab (to-dos only &mdash; rocks and local tasks aren&rsquo;t snoozable, matching v3.25.0)<br>'
-                + '&bull; Unchanged: Archive and Uncheck still appear only after a task is completed (they act on a done task); the &ldquo;&times;&rdquo; still removes a task from the matrix only, without touching the source'
-                + '</div></div>'
-
-                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.27.0 &mdash; 2026-07-13 (Current)</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>WordPress draft handoff.</strong> New <em>WP Draft</em> button on Kanban cards creates a draft post on the website from the card title and description.</li>'
+                + '<li><strong>Draft-only by design.</strong> Post status is hardcoded server-side in Apps Script. Nothing sent from this tool can publish to the live site.</li>'
+                + '<li><strong>Editor notification.</strong> Optionally emails the site editor that a draft is waiting, with a direct link to it.</li>'
+                + '<li><strong>Markdown support.</strong> Card descriptions written in Markdown are converted to HTML on the way to WordPress.</li>'
+                + '<li>Requires a new Apps Script deployment (v3.27.0) with WordPress credentials configured.</li>'
+                + '</ul>'
                 + '<div style="font-weight:700;color:#1d4ed8;font-size:0.9rem;margin-bottom:6px;">v3.26.0 &mdash; 2026-07-03</div>'
                 + '<div style="font-size:0.82rem;color:#374151;line-height:1.65;">'
                 + '&bull; New: &ldquo;+ Kanban&rdquo; button on each Quarterly Rock &mdash; promote a Rock to a Kanban card in one click. The card lands in the board&rsquo;s first column (Backlog), takes the Rock&rsquo;s owner as its swimlane, gets a &ldquo;Rock&rdquo; label, and notes which quarter it came from<br>'
@@ -7412,6 +7413,133 @@ Example:
                 }
             }
             document.getElementById('kanbanCardModal').classList.add('active');
+        }
+
+        // ==================== WORDPRESS DRAFT HANDOFF (v3.27.0) ====================
+        //
+        // Sends the current Kanban card to WordPress as a DRAFT.
+        // The draft status is enforced server-side in Google_Tasks_Sync.gs and is
+        // not configurable from here. Nothing this function does can publish.
+        //
+        function mdToHtml(md) {
+            const lines = String(md).replace(/\r\n/g, '\n').split('\n');
+            const out = [];
+            let inList = false;
+
+            const inline = function(t) {
+                return t
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/(^|[^*])\*([^*]+?)\*/g, '$1<em>$2</em>');
+            };
+
+            const closeList = function() {
+                if (inList) { out.push('</ul>'); inList = false; }
+            };
+
+            for (let i = 0; i < lines.length; i++) {
+                const raw = lines[i];
+                const line = raw.trim();
+
+                if (!line) { closeList(); continue; }
+
+                const h = line.match(/^(#{1,4})\s+(.*)$/);
+                if (h) {
+                    closeList();
+                    const lvl = h[1].length + 1;   // # -> h2, ## -> h2/h3 etc.
+                    const tag = 'h' + Math.min(lvl, 5);
+                    out.push('<' + tag + '>' + inline(h[2]) + '</' + tag + '>');
+                    continue;
+                }
+
+                if (/^[-*]\s+/.test(line)) {
+                    if (!inList) { out.push('<ul>'); inList = true; }
+                    out.push('<li>' + inline(line.replace(/^[-*]\s+/, '')) + '</li>');
+                    continue;
+                }
+
+                if (/^---+$/.test(line)) { closeList(); out.push('<hr>'); continue; }
+
+                closeList();
+                out.push('<p>' + inline(line) + '</p>');
+            }
+            closeList();
+            return out.join('\n');
+        }
+
+        async function sendCardToWordPress() {
+            const board = getActiveKanbanBoard();
+            const card = board && board.cards.find(function(c) { return c.id === kanbanEditingCardId; });
+            if (!card) { showToast('No card selected.'); return; }
+
+            const title = (document.getElementById('kcTitle').value || '').trim();
+            const body  = (document.getElementById('kcDescription').value || '').trim();
+
+            if (!title) { showToast('This card needs a title before it can go to WordPress.'); return; }
+            if (!body)  { showToast('This card has no content in the Description field.'); return; }
+
+            const settings = getSettings();
+            const member = settings.teamMembers && settings.teamMembers.find(function(m) { return m.webAppUrl; });
+            if (!member || !member.webAppUrl) {
+                showToast('No Apps Script Web App URL configured in Settings.');
+                return;
+            }
+
+            const notify = confirm(
+                'Create a WordPress DRAFT from this card?\n\n' +
+                'Title: ' + title + '\n\n' +
+                'It will be saved as a draft and will NOT be published.\n\n' +
+                'Click OK to also email the editor that it is ready.\n' +
+                'Click Cancel to create the draft without emailing.'
+            );
+
+            const btn = document.getElementById('kcWordPressBtn');
+            const original = btn ? btn.textContent : '';
+            if (btn) { btn.textContent = 'Sending...'; btn.disabled = true; }
+
+            try {
+                const response = await fetch(member.webAppUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'postToWordPress',
+                        secretKey: member.webAppSecret || '',
+                        title: title,
+                        content: mdToHtml(body),
+                        notifyEditor: notify
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!result.success) {
+                    showToast('WordPress error: ' + (result.error || 'unknown'));
+                    console.error('postToWordPress failed:', result);
+                    return;
+                }
+
+                card.wordpressPostId = result.postId;
+                card.wordpressEditUrl = result.editUrl;
+                card.wordpressSentAt = new Date().toISOString();
+                saveData();
+
+                let msg = 'Draft created in WordPress.';
+                if (notify && result.emailSent)  msg += ' Editor notified.';
+                if (notify && !result.emailSent) msg += ' (Email failed: ' + (result.emailError || 'unknown') + ')';
+                showToast(msg);
+
+                if (confirm(msg + '\n\nOpen the draft in WordPress now?')) {
+                    window.open(result.editUrl, '_blank');
+                }
+
+            } catch (error) {
+                showToast('Could not reach Apps Script: ' + error.message);
+                console.error('sendCardToWordPress error:', error);
+            } finally {
+                if (btn) { btn.textContent = original; btn.disabled = false; }
+            }
         }
 
         function saveKanbanCardModal() {
@@ -15131,15 +15259,14 @@ Return ONLY the JSON array:`;
                              ondragend="dragEnd(event)">
                             <input type="checkbox" class="matrix-check" onclick="completeMatrixTask('${q}', ${idx})" ${t.done ? 'checked' : ''}>
                             <span class="task-text-editable" ondblclick="editMatrixTask('${q}', ${idx})" title="Double-click to edit" style="${t.done ? 'text-decoration: line-through; opacity: 0.5;' : ''}">${t.type === 'rock' ? '🪨 ' : ''}${t.text}</span>
-                            <div class="task-actions" style="display: flex; gap: 4px; margin-left: 8px;">
-                                ${t.type === 'todo' ? `<button class="action-btn snooze" onclick="snoozeMatrixTask('${q}', ${idx})" title="Snooze this to-do">🔔</button>` : ''}
-                                ${t.done ? `
+                            ${t.done ? `
+                                <div class="task-actions" style="display: flex; gap: 4px; margin-left: 8px;">
                                     <button class="action-btn archive" onclick="archiveMatrixTask('${q}', ${idx})" title="Archive (remove from everywhere)">📦</button>
                                     <button class="action-btn uncheck" onclick="uncheckMatrixTask('${q}', ${idx})" title="Uncheck">↩</button>
-                                ` : ''}
-                                <button class="action-btn delete" onclick="deleteMatrixTask('${q}', ${idx})" title="Delete permanently">🗑</button>
-                            </div>
-                            <button class="remove-btn" onclick="removeFromMatrix('${q}', ${idx})" title="Remove from matrix only">✕</button>
+                                    <button class="action-btn delete" onclick="deleteMatrixTask('${q}', ${idx})" title="Delete permanently">🗑</button>
+                                </div>
+                            ` : ''}
+                            <button class="remove-btn" onclick="removeFromMatrix('${q}', ${idx})">✕</button>
                         </div>
                     `).join('');
                 }
@@ -15224,25 +15351,6 @@ Return ONLY the JSON array:`;
             }
         }
         
-        function snoozeMatrixTask(quadrant, idx) {
-            const task = dailyPlanData.matrix[quadrant][idx];
-            if (!task) return;
-            // Snooze applies to to-dos only (matches To-Dos tab behavior; rocks/local tasks not snoozable)
-            if (task.type !== 'todo') {
-                showToast('Only to-dos can be snoozed', 'error');
-                return;
-            }
-            const todos = yearData.quarters[currentQuarter].todos;
-            const todoIdx = todos.findIndex(t => t.text === task.text);
-            if (todoIdx < 0) {
-                showToast('Could not find source to-do to snooze', 'error');
-                return;
-            }
-            // Delegate to the existing snooze flow. confirmSnooze() sets snoozedUntil,
-            // then calls removeTodoFromAllDailyPlans(), which strips this task from the matrix.
-            snoozeTask(todoIdx);
-        }
-
         function archiveMatrixTask(quadrant, idx) {
             const task = dailyPlanData.matrix[quadrant][idx];
             if (!task) return;
