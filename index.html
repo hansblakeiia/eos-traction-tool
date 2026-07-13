@@ -3095,6 +3095,7 @@
                     <button class="btn btn-secondary" id="mktWpBtn" onclick="mktSendToWordPress()" style="color:var(--primary);">Send Blog to WordPress</button>
                     <button class="btn btn-secondary" id="mktDraftBtn" onclick="mktDraftBlog()" style="color:var(--primary);">AI: Draft Blog</button>
                     <button class="btn btn-secondary" id="mktPackageBtn" onclick="mktDraftPackage()" style="color:var(--primary);">AI: Social + Quote</button>
+                    <button class="btn btn-secondary" id="mktDriveBtn" onclick="mktSaveBlogToDrive()">Save to Drive</button>
                     <button class="btn btn-primary" onclick="mktSaveCard()">Save</button>
                 </div>
             </div>
@@ -3276,6 +3277,22 @@
                                 <option value="claude">Claude</option>
                                 <option value="openai">OpenAI</option>
                             </select>
+
+                            <div style="margin: 14px 0; padding: 10px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px;">
+                                <label style="font-size: 0.8rem; font-weight: 600;">Firm Context Folder (Google Drive)</label>
+                                <p style="font-size: 0.75rem; color: var(--gray-500); margin: 4px 0 8px;">
+                                    Paste the folder ID from the Drive URL (the part after <code>/folders/</code>). Two kinds of file:
+                                </p>
+                                <ul style="font-size: 0.75rem; color: var(--gray-500); margin: 0 0 8px 16px; padding: 0; line-height: 1.5;">
+                                    <li><strong>Filenames starting with <code>_</code></strong> are <strong>firm facts</strong> &mdash; taglines, ideal clients, service names.
+                                        Small, evergreen, <strong>always loaded</strong>. Start with one file: <code>_Firm Summary.md</code>.</li>
+                                    <li><strong>Everything else</strong> is a <strong>writing sample</strong>. Only the <strong>5 most recently modified</strong> are loaded,
+                                        so token cost stays flat as the folder grows and the AI tracks your <em>current</em> voice.</li>
+                                </ul>
+                                <input type="text" id="firmContextFolderId" placeholder="1AbC...folder ID" style="font-size: 0.85rem;">
+                                <button class="btn btn-secondary" onclick="testFirmContext()" style="margin-top: 6px; font-size: 0.78rem; padding: 4px 10px;">Test Folder</button>
+                                <div id="firmContextStatus" style="display:none; margin-top:6px; padding:6px 8px; border-radius:4px; font-size:0.78rem;"></div>
+                            </div>
 
                             <label style="font-size: 0.8rem;">Marketing AI <span style="font-weight:400; color: var(--gray-500);">(topics, blog drafts, social)</span></label>
                             <select id="aiRouteMarketing">
@@ -3934,7 +3951,7 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.31.0';
+        const EOS_VERSION = '3.33.0';
         const EOS_BUILD_DATE = '2026-07-13';
         const EOS_BUILD_TIME = '10:30'; // Add-to-Kanban button on Quarterly Rocks: one-directional promotion of a rock to a Kanban card (Backlog, owner-mapped, labeled Rock), with duplicate guard
         
@@ -5717,7 +5734,24 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.31.0 &mdash; 2026-07-13 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.33.0 &mdash; 2026-07-13 (Current)</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Firm facts vs. writing samples.</strong> Files named starting with an underscore (e.g. <code>_Firm Summary.md</code>) are treated as <em>ground truth</em> and are ALWAYS loaded. Everything else is a style sample.</li>'
+                + '<li><strong>Only the 5 most recent samples load.</strong> Token cost stays flat as the folder grows, and the AI tracks your current voice rather than a years-old average of it.</li>'
+                + '<li><strong>The two get different instructions.</strong> Firm facts: use exactly, never invent alternatives. Samples: imitate the voice, never reuse the content.</li>'
+                + '<li>Fixes a real flaw in v3.32.0, where a long blog could crowd your firm summary out of the context window entirely.</li>'
+                + '<li>Requires a NEW Apps Script deployment (v3.33.0).</li>'
+                + '</ul>'
+                + '<div style="font-weight:700;color:#1d4ed8;font-size:0.9rem;margin-bottom:6px;">v3.32.0 &mdash; 2026-07-13</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Firm Context folder (Google Drive).</strong> Point the tool at a Drive folder of writing samples, taglines, ideal-client notes, and past blogs. The AI reads them before every draft.</li>'
+                + '<li><strong>This is the fix for dry, generic drafts.</strong> The API model has no memory and no access to past chats. Without samples it invents a voice. With them, it matches yours and uses your real service names instead of made-up ones.</li>'
+                + '<li><strong>No more fabricated clients.</strong> The prompt now forbids inventing client anecdotes, firm services, or taglines that do not appear in the context.</li>'
+                + '<li><strong>Save to Drive.</strong> Finalize a blog, save it back to the folder, and it becomes a sample for the next one. Quality compounds as the folder grows.</li>'
+                + '<li>Context is capped at 8 files / 60k characters. More is not better: oversized context costs more and dilutes the model\'s attention.</li>'
+                + '<li>Requires a NEW Apps Script deployment (v3.32.0). Adds a Google Drive scope.</li>'
+                + '</ul>'
+                + '<div style="font-weight:700;color:#1d4ed8;font-size:0.9rem;margin-bottom:6px;">v3.31.0 &mdash; 2026-07-13</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>API key status is now visible.</strong> Each provider shows a green <em>Key saved</em> pill or a red <em>No key saved</em> pill. A password field with placeholder text looked identical whether it held a key or nothing, which was genuinely misleading.</li>'
                 + '<li><strong>Actionable errors.</strong> If a feature is routed to a provider with no key, the message now names the provider and where to fix it, and clarifies that an API key is not the same as a chat subscription.</li>'
@@ -6278,6 +6312,166 @@ Example:
             }
         }
 
+        // ==================== FIRM CONTEXT (v3.32.0) ====================
+        //
+        // Pulls voice samples and firm facts from a Google Drive folder via Apps Script,
+        // then injects them into the marketing prompts. This is the difference between a
+        // draft that invents a fictional client named Bill and one that knows about
+        // Intelligrations, QCDs, and how Hans actually opens an article.
+        //
+        // IMPORTANT: the model does not learn. Every API call is stateless. Quality
+        // compounds because the FOLDER grows - finalize a blog, save it back to Drive,
+        // and it becomes context for the next draft.
+        //
+        let firmContextCache = null;      // { files: [...], fetchedAt: Date }
+        const FIRM_CONTEXT_TTL_MS = 10 * 60 * 1000;
+
+        async function fetchFirmContext(force) {
+            const settings = getSettings();
+            const folderId = (settings.firmContextFolderId || '').trim();
+            if (!folderId) return null;
+
+            if (!force && firmContextCache &&
+                (Date.now() - firmContextCache.fetchedAt) < FIRM_CONTEXT_TTL_MS) {
+                return firmContextCache;
+            }
+
+            const member = settings.teamMembers && settings.teamMembers.find(function(m) { return m.webAppUrl; });
+            if (!member || !member.webAppUrl) return null;
+
+            try {
+                const response = await fetch(member.webAppUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'getFirmContext',
+                        secretKey: member.webAppSecret || '',
+                        folderId: folderId
+                    })
+                });
+                const result = await response.json();
+                if (!result.success) {
+                    console.warn('Firm context unavailable:', result.error);
+                    return null;
+                }
+                firmContextCache = { files: result.files || [], fetchedAt: Date.now(),
+                                     folderName: result.folderName, totalChars: result.totalChars,
+                                     sampleTotal: result.sampleTotal };
+                return firmContextCache;
+            } catch (error) {
+                console.warn('Firm context fetch failed:', error);
+                return null;
+            }
+        }
+
+        // Builds the context block prepended to every marketing prompt.
+        //
+        // The two kinds are labelled separately and given DIFFERENT instructions, because
+        // they serve different jobs. Firm facts are ground truth the model must use verbatim.
+        // Past blogs are style references it should imitate but never copy from.
+        function buildFirmContextBlock(ctx) {
+            if (!ctx || !ctx.files || !ctx.files.length) return '';
+
+            const evergreen = ctx.files.filter(function(f) { return f.kind === 'evergreen'; });
+            const samples   = ctx.files.filter(function(f) { return f.kind !== 'evergreen'; });
+
+            let block = '\n\n===== FIRM CONTEXT =====\n';
+
+            if (evergreen.length) {
+                block += '\n--- FIRM FACTS (ground truth - use these exactly; never invent alternatives) ---\n' +
+                         evergreen.map(function(f) {
+                             return '[' + f.name + ']\n' + f.text;
+                         }).join('\n\n') + '\n';
+            }
+
+            if (samples.length) {
+                block += '\n--- RECENT WRITING SAMPLES (imitate the VOICE; do not reuse their content) ---\n' +
+                         'Study how these open, how they build an argument, how they concede before ' +
+                         'disagreeing, sentence rhythm, and how they close. Match that voice. These are ' +
+                         'style references, not source material - do not lift their examples or arguments.\n\n' +
+                         samples.map(function(f) {
+                             return '[' + f.name + ']\n' + f.text;
+                         }).join('\n\n') + '\n';
+            }
+
+            block += '\n===== END FIRM CONTEXT =====\n';
+            return block;
+        }
+
+        async function testFirmContext() {
+            const status = document.getElementById('firmContextStatus');
+            status.style.display = 'block';
+            status.style.background = '#fff3cd';
+            status.style.color = '#856404';
+            status.textContent = 'Reading folder...';
+
+            const ctx = await fetchFirmContext(true);
+            if (!ctx) {
+                status.style.background = '#f8d7da';
+                status.style.color = '#721c24';
+                status.textContent = 'Could not read the folder. Check the ID, and make sure the Apps Script has been redeployed with Drive access (v3.32.0).';
+                return;
+            }
+            if (!ctx.files.length) {
+                status.style.background = '#fff3cd';
+                status.style.color = '#856404';
+                status.textContent = 'Folder found ("' + (ctx.folderName || '') + '") but it has no readable files. Add Google Docs, .txt, or .md files.';
+                return;
+            }
+            status.style.background = '#e6f4ea';
+            status.style.color = '#1e8e3e';
+            const ever = ctx.files.filter(function(f) { return f.kind === 'evergreen'; });
+            const samp = ctx.files.filter(function(f) { return f.kind !== 'evergreen'; });
+            let msg = 'Folder "' + ctx.folderName + '" loaded (' + Math.round(ctx.totalChars / 1000) + 'k chars).';
+            msg += '\n\nFIRM FACTS (' + ever.length + '): ' + (ever.length ? ever.map(function(f) { return f.name; }).join(', ') : 'none yet - add a file named starting with an underscore, e.g. "_Firm Summary.md"');
+            msg += '\n\nWRITING SAMPLES (' + samp.length + ' of ' + (ctx.sampleTotal || samp.length) + ' most recent): ' + (samp.length ? samp.map(function(f) { return f.name; }).join(', ') : 'none yet');
+            status.style.whiteSpace = 'pre-wrap';
+            status.textContent = msg;
+        }
+
+        // Saves a finished blog back to the Drive folder so it becomes future context.
+        async function mktSaveBlogToDrive() {
+            const card = mktGetCard(mktEditingId);
+            if (!card) return;
+
+            const settings = getSettings();
+            const folderId = (settings.firmContextFolderId || '').trim();
+            if (!folderId) {
+                showToast('No Firm Context folder set. Add one in Settings > AI Tools.');
+                return;
+            }
+
+            const title = document.getElementById('mktTitle').value.trim();
+            const blog  = document.getElementById('mktBlog').value.trim();
+            if (!blog) { showToast('There is no blog to save.'); return; }
+
+            if (!confirm('Save this finalized blog to your Firm Context folder?\n\n' +
+                         'It will become a writing sample the AI draws on for future drafts.')) return;
+
+            const member = settings.teamMembers.find(function(m) { return m.webAppUrl; });
+            if (!member) { showToast('No Apps Script URL configured.'); return; }
+
+            try {
+                const response = await fetch(member.webAppUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'saveBlogToDrive',
+                        secretKey: member.webAppSecret || '',
+                        folderId: folderId,
+                        title: title,
+                        content: blog
+                    })
+                });
+                const result = await response.json();
+                if (!result.success) { showToast('Save failed: ' + result.error); return; }
+                firmContextCache = null;   // force refresh so the new sample is picked up
+                showToast('Saved to Drive as "' + result.fileName + '". It will inform future drafts.');
+            } catch (error) {
+                showToast('Could not reach Apps Script: ' + error.message);
+            }
+        }
+
         // ==================== AI TOPIC RESEARCH (v3.29.0) ====================
         //
         // NOTE ON WEB ACCESS: the model is called directly from the browser and cannot
@@ -6315,8 +6509,11 @@ Example:
             mktLoad();
             const existing = mktData.cards.map(function(c) { return c.title; }).filter(Boolean);
 
+            const ctxRes = await fetchFirmContext(false);
+            const ctxResBlock = buildFirmContextBlock(ctxRes);
+
             const prompt =
-                MKT_FIRM_CONTEXT + '\n\n' +
+                MKT_FIRM_CONTEXT + ctxResBlock + '\n\n' +
                 'Propose 5 blog topics he could write for his audience.\n\n' +
                 (news
                     ? 'CURRENT CONTEXT he has given you (use this - it is the only current information you have):\n' + news + '\n\n'
@@ -6480,8 +6677,14 @@ Example:
             const cfg = getAIProviderConfig('marketing');
             if (!requireApiKey('Marketing AI', cfg)) return;
 
+            const btnEarly = document.getElementById('mktDraftBtn');
+            btnEarly.disabled = true;
+            btnEarly.textContent = 'Reading firm context...';
+            const ctx = await fetchFirmContext(false);
+            const ctxBlock = buildFirmContextBlock(ctx);
+
             const prompt =
-                MKT_FIRM_CONTEXT + '\n\n' +
+                MKT_FIRM_CONTEXT + ctxBlock + '\n\n' +
                 'Write a blog post for his website.\n\n' +
                 'HEADLINE: ' + title + '\n\n' +
                 (card.aiAngle ? 'THE ANGLE: ' + card.aiAngle + '\n\n' : '') +
@@ -6507,7 +6710,12 @@ Example:
                 '- Markdown. Use ## for section headings. Do not include the H1 title.\n' +
                 '- Educational, not advice. This is a regulated RIA: no performance promises, no ' +
                 'guarantees, no specific security recommendations.\n' +
-                '- If you are unsure of a number or a rule, say so plainly rather than inventing it.\n\n' +
+                '- If you are unsure of a number or a rule, say so plainly rather than inventing it.\n' +
+                '- Do NOT invent client anecdotes, names, or stories. If Hans did not give you a story ' +
+                'in his Take or in the firm context, do not manufacture one. A fabricated client is worse ' +
+                'than no client.\n' +
+                '- Do NOT invent firm services, product names, or taglines. Use only what appears in the ' +
+                'firm context above.\n\n' +
                 'Return ONLY the blog body in Markdown. No preamble, no commentary, no code fences.';
 
             const btn = document.getElementById('mktDraftBtn');
@@ -6559,8 +6767,11 @@ Example:
             const cfg = getAIProviderConfig('marketing');
             if (!requireApiKey('Marketing AI', cfg)) return;
 
+            const ctxPkg = await fetchFirmContext(false);
+            const ctxPkgBlock = buildFirmContextBlock(ctxPkg);
+
             const prompt =
-                MKT_FIRM_CONTEXT + '\n\n' +
+                MKT_FIRM_CONTEXT + ctxPkgBlock + '\n\n' +
                 'Below is a finished blog post. Produce two things from it.\n\n' +
                 'BLOG TITLE: ' + title + '\n\nBLOG:\n"""\n' + blog + '\n"""\n\n' +
                 '1. SOCIAL: a LinkedIn/Facebook post introducing the article. 80-150 words. ' +
@@ -12684,6 +12895,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                 openaiInput.disabled = true;
             }
             updateKeyStatusPills(settings);
+            document.getElementById('firmContextFolderId').value = settings.firmContextFolderId || '';
             document.getElementById('geminiModel').value = settings.geminiModel || '';
             document.getElementById('claudeModel').value = settings.claudeModel || '';
             document.getElementById('openaiModel').value = settings.openaiModel || '';
@@ -12984,6 +13196,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                 kanbanAgent: document.getElementById('aiRouteKanban').value,
                 marketing: document.getElementById('aiRouteMarketing').value
             };
+            settings.firmContextFolderId = document.getElementById('firmContextFolderId').value.trim();
             
             // Pomodoro settings
             settings.pomoFocusMin = parseInt(document.getElementById('pomoFocusMin').value) || 25;
