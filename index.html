@@ -2243,6 +2243,10 @@
         .key-status { font-size:0.72rem; font-weight:600; padding:3px 8px; border-radius:10px; display:inline-block; margin-bottom:5px; }
         .key-status-ok { background:#d1fae5; color:#065f46; border:1px solid #a7f3d0; }
         .key-status-missing { background:#fee2e2; color:#991b1b; border:1px solid #fecaca; }
+        .mkt-company-toggle { display:inline-flex; border:1px solid var(--gray-200); border-radius:6px; overflow:hidden; }
+        .mkt-company-btn { background:#fff; border:none; padding:6px 12px; font-size:0.8rem; font-weight:600; cursor:pointer; color:var(--gray-500); }
+        .mkt-company-btn:not(:last-child) { border-right:1px solid var(--gray-200); }
+        .mkt-company-active { background:var(--primary, #1d4ed8); color:#fff; }
     </style>
 </head>
 <body>
@@ -3005,7 +3009,8 @@
                         The column tells you whose turn it is. Check <strong>My Review</strong> daily; if it is empty, you are done.
                     </p>
                 </div>
-                <div style="display:flex; gap:8px;">
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <div id="mktCompanyToggle" class="mkt-company-toggle"></div>
                     <button class="btn btn-secondary" onclick="mktOpenResearch()">Suggest Topics</button>
                     <button class="btn btn-secondary" onclick="mktNewCard('standalone')">+ Social / Quote</button>
                     <button class="btn btn-primary" onclick="mktNewCard('blog')">+ New Blog</button>
@@ -3049,6 +3054,9 @@
                 <div class="modal-body">
                     <label style="font-size:0.8rem;font-weight:600;color:var(--gray-500);">Title / Headline</label>
                     <input type="text" id="mktTitle" style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-size:0.95rem; box-sizing:border-box; margin-bottom:12px;">
+
+                    <label style="font-size:0.8rem;font-weight:600;color:var(--gray-500);">Company</label>
+                    <select id="mktCompany" style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; box-sizing:border-box; margin-bottom:12px;"></select>
 
                     <div id="mktAngleBox" style="display:none; margin-bottom:12px; padding:8px 10px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; font-size:0.82rem;"></div>
 
@@ -3289,9 +3297,20 @@
                                     <li><strong>Everything else</strong> is a <strong>writing sample</strong>. Only the <strong>5 most recently modified</strong> are loaded,
                                         so token cost stays flat as the folder grows and the AI tracks your <em>current</em> voice.</li>
                                 </ul>
-                                <input type="text" id="firmContextFolderId" placeholder="1AbC...folder ID" style="font-size: 0.85rem;">
-                                <button class="btn btn-secondary" onclick="testFirmContext()" style="margin-top: 6px; font-size: 0.78rem; padding: 4px 10px;">Test Folder</button>
-                                <div id="firmContextStatus" style="display:none; margin-top:6px; padding:6px 8px; border-radius:4px; font-size:0.78rem;"></div>
+                                <label style="font-size: 0.78rem; font-weight: 600; margin-top: 4px; display:block;">Intelligent Investing &mdash; folder ID</label>
+                                <input type="text" id="firmContextFolderId_ii" placeholder="1AbC...folder ID" style="font-size: 0.85rem;">
+                                <button class="btn btn-secondary" onclick="testFirmContext('ii')" style="margin-top: 6px; font-size: 0.78rem; padding: 4px 10px;">Test Folder</button>
+                                <div id="firmContextStatus_ii" style="display:none; margin-top:6px; padding:6px 8px; border-radius:4px; font-size:0.78rem;"></div>
+
+                                <label style="font-size: 0.78rem; font-weight: 600; margin-top: 12px; display:block;">Intelligrations &mdash; folder ID</label>
+                                <input type="text" id="firmContextFolderId_ig" placeholder="Leave blank if not used" style="font-size: 0.85rem;">
+                                <button class="btn btn-secondary" onclick="testFirmContext('ig')" style="margin-top: 6px; font-size: 0.78rem; padding: 4px 10px;">Test Folder</button>
+                                <div id="firmContextStatus_ig" style="display:none; margin-top:6px; padding:6px 8px; border-radius:4px; font-size:0.78rem;"></div>
+
+                                <p style="font-size: 0.72rem; color: var(--gray-500); margin: 10px 0 0;">
+                                    Each company gets its own folder, its own <code>_Firm Summary</code>, and its own writing samples.
+                                    Switch companies on the Marketing tab; each card remembers which company it belongs to.
+                                </p>
                             </div>
 
                             <label style="font-size: 0.8rem;">Marketing AI <span style="font-weight:400; color: var(--gray-500);">(topics, blog drafts, social)</span></label>
@@ -3951,7 +3970,7 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.33.0';
+        const EOS_VERSION = '3.34.0';
         const EOS_BUILD_DATE = '2026-07-13';
         const EOS_BUILD_TIME = '10:30'; // Add-to-Kanban button on Quarterly Rocks: one-directional promotion of a rock to a Kanban card (Backlog, owner-mapped, labeled Rock), with duplicate guard
         
@@ -5734,7 +5753,15 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.33.0 &mdash; 2026-07-13 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.34.0 &mdash; 2026-07-13 (Current)</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Two companies on the Marketing tab.</strong> Toggle between Intelligent Investing and Intelligrations. Each has its own Drive context folder, its own <code>_Firm Summary</code>, and its own writing samples.</li>'
+                + '<li><strong>The board filters by company.</strong> You only see cards for the company you are working on.</li>'
+                + '<li><strong>Each card remembers its company.</strong> Re-draft an old Intelligrations card and it still reaches for Intelligrations context, even if the board is toggled elsewhere.</li>'
+                + '<li><strong>No cross-contamination.</strong> The prompt no longer hardcodes any firm details, so one company\'s services and ideal-client framing can never leak into the other\'s draft.</li>'
+                + '<li>Existing cards and your existing folder ID both migrate automatically to Intelligent Investing.</li>'
+                + '</ul>'
+                + '<div style="font-weight:700;color:#1d4ed8;font-size:0.9rem;margin-bottom:6px;">v3.33.0 &mdash; 2026-07-13</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Firm facts vs. writing samples.</strong> Files named starting with an underscore (e.g. <code>_Firm Summary.md</code>) are treated as <em>ground truth</em> and are ALWAYS loaded. Everything else is a style sample.</li>'
                 + '<li><strong>Only the 5 most recent samples load.</strong> Token cost stays flat as the folder grows, and the AI tracks your current voice rather than a years-old average of it.</li>'
@@ -6323,19 +6350,45 @@ Example:
         // compounds because the FOLDER grows - finalize a blog, save it back to Drive,
         // and it becomes context for the next draft.
         //
-        let firmContextCache = null;      // { files: [...], fetchedAt: Date }
+        // Two companies, two context folders, two voices. A card written for Intelligrations
+        // must never inherit Intelligent Investing's ideal-client framing or service names,
+        // and vice versa. The card stores its own company, so re-drafting an old card always
+        // reaches for the right context even if the board is currently toggled elsewhere.
+        const MKT_COMPANIES = {
+            ii: { key: 'ii', name: 'Intelligent Investing', folderField: 'firmContextFolderId_ii' },
+            ig: { key: 'ig', name: 'Intelligrations',       folderField: 'firmContextFolderId_ig' }
+        };
+
+        let mktActiveCompany = localStorage.getItem('eos_mkt_company') || 'ii';
+        let firmContextCache = {};      // keyed by company: { ii: {...}, ig: {...} }
         const FIRM_CONTEXT_TTL_MS = 10 * 60 * 1000;
 
-        async function fetchFirmContext(force) {
+        function mktSetCompany(key) {
+            if (!MKT_COMPANIES[key]) return;
+            mktActiveCompany = key;
+            localStorage.setItem('eos_mkt_company', key);   // view preference: local only, never synced
+            mktRender();
+        }
+
+        function getCompanyFolderId(companyKey) {
             const settings = getSettings();
-            const folderId = (settings.firmContextFolderId || '').trim();
+            const company = MKT_COMPANIES[companyKey] || MKT_COMPANIES.ii;
+            // Fall back to the pre-v3.34 single-folder setting so existing setups keep working.
+            const legacy = (companyKey === 'ii') ? (settings.firmContextFolderId || '') : '';
+            return (settings[company.folderField] || legacy || '').trim();
+        }
+
+        async function fetchFirmContext(companyKey, force) {
+            const key = MKT_COMPANIES[companyKey] ? companyKey : 'ii';
+            const folderId = getCompanyFolderId(key);
             if (!folderId) return null;
 
-            if (!force && firmContextCache &&
-                (Date.now() - firmContextCache.fetchedAt) < FIRM_CONTEXT_TTL_MS) {
-                return firmContextCache;
+            const cached = firmContextCache[key];
+            if (!force && cached && (Date.now() - cached.fetchedAt) < FIRM_CONTEXT_TTL_MS) {
+                return cached;
             }
 
+            const settings = getSettings();
             const member = settings.teamMembers && settings.teamMembers.find(function(m) { return m.webAppUrl; });
             if (!member || !member.webAppUrl) return null;
 
@@ -6351,13 +6404,17 @@ Example:
                 });
                 const result = await response.json();
                 if (!result.success) {
-                    console.warn('Firm context unavailable:', result.error);
+                    console.warn('Firm context unavailable for ' + key + ':', result.error);
                     return null;
                 }
-                firmContextCache = { files: result.files || [], fetchedAt: Date.now(),
-                                     folderName: result.folderName, totalChars: result.totalChars,
-                                     sampleTotal: result.sampleTotal };
-                return firmContextCache;
+                firmContextCache[key] = {
+                    files: result.files || [],
+                    fetchedAt: Date.now(),
+                    folderName: result.folderName,
+                    totalChars: result.totalChars,
+                    sampleTotal: result.sampleTotal
+                };
+                return firmContextCache[key];
             } catch (error) {
                 console.warn('Firm context fetch failed:', error);
                 return null;
@@ -6369,19 +6426,23 @@ Example:
         // The two kinds are labelled separately and given DIFFERENT instructions, because
         // they serve different jobs. Firm facts are ground truth the model must use verbatim.
         // Past blogs are style references it should imitate but never copy from.
-        function buildFirmContextBlock(ctx) {
-            if (!ctx || !ctx.files || !ctx.files.length) return '';
+        function buildFirmContextBlock(ctx, companyKey) {
+            const company = MKT_COMPANIES[companyKey] || MKT_COMPANIES.ii;
+            if (!ctx || !ctx.files || !ctx.files.length) {
+                return '\n\nYou are writing for ' + company.name + '.\n';
+            }
 
             const evergreen = ctx.files.filter(function(f) { return f.kind === 'evergreen'; });
             const samples   = ctx.files.filter(function(f) { return f.kind !== 'evergreen'; });
 
-            let block = '\n\n===== FIRM CONTEXT =====\n';
+            let block = '\n\n===== CONTEXT FOR ' + company.name.toUpperCase() + ' =====\n' +
+                        'You are writing for ' + company.name + '. Everything below belongs to this ' +
+                        'company. Do not borrow services, taglines, or client descriptions from any ' +
+                        'other business.\n';
 
             if (evergreen.length) {
                 block += '\n--- FIRM FACTS (ground truth - use these exactly; never invent alternatives) ---\n' +
-                         evergreen.map(function(f) {
-                             return '[' + f.name + ']\n' + f.text;
-                         }).join('\n\n') + '\n';
+                         evergreen.map(function(f) { return '[' + f.name + ']\n' + f.text; }).join('\n\n') + '\n';
             }
 
             if (samples.length) {
@@ -6389,43 +6450,57 @@ Example:
                          'Study how these open, how they build an argument, how they concede before ' +
                          'disagreeing, sentence rhythm, and how they close. Match that voice. These are ' +
                          'style references, not source material - do not lift their examples or arguments.\n\n' +
-                         samples.map(function(f) {
-                             return '[' + f.name + ']\n' + f.text;
-                         }).join('\n\n') + '\n';
+                         samples.map(function(f) { return '[' + f.name + ']\n' + f.text; }).join('\n\n') + '\n';
             }
 
-            block += '\n===== END FIRM CONTEXT =====\n';
+            block += '\n===== END CONTEXT =====\n';
             return block;
         }
 
-        async function testFirmContext() {
-            const status = document.getElementById('firmContextStatus');
+        async function testFirmContext(companyKey) {
+            const company = MKT_COMPANIES[companyKey];
+            const status = document.getElementById('firmContextStatus_' + companyKey);
             status.style.display = 'block';
+            status.style.whiteSpace = 'pre-wrap';
             status.style.background = '#fff3cd';
             status.style.color = '#856404';
             status.textContent = 'Reading folder...';
 
-            const ctx = await fetchFirmContext(true);
+            if (!getCompanyFolderId(companyKey)) {
+                status.style.background = '#f8d7da';
+                status.style.color = '#721c24';
+                status.textContent = 'No folder ID entered for ' + company.name + '. Paste one and Save first.';
+                return;
+            }
+
+            const ctx = await fetchFirmContext(companyKey, true);
             if (!ctx) {
                 status.style.background = '#f8d7da';
                 status.style.color = '#721c24';
-                status.textContent = 'Could not read the folder. Check the ID, and make sure the Apps Script has been redeployed with Drive access (v3.32.0).';
+                status.textContent = 'Could not read the folder. Check the ID, and make sure the Apps Script has been redeployed with Drive access (v3.33.0+).';
                 return;
             }
+
+            const ever = ctx.files.filter(function(f) { return f.kind === 'evergreen'; });
+            const samp = ctx.files.filter(function(f) { return f.kind !== 'evergreen'; });
+
             if (!ctx.files.length) {
                 status.style.background = '#fff3cd';
                 status.style.color = '#856404';
-                status.textContent = 'Folder found ("' + (ctx.folderName || '') + '") but it has no readable files. Add Google Docs, .txt, or .md files.';
+                status.textContent = 'Folder "' + (ctx.folderName || '') + '" found, but it has no readable files.\n\n' +
+                    'Add Google Docs, .txt, or .md files. Note: .docx files are SKIPPED - open them in Google Docs and save them there.';
                 return;
             }
+
             status.style.background = '#e6f4ea';
             status.style.color = '#1e8e3e';
-            const ever = ctx.files.filter(function(f) { return f.kind === 'evergreen'; });
-            const samp = ctx.files.filter(function(f) { return f.kind !== 'evergreen'; });
-            let msg = 'Folder "' + ctx.folderName + '" loaded (' + Math.round(ctx.totalChars / 1000) + 'k chars).';
-            msg += '\n\nFIRM FACTS (' + ever.length + '): ' + (ever.length ? ever.map(function(f) { return f.name; }).join(', ') : 'none yet - add a file named starting with an underscore, e.g. "_Firm Summary.md"');
-            msg += '\n\nWRITING SAMPLES (' + samp.length + ' of ' + (ctx.sampleTotal || samp.length) + ' most recent): ' + (samp.length ? samp.map(function(f) { return f.name; }).join(', ') : 'none yet');
-            status.style.whiteSpace = 'pre-wrap';
+            let msg = company.name + ' - folder "' + ctx.folderName + '" (' + Math.round(ctx.totalChars / 1000) + 'k chars).';
+            msg += '\n\nFIRM FACTS (' + ever.length + '): ' + (ever.length
+                ? ever.map(function(f) { return f.name; }).join(', ')
+                : 'none - add a file whose name starts with an underscore, e.g. "_Firm Summary.md"');
+            msg += '\n\nWRITING SAMPLES (' + samp.length + ' of ' + (ctx.sampleTotal || samp.length) + ' most recent): ' + (samp.length
+                ? samp.map(function(f) { return f.name; }).join(', ')
+                : 'none yet');
             status.textContent = msg;
         }
 
@@ -6435,9 +6510,10 @@ Example:
             if (!card) return;
 
             const settings = getSettings();
-            const folderId = (settings.firmContextFolderId || '').trim();
+            const driveCompany = card.company || 'ii';
+            const folderId = getCompanyFolderId(driveCompany);
             if (!folderId) {
-                showToast('No Firm Context folder set. Add one in Settings > AI Tools.');
+                showToast('No context folder set for ' + MKT_COMPANIES[driveCompany].name + '. Add one in Settings > AI Tools.');
                 return;
             }
 
@@ -6465,7 +6541,7 @@ Example:
                 });
                 const result = await response.json();
                 if (!result.success) { showToast('Save failed: ' + result.error); return; }
-                firmContextCache = null;   // force refresh so the new sample is picked up
+                delete firmContextCache[driveCompany];   // force refresh so the new sample is picked up
                 showToast('Saved to Drive as "' + result.fileName + '". It will inform future drafts.');
             } catch (error) {
                 showToast('Could not reach Apps Script: ' + error.message);
@@ -6481,16 +6557,14 @@ Example:
         // market move, whatever is actually on your mind. The angle is what we want
         // from the model; the raw news is what we want from you.
         //
+        // Deliberately generic. The company's actual identity, voice, ideal client, and
+        // service names come from its Drive context folder, not from hardcoded text here.
+        // Hardcoding one firm's details would leak them into the other company's drafts.
         const MKT_FIRM_CONTEXT =
-            'You are helping Hans Blake, CFA, CPA, founder of Intelligent Investing LLC, ' +
-            'an independent RIA in Greenville, South Carolina (investedwithyou.com). ' +
-            'His audience is pre-retirees and retirees, often people who accumulated a large 401(k) ' +
-            'over decades without ever using an advisor, and who are now approaching or entering ' +
-            'the distribution phase. His voice: warm, plainspoken, fiduciary, never hyped. ' +
-            'He earns a point through a concrete story or cultural detail before naming the lesson. ' +
-            'He steelmans the other side fully before disagreeing. He is honest about uncertainty ' +
-            'and openly says when nobody can know something. He never sells fear or FOMO. ' +
-            'His firm tagline: minimize your financial stress so you can focus on maximizing your life.';
+            'You are a writing assistant for a financial services firm. The firm context below ' +
+            'tells you which company you are writing for, who its audience is, and how it writes. ' +
+            'Follow it exactly. If the context is missing or thin, write plainly and factually ' +
+            'and do NOT invent firm details, service names, taglines, or client stories.';
 
         function mktOpenResearch() {
             document.getElementById('mktResearchNews').value = '';
@@ -6509,8 +6583,8 @@ Example:
             mktLoad();
             const existing = mktData.cards.map(function(c) { return c.title; }).filter(Boolean);
 
-            const ctxRes = await fetchFirmContext(false);
-            const ctxResBlock = buildFirmContextBlock(ctxRes);
+            const ctxRes = await fetchFirmContext(mktActiveCompany, false);
+            const ctxResBlock = buildFirmContextBlock(ctxRes, mktActiveCompany);
 
             const prompt =
                 MKT_FIRM_CONTEXT + ctxResBlock + '\n\n' +
@@ -6580,6 +6654,7 @@ Example:
             mktData.cards.push({
                 id: 'mkt_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
                 kind: 'blog',
+                company: mktActiveCompany,
                 title: idea.headline || 'Untitled',
                 take: '',
                 blog: '',
@@ -6680,8 +6755,9 @@ Example:
             const btnEarly = document.getElementById('mktDraftBtn');
             btnEarly.disabled = true;
             btnEarly.textContent = 'Reading firm context...';
-            const ctx = await fetchFirmContext(false);
-            const ctxBlock = buildFirmContextBlock(ctx);
+            const companyKey = card.company || 'ii';
+            const ctx = await fetchFirmContext(companyKey, false);
+            const ctxBlock = buildFirmContextBlock(ctx, companyKey);
 
             const prompt =
                 MKT_FIRM_CONTEXT + ctxBlock + '\n\n' +
@@ -6767,8 +6843,9 @@ Example:
             const cfg = getAIProviderConfig('marketing');
             if (!requireApiKey('Marketing AI', cfg)) return;
 
-            const ctxPkg = await fetchFirmContext(false);
-            const ctxPkgBlock = buildFirmContextBlock(ctxPkg);
+            const pkgCompany = card.company || 'ii';
+            const ctxPkg = await fetchFirmContext(pkgCompany, false);
+            const ctxPkgBlock = buildFirmContextBlock(ctxPkg, pkgCompany);
 
             const prompt =
                 MKT_FIRM_CONTEXT + ctxPkgBlock + '\n\n' +
@@ -6877,6 +6954,7 @@ Example:
             const card = {
                 id: 'mkt_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
                 kind: kind === 'standalone' ? 'standalone' : 'blog',
+                company: mktActiveCompany,
                 title: '',
                 take: '',
                 blog: '',
@@ -6914,6 +6992,12 @@ Example:
             document.getElementById('mktBlog').value   = card.blog   || '';
             document.getElementById('mktSocial').value = card.social || '';
             document.getElementById('mktQuote').value  = card.quote  || '';
+
+            const compSel = document.getElementById('mktCompany');
+            compSel.innerHTML = Object.keys(MKT_COMPANIES).map(function(k) {
+                return '<option value="' + k + '">' + escapeHtml(MKT_COMPANIES[k].name) + '</option>';
+            }).join('');
+            compSel.value = card.company || 'ii';
 
             const colSel = document.getElementById('mktColumn');
             colSel.innerHTML = MKT_COLUMNS.map(function(c) {
@@ -6967,6 +7051,7 @@ Example:
             card.blog   = document.getElementById('mktBlog').value;
             card.social = document.getElementById('mktSocial').value;
             card.quote  = document.getElementById('mktQuote').value;
+            card.company     = document.getElementById('mktCompany').value;
             card.columnId    = document.getElementById('mktColumn').value;
             card.blogStatus   = document.getElementById('mktBlogStatus').value;
             card.socialStatus = document.getElementById('mktSocialStatus').value;
@@ -6999,8 +7084,23 @@ Example:
             const board = document.getElementById('mktBoard');
             if (!board) return;
 
+            const toggle = document.getElementById('mktCompanyToggle');
+            if (toggle) {
+                toggle.innerHTML = Object.keys(MKT_COMPANIES).map(function(k) {
+                    const c = MKT_COMPANIES[k];
+                    const active = (k === mktActiveCompany) ? ' mkt-company-active' : '';
+                    return '<button class="mkt-company-btn' + active + '" onclick="mktSetCompany(\'' + k + '\')">' +
+                           escapeHtml(c.name) + '</button>';
+                }).join('');
+            }
+
+            // Cards created before v3.34 have no company; they belong to Intelligent Investing.
+            const visible = mktData.cards.filter(function(c) {
+                return (c.company || 'ii') === mktActiveCompany;
+            });
+
             board.innerHTML = MKT_COLUMNS.map(function(col) {
-                const cards = mktData.cards.filter(function(c) { return (c.columnId || 'ideas') === col.id; });
+                const cards = visible.filter(function(c) { return (c.columnId || 'ideas') === col.id; });
                 const isReview = col.id === 'review';
 
                 const cardHtml = cards.map(function(c) {
@@ -12895,7 +12995,10 @@ Make sure your suggestions directly address the specific root cause and discussi
                 openaiInput.disabled = true;
             }
             updateKeyStatusPills(settings);
-            document.getElementById('firmContextFolderId').value = settings.firmContextFolderId || '';
+            // Migrate the old single-folder setting into the Intelligent Investing slot.
+            document.getElementById('firmContextFolderId_ii').value =
+                settings.firmContextFolderId_ii || settings.firmContextFolderId || '';
+            document.getElementById('firmContextFolderId_ig').value = settings.firmContextFolderId_ig || '';
             document.getElementById('geminiModel').value = settings.geminiModel || '';
             document.getElementById('claudeModel').value = settings.claudeModel || '';
             document.getElementById('openaiModel').value = settings.openaiModel || '';
@@ -13196,7 +13299,8 @@ Make sure your suggestions directly address the specific root cause and discussi
                 kanbanAgent: document.getElementById('aiRouteKanban').value,
                 marketing: document.getElementById('aiRouteMarketing').value
             };
-            settings.firmContextFolderId = document.getElementById('firmContextFolderId').value.trim();
+            settings.firmContextFolderId_ii = document.getElementById('firmContextFolderId_ii').value.trim();
+            settings.firmContextFolderId_ig = document.getElementById('firmContextFolderId_ig').value.trim();
             
             // Pomodoro settings
             settings.pomoFocusMin = parseInt(document.getElementById('pomoFocusMin').value) || 25;
