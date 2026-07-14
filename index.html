@@ -3970,7 +3970,7 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.34.0';
+        const EOS_VERSION = '3.35.0';
         const EOS_BUILD_DATE = '2026-07-13';
         const EOS_BUILD_TIME = '10:30'; // Add-to-Kanban button on Quarterly Rocks: one-directional promotion of a rock to a Kanban card (Backlog, owner-mapped, labeled Rock), with duplicate guard
         
@@ -6361,6 +6361,7 @@ Example:
 
         let mktActiveCompany = localStorage.getItem('eos_mkt_company') || 'ii';
         let firmContextCache = {};      // keyed by company: { ii: {...}, ig: {...} }
+        let firmContextError = '';      // last real error, surfaced in the Test Folder readout
         const FIRM_CONTEXT_TTL_MS = 10 * 60 * 1000;
 
         function mktSetCompany(key) {
@@ -6383,6 +6384,7 @@ Example:
             const folderId = getCompanyFolderId(key);
             if (!folderId) return null;
 
+            firmContextError = '';
             const cached = firmContextCache[key];
             if (!force && cached && (Date.now() - cached.fetchedAt) < FIRM_CONTEXT_TTL_MS) {
                 return cached;
@@ -6405,6 +6407,7 @@ Example:
                 const result = await response.json();
                 if (!result.success) {
                     console.warn('Firm context unavailable for ' + key + ':', result.error);
+                    firmContextError = result.error || 'Unknown error from Apps Script.';
                     return null;
                 }
                 firmContextCache[key] = {
@@ -6417,6 +6420,7 @@ Example:
                 return firmContextCache[key];
             } catch (error) {
                 console.warn('Firm context fetch failed:', error);
+                firmContextError = 'Could not reach Apps Script: ' + error.message;
                 return null;
             }
         }
@@ -6477,7 +6481,11 @@ Example:
             if (!ctx) {
                 status.style.background = '#f8d7da';
                 status.style.color = '#721c24';
-                status.textContent = 'Could not read the folder. Check the ID, and make sure the Apps Script has been redeployed with Drive access (v3.33.0+).';
+                status.textContent = 'FAILED: ' + (firmContextError || 'Unknown error.') +
+                    '\n\nCommon causes:' +
+                    '\n- "Invalid secret key": the Web App Secret in Settings > Team Members does not match SECRET_KEY in the Apps Script.' +
+                    '\n- Drive permission errors: run getFirmContext once from the Apps Script editor to trigger the authorization prompt.' +
+                    '\n- "action not recognized": the deployment is serving older code. Save, then Deploy > New deployment.';
                 return;
             }
 
