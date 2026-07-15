@@ -3766,6 +3766,16 @@
                     <input type="checkbox" id="printDailyCheck" style="width: 18px; height: 18px;">
                     <span><strong>My Daily Plan</strong> (Portrait)</span>
                 </label>
+                <div style="background: var(--gray-50); border-radius: 6px; padding: 10px;">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                        <input type="checkbox" id="printKanbanCheck" onchange="toggleKanbanPrintBoardList()" style="width: 18px; height: 18px;">
+                        <span><strong>Kanban Boards</strong> (Landscape, active cards only)</span>
+                    </label>
+                    <div id="printKanbanBoardWrap" style="display: none; margin-top: 6px;">
+                        <div style="font-size: 0.75rem; color: var(--gray-500); padding: 2px 0 2px 28px;">Choose boards (one per page):</div>
+                        <div id="printKanbanBoardList"></div>
+                    </div>
+                </div>
             </div>
             
             <div class="modal-actions">
@@ -3991,9 +4001,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.39.0';
+        const EOS_VERSION = '3.40.0';
         const EOS_BUILD_DATE = '2026-07-15';
-        const EOS_BUILD_TIME = '10:30'; // Add-to-Kanban button on Quarterly Rocks: one-directional promotion of a rock to a Kanban card (Backlog, owner-mapped, labeled Rock), with duplicate guard
+        const EOS_BUILD_TIME = '15:00'; // Print Kanban boards: added to Master Print modal (landscape, one board per page, columns side by side, active cards only, per-board selection)
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -5774,7 +5784,16 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.39.0 &mdash; 2026-07-15 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.40.0 &mdash; 2026-07-15 (Current)</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Print your Kanban boards.</strong> The Print Package window now includes a Kanban Boards option. Pick which boards to print &mdash; each prints on its own landscape page with columns side by side.</li>'
+                + '<li><strong>Active cards only.</strong> Archived/shipped cards are left off the printout, so you get a clean snapshot of live work.</li>'
+                + '<li>Kanban prints in its own landscape window; if you also select portrait documents (Vision, Rocks, etc.) those still print together in their own package, each at the correct orientation.</li>'
+                + '<li>Uses the existing v3.38.0 Apps Script backend &mdash; no new deployment required for this update.</li>'
+                + '</ul></div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.39.0 &mdash; 2026-07-15</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>No title? The AI suggests some.</strong> Click Send Blog to WordPress with the title blank and the AI proposes 5 options from your draft. Pick a number or type your own &mdash; drafting no longer stops just because you skipped the title.</li>'
                 + '<li><strong>Three send options.</strong> On send you now choose: (1) WordPress draft + email Trevor + save to Drive archive, (2) WordPress draft + Drive archive, or (3) WordPress draft only.</li>'
@@ -12258,25 +12277,43 @@ Make sure your suggestions directly address the specific root cause and discussi
             document.getElementById('printScorecardCheck').checked = prefs.scorecard || false;
             document.getElementById('printAgendaCheck').checked = prefs.agenda || false;
             document.getElementById('printDailyCheck').checked = prefs.daily || false;
-            
+
+            const kanbanOn = prefs.kanban || false;
+            document.getElementById('printKanbanCheck').checked = kanbanOn;
+            renderKanbanPrintBoardOptions();
+            toggleKanbanPrintBoardList();
+
             document.getElementById('masterPrintModal').classList.add('active');
         }
         
         async function executeMasterPrint() {
+            const kanbanOn = document.getElementById('printKanbanCheck').checked;
+            const selectedKanbanBoards = Array.prototype.slice
+                .call(document.querySelectorAll('.kanbanPrintBoardCb:checked'))
+                .map(function(cb) { return cb.value; });
+
             const prefs = {
                 vision: document.getElementById('printVisionCheck').checked,
                 oneYear: document.getElementById('print1YearCheck').checked,
                 rocks: document.getElementById('printRocksCheck').checked,
                 scorecard: document.getElementById('printScorecardCheck').checked,
                 agenda: document.getElementById('printAgendaCheck').checked,
-                daily: document.getElementById('printDailyCheck').checked
+                daily: document.getElementById('printDailyCheck').checked,
+                kanban: kanbanOn,
+                kanbanBoards: selectedKanbanBoards
             };
             
             // Save preferences
             localStorage.setItem('eos_print_prefs', JSON.stringify(prefs));
+
+            if (kanbanOn && selectedKanbanBoards.length === 0) {
+                alert('Select at least one Kanban board to print, or uncheck Kanban Boards.');
+                return;
+            }
+
             closeModal('masterPrintModal');
             
-            // Build combined print document
+            // Build combined print document (portrait sections)
             const sections = [];
             if (prefs.vision) sections.push(generateVisionSection());
             if (prefs.oneYear) sections.push(generate1YearSection());
@@ -12285,13 +12322,19 @@ Make sure your suggestions directly address the specific root cause and discussi
             if (prefs.agenda) sections.push(generateAgendaSection());
             if (prefs.daily) sections.push(generateDailyPlanSection());
             
-            if (sections.length === 0) {
+            if (sections.length === 0 && !kanbanOn) {
                 alert('Please select at least one document to print.');
                 return;
             }
             
-            // Create single combined print window
-            printCombinedPackage(sections);
+            // Portrait package and landscape Kanban print in separate windows so each
+            // keeps its correct @page orientation (they cannot share one document).
+            if (sections.length > 0) {
+                printCombinedPackage(sections);
+            }
+            if (kanbanOn) {
+                printKanbanBoards(selectedKanbanBoards);
+            }
         }
         
         function printCombinedPackage(sections) {
@@ -12345,6 +12388,133 @@ Make sure your suggestions directly address the specific root cause and discussi
             printWindow.onload = function() { printWindow.print(); };
         }
         
+
+        // ==================== KANBAN PRINT ====================
+        // Landscape, one board per page, columns side by side, ACTIVE cards only.
+        // Deliberately its own print window (not folded into printCombinedPackage)
+        // because that package is hardcoded portrait and CSS @page orientation cannot
+        // reliably switch mid-document across browsers. Board selection is chosen at
+        // print time via the checkboxes injected into the Master Print modal.
+        function getKanbanPrintableBoards() {
+            if (!kanbanData || !Array.isArray(kanbanData.boards)) return [];
+            return kanbanData.boards;
+        }
+
+        // Build the list of board checkboxes inside the Master Print modal (called when
+        // the modal opens). Restores prior selection from eos_print_prefs.kanbanBoards.
+        function renderKanbanPrintBoardOptions() {
+            const wrap = document.getElementById('printKanbanBoardList');
+            if (!wrap) return;
+            const boards = getKanbanPrintableBoards();
+            const prefs = JSON.parse(localStorage.getItem('eos_print_prefs') || '{}');
+            const savedIds = Array.isArray(prefs.kanbanBoards) ? prefs.kanbanBoards : null;
+            if (!boards.length) {
+                wrap.innerHTML = '<div style="font-size:0.8rem;color:var(--gray-500);padding:4px 0 0 28px;">No Kanban boards found.</div>';
+                return;
+            }
+            wrap.innerHTML = boards.map(function(b) {
+                // Default: select all boards the first time (savedIds null), otherwise honor saved.
+                const checked = savedIds ? (savedIds.indexOf(b.id) !== -1) : true;
+                return '<label style="display:flex;align-items:center;gap:8px;padding:4px 0 4px 28px;cursor:pointer;font-size:0.85rem;">'
+                    + '<input type="checkbox" class="kanbanPrintBoardCb" value="' + b.id + '"' + (checked ? ' checked' : '') + ' style="width:15px;height:15px;">'
+                    + '<span>' + escapeHtml(b.name || 'Untitled Board') + '</span>'
+                    + '</label>';
+            }).join('');
+        }
+
+        // Show/hide the board sub-list when the Kanban master checkbox toggles.
+        function toggleKanbanPrintBoardList() {
+            const on = document.getElementById('printKanbanCheck');
+            const wrap = document.getElementById('printKanbanBoardWrap');
+            if (!on || !wrap) return;
+            wrap.style.display = on.checked ? 'block' : 'none';
+        }
+
+        function formatKanbanDueDate(due) {
+            if (!due) return '';
+            const d = new Date(due);
+            if (isNaN(d.getTime())) return '';
+            return (d.getMonth() + 1) + '/' + d.getDate() + '/' + String(d.getFullYear()).slice(-2);
+        }
+
+        // Print one landscape page per selected board. Active (non-archived) cards only.
+        function printKanbanBoards(boardIds) {
+            const allBoards = getKanbanPrintableBoards();
+            const boards = allBoards.filter(function(b) { return boardIds.indexOf(b.id) !== -1; });
+            if (!boards.length) { alert('No Kanban boards selected to print.'); return; }
+
+            const today = new Date();
+            const dateStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+            const boardPages = boards.map(function(board, bIdx) {
+                const columns = Array.isArray(board.columns) ? board.columns : [];
+                const activeCards = (Array.isArray(board.cards) ? board.cards : []).filter(function(c) { return !c.archived; });
+
+                const colCount = columns.length || 1;
+                const colHtml = columns.map(function(col) {
+                    const cards = activeCards
+                        .filter(function(c) { return c.columnId === col.id; })
+                        .sort(function(a, b) { return (a.position || 0) - (b.position || 0); });
+                    const cardsHtml = cards.length ? cards.map(function(c) {
+                        const labels = Array.isArray(c.labels) && c.labels.length
+                            ? '<div class="kp-labels">' + c.labels.map(function(l) { return '<span class="kp-label">' + escapeHtml(l) + '</span>'; }).join('') + '</div>'
+                            : '';
+                        const owner = c.owner ? '<span class="kp-owner">' + escapeHtml(c.owner) + '</span>' : '';
+                        const due = formatKanbanDueDate(c.dueDate);
+                        const dueHtml = due ? '<span class="kp-due">Due ' + due + '</span>' : '';
+                        const meta = (owner || dueHtml) ? '<div class="kp-meta">' + owner + dueHtml + '</div>' : '';
+                        return '<div class="kp-card">'
+                            + '<div class="kp-title">' + escapeHtml(c.title || '(untitled)') + '</div>'
+                            + labels + meta
+                            + '</div>';
+                    }).join('') : '<div class="kp-empty">&mdash;</div>';
+                    return '<div class="kp-col">'
+                        + '<div class="kp-colhead" style="border-top:3px solid ' + (col.color || '#999') + ';">'
+                        + escapeHtml(col.name || '') + ' <span class="kp-count">' + cards.length + '</span>'
+                        + '</div>'
+                        + '<div class="kp-cards">' + cardsHtml + '</div>'
+                        + '</div>';
+                }).join('');
+
+                return '<div class="kp-page ' + (bIdx > 0 ? 'kp-break' : '') + '">'
+                    + '<div class="kp-header"><h1>' + escapeHtml(board.name || 'Kanban Board') + '</h1>'
+                    + '<div class="kp-sub">' + escapeHtml(dateStr) + ' &middot; ' + activeCards.length + ' active card' + (activeCards.length === 1 ? '' : 's') + '</div></div>'
+                    + '<div class="kp-board" style="grid-template-columns:repeat(' + colCount + ',1fr);">' + colHtml + '</div>'
+                    + '</div>';
+            }).join('');
+
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(
+                '<!DOCTYPE html><html><head><title>Kanban Boards</title><style>'
+                + '@page { size: landscape; margin: 0.35in; }'
+                + '@media print { .kp-break { page-break-before: always; } .kp-card { page-break-inside: avoid; } .kp-col { page-break-inside: avoid; } }'
+                + '* { box-sizing: border-box; }'
+                + 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 8pt; line-height: 1.35; margin: 0; padding: 0; color: #111; }'
+                + '.kp-page { padding: 6px 0 2px 0; }'
+                + '.kp-header { text-align: center; margin-bottom: 10px; border-bottom: 2px solid #333; padding-bottom: 6px; }'
+                + '.kp-header h1 { font-size: 14pt; margin: 0 0 3px 0; }'
+                + '.kp-sub { color: #666; font-size: 8pt; }'
+                + '.kp-board { display: grid; gap: 8px; align-items: start; }'
+                + '.kp-col { border: 1px solid #ddd; border-radius: 5px; overflow: hidden; background: #fafafa; }'
+                + '.kp-colhead { font-weight: 700; font-size: 8.5pt; padding: 5px 6px; background: #fff; border-bottom: 1px solid #e5e7eb; }'
+                + '.kp-count { color: #888; font-weight: 600; }'
+                + '.kp-cards { padding: 5px; display: flex; flex-direction: column; gap: 5px; }'
+                + '.kp-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 4px; padding: 5px 6px; }'
+                + '.kp-title { font-weight: 600; font-size: 8pt; }'
+                + '.kp-labels { margin-top: 3px; display: flex; flex-wrap: wrap; gap: 3px; }'
+                + '.kp-label { font-size: 6.5pt; background: #eef2ff; color: #3730a3; border-radius: 8px; padding: 1px 6px; }'
+                + '.kp-meta { margin-top: 3px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }'
+                + '.kp-owner { font-size: 6.5pt; color: #444; background: #f3f4f6; border-radius: 8px; padding: 1px 6px; }'
+                + '.kp-due { font-size: 6.5pt; color: #b91c1c; }'
+                + '.kp-empty { color: #bbb; text-align: center; font-size: 8pt; padding: 6px 0; }'
+                + '</style></head><body>'
+                + boardPages
+                + '</body></html>'
+            );
+            printWindow.document.close();
+            printWindow.onload = function() { printWindow.print(); };
+        }
+
         function generateVisionSection() {
             const today = new Date();
             const dateStr = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;
