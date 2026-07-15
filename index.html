@@ -3264,6 +3264,16 @@
                             <button class="btn btn-secondary" onclick="testOpenAIConnection()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">🔔 Test Connection</button>
                         </div>
 
+                        <!-- WordPress Health Check (v3.37.0) -->
+                        <div style="margin-bottom: 14px; padding: 10px; background: white; border: 1px solid #e5e7eb; border-radius: 6px;">
+                            <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 6px;">WordPress Publishing
+                                <span style="color: var(--gray-400); font-weight: 400; font-size: 0.72rem; margin-left: 6px;">draft handoff</span>
+                            </div>
+                            <div style="font-size: 0.75rem; color: var(--gray-500); margin-bottom: 6px;">Checks whether the site accepts your Application Password and whether that account can create drafts. Credentials live in Apps Script Script Properties, not here.</div>
+                            <div id="wpHealthStatus" style="margin-top: 6px; padding: 6px; border-radius: 4px; display: none; font-size: 0.8rem;"></div>
+                            <button class="btn btn-secondary" onclick="testWordPressConnection()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">Test WordPress Connection</button>
+                        </div>
+
                         <div style="font-size: 0.72rem; color: var(--gray-400); margin-bottom: 14px;">
                             More providers can be added here later &mdash; the routing below will automatically offer them.
                         </div>
@@ -3311,6 +3321,17 @@
                                     Each company gets its own folder, its own <code>_Firm Summary</code>, and its own writing samples.
                                     Switch companies on the Marketing tab; each card remembers which company it belongs to.
                                 </p>
+                            </div>
+
+                            <div style="margin-bottom: 14px; padding: 10px; background: white; border: 1px solid #e5e7eb; border-radius: 6px;">
+                                <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 6px;">Published Blog Archive <span style="font-weight:400; color: var(--gray-500);">(optional)</span></div>
+                                <p style="font-size: 0.75rem; color: var(--gray-500); margin: 0 0 8px;">
+                                    A separate Drive folder for a record of blogs sent to WordPress. Kept apart from the Firm Context folder on purpose, so your writing samples stay clean and curated.
+                                </p>
+                                <label style="font-size: 0.78rem; font-weight: 600; display:block;">Intelligent Investing &mdash; archive folder ID</label>
+                                <input type="text" id="publishedArchiveFolderId_ii" placeholder="Leave blank to skip archiving" style="font-size: 0.85rem;">
+                                <label style="font-size: 0.78rem; font-weight: 600; margin-top: 12px; display:block;">Intelligrations &mdash; archive folder ID</label>
+                                <input type="text" id="publishedArchiveFolderId_ig" placeholder="Leave blank to skip archiving" style="font-size: 0.85rem;">
                             </div>
 
                             <label style="font-size: 0.8rem;">Marketing AI <span style="font-weight:400; color: var(--gray-500);">(topics, blog drafts, social)</span></label>
@@ -3970,7 +3991,7 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.36.0';
+        const EOS_VERSION = '3.39.0';
         const EOS_BUILD_DATE = '2026-07-15';
         const EOS_BUILD_TIME = '10:30'; // Add-to-Kanban button on Quarterly Rocks: one-directional promotion of a rock to a Kanban card (Backlog, owner-mapped, labeled Rock), with duplicate guard
         
@@ -5753,7 +5774,30 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.36.0 &mdash; 2026-07-15 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.39.0 &mdash; 2026-07-15 (Current)</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>No title? The AI suggests some.</strong> Click Send Blog to WordPress with the title blank and the AI proposes 5 options from your draft. Pick a number or type your own &mdash; drafting no longer stops just because you skipped the title.</li>'
+                + '<li><strong>Three send options.</strong> On send you now choose: (1) WordPress draft + email Trevor + save to Drive archive, (2) WordPress draft + Drive archive, or (3) WordPress draft only.</li>'
+                + '<li><strong>Published Blog Archive folder.</strong> A separate optional Drive folder per company (set it in Settings) for a record of what went to WordPress. Kept apart from the Firm Context folder so your writing samples stay clean.</li>'
+                + '<li>Uses the existing v3.38.0 Apps Script backend &mdash; no new deployment required for this update.</li>'
+                + '</ul>'
+                + '<div style="font-weight:700;color:#1d4ed8;font-size:0.9rem;margin-bottom:6px;">v3.38.0 &mdash; 2026-07-15</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>WordPress drafts now match your house format automatically.</strong> Every draft is wrapped with your reading-time line at the top and your Schedule-a-Conversation button plus full compliance disclosure at the bottom &mdash; fixed boilerplate, never AI-generated.</li>'
+                + '<li><strong>Quotes format correctly.</strong> A markdown <code>&gt; quote</code> now becomes your published blockquote style instead of a plain paragraph.</li>'
+                + '<li><strong>Category selection.</strong> On send, the tool pulls your WordPress categories, the AI suggests the best fit, and you confirm or pick another. Uses the standard REST API &mdash; no new plugin.</li>'
+                + '<li>Reminder: writing <em>style</em> (voice, headings, quote framing) comes from your Drive context folder &mdash; drop recent finalized blogs in so drafts match your voice. Boilerplate stays out of that folder on purpose.</li>'
+                + '<li><strong>Backend (Google_Tasks_Sync.gs v3.38.0):</strong> added <code>getWordPressCategories</code> and optional category assignment on drafts (status still hardcoded to draft).</li>'
+                + '<li>Requires the v3.38.0 Apps Script deployment.</li>'
+                + '</ul>'
+                + '<div style="font-weight:700;color:#1d4ed8;font-size:0.9rem;margin-bottom:6px;">v3.37.0 &mdash; 2026-07-15</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Test WordPress Connection button</strong> in Settings. Tells you in plain English whether the site accepts your Application Password and whether that account can create drafts &mdash; no more cryptic 401s.</li>'
+                + '<li>When it fails, it names the likely cause and the fix (regenerate the Application Password, or promote the account), so a broken WordPress handoff is a two-minute fix instead of a dig through Apps Script.</li>'
+                + '<li><strong>Backend (Google_Tasks_Sync.gs v3.37.0):</strong> added read-only <code>probeWordPressAuth</code> and <code>probeTaskLinks</code> diagnostics. No writes.</li>'
+                + '<li>Requires the v3.37.0 Apps Script deployment.</li>'
+                + '</ul>'
+                + '<div style="font-weight:700;color:#1d4ed8;font-size:0.9rem;margin-bottom:6px;">v3.36.0 &mdash; 2026-07-15</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Version alignment.</strong> The app version now matches the backend. No feature changes in the app itself.</li>'
                 + '<li><strong>Backend (Google_Tasks_Sync.gs v3.36.0):</strong> WordPress credentials moved out of the code file and into Script Properties, so future backend updates no longer wipe them. Set once; they survive every future <code>.gs</code> paste.</li>'
@@ -6388,6 +6432,15 @@ Example:
             // Fall back to the pre-v3.34 single-folder setting so existing setups keep working.
             const legacy = (companyKey === 'ii') ? (settings.firmContextFolderId || '') : '';
             return (settings[company.folderField] || legacy || '').trim();
+        }
+
+        // Published-blog archive folder per company. Separate from the firm-context
+        // folder on purpose - archiving a sent blog must never pollute the writing-sample
+        // corpus. Returns '' when no archive folder is configured (archiving is skipped).
+        function getArchiveFolderId(companyKey) {
+            const settings = getSettings();
+            const field = (companyKey === 'ig') ? 'publishedArchiveFolderId_ig' : 'publishedArchiveFolderId_ii';
+            return (settings[field] || '').trim();
         }
 
         async function fetchFirmContext(companyKey, force) {
@@ -7144,16 +7197,153 @@ Example:
             }).join('');
         }
 
-        // Reuses the v3.27.0 Apps Script postToWordPress action and the mdToHtml converter.
+        // ==================== WORDPRESS BOILERPLATE (v3.38.0) ====================
+        // Fixed template wrapped around every WordPress draft. These are NOT
+        // AI-generated - they are byte-for-byte house boilerplate so the reading-time
+        // shortcode, CTA button, and compliance disclosure are always correct and
+        // never at the mercy of a model. The disclosure is regulatory language for a
+        // fee-only RIA; do not let it be reworded or generated.
+        const WP_READING_TIME_TOP =
+            '<strong>[rt_reading_time label="Reading Time:" postfix="minutes" postfix_singular="minute"]</strong>';
+
+        const WP_CTA_BUTTON =
+            '<h2>Is Your Current Plan Truly Tax-Efficient?</h2>\n'
+          + '<p>Not just this year &mdash; but structured correctly for the long game? Let\'s have a deep, honest conversation about your goals, your tax exposure, and what a plan built on truth and transparency actually looks like.</p>\n'
+          + '<p>[su_button url="https://investedwithyou.com/connect/#schedule" target="blank" style="soft" background="#A4C739" size="10" icon_color="#A4C739"]Schedule a Conversation[/su_button]</p>';
+
+        const WP_DISCLOSURE =
+            '<h6 style="font-size: 10px;"><strong>Disclosure:</strong> This blog may reflect the perspectives and research of Intelligent Investing and, where applicable, incorporates insights from guest interviews or expert opinions. Any external views or opinions shared do not necessarily reflect the stance of Intelligent Investing. We may also utilize tools such as ChatGPT to enhance readability, grammar, and flow, while all core ideas remain proprietary to our firm.</h6>\n'
+          + '<h6 style="font-size: 10px;">Please note that Intelligent Investing does not provide specific tax or legal advice. All investments carry risks, including the potential loss of principal, and past performance is not indicative of future results. Any specific securities, sectors, or investment strategies mentioned are for informational purposes only and should not be considered a recommendation. We encourage readers to consult with Intelligent Investing for advice tailored to their unique financial situation. Unauthorized reproduction or distribution of this content is prohibited without proper credit to Intelligent Investing.</h6>';
+
+        // Wraps converted blog HTML with the standard top and bottom boilerplate.
+        // Kept separate from mdToHtml so the body conversion stays pure.
+        function wrapBlogForWordPress(bodyHtml) {
+            return WP_READING_TIME_TOP + '\n\n'
+                 + bodyHtml + '\n\n'
+                 + WP_CTA_BUTTON + '\n\n'
+                 + WP_DISCLOSURE;
+        }
+
+        // Fetches site categories, optionally asks the marketing AI to suggest the
+        // best fit, and lets the user confirm or choose. Returns an array of category
+        // IDs (usually one) or null for "no category / use WordPress default".
+        // Never throws in a way that blocks the draft - on any failure it returns null.
+        async function pickWordPressCategory(member, title, body) {
+            let cats = [];
+            try {
+                const url = member.webAppUrl
+                    + '?action=getWordPressCategories'
+                    + '&secretKey=' + encodeURIComponent(member.webAppSecret || '');
+                const res = await fetch(url);
+                const json = await res.json();
+                if (json.success && Array.isArray(json.categories)) cats = json.categories;
+            } catch (e) {
+                console.warn('Could not fetch WP categories:', e);
+            }
+            if (!cats.length) return null; // no categories available; skip silently
+
+            // Ask the AI to suggest the best-fitting category, if a provider is set.
+            let suggestedId = null;
+            try {
+                const cfg = getAIProviderConfig('marketing');
+                if (cfg && cfg.apiKey) {
+                    const list = cats.map(function(c) { return c.id + ': ' + c.name; }).join('\n');
+                    const prompt =
+                        'You are categorizing a blog post for a fee-only RIA.\n\n' +
+                        'TITLE: ' + title + '\n\n' +
+                        'EXCERPT:\n' + String(body).slice(0, 1200) + '\n\n' +
+                        'Available categories (id: name):\n' + list + '\n\n' +
+                        'Return ONLY the single best-fitting category id as a number. No words, no punctuation.';
+                    const raw = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt, { temperature: 0, maxTokens: 10 });
+                    const m = String(raw).match(/\d+/);
+                    if (m) {
+                        const id = parseInt(m[0], 10);
+                        if (cats.some(function(c) { return c.id === id; })) suggestedId = id;
+                    }
+                }
+            } catch (e) {
+                console.warn('AI category suggestion skipped:', e);
+            }
+
+            // Present a numbered picker. Default is the AI suggestion if we have one.
+            const numbered = cats.map(function(c, i) {
+                const star = (c.id === suggestedId) ? '  <- suggested' : '';
+                return (i + 1) + '. ' + c.name + star;
+            }).join('\n');
+            const defaultIdx = suggestedId
+                ? (cats.findIndex(function(c) { return c.id === suggestedId; }) + 1)
+                : '';
+            const answer = prompt(
+                'Choose a category for this WordPress draft (number), or leave blank for none:\n\n' + numbered,
+                String(defaultIdx)
+            );
+            if (answer === null) return null;          // user cancelled -> no category
+            const idx = parseInt(answer.trim(), 10);
+            if (isNaN(idx) || idx < 1 || idx > cats.length) return null;
+            return [cats[idx - 1].id];
+        }
+
+        // Proposes catchy blog title options via the marketing AI, based on the draft
+        // body. Returns a chosen title string, or '' if the user cancels/none work.
+        async function mktGenerateTitles(body, company) {
+            const cfg = getAIProviderConfig('marketing');
+            if (!cfg || !cfg.apiKey) {
+                // No AI available - fall back to a manual prompt so the flow still works.
+                const manual = prompt('No AI provider is configured for titles. Type a title for this blog:');
+                return manual ? manual.trim() : '';
+            }
+
+            let ctxBlock = '';
+            try {
+                const ctxRes = await fetchFirmContext(company, false);
+                ctxBlock = buildFirmContextBlock(ctxRes, company);
+            } catch (e) { /* context is optional for titling */ }
+
+            const prompt1 =
+                (ctxBlock ? ctxBlock + '\n\n' : '') +
+                'Below is a finished blog draft for a fee-only RIA. Propose 5 title options: ' +
+                'specific, curiosity-driving, not clickbait, in the firm\'s voice.\n\n' +
+                'DRAFT:\n' + String(body).slice(0, 4000) + '\n\n' +
+                'Return ONLY a JSON array of 5 strings. No markdown fences, no preamble.';
+
+            let titles = [];
+            try {
+                const raw = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt1, { temperature: 0.8, maxTokens: 400 });
+                const clean = String(raw).replace(/```json/gi, '').replace(/```/g, '').trim();
+                const s = clean.indexOf('['), e = clean.lastIndexOf(']');
+                if (s !== -1 && e !== -1) titles = JSON.parse(clean.slice(s, e + 1));
+            } catch (err) {
+                console.warn('Title generation failed:', err);
+            }
+            if (!Array.isArray(titles) || !titles.length) {
+                const manual = prompt('Could not generate titles. Type a title for this blog:');
+                return manual ? manual.trim() : '';
+            }
+
+            const numbered = titles.map(function(t, i) { return (i + 1) + '. ' + t; }).join('\n');
+            const answer = prompt(
+                'This blog has no title. Pick one (number), or type your own title:\n\n' + numbered,
+                '1'
+            );
+            if (answer === null) return '';
+            const trimmed = answer.trim();
+            const idx = parseInt(trimmed, 10);
+            if (!isNaN(idx) && idx >= 1 && idx <= titles.length && String(idx) === trimmed) {
+                return String(titles[idx - 1]).trim();
+            }
+            // Anything that isn't a plain index is treated as a custom title.
+            return trimmed;
+        }
+
+        // Reuses the Apps Script postToWordPress action and the mdToHtml converter.
         // Draft status is enforced server-side; nothing here can publish.
         async function mktSendToWordPress() {
             const card = mktGetCard(mktEditingId);
             if (!card) return;
 
-            const title = document.getElementById('mktTitle').value.trim();
+            let title = document.getElementById('mktTitle').value.trim();
             const body  = document.getElementById('mktBlog').value.trim();
 
-            if (!title) { showToast('This card needs a title first.'); return; }
             if (!body)  { showToast('The Blog Draft field is empty.'); return; }
 
             const settings = getSettings();
@@ -7163,13 +7353,42 @@ Example:
                 return;
             }
 
-            const notify = confirm(
-                'Create a WordPress DRAFT of this blog?\n\n' +
-                title + '\n\n' +
-                'It saves as a draft and will NOT be published.\n\n' +
-                'OK = create draft AND email Trevor.\n' +
-                'Cancel = create draft only, no email.'
+            const company = card.company || 'ii';
+
+            // ---- Title: if blank, generate options and let the user choose (v3.39.0).
+            if (!title) {
+                title = await mktGenerateTitles(body, company);
+                if (!title) { showToast('No title chosen - draft not sent.'); return; }
+                document.getElementById('mktTitle').value = title;   // reflect the choice in the field
+            }
+
+            // ---- Category selection: fetch site categories, AI suggests, user confirms.
+            let chosenCategoryIds = null;
+            try {
+                chosenCategoryIds = await pickWordPressCategory(member, title, body);
+            } catch (e) {
+                console.warn('Category selection skipped:', e);
+            }
+
+            // ---- Send options (v3.39.0): three explicit choices instead of OK/Cancel.
+            const archiveFolderId = getArchiveFolderId(company);
+            const archiveNote = archiveFolderId
+                ? 'Drive archive is configured for ' + (MKT_COMPANIES[company] ? MKT_COMPANIES[company].name : company) + '.'
+                : 'No Drive archive folder is set for this company (options 1 and 2 will skip archiving).';
+            const choice = prompt(
+                'Send this WordPress DRAFT. Choose an option (number):\n\n' +
+                '1 = WordPress draft + email Trevor + save to Drive archive\n' +
+                '2 = WordPress draft + save to Drive archive (no email)\n' +
+                '3 = WordPress draft only\n\n' +
+                archiveNote,
+                '1'
             );
+            if (choice === null) { showToast('Cancelled.'); return; }
+            const opt = parseInt(choice.trim(), 10);
+            if (![1, 2, 3].includes(opt)) { showToast('Not a valid option - cancelled.'); return; }
+
+            const notify     = (opt === 1);
+            const doArchive  = (opt === 1 || opt === 2);
 
             const btn = document.getElementById('mktWpBtn');
             const original = btn.textContent;
@@ -7184,7 +7403,8 @@ Example:
                         action: 'postToWordPress',
                         secretKey: member.webAppSecret || '',
                         title: title,
-                        content: mdToHtml(body),
+                        content: wrapBlogForWordPress(mdToHtml(body)),
+                        categoryIds: chosenCategoryIds,
                         notifyEditor: notify
                     })
                 });
@@ -7194,6 +7414,36 @@ Example:
                     showToast('WordPress error: ' + (result.error || 'unknown'));
                     console.error('postToWordPress failed:', result);
                     return;
+                }
+
+                // ---- Optional Drive archive. Non-blocking: a failed archive must not
+                // undo a successful WordPress draft. Saves the clean markdown source,
+                // not the boilerplate-wrapped HTML.
+                let archiveMsg = '';
+                if (doArchive) {
+                    if (!archiveFolderId) {
+                        archiveMsg = ' (archive skipped: no folder set)';
+                    } else {
+                        try {
+                            const arcRes = await fetch(member.webAppUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                                body: JSON.stringify({
+                                    action: 'saveBlogToDrive',
+                                    secretKey: member.webAppSecret || '',
+                                    folderId: archiveFolderId,
+                                    title: title,
+                                    content: body
+                                })
+                            });
+                            const arcJson = await arcRes.json();
+                            archiveMsg = arcJson.success
+                                ? ' Archived to Drive.'
+                                : ' (archive failed: ' + (arcJson.error || 'unknown') + ')';
+                        } catch (arcErr) {
+                            archiveMsg = ' (archive error: ' + arcErr.message + ')';
+                        }
+                    }
                 }
 
                 card.title = title;
@@ -7209,6 +7459,7 @@ Example:
                 let msg = 'Draft created in WordPress. Card moved to With Trevor.';
                 if (notify && result.emailSent)  msg += ' Trevor notified.';
                 if (notify && !result.emailSent) msg += ' (Email failed: ' + (result.emailError || 'unknown') + ')';
+                msg += archiveMsg;
                 showToast(msg);
 
                 if (confirm(msg + '\n\nOpen the draft in WordPress now?')) {
@@ -8563,6 +8814,17 @@ Example:
                 const line = raw.trim();
 
                 if (!line) { closeList(); continue; }
+
+                // Blockquote: "> text" becomes the house style used on published
+                // posts - a blockquote wrapping a span with font-weight:400. Matches
+                // how quotes are formatted on investedwithyou.com so drafted quotes
+                // land correctly without hand-editing in WordPress.
+                if (/^>\s?/.test(line)) {
+                    closeList();
+                    const quote = line.replace(/^>\s?/, '');
+                    out.push('<blockquote><span style="font-weight: 400;">' + inline(quote) + '</span></blockquote>');
+                    continue;
+                }
 
                 const h = line.match(/^(#{1,4})\s+(.*)$/);
                 if (h) {
@@ -13018,6 +13280,8 @@ Make sure your suggestions directly address the specific root cause and discussi
             document.getElementById('firmContextFolderId_ii').value =
                 settings.firmContextFolderId_ii || settings.firmContextFolderId || '';
             document.getElementById('firmContextFolderId_ig').value = settings.firmContextFolderId_ig || '';
+            document.getElementById('publishedArchiveFolderId_ii').value = settings.publishedArchiveFolderId_ii || '';
+            document.getElementById('publishedArchiveFolderId_ig').value = settings.publishedArchiveFolderId_ig || '';
             document.getElementById('geminiModel').value = settings.geminiModel || '';
             document.getElementById('claudeModel').value = settings.claudeModel || '';
             document.getElementById('openaiModel').value = settings.openaiModel || '';
@@ -13320,6 +13584,8 @@ Make sure your suggestions directly address the specific root cause and discussi
             };
             settings.firmContextFolderId_ii = document.getElementById('firmContextFolderId_ii').value.trim();
             settings.firmContextFolderId_ig = document.getElementById('firmContextFolderId_ig').value.trim();
+            settings.publishedArchiveFolderId_ii = document.getElementById('publishedArchiveFolderId_ii').value.trim();
+            settings.publishedArchiveFolderId_ig = document.getElementById('publishedArchiveFolderId_ig').value.trim();
             
             // Pomodoro settings
             settings.pomoFocusMin = parseInt(document.getElementById('pomoFocusMin').value) || 25;
@@ -13609,6 +13875,68 @@ Make sure your suggestions directly address the specific root cause and discussi
                 statusEl.style.background = '#fce8e6';
                 statusEl.style.color = '#d93025';
                 statusEl.textContent = '❌ Connection failed: ' + error.message + ' (if this is a CORS error, Anthropic may be blocking direct browser calls for your key type)';
+            }
+        }
+
+        // WordPress health check (v3.37.0). Calls the read-only probeWordPressAuth
+        // action and reports, in plain English, whether the site accepts the stored
+        // Application Password and whether that account can create drafts. Reuses the
+        // same current-member webAppUrl + webAppSecret resolution as task sync.
+        async function testWordPressConnection() {
+            const statusEl = document.getElementById('wpHealthStatus');
+            const show = (bg, color, text) => {
+                statusEl.style.display = 'block';
+                statusEl.style.background = bg;
+                statusEl.style.color = color;
+                statusEl.innerHTML = text;
+            };
+
+            const settings = getSettings();
+            const currentUser = document.getElementById('dailyPlanUser')?.value || settings.teamMembers?.[0]?.initials;
+            const member = settings.teamMembers?.find(m => m.initials === currentUser)
+                        || settings.teamMembers?.find(m => m.webAppUrl);
+
+            if (!member?.webAppUrl) {
+                show('#fff3cd', '#856404', '\u26a0\ufe0f No Apps Script Web App URL is configured for your account. Add it in team settings first.');
+                return;
+            }
+
+            show('#e8f4fd', '#1a73e8', '\u23f3 Checking WordPress connection...');
+
+            try {
+                const url = member.webAppUrl
+                    + '?action=probeWordPressAuth'
+                    + '&secretKey=' + encodeURIComponent(member.webAppSecret || '');
+                const response = await fetch(url);
+                const result = await response.json();
+
+                if (result.success && result.can_edit_posts) {
+                    const who = escapeHtml(result.authenticatedAs || 'your account');
+                    const roles = (result.roles || []).join(', ');
+                    const pub = result.can_publish_posts ? ' and publish' : '';
+                    show('#e6f4ea', '#1e8e3e',
+                        '\u2705 Connected as <strong>' + who + '</strong>'
+                        + (roles ? ' (' + escapeHtml(roles) + ')' : '')
+                        + '. This account can create drafts' + pub + '.');
+                } else if (result.success && !result.can_edit_posts) {
+                    show('#fce8e6', '#d93025',
+                        '\u274c Authenticated as <strong>' + escapeHtml(result.authenticatedAs || '?')
+                        + '</strong>, but this account cannot create posts. Promote it to Author or higher in WordPress, or point WP_USERNAME at an Author/Editor/Admin account.');
+                } else {
+                    // Auth failure. Give the most useful next step based on the WP error code.
+                    const code = result.wpErrorCode || '';
+                    let hint;
+                    if (code === 'incorrect_password') {
+                        hint = 'The Application Password is wrong or revoked. In WordPress: Users &rarr; Profile &rarr; Application Passwords &rarr; generate a new one, then paste it into WP_APP_PASSWORD in Apps Script Script Properties.';
+                    } else if (code === 'rest_not_logged_in') {
+                        hint = 'The site did not accept the credentials. Most often this means WP_APP_PASSWORD holds a normal login password instead of a generated Application Password, or the server is stripping the Authorization header. Generate a real Application Password (Users &rarr; Profile &rarr; Application Passwords) and update WP_APP_PASSWORD.';
+                    } else {
+                        hint = escapeHtml(result.error || 'Unknown error') + '. Check WP_USERNAME and WP_APP_PASSWORD in Apps Script Script Properties.';
+                    }
+                    show('#fce8e6', '#d93025', '\u274c Not connected. ' + hint);
+                }
+            } catch (error) {
+                show('#fce8e6', '#d93025', '\u274c Could not reach the Apps Script backend: ' + escapeHtml(error.message) + '. Confirm the Web App URL and secret key are correct.');
             }
         }
 
