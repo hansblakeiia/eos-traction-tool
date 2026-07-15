@@ -3970,8 +3970,8 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.35.0';
-        const EOS_BUILD_DATE = '2026-07-13';
+        const EOS_VERSION = '3.36.0';
+        const EOS_BUILD_DATE = '2026-07-15';
         const EOS_BUILD_TIME = '10:30'; // Add-to-Kanban button on Quarterly Rocks: one-directional promotion of a rock to a Kanban card (Backlog, owner-mapped, labeled Rock), with duplicate guard
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
@@ -5753,7 +5753,18 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.34.0 &mdash; 2026-07-13 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.36.0 &mdash; 2026-07-15 (Current)</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Version alignment.</strong> The app version now matches the backend. No feature changes in the app itself.</li>'
+                + '<li><strong>Backend (Google_Tasks_Sync.gs v3.36.0):</strong> WordPress credentials moved out of the code file and into Script Properties, so future backend updates no longer wipe them. Set once; they survive every future <code>.gs</code> paste.</li>'
+                + '<li>Added <code>authorizeDrive()</code> &mdash; a no-argument function you run once from the Apps Script editor to grant the Drive OAuth consent a Web App POST cannot trigger on its own.</li>'
+                + '<li>Requires a NEW Apps Script deployment (v3.36.0), plus a one-time run of <code>authorizeDrive()</code>.</li>'
+                + '</ul>'
+                + '<div style="font-weight:700;color:#1d4ed8;font-size:0.9rem;margin-bottom:6px;">v3.35.0 &mdash; 2026-07-13</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Real firm-context errors.</strong> When Drive context fails to load, the tool now surfaces the actual Apps Script error instead of a generic message, so you can see what actually went wrong.</li>'
+                + '</ul>'
+                + '<div style="font-weight:700;color:#1d4ed8;font-size:0.9rem;margin-bottom:6px;">v3.34.0 &mdash; 2026-07-13</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Two companies on the Marketing tab.</strong> Toggle between Intelligent Investing and Intelligrations. Each has its own Drive context folder, its own <code>_Firm Summary</code>, and its own writing samples.</li>'
                 + '<li><strong>The board filters by company.</strong> You only see cards for the company you are working on.</li>'
