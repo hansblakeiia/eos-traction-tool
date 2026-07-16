@@ -3053,8 +3053,11 @@
                 </div>
                 <div class="modal-body">
                     <label style="font-size:0.8rem;font-weight:600;color:var(--gray-500);">Title / Headline</label>
-                    <input type="text" id="mktTitle" style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-size:0.95rem; box-sizing:border-box; margin-bottom:12px;">
-
+                    <input type="text" id="mktTitle" style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-size:0.95rem; box-sizing:border-box; margin-bottom:6px;">
+                    <div style="margin-bottom:8px;">
+                        <button type="button" class="btn btn-secondary" id="mktTitlesBtn" onclick="mktSuggestTitles()" style="font-size:0.78rem; padding:5px 10px; color:var(--primary);">AI: Suggest Titles</button>
+                    </div>
+                    <div id="mktTitleOptions" style="display:none; margin-bottom:12px;"></div>
                     <label style="font-size:0.8rem;font-weight:600;color:var(--gray-500);">Company</label>
                     <select id="mktCompany" style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; box-sizing:border-box; margin-bottom:12px;"></select>
 
@@ -3079,7 +3082,8 @@
 
                     <label style="font-size:0.8rem;font-weight:600;color:var(--gray-500);">Quote (for IntelliQuotes)</label>
                     <textarea id="mktQuote" rows="2" placeholder="The line from the blog worth turning into a branded image."
-                        style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; box-sizing:border-box; resize:vertical; margin-bottom:12px;"></textarea>
+                        style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; box-sizing:border-box; resize:vertical; margin-bottom:6px;"></textarea>
+                    <div id="mktQuoteOptions" style="display:none; margin-bottom:12px;"></div>
 
                     <div style="display:flex; gap:12px; flex-wrap:wrap;">
                         <div style="flex:1; min-width:180px;">
@@ -3341,6 +3345,13 @@
                                 <option value="openai">OpenAI</option>
                             </select>
 
+                            <label style="font-size: 0.8rem;">Meeting Email AI <span style="font-weight:400; color: var(--gray-500);">(coffee/lunch drafts from a task)</span></label>
+                            <select id="aiRouteMeetingEmail">
+                                <option value="gemini">Gemini</option>
+                                <option value="claude" selected>Claude</option>
+                                <option value="openai">OpenAI</option>
+                            </select>
+
                             <label style="font-size: 0.8rem;">Kanban AI Agent <span style="font-weight:400; color: var(--gray-500);">(coming soon)</span></label>
                             <select id="aiRouteKanban">
                                 <option value="gemini">Gemini</option>
@@ -3403,6 +3414,16 @@
                             <option value="weeklyMeeting" selected>Weekly Meeting (Default)</option>
                             <option value="dailyPlan">My Daily Plan</option>
                         </select>
+                    </div>
+
+                    <!-- Meeting Scheduling Links -->
+                    <div style="margin-bottom: 16px; padding-top: 16px; border-top: 1px solid #a7f3d0;">
+                        <h4 style="color: #047857; margin-bottom: 8px; font-size: 0.95rem;">Meeting Scheduling Links</h4>
+                        <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 10px;">Used when drafting coffee/lunch emails from a task. Paste your Calendly (or other scheduler) links.</p>
+                        <label style="font-size: 0.8rem;">Coffee / short meeting link</label>
+                        <input type="text" id="calendlyCoffee" placeholder="https://calendly.com/you/coffee" style="font-size: 0.85rem; width: 100%; margin-bottom: 8px;">
+                        <label style="font-size: 0.8rem;">Lunch / longer meeting link</label>
+                        <input type="text" id="calendlyLunch" placeholder="https://calendly.com/you/lunch" style="font-size: 0.85rem; width: 100%;">
                     </div>
                     
                     <!-- Auto-Sync Interval -->
@@ -3609,7 +3630,43 @@
             </div>
         </div>
     </div>
-    
+
+    <div class="modal-overlay" id="meetingEmailModal">
+        <div class="modal" style="max-width: 560px;">
+            <div class="modal-header">
+                <h2>Draft Meeting Email</h2>
+                <button onclick="closeModal('meetingEmailModal')" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray-500);">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:0.82rem;color:var(--gray-500);margin-bottom:12px;">Drafts a warm coffee-or-lunch invite with your Calendly links. You review and send it from Gmail &mdash; nothing sends automatically.</p>
+
+                <label style="font-size:0.8rem;font-weight:600;color:var(--gray-500);">Recipient name</label>
+                <div style="display:flex; gap:6px; margin-bottom:10px;">
+                    <input type="text" id="meetingEmailRecipientName" style="flex:1; padding:8px; border:1px solid var(--gray-200); border-radius:6px; box-sizing:border-box;">
+                    <button type="button" id="meetingEmailContactsBtn" onclick="lookupContactForEmail()" style="display:none; white-space:nowrap; padding:8px 10px; border:1px solid var(--gray-200); background:var(--gray-50, #f9fafb); border-radius:6px; cursor:pointer; font-size:0.8rem; color:var(--primary);">Find in Contacts</button>
+                </div>
+                <div id="meetingEmailContactResults" style="display:none; margin:-4px 0 10px; border:1px solid var(--gray-200); border-radius:6px; max-height:160px; overflow-y:auto;"></div>
+
+                <label style="font-size:0.8rem;font-weight:600;color:var(--gray-500);">Recipient email</label>
+                <input type="email" id="meetingEmailRecipientEmail" placeholder="name@example.com" style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; box-sizing:border-box; margin-bottom:10px;">
+
+                <label style="font-size:0.8rem;font-weight:600;color:var(--gray-500);">Context <span style="font-weight:400;">&mdash; why you're reaching out, any history (optional)</span></label>
+                <textarea id="meetingEmailContext" rows="3" placeholder="Pulled from the task notes; edit as needed." style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; box-sizing:border-box; resize:vertical; margin-bottom:12px;"></textarea>
+
+                <label style="font-size:0.8rem;font-weight:600;color:var(--gray-500);">Subject</label>
+                <input type="text" id="meetingEmailSubject" style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; box-sizing:border-box; margin-bottom:10px;">
+
+                <label style="font-size:0.8rem;font-weight:600;color:var(--gray-500);">Draft</label>
+                <textarea id="meetingEmailOutput" rows="9" style="display:none; width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; box-sizing:border-box; resize:vertical; margin-bottom:6px;"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('meetingEmailModal')">Close</button>
+                <button class="btn btn-secondary" id="meetingEmailGenBtn" onclick="generateMeetingEmail()" style="color:var(--primary);">AI: Draft Email</button>
+                <button class="btn btn-primary" id="meetingEmailGmailBtn" style="display:none;">Open in Gmail</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="backupReminderModal">
         <div class="modal" style="max-width: 450px;">
             <h2>⚠️ Backup Reminder</h2>
@@ -4001,9 +4058,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.40.0';
-        const EOS_BUILD_DATE = '2026-07-15';
-        const EOS_BUILD_TIME = '15:00'; // Print Kanban boards: added to Master Print modal (landscape, one board per page, columns side by side, active cards only, per-board selection)
+        const EOS_VERSION = '3.44.0';
+        const EOS_BUILD_DATE = '2026-07-16';
+        const EOS_BUILD_TIME = '15:30'; // Contacts lookup wired into the meeting-email drafter. "Find in Contacts" button (name -> email via personal Contacts + Workspace Directory) appears only when capabilityReady('contacts.lookup') is true; degrades to typed email otherwise. First real consumer of the v3.43.0 capability registry. Pairs with .gs v3.40.0 lookupContact.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -4144,6 +4201,11 @@ Example:
             
             // Google Sign-In gate, if configured
             initGoogleSignIn();
+
+            // Probe which capabilities (Contacts, Calendar, ...) the backend actually
+            // grants for this user. Inert until a scope is consented; failures leave the
+            // registry unavailable so behavior matches pre-registry builds.
+            setTimeout(function() { probeCapabilities(); }, 1200);
             
             // Auto-select the current quarter based on today's date
             autoSelectCurrentQuarter();
@@ -5784,7 +5846,43 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.40.0 &mdash; 2026-07-15 (Current)</div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.44.0 &mdash; 2026-07-16 (Current)</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Find a recipient in your Contacts.</strong> When drafting a coffee/lunch email from a task, type a name and click <em>Find in Contacts</em> &mdash; it searches your personal Google Contacts and your Workspace directory (coworkers) and fills in the email address for you. Pick from the matches; the name and email drop into the fields.</li>'
+                + '<li>Still fully optional: if you would rather type the email, just do that. The button only appears once Contacts access has been granted on your Apps Script backend; until then the drafter works exactly as before.</li>'
+                + '<li>Read-only &mdash; it looks up names, nothing else. It never reads your email and never sends anything; you still review and send from Gmail yourself.</li>'
+                + '<li>Requires the paired Apps Script backend v3.40.0 and a one-time Contacts permission grant (see setup notes). First feature built on the v3.43.0 capability registry.</li>'
+                + '</ul></div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.43.0 &mdash; 2026-07-16</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Groundwork for connected tools (Contacts, Calendar, and more).</strong> Added an internal capability registry that lets the tool safely detect which Google permissions are granted and turn features on only when they\'re available &mdash; the foundation for plug-and-play APIs.</li>'
+                + '<li>This release is invisible by design: nothing changes in how the tool works today. It reports every optional capability as unavailable until the matching permission is granted, so behavior is identical to v3.42.0.</li>'
+                + '<li>Requires the paired Apps Script backend v3.39.0 (adds a read-only getCapabilities check). Update it when convenient; the tool works fine without it (capabilities simply stay off).</li>'
+                + '</ul></div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.42.0 &mdash; 2026-07-16</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Draft a coffee/lunch email from any task.</strong> New envelope button on a to-do opens a drafter: add the recipient name + email, and the AI writes a warm invite offering coffee OR lunch with your scheduling links, then opens Gmail compose prefilled. You review and send &mdash; nothing sends automatically.</li>'
+                + '<li><strong>Scheduling links in Settings.</strong> Add your Calendly (or other) coffee and lunch links under EOS Configuration &mdash; they get dropped into the draft. Meeting Email AI provider is routable like the other AI features.</li>'
+                + '<li>Context is pulled from the task notes so the email can reference why you\'re reaching out. It never invents shared history.</li>'
+                + '<li>Uses the existing v3.38.0 Apps Script backend &mdash; no new deployment, and no new Google permissions (recipient details are typed in, not read from Contacts).</li>'
+                + '</ul></div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.41.0 &mdash; 2026-07-15</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Pick your title from options.</strong> New AI: Suggest Titles button on a content card proposes 5 headlines from Your Take or the finished blog &mdash; click one to drop it into the Title field.</li>'
+                + '<li><strong>Pick your quote from options.</strong> AI: Social + Quote now returns 5 quote options for IntelliQuotes, each shown with its attribution (your own lines signed Hans Blake, CFA, CPA; vetted or genuinely famous quotes attributed to their real author). Click one to use it.</li>'
+                + '<li><strong>Quotes from others, done carefully.</strong> Blog drafts and quote options may include quotes from your Context folder or well-known figures (Buffett, Bogle, Lynch, Einstein, Lincoln, and the like) &mdash; but only when the wording and author are genuinely known, never invented and pinned on a real person.</li>'
+                + '<li>Uses the existing v3.38.0 Apps Script backend &mdash; no new deployment required for this update.</li>'
+                + '</ul></div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.40.0 &mdash; 2026-07-15</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Print your Kanban boards.</strong> The Print Package window now includes a Kanban Boards option. Pick which boards to print &mdash; each prints on its own landscape page with columns side by side.</li>'
                 + '<li><strong>Active cards only.</strong> Archived/shipped cards are left off the printout, so you get a clean snapshot of live work.</li>'
@@ -6882,7 +6980,14 @@ Example:
                 'in his Take or in the firm context, do not manufacture one. A fabricated client is worse ' +
                 'than no client.\n' +
                 '- Do NOT invent firm services, product names, or taglines. Use only what appears in the ' +
-                'firm context above.\n\n' +
+                'firm context above.\n' +
+                '- You MAY quote others where it strengthens the piece, under strict rules: either a ' +
+                'quote drawn from the firm context above (attributed as recorded there), OR a genuinely ' +
+                'well-known quote from a famous figure (e.g. Buffett, Bogle, Lynch, Einstein, Lincoln) ' +
+                'that you are confident of in BOTH exact wording AND real author. Attribute it clearly. ' +
+                'If you are not confident a quote is real and correctly attributed, DO NOT use it - make ' +
+                'the point in your own words instead. Never attribute an invented or paraphrased line to ' +
+                'a real person.\n\n' +
                 'Return ONLY the blog body in Markdown. No preamble, no commentary, no code fences.';
 
             const btn = document.getElementById('mktDraftBtn');
@@ -6919,6 +7024,92 @@ Example:
             }
         }
 
+
+        // ==================== TITLE OPTIONS (v3.40.0) ====================
+        // Generates several headline options FROM the finished blog, shown as clickable
+        // chips. Complements the WordPress send-time fallback: this is the proactive
+        // "pick a title before finalizing" path.
+        async function mktSuggestTitles() {
+            const card = mktGetCard(mktEditingId);
+            if (!card) return;
+            const blog = document.getElementById('mktBlog').value.trim();
+            const take = document.getElementById('mktTake').value.trim();
+            if (!blog && !take) { showToast('Write Your Take or draft the blog first, so titles have something to work from.'); return; }
+
+            const cfg = getAIProviderConfig('marketing');
+            if (!requireApiKey('Marketing AI', cfg)) return;
+
+            const companyKey = card.company || 'ii';
+            const ctx = await fetchFirmContext(companyKey, false);
+            const ctxBlock = buildFirmContextBlock(ctx, companyKey);
+
+            const source = blog ? ('BLOG:\n"""\n' + blog + '\n"""') : ('HANS\'S TAKE:\n"""\n' + take + '\n"""');
+            const prompt =
+                MKT_FIRM_CONTEXT + ctxBlock + '\n\n' +
+                'Propose 5 headline options for the piece below. Each should be specific and ' +
+                'make a reader want to click - not vague, not clickbait, not hyped. Match how Hans ' +
+                'writes: plainspoken, concrete, honest. Vary the angle across the 5 (a question, a ' +
+                'contrarian take, a plain descriptive one, etc.).\n\n' +
+                source + '\n\n' +
+                'Return ONLY a JSON array of 5 strings. No fences, no preamble:\n' +
+                '["...","...","...","...","..."]';
+
+            const btn = document.getElementById('mktTitlesBtn');
+            const original = btn.textContent;
+            btn.disabled = true; btn.textContent = 'Thinking...';
+            try {
+                const raw = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt,
+                                             { temperature: 0.8, maxTokens: 500 });
+                const clean = String(raw).replace(/```json/gi, '').replace(/```/g, '').trim();
+                const s = clean.indexOf('['), e = clean.lastIndexOf(']');
+                if (s === -1 || e === -1) throw new Error('The model did not return the expected format.');
+                const opts = JSON.parse(clean.slice(s, e + 1));
+                if (!Array.isArray(opts) || !opts.length) throw new Error('No titles came back.');
+                mktRenderOptionChips('mktTitleOptions', opts, function(choice) {
+                    document.getElementById('mktTitle').value = choice;
+                });
+            } catch (error) {
+                showToast('Title suggestions failed: ' + error.message);
+                console.error('mktSuggestTitles error:', error);
+            } finally {
+                btn.disabled = false; btn.textContent = original;
+            }
+        }
+
+        // Render a set of clickable option chips into a container. Clicking a chip calls
+        // onPick(text) and visually marks the choice. Used for both titles and quotes.
+        function mktRenderOptionChips(containerId, options, onPick) {
+            const wrap = document.getElementById(containerId);
+            if (!wrap) return;
+            wrap.innerHTML = '';
+            wrap.style.display = 'block';
+            const heading = document.createElement('div');
+            heading.style.cssText = 'font-size:0.72rem;color:var(--gray-500);margin:2px 0 4px;';
+            heading.textContent = 'Click one to use it:';
+            wrap.appendChild(heading);
+            options.forEach(function(opt) {
+                const text = (typeof opt === 'string') ? opt : (opt.text || '');
+                if (!text) return;
+                const chip = document.createElement('button');
+                chip.type = 'button';
+                chip.className = 'mkt-opt-chip';
+                chip.textContent = text;
+                chip.style.cssText = 'display:block;width:100%;text-align:left;margin-bottom:5px;padding:7px 9px;'
+                    + 'background:#f8fafc;border:1px solid var(--gray-200);border-radius:6px;cursor:pointer;'
+                    + 'font-size:0.83rem;line-height:1.35;color:#111;';
+                chip.onmouseover = function() { chip.style.background = '#eef2ff'; chip.style.borderColor = '#c7d2fe'; };
+                chip.onmouseout  = function() { chip.style.background = '#f8fafc'; chip.style.borderColor = 'var(--gray-200)'; };
+                chip.onclick = function() {
+                    onPick(text);
+                    Array.prototype.forEach.call(wrap.querySelectorAll('.mkt-opt-chip'), function(c) {
+                        c.style.background = '#f8fafc'; c.style.borderColor = 'var(--gray-200)'; c.style.fontWeight = '400';
+                    });
+                    chip.style.background = '#dcfce7'; chip.style.borderColor = '#86efac'; chip.style.fontWeight = '600';
+                };
+                wrap.appendChild(chip);
+            });
+        }
+
         // Generates the social copy and the pull-quote FROM THE FINAL BLOG, in one call.
         // Deliberately not run earlier: derivatives generated before the blog is frozen
         // go stale the moment the blog is edited.
@@ -6946,12 +7137,21 @@ Example:
                 'Hook the reader with the specific problem the article solves - not a summary, ' +
                 'not "check out my new blog." No hashtag spam, at most 2-3 relevant hashtags. ' +
                 'End with a light call to action to read it.\n\n' +
-                '2. QUOTE: one sentence pulled from or distilled from the blog, suitable for a ' +
-                'branded quote image. It must stand alone without context, sound like something ' +
-                'Hans would actually say, and carry a real idea - not a platitude. Under 25 words. ' +
-                'No quotation marks.\n\n' +
+                '2. QUOTES: FIVE options for a branded quote image (IntelliQuotes). Each must ' +
+                'stand alone without context, carry a real idea (not a platitude), and be under ' +
+                '25 words. Each option is an object with "text" and "author":\n' +
+                '   - Lines you distill from the blog or that express Hans\'s own view: set ' +
+                '"author" to "Hans Blake, CFA, CPA".\n' +
+                '   - You MAY instead offer a genuinely well-known quote from a famous figure ' +
+                '(e.g. Warren Buffett, Jack Bogle, Peter Lynch, Albert Einstein, Abraham Lincoln) ' +
+                'IF it fits the blog\'s theme AND you are confident of BOTH the exact wording AND ' +
+                'the real author. Set "author" to that person\'s name. If you are not confident a ' +
+                'famous quote is real and correctly attributed, DO NOT use it - distill an original ' +
+                'line and attribute it to Hans instead. Never invent a quote and attribute it to a ' +
+                'real person. A misattributed quote is worse than none.\n' +
+                '   - Do not put quotation marks inside "text".\n\n' +
                 'Return ONLY a JSON object. No fences, no preamble:\n' +
-                '{"social": "...", "quote": "..."}';
+                '{"social": "...", "quotes": [{"text": "...", "author": "..."}, ...]}';
 
             const btn = document.getElementById('mktPackageBtn');
             const original = btn.textContent;
@@ -6968,18 +7168,40 @@ Example:
                 const pkg = JSON.parse(clean.slice(s, e + 1));
 
                 document.getElementById('mktSocial').value = pkg.social || '';
-                document.getElementById('mktQuote').value  = pkg.quote  || '';
                 document.getElementById('mktSocialStatus').value = 'draft';
-                document.getElementById('mktQuoteStatus').value  = 'draft';
-
                 card.social = pkg.social || '';
-                card.quote  = pkg.quote  || '';
                 card.socialStatus = 'draft';
-                card.quoteStatus  = 'draft';
+
+                // Normalize quotes to [{text, author}] and render as pickable chips.
+                let quotes = Array.isArray(pkg.quotes) ? pkg.quotes : [];
+                if (!quotes.length && pkg.quote) quotes = [{ text: pkg.quote, author: 'Hans Blake, CFA, CPA' }];
+                const chipData = quotes.map(function(q) {
+                    const t = (q && q.text) ? String(q.text).trim() : '';
+                    const a = (q && q.author) ? String(q.author).trim() : 'Hans Blake, CFA, CPA';
+                    return t ? { text: t + '\n~ ' + a } : null;
+                }).filter(Boolean);
+
+                if (chipData.length) {
+                    mktRenderOptionChips('mktQuoteOptions', chipData, function(choice) {
+                        document.getElementById('mktQuote').value = choice;
+                        document.getElementById('mktQuoteStatus').value = 'draft';
+                        card.quote = choice;
+                        card.quoteStatus = 'draft';
+                        mktSave();
+                    });
+                    // Pre-fill with the first option so the card isn't empty if he doesn't
+                    // click, but the chips let him swap.
+                    const first = chipData[0].text;
+                    document.getElementById('mktQuote').value = first;
+                    document.getElementById('mktQuoteStatus').value = 'draft';
+                    card.quote = first;
+                    card.quoteStatus = 'draft';
+                }
+
                 mktSave();
                 mktRender();
 
-                showToast('Social post and quote drafted from the final blog.');
+                showToast('Social post drafted. Pick a quote from the options.');
 
             } catch (error) {
                 showToast('Package generation failed: ' + error.message);
@@ -7083,6 +7305,12 @@ Example:
             document.getElementById('mktBlog').value   = card.blog   || '';
             document.getElementById('mktSocial').value = card.social || '';
             document.getElementById('mktQuote').value  = card.quote  || '';
+
+            // Clear any option chips left over from a previously-opened card.
+            ['mktTitleOptions', 'mktQuoteOptions'].forEach(function(cid) {
+                const el = document.getElementById(cid);
+                if (el) { el.innerHTML = ''; el.style.display = 'none'; }
+            });
 
             const compSel = document.getElementById('mktCompany');
             compSel.innerHTML = Object.keys(MKT_COMPANIES).map(function(k) {
@@ -10042,6 +10270,187 @@ Example:
             container.innerHTML = headerRow + todosHtml;
         }
         
+
+        // ==================== TASK MEETING EMAIL DRAFTER (v3.42.0) ====================
+        // Low-risk, no-new-scope feature. From a task, draft a warm coffee-or-lunch email
+        // with the user's Calendly links, then open Gmail compose prefilled. USER SENDS.
+        // Deliberately does NOT touch Google Contacts (People API scope) or read Gmail
+        // (read scope) - those are gated on the compliance conversation (see Master Summary
+        // 5.13/5.14). Recipient name + email are typed by the user here.
+        let meetingEmailTaskIdx = null;
+
+        function openMeetingEmailModal(idx) {
+            meetingEmailTaskIdx = idx;
+            const todos = yearData.quarters[currentQuarter].todos;
+            const t = todos[idx];
+            if (!t) return;
+
+            // Best-effort: pull a likely name out of the task text ("email Blake Jackson ...").
+            const guess = (t.text || '').replace(/^\s*(email|e-mail|contact|reach out to|invite)\s+/i, '')
+                .replace(/\s+(for|about|to)\b.*$/i, '').trim();
+
+            document.getElementById('meetingEmailRecipientName').value = guess || '';
+            document.getElementById('meetingEmailRecipientEmail').value = '';
+            document.getElementById('meetingEmailContext').value = t.notes || '';
+            document.getElementById('meetingEmailOutput').style.display = 'none';
+            document.getElementById('meetingEmailOutput').value = '';
+            document.getElementById('meetingEmailSubject').value = '';
+            document.getElementById('meetingEmailGmailBtn').style.display = 'none';
+
+            // Contacts lookup is additive: only offered if the backend proved the scope
+            // is granted (v3.44.0). Otherwise the drafter behaves exactly as v3.42.0 -
+            // the user types the email. See capabilityReady('contacts.lookup').
+            const contactsBtn = document.getElementById('meetingEmailContactsBtn');
+            if (contactsBtn) contactsBtn.style.display = capabilityReady('contacts.lookup') ? 'inline-block' : 'none';
+            const contactResults = document.getElementById('meetingEmailContactResults');
+            if (contactResults) { contactResults.style.display = 'none'; contactResults.innerHTML = ''; }
+
+            document.getElementById('meetingEmailModal').classList.add('active');
+        }
+
+        // Look up the typed name against Google Contacts + Workspace Directory (v3.44.0).
+        // Read-only. Degrades silently: if the capability isn't ready, the button isn't
+        // even shown, so this is only reachable when the scope is granted.
+        async function lookupContactForEmail() {
+            if (!capabilityReady('contacts.lookup')) return;
+            const nameInput = document.getElementById('meetingEmailRecipientName');
+            const query = (nameInput.value || '').trim();
+            if (!query) { showToast('Type a name to search for first.'); return; }
+
+            const settings = getSettings();
+            const currentUserInitials = document.getElementById('dailyPlanUser')?.value || 'HB';
+            const member = settings.teamMembers?.find(m => m.initials === currentUserInitials)
+                || settings.teamMembers?.find(m => m.webAppUrl);
+            if (!member || !member.webAppUrl) { showToast('No backend configured for lookup.'); return; }
+
+            const btn = document.getElementById('meetingEmailContactsBtn');
+            const resultsBox = document.getElementById('meetingEmailContactResults');
+            const originalLabel = btn.textContent;
+            btn.disabled = true; btn.textContent = 'Searching...';
+            try {
+                const resp = await fetch(member.webAppUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({
+                        action: 'lookupContact',
+                        secretKey: member.webAppSecret,
+                        query: query
+                    })
+                });
+                const data = await resp.json();
+                if (!data || !data.success) throw new Error((data && data.error) || 'Lookup failed.');
+
+                const matches = data.matches || [];
+                if (!matches.length) {
+                    resultsBox.innerHTML = '<div style="padding:8px 10px; font-size:0.82rem; color:var(--gray-500);">No matches. Type the email manually.</div>';
+                    resultsBox.style.display = 'block';
+                    return;
+                }
+
+                resultsBox.innerHTML = matches.map(function(m, i) {
+                    const nm = (m.name || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    const em = (m.email || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    return '<div class="contact-match-row" data-name="' + encodeURIComponent(m.name || '') +
+                        '" data-email="' + encodeURIComponent(m.email || '') +
+                        '" style="padding:8px 10px; cursor:pointer; border-bottom:1px solid var(--gray-100, #f3f4f6); font-size:0.85rem;">' +
+                        '<strong>' + nm + '</strong><br><span style="color:var(--gray-500);">' + em + '</span></div>';
+                }).join('');
+                resultsBox.style.display = 'block';
+
+                Array.prototype.forEach.call(resultsBox.querySelectorAll('.contact-match-row'), function(row) {
+                    row.onclick = function() {
+                        document.getElementById('meetingEmailRecipientName').value = decodeURIComponent(row.getAttribute('data-name'));
+                        document.getElementById('meetingEmailRecipientEmail').value = decodeURIComponent(row.getAttribute('data-email'));
+                        resultsBox.style.display = 'none';
+                        resultsBox.innerHTML = '';
+                    };
+                    row.onmouseover = function() { row.style.background = 'var(--gray-50, #f9fafb)'; };
+                    row.onmouseout = function() { row.style.background = ''; };
+                });
+            } catch (error) {
+                showToast('Contacts lookup failed: ' + error.message);
+            } finally {
+                btn.disabled = false; btn.textContent = originalLabel;
+            }
+        }
+
+        async function generateMeetingEmail() {
+            const name = document.getElementById('meetingEmailRecipientName').value.trim();
+            const email = document.getElementById('meetingEmailRecipientEmail').value.trim();
+            const ctx = document.getElementById('meetingEmailContext').value.trim();
+            if (!name) { showToast('Add the recipient name first.'); return; }
+
+            const settings = getSettings();
+            const coffee = (settings.calendlyCoffee || '').trim();
+            const lunch  = (settings.calendlyLunch || '').trim();
+            if (!coffee && !lunch) {
+                if (!confirm('No Calendly links are saved yet (Settings > Meeting Scheduling Links). ' +
+                             'Draft the email without links for now?')) return;
+            }
+
+            const cfg = getAIProviderConfig('meetingEmail');
+            if (!requireApiKey('Meeting Email AI', cfg)) return;
+
+            const linkLines = [];
+            if (coffee) linkLines.push('Coffee (short): ' + coffee);
+            if (lunch)  linkLines.push('Lunch (longer): ' + lunch);
+            const linksBlock = linkLines.length
+                ? 'Scheduling links to include verbatim (do not alter the URLs):\n' + linkLines.join('\n')
+                : 'No scheduling links are available; invite them to reply with times that work.';
+
+            const senderName = (settings.teamMembers?.find(m => m.initials === 'HB')?.name) || 'Hans';
+
+            const prompt =
+                'Write a short, warm, genuine email from ' + senderName + ' inviting someone to meet up.\n\n' +
+                'RECIPIENT: ' + name + '\n' +
+                (ctx ? 'CONTEXT (why reach out / any history - use naturally, do not quote verbatim):\n"""\n' + ctx + '\n"""\n' : '') +
+                '\n' +
+                'Offer them the choice of a quick coffee OR a longer lunch - their pick. ' + linksBlock + '\n\n' +
+                'Rules:\n' +
+                '- Warm and personal, not corporate or salesy. Sound like a real person reaching out.\n' +
+                '- Short: 4-7 sentences.\n' +
+                '- If context was given, reference it naturally in one line; do not force it.\n' +
+                '- Present both options (coffee or lunch) and make it easy to pick.\n' +
+                '- If scheduling links are provided, include them clearly labeled. If not, ask them to suggest times.\n' +
+                '- Do NOT invent shared history, mutual friends, or facts not given in the context.\n' +
+                '- Sign off as ' + senderName + '.\n\n' +
+                'Return ONLY a JSON object, no fences, no preamble:\n' +
+                '{"subject": "...", "body": "..."}';
+
+            const btn = document.getElementById('meetingEmailGenBtn');
+            const original = btn.textContent;
+            btn.disabled = true; btn.textContent = 'Drafting...';
+            try {
+                const raw = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt,
+                                             { temperature: 0.7, maxTokens: 700 });
+                const clean = String(raw).replace(/```json/gi, '').replace(/```/g, '').trim();
+                const s = clean.indexOf('{'), e = clean.lastIndexOf('}');
+                if (s === -1 || e === -1) throw new Error('The model did not return the expected format.');
+                const obj = JSON.parse(clean.slice(s, e + 1));
+
+                document.getElementById('meetingEmailSubject').value = obj.subject || ('Coffee or lunch, ' + name + '?');
+                const out = document.getElementById('meetingEmailOutput');
+                out.value = obj.body || '';
+                out.style.display = 'block';
+
+                // Wire the Gmail compose button (opens prefilled; user sends).
+                const gbtn = document.getElementById('meetingEmailGmailBtn');
+                gbtn.style.display = 'inline-block';
+                gbtn.onclick = function() {
+                    const to = encodeURIComponent(document.getElementById('meetingEmailRecipientEmail').value.trim());
+                    const su = encodeURIComponent(document.getElementById('meetingEmailSubject').value);
+                    const bo = encodeURIComponent(document.getElementById('meetingEmailOutput').value);
+                    const url = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + to + '&su=' + su + '&body=' + bo;
+                    window.open(url, '_blank');
+                };
+            } catch (error) {
+                showToast('Draft failed: ' + error.message);
+                console.error('generateMeetingEmail error:', error);
+            } finally {
+                btn.disabled = false; btn.textContent = original;
+            }
+        }
+
         function renderTodoItem(t, idx, depth = 0, hasSubtasks = false, isExpanded = true) {
             // Determine owner display and color
             let ownerDisplay = '';
@@ -10101,6 +10510,10 @@ Example:
                             ➕
                         </button>
                     ` : ''}
+                    <button onclick="openMeetingEmailModal(${idx})" style="background: none; border: none; cursor: pointer; font-size: 0.9rem; padding: 2px 6px; flex-shrink: 0; color: #6366f1;"
+                            title="Draft a coffee/lunch email from this task">
+                        ✉️
+                    </button>
                     <div class="todo-text" contenteditable="true" 
                          onblur="updateTodo(${idx}, 'text', this.textContent)"
                          onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); this.blur();}"
@@ -11474,6 +11887,87 @@ Make sure your suggestions directly address the specific root cause and discussi
         function aiProviderLabel(provider) {
             return { gemini: 'Gemini', claude: 'Claude', openai: 'OpenAI' }[provider] || provider;
         }
+
+
+        // ==================== CAPABILITY REGISTRY (v3.43.0) ====================
+        // Plug-and-play substrate for APIs/MCPs. See CAPABILITY_REGISTRY_DESIGN.md.
+        // Features ask capabilityReady('key') instead of calling backends directly.
+        // Ships INERT: every capability defaults available:false, so behavior is
+        // identical to v3.42.0 until a backend scope is actually granted + probed.
+        //
+        // To add a capability later: add one entry here + one .gs action case + (if it
+        // needs a new Google scope) a manifest scope and interactive re-consent.
+        const CAPABILITIES = {
+            'contacts.lookup': {
+                key: 'contacts.lookup',
+                label: 'Contacts lookup',
+                backendAction: 'lookupContact',
+                requiredScope: 'https://www.googleapis.com/auth/contacts.readonly',
+                kind: 'google-api',
+                available: false,          // filled by probeCapabilities() from backend
+                enabled: true,             // admin/user toggle (granted scope can still be off)
+                degrade: 'Type the recipient email manually.'
+            },
+            'calendar.createEvent': {
+                key: 'calendar.createEvent',
+                label: 'Calendar: create event',
+                backendAction: 'createCalendarEvent',
+                requiredScope: 'https://www.googleapis.com/auth/calendar.events',
+                kind: 'google-api',
+                available: false,
+                enabled: true,
+                degrade: 'Skip the calendar hold; the email still drafts.'
+            }
+        };
+
+        // A capability is usable only if the backend proved the scope is granted AND the
+        // user/admin has not turned it off. Features call THIS, never a raw backend action.
+        function capabilityReady(key) {
+            const c = CAPABILITIES[key];
+            return !!(c && c.available && c.enabled);
+        }
+
+        function getCapability(key) {
+            return CAPABILITIES[key] || null;
+        }
+
+        // Ask the backend which capabilities are actually granted for THIS user, and cache
+        // the result onto the registry. Safe to call on load; failures leave everything
+        // unavailable (graceful degradation). No new scopes are consumed by the probe.
+        async function probeCapabilities() {
+            try {
+                const settings = getSettings();
+                const currentUserInitials = document.getElementById('dailyPlanUser')?.value || 'HB';
+                const member = settings.teamMembers?.find(m => m.initials === currentUserInitials)
+                    || settings.teamMembers?.find(m => m.webAppUrl);
+                if (!member || !member.webAppUrl) return; // no backend configured; stay inert
+
+                const secretParam = member.webAppSecret
+                    ? '&secretKey=' + encodeURIComponent(member.webAppSecret) : '';
+                const url = member.webAppUrl + '?action=getCapabilities' + secretParam;
+
+                const resp = await fetch(url);
+                if (!resp.ok) return;
+                const data = await resp.json();
+                if (!data || !data.success || !Array.isArray(data.capabilities)) return;
+
+                data.capabilities.forEach(function(cap) {
+                    const entry = CAPABILITIES[cap.key];
+                    if (entry) {
+                        entry.available = !!cap.available;
+                        entry.availabilityReason = cap.reason || '';
+                    }
+                });
+                if (typeof console !== 'undefined') {
+                    console.log('Capabilities probed:', data.capabilities);
+                }
+            } catch (e) {
+                // Silent by design: any failure = capabilities stay unavailable = tool
+                // behaves exactly as it did before the registry existed.
+                console.log('probeCapabilities: staying inert (', e.message, ')');
+            }
+        }
+
 
         function getAIProviderConfig(featureKey) {
             const settings = getSettings();
@@ -13464,6 +13958,10 @@ Make sure your suggestions directly address the specific root cause and discussi
             document.getElementById('aiRouteDailyPlanning').value = routing.dailyPlanning || 'gemini';
             document.getElementById('aiRouteKanban').value = routing.kanbanAgent || 'gemini';
             document.getElementById('aiRouteMarketing').value = routing.marketing || 'claude';
+            document.getElementById('aiRouteMeetingEmail').value = routing.meetingEmail || 'claude';
+
+            document.getElementById('calendlyCoffee').value = settings.calendlyCoffee || '';
+            document.getElementById('calendlyLunch').value = settings.calendlyLunch || '';
 
             document.getElementById('otterTestStatus').style.display = 'none';
             document.getElementById('geminiTestStatus').style.display = 'none';
@@ -13750,8 +14248,11 @@ Make sure your suggestions directly address the specific root cause and discussi
                 idsSuggestions: document.getElementById('aiRouteIds').value,
                 dailyPlanning: document.getElementById('aiRouteDailyPlanning').value,
                 kanbanAgent: document.getElementById('aiRouteKanban').value,
-                marketing: document.getElementById('aiRouteMarketing').value
+                marketing: document.getElementById('aiRouteMarketing').value,
+                meetingEmail: document.getElementById('aiRouteMeetingEmail').value
             };
+            settings.calendlyCoffee = document.getElementById('calendlyCoffee').value.trim();
+            settings.calendlyLunch = document.getElementById('calendlyLunch').value.trim();
             settings.firmContextFolderId_ii = document.getElementById('firmContextFolderId_ii').value.trim();
             settings.firmContextFolderId_ig = document.getElementById('firmContextFolderId_ig').value.trim();
             settings.publishedArchiveFolderId_ii = document.getElementById('publishedArchiveFolderId_ii').value.trim();
