@@ -3662,7 +3662,9 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal('meetingEmailModal')">Close</button>
                 <button class="btn btn-secondary" id="meetingEmailGenBtn" onclick="generateMeetingEmail()" style="color:var(--primary);">AI: Draft Email</button>
+                <button class="btn btn-secondary" id="meetingEmailCopyBtn" style="display:none;" onclick="copyMeetingEmailDraft()">Copy</button>
                 <button class="btn btn-primary" id="meetingEmailGmailBtn" style="display:none;">Open in Gmail</button>
+                <button class="btn btn-secondary" id="meetingEmailDoneBtn" style="display:none;" onclick="markMeetingEmailTaskDone()">Sent it &mdash; mark done</button>
             </div>
         </div>
     </div>
@@ -4058,9 +4060,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.45.0';
+        const EOS_VERSION = '3.46.0';
         const EOS_BUILD_DATE = '2026-07-16';
-        const EOS_BUILD_TIME = '16:15'; // Two email-drafter bug fixes: (1) recipient-name extraction now strips "book lunch/coffee/meet with ..." prefixes and trailing clauses, so "Book lunch with Blake Jackson" -> "Blake Jackson"; (2) modals no longer close when a text-selection drag starts inside the dialog and releases on the backdrop (require mousedown+click both on backdrop). Global modal fix. No .gs change.
+        const EOS_BUILD_TIME = '17:30'; // Email HTML drafts (Steps 1-2 of EMAIL_HTML_DRAFT_DESIGN.md). Meeting-email drafter can now create a real HTML draft in Gmail with TRUE clickable Coffee/Lunch links (the words hyperlink to your Calendly), instead of a plain-text compose window that dumps raw URLs. Requires the gmail.compose scope granted interactively (run authorizeGmailCompose() in the Apps Script editor); until then it degrades gracefully to the old plain-text compose-URL path. New capability gmail.createDraft. Compliance footer (Step 3, needs your disclosure text) and voice (Step 4) deferred. Pairs with Google_Tasks_Sync.gs v3.41.0.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -5848,7 +5850,16 @@ Example:
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.45.0 &mdash; 2026-07-16 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.46.0 &mdash; 2026-07-16 (Current)</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Real Gmail drafts with clickable links.</strong> When you draft a coffee/lunch email, you can now create a proper HTML draft straight in your Gmail Drafts &mdash; the words <em>coffee</em> and <em>lunch</em> become clickable links to your Calendly, instead of a plain-text window that dumps raw web addresses. Review and send it from Gmail; nothing sends automatically.</li>'
+                + '<li>Needs a one-time Gmail permission on your Apps Script backend (run <em>authorizeGmailCompose</em> once in the editor). Until that&rsquo;s granted, the button falls back to the old plain-text compose window &mdash; so it keeps working either way.</li>'
+                + '<li><strong>Draft now, address later.</strong> No contact email yet? Draft anyway, then <em>Copy</em> the text (or create the draft with a blank To: field) and fill in the address in Gmail once you find it.</li>'
+                + '<li><strong>One-click &ldquo;mark done.&rdquo;</strong> After you hand the email off to Gmail (or copy it), a <em>Sent it &mdash; mark done</em> button appears so you can close out the task without hunting for it in To-Dos. The tool doesn&rsquo;t auto-detect the send (you send from Gmail, which the tool can&rsquo;t see) &mdash; you confirm with one click.</li>'
+                + '<li>Coming next in this feature: a compliance signature/footer (needs your firm&rsquo;s disclosure text) and voice-matching from your writing samples. Requires the paired Apps Script backend v3.41.0.</li>'
+                + '</ul></div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.45.0 &mdash; 2026-07-16</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Smarter recipient name.</strong> When you draft a coffee/lunch email from a task, the recipient field now pulls just the person&rsquo;s name &mdash; &ldquo;Book lunch with Blake Jackson&rdquo; fills in &ldquo;Blake Jackson&rdquo; instead of the whole task. Handles &ldquo;coffee with&hellip;&rdquo;, &ldquo;meet with&hellip;&rdquo;, &ldquo;email&hellip;&rdquo;, and similar. You can still edit it.</li>'
                 + '<li><strong>No more accidental close.</strong> Selecting text in a dialog and dragging slightly outside it no longer closes the window and bounces you back to another tab. Dialogs now only close on a deliberate click on the dimmed background. Applies to every dialog in the tool.</li>'
@@ -10311,6 +10322,8 @@ Example:
             document.getElementById('meetingEmailOutput').value = '';
             document.getElementById('meetingEmailSubject').value = '';
             document.getElementById('meetingEmailGmailBtn').style.display = 'none';
+            document.getElementById('meetingEmailCopyBtn').style.display = 'none';
+            document.getElementById('meetingEmailDoneBtn').style.display = 'none';
 
             // Contacts lookup is additive: only offered if the backend proved the scope
             // is granted (v3.44.0). Otherwise the drafter behaves exactly as v3.42.0 -
@@ -10448,22 +10461,206 @@ Example:
                 out.value = obj.body || '';
                 out.style.display = 'block';
 
-                // Wire the Gmail compose button (opens prefilled; user sends).
+                // A draft now exists -> offer Copy (no Gmail needed at all).
+                document.getElementById('meetingEmailCopyBtn').style.display = 'inline-block';
+
+                // Wire the Gmail button. Two paths, chosen by capability:
+                //   - gmail.createDraft granted -> POST an HTML draft (clickable links +
+                //     compliance footer) into Gmail Drafts; user reviews and sends.
+                //   - not granted -> fall back to the plain-text compose-URL (v3.45.0
+                //     behavior). Additive and safe: nothing is removed.
                 const gbtn = document.getElementById('meetingEmailGmailBtn');
                 gbtn.style.display = 'inline-block';
-                gbtn.onclick = function() {
-                    const to = encodeURIComponent(document.getElementById('meetingEmailRecipientEmail').value.trim());
-                    const su = encodeURIComponent(document.getElementById('meetingEmailSubject').value);
-                    const bo = encodeURIComponent(document.getElementById('meetingEmailOutput').value);
-                    const url = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + to + '&su=' + su + '&body=' + bo;
-                    window.open(url, '_blank');
-                };
+                const canHtmlDraft = capabilityReady('gmail.createDraft');
+                gbtn.textContent = canHtmlDraft ? 'Create Gmail draft' : 'Open in Gmail';
+                gbtn.onclick = canHtmlDraft
+                    ? function() { createHtmlEmailDraft(coffee, lunch); revealMeetingEmailDone(); }
+                    : function() {
+                        const to = encodeURIComponent(document.getElementById('meetingEmailRecipientEmail').value.trim());
+                        const su = encodeURIComponent(document.getElementById('meetingEmailSubject').value);
+                        const bo = encodeURIComponent(document.getElementById('meetingEmailOutput').value);
+                        const url = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + to + '&su=' + su + '&body=' + bo;
+                        window.open(url, '_blank');
+                        revealMeetingEmailDone();
+                    };
             } catch (error) {
                 showToast('Draft failed: ' + error.message);
                 console.error('generateMeetingEmail error:', error);
             } finally {
                 btn.disabled = false; btn.textContent = original;
             }
+        }
+
+
+        // ---- HTML email assembly (v3.46.0) ----------------------------------
+        // Turns the AI-written plain body into an HTML email with TRUE clickable
+        // links: the words "coffee" and "lunch" become anchors to the Calendly
+        // links, instead of dumping raw URLs and a tacky "(1 hour)". Then POSTs it
+        // to the backend createEmailDraft action, which creates an HTML draft in
+        // Gmail. The tool never sends — the user reviews and sends from Gmail.
+        //
+        // Only reachable when capabilityReady('gmail.createDraft') is true; the
+        // caller falls back to the plain-text compose URL otherwise.
+
+        function escapeEmailHtml(s) {
+            return String(s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
+        // Build the HTML body from the plain-text draft + the two Calendly links.
+        // Strategy: escape everything, convert newlines to <br>/paragraphs, then
+        // (a) hyperlink the first bare occurrence of the words coffee / lunch to
+        // their links, and (b) strip any raw URL lines the model may have emitted
+        // (we don't want both a raw URL and a clickable word). Degrades cleanly:
+        // if a link isn't configured, that word is left as plain text.
+        function assembleMeetingEmailHtml(plainBody, coffeeUrl, lunchUrl) {
+            let body = String(plainBody || '');
+
+            // Remove lines that are just a labeled raw URL the model echoed back,
+            // e.g. "Coffee (short): https://..." — the clickable word replaces them.
+            body = body.replace(/^\s*(coffee|lunch)[^\n:]*:\s*https?:\/\/\S+\s*$/gim, '');
+            // Remove any stray bare Calendly URLs left inline.
+            if (coffeeUrl) body = body.split(coffeeUrl).join('');
+            if (lunchUrl)  body = body.split(lunchUrl).join('');
+            // Collapse the blank lines those removals may leave behind.
+            body = body.replace(/\n{3,}/g, '\n\n').trim();
+
+            // Escape, then split into paragraphs on blank lines.
+            const paras = body.split(/\n{2,}/).map(function(p) {
+                return escapeEmailHtml(p).replace(/\n/g, '<br>');
+            });
+            let html = paras.map(function(p) {
+                return '<p style="margin:0 0 14px 0;">' + p + '</p>';
+            }).join('');
+
+            // Hyperlink the FIRST standalone occurrence of each word (case-insensitive,
+            // word-boundaried) so we don't mangle words like "coffees" mid-sentence.
+            function linkWord(h, word, url) {
+                if (!url) return h;
+                const re = new RegExp('\\b(' + word + ')\\b', 'i');
+                let done = false;
+                return h.replace(re, function(m, g1) {
+                    if (done) return m;
+                    done = true;
+                    return '<a href="' + escapeEmailHtml(url) + '" ' +
+                        'style="color:#1a73e8;text-decoration:underline;">' + g1 + '</a>';
+                });
+            }
+            html = linkWord(html, 'coffee', coffeeUrl);
+            html = linkWord(html, 'lunch', lunchUrl);
+
+            // Wrap in a simple, email-client-safe container. (Compliance footer —
+            // design doc §3 — is Step 3; not added here. Voice — §5 — is Step 4.)
+            return '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;' +
+                'line-height:1.5;color:#202124;">' + html + '</div>';
+        }
+
+        async function createHtmlEmailDraft(coffeeUrl, lunchUrl) {
+            const to = document.getElementById('meetingEmailRecipientEmail').value.trim();
+            const subject = document.getElementById('meetingEmailSubject').value.trim();
+            const plainBody = document.getElementById('meetingEmailOutput').value;
+            if (!plainBody) { showToast('Draft the email first.'); return; }
+
+            const settings = getSettings();
+            const currentUserInitials = document.getElementById('dailyPlanUser')?.value || 'HB';
+            const member = settings.teamMembers?.find(m => m.initials === currentUserInitials)
+                || settings.teamMembers?.find(m => m.webAppUrl);
+            if (!member || !member.webAppUrl) { showToast('No backend configured for Gmail drafts.'); return; }
+
+            const htmlBody = assembleMeetingEmailHtml(plainBody, coffeeUrl, lunchUrl);
+
+            const gbtn = document.getElementById('meetingEmailGmailBtn');
+            const label = gbtn.textContent;
+            gbtn.disabled = true; gbtn.textContent = 'Creating draft...';
+            try {
+                const resp = await fetch(member.webAppUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({
+                        action: 'createEmailDraft',
+                        secretKey: member.webAppSecret,
+                        to: to,
+                        subject: subject,
+                        htmlBody: htmlBody
+                    })
+                });
+                const data = await resp.json();
+                if (!data || !data.success) throw new Error((data && data.error) || 'Draft creation failed.');
+
+                showToast('Draft created in Gmail. Review and send it there — nothing sent automatically.');
+                if (data.draftsUrl) window.open(data.draftsUrl, '_blank');
+            } catch (error) {
+                // Graceful fallback: if the draft API fails at call time, drop back to
+                // the plain-text compose URL so the user is never stranded.
+                showToast('Gmail draft failed (' + error.message + '). Opening plain-text compose instead.');
+                const t = encodeURIComponent(to);
+                const su = encodeURIComponent(subject);
+                const bo = encodeURIComponent(plainBody);
+                window.open('https://mail.google.com/mail/?view=cm&fs=1&to=' + t + '&su=' + su + '&body=' + bo, '_blank');
+            } finally {
+                gbtn.disabled = false; gbtn.textContent = label;
+            }
+        }
+
+
+        // ---- Copy draft + confirm-and-mark-done (v3.46.0, Option B) ----------
+        // Two small conveniences for the "draft now, address later" flow:
+        //   - Copy: put the draft body on the clipboard so you can paste it into
+        //     Gmail yourself (useful when you don't have the contact's email yet).
+        //   - "Sent it — mark done": the tool CANNOT know whether you actually sent
+        //     the email (you send from Gmail, outside the tool — a deliberate
+        //     compliance choice). So instead of guessing, it offers a one-click
+        //     confirm after the handoff. You tell it; it marks the source task done
+        //     via the same path as the To-Dos checkbox. Honest, not magic.
+
+        function copyMeetingEmailDraft() {
+            const body = document.getElementById('meetingEmailOutput').value || '';
+            if (!body) { showToast('Draft the email first.'); return; }
+            const finish = function() {
+                showToast('Draft copied. Paste it into Gmail when you have the address.');
+                // Copying is a handoff too — offer to mark the task done afterward.
+                revealMeetingEmailDone();
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(body).then(finish).catch(function() {
+                    // Fallback for older/permission-restricted contexts.
+                    const ta = document.getElementById('meetingEmailOutput');
+                    ta.focus(); ta.select();
+                    try { document.execCommand('copy'); finish(); }
+                    catch (e) { showToast('Could not copy automatically — select the text and copy manually.'); }
+                });
+            } else {
+                const ta = document.getElementById('meetingEmailOutput');
+                ta.focus(); ta.select();
+                try { document.execCommand('copy'); finish(); }
+                catch (e) { showToast('Could not copy automatically — select the text and copy manually.'); }
+            }
+        }
+
+        function revealMeetingEmailDone() {
+            const doneBtn = document.getElementById('meetingEmailDoneBtn');
+            if (doneBtn) doneBtn.style.display = 'inline-block';
+        }
+
+        function markMeetingEmailTaskDone() {
+            // meetingEmailTaskIdx was set when the modal opened; it points at the
+            // exact To-Do this email was drafted from. Reuse toggleTodo so the done
+            // state, autosave, Daily Plan sync, and Google Tasks completion all fire
+            // exactly as they do from the To-Dos checkbox — no parallel logic.
+            if (meetingEmailTaskIdx === null || meetingEmailTaskIdx === undefined) {
+                showToast('No source task to mark done.');
+                return;
+            }
+            const todos = yearData.quarters[currentQuarter].todos;
+            const t = todos[meetingEmailTaskIdx];
+            if (!t) { showToast('The source task could not be found.'); return; }
+            if (t.done) { showToast('That task is already marked done.'); closeModal('meetingEmailModal'); return; }
+
+            toggleTodo(meetingEmailTaskIdx);   // flips to done + syncs everywhere
+            showToast('Task marked done: ' + String(t.text || '').slice(0, 40));
+            closeModal('meetingEmailModal');
         }
 
         function renderTodoItem(t, idx, depth = 0, hasSubtasks = false, isExpanded = true) {
@@ -11932,6 +12129,16 @@ Make sure your suggestions directly address the specific root cause and discussi
                 available: false,
                 enabled: true,
                 degrade: 'Skip the calendar hold; the email still drafts.'
+            },
+            'gmail.createDraft': {
+                key: 'gmail.createDraft',
+                label: 'Gmail: create HTML draft',
+                backendAction: 'createEmailDraft',
+                requiredScope: 'https://www.googleapis.com/auth/gmail.compose',
+                kind: 'google-api',
+                available: false,          // filled by probeCapabilities() from backend
+                enabled: true,
+                degrade: 'Open a plain-text Gmail compose window instead.'
             }
         };
 
