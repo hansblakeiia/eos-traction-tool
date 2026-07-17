@@ -4060,9 +4060,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.46.1';
-        const EOS_BUILD_DATE = '2026-07-16';
-        const EOS_BUILD_TIME = '18:05'; // Patch: recipient-name extraction now handles two meal words joined by "or" ("Book coffee or lunch with Blake Jackson" -> "Blake Jackson"). v3.45.0 only handled a single meal word before "with". Extraction-only change; no other behavior touched. Builds on v3.46.0 (email HTML drafts + Copy/mark-done).
+        const EOS_VERSION = '3.47.0';
+        const EOS_BUILD_DATE = '2026-07-17';
+        const EOS_BUILD_TIME = '00:00'; // v3.47.0 Phase 0: stable local task/rock id + idempotent one-time migration (migrateTaskIdentities). No behavior change; foundation for cross-surface action consistency. Google Tasks reconciliation untouched.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -5761,6 +5761,44 @@ Example:
             if (settingsBuild) settingsBuild.textContent = `${EOS_BUILD_DATE} ${EOS_BUILD_TIME}`;
         }
         
+        // ===== Phase 0: Cross-surface task identity (v3.47.0) =====
+        // Stable local id, independent of googleTaskId. googleTaskId remains the
+        // Google Tasks reconciliation key; this local id is the cross-SURFACE key
+        // used (in later phases) so Matrix / Rule-of-3 / Kanban reference one record
+        // instead of holding text-matched copies. Mirrors the marketing-card id pattern.
+        function generateTaskId() {
+            return 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+        }
+
+        // Idempotent: only assigns an id where one is missing. Safe to re-run.
+        // Stamps todos, their subtasks, completedTodos, and rocks across every year/quarter.
+        function migrateTaskIdentities(data) {
+            if (!data || typeof data !== 'object') return 0;
+            let stamped = 0;
+            const stamp = (item) => {
+                if (item && typeof item === 'object' && !item.id) {
+                    item.id = generateTaskId();
+                    stamped++;
+                }
+            };
+            Object.keys(data).forEach(function(key) {
+                if (key === '_settings') return;
+                const yr = data[key];
+                if (!yr || !yr.quarters) return;
+                Object.keys(yr.quarters).forEach(function(q) {
+                    const qd = yr.quarters[q];
+                    if (!qd) return;
+                    (qd.todos || []).forEach(function(t) {
+                        stamp(t);
+                        (t.subtasks || []).forEach(stamp); // defensive: if subtasks are ever nested
+                    });
+                    (qd.completedTodos || []).forEach(stamp);
+                    (qd.rocks || []).forEach(stamp);
+                });
+            });
+            return stamped;
+        }
+
         function loadOrSeedData() {
             const stored = localStorage.getItem('eos_traction_data');
             if (stored) {
@@ -5803,6 +5841,10 @@ Example:
                 // Use parsed (user's data) as the final data, not seededData
                 Object.assign(seededData, parsed);
             }
+            // Phase 0 (v3.47.0): stamp a stable local id on every task/rock (idempotent, one-time in practice).
+            const _idsStamped = migrateTaskIdentities(seededData);
+            if (_idsStamped > 0) console.log('Task identity migration: assigned ' + _idsStamped + ' new local id(s).');
+
             // Save back (now seededData contains user's data with defaults filled in)
             localStorage.setItem('eos_traction_data', JSON.stringify(seededData));
             
@@ -5850,7 +5892,16 @@ Example:
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.46.1 &mdash; 2026-07-16 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.47.0 &mdash; 2026-07-17 (Current)</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Groundwork only &mdash; nothing looks different.</strong> Every to-do, subtask, and rock now quietly gets a permanent internal ID the first time you open this version. You will not see any change; this is the foundation for the upcoming fix where task actions (snooze, notes, email, delete) stay with a task when it moves into the Eisenhower Matrix or Rule of 3.</li>'
+                + '<li>The one-time tagging runs automatically on load and is safe to re-run &mdash; it only fills in IDs that are missing and never touches anything already tagged. Your Google Tasks syncing is completely untouched.</li>'
+                + '<li><em>For the curious:</em> open the browser console after loading and you may see a one-time note like &ldquo;assigned N new local id(s)&rdquo; &mdash; that is this migration doing its job. It will say nothing on later loads.</li>'
+                + '</ul></div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.46.1 &mdash; 2026-07-16</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Recipient name fix.</strong> Drafting an email from a task like &ldquo;Book coffee or lunch with Blake Jackson&rdquo; now correctly fills the recipient as &ldquo;Blake Jackson&rdquo; so <em>Find in Contacts</em> works. The earlier fix only handled a single meal word (&ldquo;Book lunch with&hellip;&rdquo;); this handles two joined by &ldquo;or.&rdquo;</li>'
                 + '</ul></div>'
@@ -9697,7 +9748,7 @@ Example:
         }
         
         function addRock() {
-            yearData.quarters[currentQuarter].rocks.push({ text: '', owner: 'HB', status: '' });
+            yearData.quarters[currentQuarter].rocks.push({ id: generateTaskId(), text: '', owner: 'HB', status: '' });
             yearData.quarters[currentQuarter].rocksInitialized = true;
             renderRocks(yearData.quarters[currentQuarter].rocks);
             autoSave();
@@ -10793,6 +10844,7 @@ Example:
             
             // Add subtask to the array
             const newSubtask = {
+                id: generateTaskId(),
                 text: subtaskText.trim(),
                 owner: parentTask.owner,
                 originalOwner: parentTask.owner,
@@ -10969,7 +11021,7 @@ Example:
         
         function addTodo() {
             yearData.quarters[currentQuarter].todos = yearData.quarters[currentQuarter].todos || [];
-            yearData.quarters[currentQuarter].todos.push({ text: '', owner: '', done: false });
+            yearData.quarters[currentQuarter].todos.push({ id: generateTaskId(), text: '', owner: '', done: false });
             sortAndRenderTodos();
             autoSave();
             markPendingChanges();
@@ -11982,6 +12034,7 @@ Can you help me fix these or implement these features?`;
                 const dateStr = `${today.getMonth() + 1}/${today.getDate()}`;
                 
                 yearData.quarters[currentQuarter].todos.push({ 
+                    id: generateTaskId(),
                     text: action, 
                     owner: '', 
                     done: false,
