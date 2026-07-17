@@ -4058,9 +4058,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.44.0';
+        const EOS_VERSION = '3.45.0';
         const EOS_BUILD_DATE = '2026-07-16';
-        const EOS_BUILD_TIME = '15:30'; // Contacts lookup wired into the meeting-email drafter. "Find in Contacts" button (name -> email via personal Contacts + Workspace Directory) appears only when capabilityReady('contacts.lookup') is true; degrades to typed email otherwise. First real consumer of the v3.43.0 capability registry. Pairs with .gs v3.40.0 lookupContact.
+        const EOS_BUILD_TIME = '16:15'; // Two email-drafter bug fixes: (1) recipient-name extraction now strips "book lunch/coffee/meet with ..." prefixes and trailing clauses, so "Book lunch with Blake Jackson" -> "Blake Jackson"; (2) modals no longer close when a text-selection drag starts inside the dialog and releases on the backdrop (require mousedown+click both on backdrop). Global modal fix. No .gs change.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -5848,7 +5848,13 @@ Example:
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.44.0 &mdash; 2026-07-16 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.45.0 &mdash; 2026-07-16 (Current)</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Smarter recipient name.</strong> When you draft a coffee/lunch email from a task, the recipient field now pulls just the person&rsquo;s name &mdash; &ldquo;Book lunch with Blake Jackson&rdquo; fills in &ldquo;Blake Jackson&rdquo; instead of the whole task. Handles &ldquo;coffee with&hellip;&rdquo;, &ldquo;meet with&hellip;&rdquo;, &ldquo;email&hellip;&rdquo;, and similar. You can still edit it.</li>'
+                + '<li><strong>No more accidental close.</strong> Selecting text in a dialog and dragging slightly outside it no longer closes the window and bounces you back to another tab. Dialogs now only close on a deliberate click on the dimmed background. Applies to every dialog in the tool.</li>'
+                + '</ul></div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.44.0 &mdash; 2026-07-16</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Find a recipient in your Contacts.</strong> When drafting a coffee/lunch email from a task, type a name and click <em>Find in Contacts</em> &mdash; it searches your personal Google Contacts and your Workspace directory (coworkers) and fills in the email address for you. Pick from the matches; the name and email drop into the fields.</li>'
                 + '<li>Still fully optional: if you would rather type the email, just do that. The button only appears once Contacts access has been granted on your Apps Script backend; until then the drafter works exactly as before.</li>'
@@ -10285,9 +10291,18 @@ Example:
             const t = todos[idx];
             if (!t) return;
 
-            // Best-effort: pull a likely name out of the task text ("email Blake Jackson ...").
-            const guess = (t.text || '').replace(/^\s*(email|e-mail|contact|reach out to|invite)\s+/i, '')
-                .replace(/\s+(for|about|to)\b.*$/i, '').trim();
+            // Best-effort: pull a likely name out of the task text.
+            // Handles "email Blake Jackson ...", "Book lunch with Blake Jackson",
+            // "coffee with Blake", "meet with Blake about ...", "schedule call with Blake".
+            const guess = (t.text || '')
+                // strip a leading action phrase up to and including a "with" if present:
+                //   "Book lunch with ", "grab coffee with ", "schedule a call with ", "meet with "
+                .replace(/^\s*(book|schedule|set\s*up|grab|have|get|do|plan|meet|meet\s*up|connect|sync)?\s*(a\s+)?(lunch|coffee|call|meeting|chat|drink|breakfast|dinner|catch\s*up|catch-up)?\s*(with)\s+/i, '')
+                // otherwise strip a leading contact verb: "email ", "contact ", "reach out to ", "invite "
+                .replace(/^\s*(email|e-mail|contact|reach out to|invite|call|text|message)\s+/i, '')
+                // trim any trailing clause: "... for coffee", "... about the pool", "... to discuss"
+                .replace(/\s+(for|about|to|re|regarding|next|this|on)\b.*$/i, '')
+                .trim();
 
             document.getElementById('meetingEmailRecipientName').value = guess || '';
             document.getElementById('meetingEmailRecipientEmail').value = '';
@@ -13869,8 +13884,17 @@ Make sure your suggestions directly address the specific root cause and discussi
         
         // Close modal on overlay click
         document.querySelectorAll('.modal-overlay').forEach(m => {
+            // Track where the press STARTED. Only dismiss when both the mousedown and the
+            // click happen directly on the overlay backdrop. This prevents an accidental
+            // close when a text-selection drag starts inside the dialog and the mouse is
+            // released outside it (the release would otherwise register as a backdrop click).
+            let downOnBackdrop = false;
+            m.addEventListener('mousedown', function(e) {
+                downOnBackdrop = (e.target === this);
+            });
             m.addEventListener('click', function(e) {
-                if (e.target === this) this.classList.remove('active');
+                if (e.target === this && downOnBackdrop) this.classList.remove('active');
+                downOnBackdrop = false;
             });
         });
         
