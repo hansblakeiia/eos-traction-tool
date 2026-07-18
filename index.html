@@ -2791,6 +2791,7 @@
                     <div class="pomodoro-section">
                         <div class="pomodoro-header">🍅 Pomodoro Timer</div>
                         <div class="pomodoro-display" id="pomodoroDisplay">25:00</div>
+                        <div id="pomodoroFocusTask" style="display:none;font-size:0.8rem;color:#6b7280;text-align:center;margin:-4px 0 6px;padding:0 8px;"></div>
                         <div class="pomodoro-buttons">
                             <button class="pomo-btn focus" onclick="startPomodoro('focus')">Focus (25m)</button>
                             <button class="pomo-btn break" onclick="startPomodoro('short')">Short Break</button>
@@ -2803,6 +2804,14 @@
                         <div class="pomo-stats">
                             <span>Today: <strong id="pomoCount">0</strong> 🍅</span>
                         </div>
+                    </div>
+                    
+                    <div class="snoozed-section" id="snoozedSection" style="display:none;margin-top:12px;padding:12px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                            <span style="font-weight:600;color:#92400e;font-size:0.9rem;">😴 Snoozed Tasks</span>
+                            <span id="snoozedSectionCount" style="font-size:0.78rem;color:#b45309;"></span>
+                        </div>
+                        <div id="snoozedSectionList"></div>
                     </div>
                     
                     <div class="nightly-review">
@@ -4078,9 +4087,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.49.3';
+        const EOS_VERSION = '3.49.4';
         const EOS_BUILD_DATE = '2026-07-18';
-        const EOS_BUILD_TIME = '20:30'; // v3.49.3 root-cause fix: (1) the more-menu is now DOM-local (opens the clicked button's own sibling menu) instead of a global id lookup - the same task rendered on To-Dos + Matrix + Rule of 3 no longer collides, so the menu works on every surface, not just the first in the DOM; (2) star/snooze/notes/edit now work for EVERY record kind (todo, rock, completedTodo) instead of silently no-opping on non-todos - no more dead buttons on dragged rocks; email drafter accepts a kind so it works from a rock too. Audited: all 255 handler targets resolve; Pomodoro/Focus intact. No .gs change.
+        const EOS_BUILD_TIME = '22:00'; // v3.49.4: Focus now actually runs the Pomodoro - it starts the timer immediately in focus mode and shows the task name under the clock. Focus moved into the more-menu as a target-icon item on the Matrix AND Rule of 3, and only appears on the My Daily Plan tab (where the timer lives); removed the standalone Rule-of-3 Focus button. Snooze: fixed unsnooze not repainting the Daily Plan card (wording stayed 'Unsnooze' until tab switch); added an interactive Snoozed Tasks section in My Daily Plan with a per-task Unsnooze button. No .gs change.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -5940,6 +5949,7 @@ Example:
             try { if (typeof renderMatrix === 'function' && document.getElementById('matrixQ1')) renderMatrix(); } catch (e) {}
             try { if (typeof renderRuleOf3 === 'function' && document.getElementById('ruleOf3Slots')) renderRuleOf3(); } catch (e) {}
             try { if (typeof renderRepository === 'function' && document.getElementById('taskRepository')) renderRepository(); } catch (e) {}
+            try { if (typeof renderSnoozedSection === 'function' && document.getElementById('snoozedSection')) renderSnoozedSection(); } catch (e) {}
         }
 
         // --- id-addressed action handlers ---------------------------------
@@ -6165,6 +6175,11 @@ Example:
                 color: '#10b981', onclick: `addSubtaskById('${id}')` };
             const aiSpec = { key: 'ai', icon: '\uD83E\uDD16', title: 'AI actions (coming soon)', label: 'AI: help with this task',
                 color: '#8b5cf6', onclick: `aiAssistTaskById('${id}')` };
+            // Focus (Pomodoro) only exists on the My Daily Plan surfaces, since that's
+            // where the timer lives. Not shown on To-Dos / Weekly Meeting.
+            const onDailyPlan = (context === 'matrix' || context === 'ruleOf3');
+            const focusSpec = { key: 'focus', icon: '\uD83C\uDFAF', title: 'Focus this task in the Pomodoro timer',
+                label: 'Focus (Pomodoro)', color: '#16a34a', onclick: `focusTaskById('${id}')` };
 
             const menuExtras = Array.isArray(opts.menuExtras) ? opts.menuExtras : [];
             const completedCluster = Array.isArray(opts.completedCluster) ? opts.completedCluster : [];
@@ -6206,6 +6221,8 @@ Example:
             const promoteCount = (context === 'matrix' || context === 'ruleOf3') ? 0 : (mobile ? 2 : 3);
             const promoted = ranked.slice(0, promoteCount);
             const overflow = ranked.slice(promoteCount);
+            // Focus (Pomodoro) leads the menu on Daily Plan surfaces only.
+            if (onDailyPlan) overflow.unshift(focusSpec);
             overflow.push(aiSpec);
 
             const promotedHtml = promoted.map(s => s.rawLink
@@ -6340,7 +6357,16 @@ Example:
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.49.3 &mdash; 2026-07-18 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.49.4 &mdash; 2026-07-18 (Current)</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Focus now actually runs the Pomodoro.</strong> Choosing Focus on a task starts the timer immediately in focus mode and shows the task&rsquo;s name right under the clock, so you can see what you&rsquo;re working on.</li>'
+                + '<li><strong>Focus moved into the &ldquo;&middot;&middot;&middot;&rdquo; menu</strong> (target icon) on both the Matrix and Rule&nbsp;of&nbsp;3, and it only shows on the My Daily Plan tab &mdash; the one place the Pomodoro timer lives.</li>'
+                + '<li><strong>Fixed: unsnoozing a task</strong> from a Daily Plan card now updates the card right away (the menu used to keep saying &ldquo;Unsnooze&rdquo; until you left and came back).</li>'
+                + '<li><strong>New: a Snoozed Tasks section in My Daily Plan.</strong> Snoozed tasks are hidden from your lists but no longer out of reach &mdash; they appear in a collapsible list with an Unsnooze button on each one.</li>'
+                + '</ul></div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.49.3 &mdash; 2026-07-18</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Fixed: the &ldquo;&middot;&middot;&middot;&rdquo; menu now works on the Matrix and Rule&nbsp;of&nbsp;3.</strong> The root cause: the same task can appear on To-Dos, the Matrix, and Rule&nbsp;of&nbsp;3 at once, and the menu was being found by a shared id &mdash; so clicking it on the Matrix opened the (hidden) To-Dos copy instead. The menu now opens the one attached to the button you actually clicked, on every surface.</li>'
                 + '<li><strong>Fixed: star, snooze, and notes now work on Rocks</strong> (and any completed task), not just to-dos. Previously those buttons appeared on a dragged Rock but did nothing. Now every action works for every kind of item &mdash; no more dead buttons.</li>'
@@ -16152,6 +16178,7 @@ Return ONLY the JSON array:`;
                     delete todo.snoozedUntil;
                     autoSave();
                     sortAndRenderTodos();
+                    rerenderAllTaskSurfaces();
                     showToast('Task unsnoozed', 'success');
                 }
                 return;
@@ -16250,12 +16277,67 @@ Return ONLY the JSON array:`;
         }
 
         function showSnoozedTasks() {
+            // Weekly Meeting badge: jump attention to the interactive list if it's on
+            // screen (My Daily Plan), otherwise fall back to a summary. Unsnooze lives
+            // on each row now, so we no longer tell people to "click the bell".
             const todos = yearData.quarters[currentQuarter] && yearData.quarters[currentQuarter].todos || [];
             const todayStr = new Date().toISOString().split('T')[0];
             const snoozed = todos.filter(t => t.snoozedUntil && t.snoozedUntil > todayStr);
             if (snoozed.length === 0) { showToast('No snoozed tasks', 'info'); return; }
+            const section = document.getElementById('snoozedSection');
+            if (section && section.offsetParent !== null) {
+                section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
             const list = snoozed.map(t => '- ' + (t.text || '').substring(0, 50) + ' (until ' + t.snoozedUntil + ')').join('\n');
-            alert('Snoozed tasks (' + snoozed.length + '):\n\n' + list + '\n\nTo unsnooze, click the bell icon on a task.');
+            alert('Snoozed tasks (' + snoozed.length + '):\n\n' + list + '\n\nOpen the My Daily Plan tab to unsnooze individual tasks.');
+        }
+
+        // Interactive Snoozed-tasks list in My Daily Plan. Each row has an Unsnooze
+        // button. Only renders when the section container exists (Daily Plan tab).
+        function renderSnoozedSection() {
+            const section = document.getElementById('snoozedSection');
+            const listEl = document.getElementById('snoozedSectionList');
+            if (!section || !listEl) return;
+            const todos = (yearData.quarters[currentQuarter] && yearData.quarters[currentQuarter].todos) || [];
+            const todayStr = new Date().toISOString().split('T')[0];
+            // Include future-dated snoozes (still hidden). A snooze whose date has passed
+            // has effectively expired and the task is visible again, so we don't list it.
+            const snoozed = todos
+                .map((t, idx) => ({ t, idx }))
+                .filter(o => o.t.snoozedUntil && o.t.snoozedUntil > todayStr);
+            if (snoozed.length === 0) {
+                section.style.display = 'none';
+                listEl.innerHTML = '';
+                return;
+            }
+            section.style.display = 'block';
+            const countEl = document.getElementById('snoozedSectionCount');
+            if (countEl) countEl.textContent = snoozed.length + (snoozed.length === 1 ? ' task' : ' tasks');
+            listEl.innerHTML = snoozed.map(o => {
+                const label = (o.t.text || '').replace(/</g, '&lt;').substring(0, 60);
+                const until = o.t.snoozedUntil;
+                const id = o.t.id || '';
+                return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #fef3c7;">
+                        <span style="flex:1;font-size:0.85rem;color:#374151;">${label}</span>
+                        <span style="font-size:0.72rem;color:#b45309;white-space:nowrap;">until ${until}</span>
+                        <button onclick="unsnoozeById('${id}')" title="Unsnooze now"
+                            style="background:#f59e0b;color:white;border:none;border-radius:6px;padding:4px 10px;font-size:0.75rem;font-weight:600;cursor:pointer;white-space:nowrap;">Unsnooze</button>
+                    </div>`;
+            }).join('');
+        }
+
+        // Unsnooze any task by id (used by the Snoozed section). Works for todos and,
+        // defensively, any record kind that carries snoozedUntil.
+        function unsnoozeById(id) {
+            const r = resolveTaskById(id);
+            if (!r || !r.record) return;
+            delete r.record.snoozedUntil;
+            autoSave();
+            if (typeof sortAndRenderTodos === 'function') sortAndRenderTodos();
+            rerenderAllTaskSurfaces();
+            if (typeof updateSnoozedBadge === 'function') updateSnoozedBadge();
+            showToast('Task unsnoozed', 'success');
         }
 
         // ==================== AUTO-SELECT CURRENT QUARTER ====================
@@ -17171,6 +17253,7 @@ Return ONLY the JSON array:`;
         let pomodoroSeconds = 25 * 60;
         let pomodoroMode = 'focus';
         let pomodoroRunning = false;
+        let pomodoroFocusTaskText = '';
         let originalTitle = document.title;
         let currentPomoUser = null; // Track which user's timer is active
         
@@ -17331,6 +17414,7 @@ Return ONLY the JSON array:`;
             renderRepository();
             renderMatrix();
             renderRuleOf3();
+            renderSnoozedSection();
             renderDailyHabits();
             document.getElementById('tomorrowNotes').value = dailyPlanData.tomorrowNotes || '';
             document.getElementById('pomoCount').textContent = dailyPlanData.pomoCount || 0;
@@ -18733,7 +18817,6 @@ Return ONLY the JSON array:`;
                                    title="Mark as complete">
                             <span class="task-text ${isCompleted ? 'done' : ''}" ondblclick="editRuleTask(${idx})"
                                   title="Double-click to edit" style="flex:1;${isCompleted ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${rockPrefix}${task.text || ''}</span>
-                            ${!isCompleted ? `<button class="focus-btn" onclick="focusOnTask(${idx})">\uD83C\uDFAF Focus</button>` : ''}
                             <div class="shared-task-actions" style="margin-left:6px;">
                                 ${renderTaskActions(task, 'ruleOf3', { menuExtras: _ruleMenuExtras, completedCluster: _ruleCompleted })}
                             </div>
@@ -18879,13 +18962,32 @@ Return ONLY the JSON array:`;
             }
         }
 
+        // Focus on a specific task: switch the Pomodoro to focus mode, label it with
+        // the task, and START it running immediately. Only reachable from My Daily Plan
+        // (the tab that hosts the Pomodoro). slotIdx path kept for any legacy caller.
         function focusOnTask(slotIdx) {
             const entry = dailyPlanData.ruleOf3[slotIdx];
             const rec = resolveRuleEntry(entry);
-            if (rec) {
-                startPomodoro('focus');
-                // Could add more focus features here (task-specific focus context).
+            if (rec) focusPomodoroOnRecord(rec);
+        }
+
+        function focusTaskById(id) {
+            const r = resolveTaskById(id);
+            if (r) focusPomodoroOnRecord(r.record);
+        }
+
+        function focusPomodoroOnRecord(rec) {
+            if (!rec) return;
+            // Set the focus-task label under the timer.
+            pomodoroFocusTaskText = rec.text || '';
+            const label = document.getElementById('pomodoroFocusTask');
+            if (label) {
+                label.textContent = pomodoroFocusTaskText ? ('\uD83C\uDFAF Focusing: ' + pomodoroFocusTaskText) : '';
+                label.style.display = pomodoroFocusTaskText ? 'block' : 'none';
             }
+            // Arm focus mode, then start it running (startPomodoro only arms/pauses).
+            startPomodoro('focus');
+            if (!pomodoroRunning) togglePomodoro();
         }
 
         // Legacy duplicate kept as a thin alias so any stray caller still works;
@@ -19076,6 +19178,10 @@ Return ONLY the JSON array:`;
             startPomodoro(pomodoroMode);
             document.getElementById('pomoToggleBtn').textContent = '▶️ Start';
             document.title = originalTitle;
+            // Clear the focus-task label.
+            pomodoroFocusTaskText = '';
+            const _fl = document.getElementById('pomodoroFocusTask');
+            if (_fl) { _fl.textContent = ''; _fl.style.display = 'none'; }
         }
         
         function updatePomodoroDisplay() {
