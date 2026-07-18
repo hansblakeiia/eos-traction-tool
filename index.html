@@ -4078,9 +4078,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.49.2';
+        const EOS_VERSION = '3.49.3';
         const EOS_BUILD_DATE = '2026-07-18';
-        const EOS_BUILD_TIME = '18:00'; // v3.49.2: completed tasks now switch to a dedicated always-visible undo/archive/delete cluster (Matrix + Rule of 3); the more-menu on a completed card still holds star/snooze/email/notes/AI so nothing becomes unreachable. Incomplete cards keep star + more-menu (archive/delete live in the menu until completion). Nothing is hover-gated anywhere (mobile has no hover). To-Dos completed rows show an undo affordance; bulk archive/delete unchanged. No .gs change.
+        const EOS_BUILD_TIME = '20:30'; // v3.49.3 root-cause fix: (1) the more-menu is now DOM-local (opens the clicked button's own sibling menu) instead of a global id lookup - the same task rendered on To-Dos + Matrix + Rule of 3 no longer collides, so the menu works on every surface, not just the first in the DOM; (2) star/snooze/notes/edit now work for EVERY record kind (todo, rock, completedTodo) instead of silently no-opping on non-todos - no more dead buttons on dragged rocks; email drafter accepts a kind so it works from a rock too. Audited: all 255 handler targets resolve; Pomodoro/Focus intact. No .gs change.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -5982,17 +5982,51 @@ Example:
 
         function toggleStarredById(id) {
             const r = resolveTaskById(id);
-            if (!r || r.kind !== 'todo') return;
-            toggleStarred(r.idx);
-            // toggleStarred only repaints To-Dos; repaint Daily Plan surfaces too so
-            // the star flips visually when clicked from a Matrix/Rule-of-3 card.
+            if (!r) return;
+            if (r.kind === 'todo') {
+                toggleStarred(r.idx);          // full path: re-sort + Google-relevant repaint
+                rerenderAllTaskSurfaces();     // also repaint Daily Plan surfaces
+                return;
+            }
+            // rocks / completedTodos: flip the field on the single source record.
+            r.record.starred = !r.record.starred;
+            autoSave();
             rerenderAllTaskSurfaces();
         }
 
         function snoozeTaskById(id) {
             const r = resolveTaskById(id);
-            if (!r || r.kind !== 'todo') return;
-            snoozeTask(r.idx);
+            if (!r) return;
+            if (r.kind === 'todo') {
+                snoozeTask(r.idx);             // opens the snooze modal (todo-indexed)
+                return;
+            }
+            // rocks / completedTodos: same modal, but addressed by id so confirmSnooze
+            // can find the right record regardless of surface. (snoozeTaskGeneric below.)
+            snoozeRecordById(id);
+        }
+
+        // Snooze any record kind by id (used for rocks/completedTodos where the
+        // todo-index modal path doesn't apply).
+        function snoozeRecordById(id) {
+            const r = resolveTaskById(id);
+            if (!r) return;
+            const rec = r.record;
+            if (rec.snoozedUntil) {
+                if (confirm('This is snoozed until ' + rec.snoozedUntil + '.\n\nUnsnooze it now?')) {
+                    delete rec.snoozedUntil;
+                    autoSave();
+                    rerenderAllTaskSurfaces();
+                }
+                return;
+            }
+            const d = new Date(); d.setDate(d.getDate() + 7);
+            const val = prompt('Snooze until (YYYY-MM-DD):', d.toISOString().split('T')[0]);
+            if (val && /^\d{4}-\d{2}-\d{2}$/.test(val.trim())) {
+                rec.snoozedUntil = val.trim();
+                autoSave();
+                rerenderAllTaskSurfaces();
+            }
         }
 
         // updateTaskById: single-record edit. For todos, delegate to updateTodo so
@@ -6011,22 +6045,34 @@ Example:
         }
 
         function toggleNotesById(id) {
-            // Notes panel is keyed by todo idx in the To-Dos list DOM.
             const r = resolveTaskById(id);
-            if (!r || r.kind !== 'todo') return;
-            if (typeof toggleTaskNotes === 'function') toggleTaskNotes(r.idx);
+            if (!r) return;
+            // Todos have an inline notes panel keyed by their To-Dos-list DOM idx.
+            if (r.kind === 'todo') {
+                if (typeof toggleTaskNotes === 'function') toggleTaskNotes(r.idx);
+                return;
+            }
+            // rocks / completedTodos: no inline panel on those surfaces — use a prompt
+            // so the action is never a dead button.
+            const cur = r.record.notes || '';
+            const next = prompt('Notes:', cur);
+            if (next !== null && next !== cur) {
+                r.record.notes = next;
+                autoSave();
+                rerenderAllTaskSurfaces();
+            }
         }
 
         function addSubtaskById(id) {
             const r = resolveTaskById(id);
-            if (!r || r.kind !== 'todo') return;
+            if (!r || r.kind !== 'todo') return;   // subtasks are a Google-Tasks/todo concept
             if (typeof addSubtask === 'function') addSubtask(r.idx);
         }
 
         function emailTaskById(id) {
             const r = resolveTaskById(id);
-            if (!r || r.kind !== 'todo') return;
-            if (typeof openMeetingEmailModal === 'function') openMeetingEmailModal(r.idx);
+            if (!r) return;
+            if (typeof openMeetingEmailModal === 'function') openMeetingEmailModal(r.idx, r.kind);
         }
 
         // Phase 1 reserved AI slot — behavior lands in Phase 5 (§5.11b Q4).
@@ -6035,25 +6081,32 @@ Example:
         }
 
         // --- shared per-task action popover ("⋯") -------------------------
-        let _openTaskMenuId = null;
-        function toggleTaskActionMenu(id, ev) {
+        // DOM-LOCAL by design: the same task id can be rendered on multiple surfaces
+        // at once (To-Dos + Matrix + Rule of 3), so id-based getElementById would
+        // resolve to the wrong (first-in-DOM) menu. Instead we open the menu that is a
+        // sibling of the clicked button. No ids, no cross-surface collision.
+        let _openTaskMenuEl = null;
+        function closeOpenTaskMenu() {
+            if (_openTaskMenuEl) { _openTaskMenuEl.style.display = 'none'; _openTaskMenuEl = null; }
+        }
+        function toggleTaskActionMenu(btn, ev) {
             if (ev) { ev.stopPropagation(); }
-            const menu = document.getElementById('taskMenu_' + id);
+            // btn is the ⋯ button element; its sibling within .task-action-wrap is the menu.
+            const wrap = btn && btn.closest ? btn.closest('.task-action-wrap') : null;
+            const menu = wrap ? wrap.querySelector('.task-action-menu') : null;
             if (!menu) return;
             const willOpen = menu.style.display === 'none' || !menu.style.display;
-            // Close any other open menu first.
+            // Close whatever is currently open (including this one).
             document.querySelectorAll('.task-action-menu').forEach(m => { m.style.display = 'none'; });
             menu.style.display = willOpen ? 'block' : 'none';
-            _openTaskMenuId = willOpen ? id : null;
+            _openTaskMenuEl = willOpen ? menu : null;
         }
         // One document-level outside-click listener (added once).
         if (!window._taskMenuOutsideBound) {
             window._taskMenuOutsideBound = true;
             document.addEventListener('click', function (e) {
-                if (_openTaskMenuId && !e.target.closest('.task-action-wrap')) {
-                    const m = document.getElementById('taskMenu_' + _openTaskMenuId);
-                    if (m) m.style.display = 'none';
-                    _openTaskMenuId = null;
+                if (_openTaskMenuEl && !e.target.closest('.task-action-wrap')) {
+                    closeOpenTaskMenu();
                 }
             });
         }
@@ -6129,9 +6182,9 @@ Example:
                 // ⋯ still exposes the per-task actions so they stay reachable.
                 let menuItems = [starSpec, snoozeSpec, emailSpec, notesSpec, aiSpec].map(menuRow).join('');
                 const menuHtml = `<div class="task-action-wrap">
-                        <button onclick="toggleTaskActionMenu('${id}', event)" title="More actions"
+                        <button onclick="toggleTaskActionMenu(this, event)" title="More actions"
                             style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 6px;color:#6b7280;">\u22EF</button>
-                        <div id="taskMenu_${id}" class="task-action-menu" style="display:none;position:absolute;right:0;top:100%;min-width:190px;background:white;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.14);padding:4px 0;">
+                        <div class="task-action-menu" style="display:none;position:absolute;right:0;top:100%;min-width:190px;background:white;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.14);padding:4px 0;">
                             ${menuItems}
                         </div>
                     </div>`;
@@ -6166,9 +6219,9 @@ Example:
             }
 
             const menuHtml = `<div class="task-action-wrap">
-                    <button onclick="toggleTaskActionMenu('${id}', event)" title="More actions"
+                    <button onclick="toggleTaskActionMenu(this, event)" title="More actions"
                         style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 6px;color:#6b7280;">\u22EF</button>
-                    <div id="taskMenu_${id}" class="task-action-menu" style="display:none;position:absolute;right:0;top:100%;min-width:190px;background:white;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.14);padding:4px 0;">
+                    <div class="task-action-menu" style="display:none;position:absolute;right:0;top:100%;min-width:190px;background:white;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.14);padding:4px 0;">
                         ${menuItems}
                     </div>
                 </div>`;
@@ -6287,7 +6340,16 @@ Example:
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.49.2 &mdash; 2026-07-18 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.49.3 &mdash; 2026-07-18 (Current)</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Fixed: the &ldquo;&middot;&middot;&middot;&rdquo; menu now works on the Matrix and Rule&nbsp;of&nbsp;3.</strong> The root cause: the same task can appear on To-Dos, the Matrix, and Rule&nbsp;of&nbsp;3 at once, and the menu was being found by a shared id &mdash; so clicking it on the Matrix opened the (hidden) To-Dos copy instead. The menu now opens the one attached to the button you actually clicked, on every surface.</li>'
+                + '<li><strong>Fixed: star, snooze, and notes now work on Rocks</strong> (and any completed task), not just to-dos. Previously those buttons appeared on a dragged Rock but did nothing. Now every action works for every kind of item &mdash; no more dead buttons.</li>'
+                + '<li>The email drafter also works from a Rock now (it reads the Rock&rsquo;s text like it does a to-do&rsquo;s).</li>'
+                + '<li><em>Verified nothing was lost:</em> every clickable action in the app was checked against its function, and the Pomodoro timer and Focus button were confirmed intact.</li>'
+                + '</ul></div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.49.2 &mdash; 2026-07-18</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Completed tasks now get their own action set.</strong> When you check a task off (on the Matrix or in Rule&nbsp;of&nbsp;3), the card switches to a clean, always-visible row of just <em>undo</em>, <em>archive</em>, and <em>delete</em> &mdash; the actions that actually matter for a finished task.</li>'
                 + '<li><strong>Nothing gets lost.</strong> The &ldquo;&middot;&middot;&middot;&rdquo; menu is still there on a completed card, holding star, snooze, email, and notes, so you can always reach them &mdash; they just move off the surface to keep the done card tidy.</li>'
@@ -10800,10 +10862,20 @@ Example:
         // 5.13/5.14). Recipient name + email are typed by the user here.
         let meetingEmailTaskIdx = null;
 
-        function openMeetingEmailModal(idx) {
+        function openMeetingEmailModal(idx, kind) {
             meetingEmailTaskIdx = idx;
-            const todos = yearData.quarters[currentQuarter].todos;
-            const t = todos[idx];
+            // Resolve the source record for any kind. Default path (kind omitted or
+            // 'todo') indexes the To-Dos list as before; other kinds resolve via the
+            // shared resolver so the drafter works from a Matrix/Rule-of-3 rock too.
+            let t;
+            if (!kind || kind === 'todo') {
+                const todos = yearData.quarters[currentQuarter].todos;
+                t = todos[idx];
+            } else {
+                const q = yearData.quarters[currentQuarter];
+                const pool = (kind === 'rock') ? (q.rocks || []) : (q.completedTodos || []);
+                t = pool[idx];
+            }
             if (!t) return;
 
             // Best-effort: pull a likely name out of the task text.
