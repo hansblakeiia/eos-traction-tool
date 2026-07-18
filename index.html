@@ -867,6 +867,24 @@
         .rule-slot:hover .task-actions {
             opacity: 1;
         }
+
+        /* Shared per-task action cluster (star + promoted icons + more-menu).
+           Unlike legacy .task-actions, this is ALWAYS visible on Daily Plan cards
+           (no hover-to-reveal) so the star/more-menu are discoverable and tappable
+           on mobile. */
+        .shared-task-actions {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            flex-shrink: 0;
+        }
+        /* The card must be a positioning context so the absolute ⋯ popover anchors
+           to the ⋯ button and isn't clipped by the card's own box. */
+        .matrix-task, .rule-slot { position: relative; }
+        /* The popover must escape the card visually; give it a high z-index and let
+           the wrapper overflow it. */
+        .task-action-wrap { position: relative; display: inline-flex; flex-shrink: 0; }
+        .task-action-menu { z-index: 4000 !important; }
         
         .action-btn {
             width: 26px;
@@ -4060,9 +4078,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.49.0';
+        const EOS_VERSION = '3.49.2';
         const EOS_BUILD_DATE = '2026-07-18';
-        const EOS_BUILD_TIME = '14:00'; // v3.49.0 Phase 2: Rule of 3 converted to {id,type} references (like the Matrix); Rule-of-3 cards route through the shared renderTaskActions (full action set + more-menu) instead of just checkbox/focus/x; all six Rule-of-3 actions + drop seams are id-native; rocks-by-text -> by-id; completion now reads the single source record's done state; repository/print/daily-plan-print consumers resolve references (also repairs a Phase-1 Matrix regression). Kanban + autoPullFromGoogleTasks dedup untouched. No .gs change.
+        const EOS_BUILD_TIME = '18:00'; // v3.49.2: completed tasks now switch to a dedicated always-visible undo/archive/delete cluster (Matrix + Rule of 3); the more-menu on a completed card still holds star/snooze/email/notes/AI so nothing becomes unreachable. Incomplete cards keep star + more-menu (archive/delete live in the menu until completion). Nothing is hover-gated anywhere (mobile has no hover). To-Dos completed rows show an undo affordance; bulk archive/delete unchanged. No .gs change.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -5966,6 +5984,9 @@ Example:
             const r = resolveTaskById(id);
             if (!r || r.kind !== 'todo') return;
             toggleStarred(r.idx);
+            // toggleStarred only repaints To-Dos; repaint Daily Plan surfaces too so
+            // the star flips visually when clicked from a Matrix/Rule-of-3 card.
+            rerenderAllTaskSurfaces();
         }
 
         function snoozeTaskById(id) {
@@ -6050,71 +6071,110 @@ Example:
                     <span style="width:1.2em;text-align:center;">${spec.icon}</span><span>${spec.label}</span></button>`;
         }
 
-        // The single shared action set. context ∈ {'todos','matrix'} for Phase 1.
-        // Returns an HTML string of id-addressed action controls (star + promoted
-        // icons + ⋯ menu). The done checkbox is drawn by the row, not here.
-        function renderTaskActions(task, context) {
+        // The single shared action set, id-addressed. Returns an HTML string of
+        // action controls. The done checkbox is drawn by the ROW, not here.
+        //
+        // Two visual modes, switched on task.done:
+        //   INCOMPLETE: star + ⋯   (⋯ menu = snooze/email/notes/AI + any opts.menuExtras
+        //               such as archive/delete, which are surface-addressed)
+        //   COMPLETED:  always-visible opts.completedCluster (undo/archive/delete) + ⋯
+        //               (⋯ menu still holds star/snooze/email/notes/AI so nothing a
+        //               task carries becomes unreachable once it's checked off)
+        //
+        // NOTHING is hover-gated — every control is always rendered (mobile has no hover).
+        //
+        // opts: { menuExtras?: spec[], completedCluster?: spec[] }
+        // A spec is { icon, label, title, color, onclick, rawLink? }.
+        function renderTaskActions(task, context, opts) {
             if (!task || !task.id) return '';
+            opts = opts || {};
             const id = task.id;
-            const mobile = isNarrowViewport();
+            const isDone = !!task.done;
 
-            // Star (always visible, left cluster is drawn by the row; star sits with actions).
-            const starBtn = `<button onclick="toggleStarredById('${id}')" title="${task.starred ? 'Unstar' : 'Star this task'}"
-                    style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 4px;flex-shrink:0;">${task.starred ? '⭐' : '☆'}</button>`;
-
-            // Email affordance: if the task carries a source email link, the envelope
-            // opens it directly; otherwise it opens the outreach drafter.
+            // --- id-addressed specs common to both modes ---
+            const starSpec = { key: 'star', icon: (task.starred ? '\u2B50' : '\u2606'),
+                title: (task.starred ? 'Unstar' : 'Star this task'), label: (task.starred ? 'Unstar' : 'Star'),
+                color: '#eab308', onclick: `toggleStarredById('${id}')` };
             const emailSpec = task.emailLink
-                ? { key: 'email', icon: `<a href="${task.emailLink}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="text-decoration:none;color:#6366f1;">✉️</a>`,
+                ? { key: 'email', icon: `<a href="${task.emailLink}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="text-decoration:none;color:#6366f1;">\u2709\uFE0F</a>`,
                     rawLink: true, title: 'Open source email', label: 'Open source email', color: '#6366f1',
                     onclick: `window.open('${task.emailLink}','_blank')` }
-                : { key: 'email', icon: '✉️', title: 'Draft a coffee/lunch email from this task', label: 'Draft outreach email',
+                : { key: 'email', icon: '\u2709\uFE0F', title: 'Draft a coffee/lunch email from this task', label: 'Draft outreach email',
                     color: '#6366f1', onclick: `emailTaskById('${id}')` };
-
-            const notesSpec = { key: 'notes', icon: '📝', title: 'Task details/notes', label: 'Notes',
+            const notesSpec = { key: 'notes', icon: '\uD83D\uDCDD', title: 'Task details/notes', label: 'Notes',
                 color: (task.notes ? '#3b82f6' : '#9ca3af'), onclick: `toggleNotesById('${id}')` };
-            const snoozeSpec = { key: 'snooze', icon: (task.snoozedUntil ? '🔕' : '🔔'),
-                title: task.snoozedUntil ? ('Snoozed until ' + task.snoozedUntil + ' — click to unsnooze') : 'Snooze this task',
+            const snoozeSpec = { key: 'snooze', icon: (task.snoozedUntil ? '\uD83D\uDD15' : '\uD83D\uDD14'),
+                title: task.snoozedUntil ? ('Snoozed until ' + task.snoozedUntil + ' \u2014 click to unsnooze') : 'Snooze this task',
                 label: task.snoozedUntil ? 'Unsnooze' : 'Snooze', color: (task.snoozedUntil ? '#f59e0b' : '#9ca3af'),
                 onclick: `snoozeTaskById('${id}')` };
             const subtaskEligible = (context === 'todos') && (task.depth === 0 || task.depth === undefined) && !!task.googleTaskId;
-            const subtaskSpec = { key: 'subtask', icon: '➕', title: 'Add subtask', label: 'Add subtask',
+            const subtaskSpec = { key: 'subtask', icon: '\u2795', title: 'Add subtask', label: 'Add subtask',
                 color: '#10b981', onclick: `addSubtaskById('${id}')` };
-            const aiSpec = { key: 'ai', icon: '🤖', title: 'AI actions (coming soon)', label: 'AI: help with this task',
+            const aiSpec = { key: 'ai', icon: '\uD83E\uDD16', title: 'AI actions (coming soon)', label: 'AI: help with this task',
                 color: '#8b5cf6', onclick: `aiAssistTaskById('${id}')` };
 
-            // Ranked promotion order (locked): Snooze, Email, Add-subtask, Notes.
-            // Mobile promotes top 2; desktop top 3. Add-subtask only when eligible.
-            // Matrix cards stay minimal (v3.48.1): promote NOTHING — checkbox + star +
-            // text + ⋯ only; every action lives in the ⋯ menu to avoid card cramming.
+            const menuExtras = Array.isArray(opts.menuExtras) ? opts.menuExtras : [];
+            const completedCluster = Array.isArray(opts.completedCluster) ? opts.completedCluster : [];
+
+            // --- helper: render one menu row (rawLink for the email anchor case) ---
+            const menuRow = (s) => s.rawLink
+                ? `<a href="${task.emailLink}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;width:100%;padding:7px 12px;color:#374151;text-decoration:none;font-size:0.85rem;"><span style="width:1.2em;text-align:center;">\u2709\uFE0F</span><span>${s.label}</span></a>`
+                : _taskActionBtn(s, false);
+
+            // --- COMPLETED MODE ---------------------------------------------------
+            if (isDone) {
+                // Always-visible recovery cluster (undo/archive/delete) supplied by the
+                // caller (surface-addressed). Icon-only, compact.
+                const clusterHtml = completedCluster.map(s => _taskActionBtn(s, true)).join('');
+                // ⋯ still exposes the per-task actions so they stay reachable.
+                let menuItems = [starSpec, snoozeSpec, emailSpec, notesSpec, aiSpec].map(menuRow).join('');
+                const menuHtml = `<div class="task-action-wrap">
+                        <button onclick="toggleTaskActionMenu('${id}', event)" title="More actions"
+                            style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 6px;color:#6b7280;">\u22EF</button>
+                        <div id="taskMenu_${id}" class="task-action-menu" style="display:none;position:absolute;right:0;top:100%;min-width:190px;background:white;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.14);padding:4px 0;">
+                            ${menuItems}
+                        </div>
+                    </div>`;
+                return clusterHtml + menuHtml;
+            }
+
+            // --- INCOMPLETE MODE --------------------------------------------------
+            // Star sits on the surface; a promotable set (To-Dos only) + everything
+            // else in the ⋯ menu. Surface-specific menuExtras (archive/delete) go at
+            // the bottom under a divider.
+            const starBtn = _taskActionBtn(starSpec, true);
+
             const ranked = [snoozeSpec, emailSpec];
             if (subtaskEligible) ranked.push(subtaskSpec);
             ranked.push(notesSpec);
+            // Matrix + Rule-of-3 promote NOTHING (minimal card); To-Dos promotes 2 on
+            // mobile / 3 on desktop.
+            const mobile = isNarrowViewport();
             const promoteCount = (context === 'matrix' || context === 'ruleOf3') ? 0 : (mobile ? 2 : 3);
             const promoted = ranked.slice(0, promoteCount);
             const overflow = ranked.slice(promoteCount);
-            // AI always lives in the ⋯ menu in Phase 1 (reserved slot).
             overflow.push(aiSpec);
 
-            let promotedHtml = promoted.map(s => s.rawLink
+            const promotedHtml = promoted.map(s => s.rawLink
                 ? `<span style="padding:2px 6px;flex-shrink:0;font-size:0.9rem;">${s.icon}</span>`
                 : _taskActionBtn(s, true)).join('');
 
-            let menuItems = overflow.map(s => s.rawLink
-                ? `<a href="${task.emailLink}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;width:100%;padding:7px 12px;color:#374151;text-decoration:none;font-size:0.85rem;"><span style="width:1.2em;text-align:center;">✉️</span><span>${s.label}</span></a>`
-                : _taskActionBtn(s, false)).join('');
+            let menuItems = overflow.map(menuRow).join('');
+            if (menuExtras.length) {
+                menuItems += '<div style="height:1px;background:#f3f4f6;margin:4px 0;"></div>';
+                menuItems += menuExtras.map(menuRow).join('');
+            }
 
-            const menuHtml = `<div class="task-action-wrap" style="position:relative;display:inline-block;flex-shrink:0;">
+            const menuHtml = `<div class="task-action-wrap">
                     <button onclick="toggleTaskActionMenu('${id}', event)" title="More actions"
-                        style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 6px;color:#6b7280;">⋯</button>
-                    <div id="taskMenu_${id}" class="task-action-menu" style="display:none;position:absolute;right:0;top:100%;z-index:1000;min-width:190px;background:white;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.14);padding:4px 0;">
+                        style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 6px;color:#6b7280;">\u22EF</button>
+                    <div id="taskMenu_${id}" class="task-action-menu" style="display:none;position:absolute;right:0;top:100%;min-width:190px;background:white;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.14);padding:4px 0;">
                         ${menuItems}
                     </div>
                 </div>`;
 
             return starBtn + promotedHtml + menuHtml;
         }
-
         // Matrix stores {id,type} references (Phase 1). Resolve to the live record.
         function resolveMatrixEntry(entry) {
             if (!entry) return null;
@@ -6227,7 +6287,25 @@ Example:
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.49.0 &mdash; 2026-07-18 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.49.2 &mdash; 2026-07-18 (Current)</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Completed tasks now get their own action set.</strong> When you check a task off (on the Matrix or in Rule&nbsp;of&nbsp;3), the card switches to a clean, always-visible row of just <em>undo</em>, <em>archive</em>, and <em>delete</em> &mdash; the actions that actually matter for a finished task.</li>'
+                + '<li><strong>Nothing gets lost.</strong> The &ldquo;&middot;&middot;&middot;&rdquo; menu is still there on a completed card, holding star, snooze, email, and notes, so you can always reach them &mdash; they just move off the surface to keep the done card tidy.</li>'
+                + '<li><strong>While a task is still open,</strong> archive and delete live inside the &ldquo;&middot;&middot;&middot;&rdquo; menu (alongside snooze, email, notes, AI); the card surface stays minimal &mdash; checkbox, star, text, and &ldquo;&middot;&middot;&middot;&rdquo;.</li>'
+                + '<li><strong>No more hover-only buttons anywhere.</strong> Every control is always visible, since hovering does not work on a phone.</li>'
+                + '</ul></div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.49.1 &mdash; 2026-07-18</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Fixed: the star and &ldquo;&middot;&middot;&middot;&rdquo; menu now work on Daily Plan cards.</strong> Clicking the star on a Matrix or Rule&nbsp;of&nbsp;3 card now fills it in immediately (it was saving in the background but not showing until you switched tabs), and the &ldquo;&middot;&middot;&middot;&rdquo; menu now actually opens.</li>'
+                + '<li><strong>Fixed: task actions are now always visible on Daily Plan cards</strong> instead of only appearing on hover &mdash; important for mobile, where there is no hover.</li>'
+                + '<li><strong>Cleaner completed Matrix cards.</strong> Removed the extra archive/uncheck/delete button row that appeared after checking a Matrix task off. Those actions (plus Remove) now live in the one shared &ldquo;&middot;&middot;&middot;&rdquo; menu, and Rule&nbsp;of&nbsp;3 gets the same set.</li>'
+                + '<li><strong>Fixed: snoozing a to-do</strong> that was sitting in your Matrix or Top&nbsp;3 now removes it from that slot too (it is hidden from To-Dos while snoozed).</li>'
+                + '</ul></div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.49.0 &mdash; 2026-07-18</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Rule of 3 now carries the full task action set.</strong> A task in one of your Top&nbsp;3 slots now shows the same star, notes, snooze, email, and &ldquo;&middot;&middot;&middot;&rdquo; menu as everywhere else &mdash; not just a checkbox and Focus button. Completing, editing, archiving, or deleting a Top&nbsp;3 task updates the one underlying task, so it reflects instantly in To-Dos and the Matrix (and vice-versa).</li>'
                 + '<li><strong>Completion is now unified.</strong> Checking a task off in To-Dos or the Matrix now correctly shows it complete in Rule&nbsp;of&nbsp;3 too, because all three read the same task rather than separate copies. Completing a Top&nbsp;3 to-do still syncs to Google Tasks as before.</li>'
@@ -11130,7 +11208,7 @@ Example:
                 <div class="todo-item ${t.done ? 'completed' : ''} ${t.starred ? 'starred' : ''}" style="margin-left: ${indentPx}px; ${depth > 0 ? 'border-left: 3px solid #c4b5fd; background: #faf5ff; border-radius: 0 6px 6px 0;' : ''}">
                     ${expandButton}
                     <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTodo(${idx})">
-                    ${renderTaskActions({ ...t, depth: depth }, 'todos')}
+                    ${renderTaskActions({ ...t, depth: depth }, 'todos', { completedCluster: [ { icon: '\u21A9', label: 'Uncheck', title: 'Undo (uncheck)', color: '#6b7280', onclick: `toggleTaskDoneById('${t.id}')` } ] })}
                     <div class="todo-text" contenteditable="true" 
                          onblur="updateTodo(${idx}, 'text', this.textContent)"
                          onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); this.blur();}"
@@ -16058,6 +16136,21 @@ Return ONLY the JSON array:`;
             autoSave();
             sortAndRenderTodos();
             removeTodoFromAllDailyPlans(todo.text);
+            // removeTodoFromAllDailyPlans matches inactive teammates by text, but the
+            // ACTIVE user's Matrix/Rule-of-3 are now id-referenced (no .text), so remove
+            // this task's reference by id from the active plan and repaint.
+            if (todo.id && dailyPlanData) {
+                ['q1', 'q2', 'q3', 'q4'].forEach(q => {
+                    if (Array.isArray(dailyPlanData.matrix?.[q])) {
+                        dailyPlanData.matrix[q] = dailyPlanData.matrix[q].filter(e => !(e && e.id === todo.id));
+                    }
+                });
+                if (Array.isArray(dailyPlanData.ruleOf3)) {
+                    dailyPlanData.ruleOf3 = dailyPlanData.ruleOf3.map(e => (e && e.id === todo.id) ? null : e);
+                }
+                try { saveDailyPlan(); } catch (e) {}
+                rerenderAllTaskSurfaces();
+            }
             showToast('Task snoozed until ' + dateEl.value, 'success');
         }
 
@@ -18078,7 +18171,17 @@ Return ONLY the JSON array:`;
                     const listName = rec.googleListName || 'To-Dos';
                     const listPill = `<span class="matrix-list-pill" title="List" style="font-size:0.65rem;padding:1px 6px;border-radius:4px;background:#f3f4f6;color:#6b7280;white-space:nowrap;flex-shrink:0;">${listName}</span>`;
                     const duePill = rec.dueDate ? `<span class="matrix-due-pill" title="Due ${rec.dueDate}" style="font-size:0.65rem;padding:1px 6px;border-radius:4px;white-space:nowrap;flex-shrink:0;${(isOverdue(rec.dueDate) && !rec.done) ? 'background:#fee2e2;color:#b91c1c;' : 'background:#eef2ff;color:#4f46e5;'}">${rec.dueDate}</span>` : '';
-                    const actions = renderTaskActions(rec, 'matrix');
+                    const _matrixMenuExtras = [
+                        { icon: '\uD83D\uDCE6', label: 'Archive', title: 'Archive (remove from everywhere)', color: '#6b7280', onclick: `archiveMatrixTask('${q}', ${idx})` },
+                        { icon: '\uD83D\uDDD1', label: 'Delete permanently', title: 'Delete permanently', color: '#dc2626', onclick: `deleteMatrixTask('${q}', ${idx})` },
+                        { icon: '\u2715', label: 'Remove from Matrix', title: 'Remove from this quadrant', color: '#6b7280', onclick: `removeFromMatrix('${q}', ${idx})` }
+                    ];
+                    const _matrixCompleted = [
+                        { icon: '\u21A9', label: 'Uncheck', title: 'Undo (uncheck)', color: '#6b7280', onclick: `uncheckMatrixTask('${q}', ${idx})` },
+                        { icon: '\uD83D\uDCE6', label: 'Archive', title: 'Archive (remove from everywhere)', color: '#6b7280', onclick: `archiveMatrixTask('${q}', ${idx})` },
+                        { icon: '\uD83D\uDDD1', label: 'Delete', title: 'Delete permanently', color: '#dc2626', onclick: `deleteMatrixTask('${q}', ${idx})` }
+                    ];
+                    const actions = renderTaskActions(rec, 'matrix', { menuExtras: _matrixMenuExtras, completedCluster: _matrixCompleted });
                     return `
                         <div class="matrix-task ${rec.done ? 'completed' : ''}" draggable="true"
                              data-quadrant="${q}" data-idx="${idx}"
@@ -18089,17 +18192,9 @@ Return ONLY the JSON array:`;
                              ondragend="dragEnd(event)">
                             <input type="checkbox" class="matrix-check" onclick="completeMatrixTask('${q}', ${idx})" ${rec.done ? 'checked' : ''}>
                             <span class="task-text-editable" ondblclick="editMatrixTask('${q}', ${idx})" title="Double-click to edit" style="flex:1;${rec.done ? 'text-decoration: line-through; opacity: 0.5;' : ''}">${rockIcon}${rec.text || ''}</span>
-                            <div class="matrix-task-meta" style="display:flex;align-items:center;gap:4px;justify-content:flex-end;">
+                            <div class="shared-task-actions matrix-task-meta">
                                 ${actions}
                             </div>
-                            ${rec.done ? `
-                                <div class="task-actions" style="display: flex; gap: 4px; margin-left: 8px;">
-                                    <button class="action-btn archive" onclick="archiveMatrixTask('${q}', ${idx})" title="Archive (remove from everywhere)">\uD83D\uDCE6</button>
-                                    <button class="action-btn uncheck" onclick="uncheckMatrixTask('${q}', ${idx})" title="Uncheck">\u21A9</button>
-                                    <button class="action-btn delete" onclick="deleteMatrixTask('${q}', ${idx})" title="Delete permanently">\uD83D\uDDD1</button>
-                                </div>
-                            ` : ''}
-                            <button class="remove-btn" onclick="removeFromMatrix('${q}', ${idx})">\u2715</button>
                         </div>
                     `;
                 }).join('');
@@ -18118,7 +18213,17 @@ Return ONLY the JSON array:`;
                         const listName = rec.googleListName || 'To-Dos';
                         const listPill = `<span class="matrix-list-pill" title="List" style="font-size:0.65rem;padding:1px 6px;border-radius:4px;background:#f3f4f6;color:#6b7280;white-space:nowrap;flex-shrink:0;">${listName}</span>`;
                         const duePill = rec.dueDate ? `<span class="matrix-due-pill" title="Due ${rec.dueDate}" style="font-size:0.65rem;padding:1px 6px;border-radius:4px;white-space:nowrap;flex-shrink:0;${(isOverdue(rec.dueDate) && !rec.done) ? 'background:#fee2e2;color:#b91c1c;' : 'background:#eef2ff;color:#4f46e5;'}">${rec.dueDate}</span>` : '';
-                        const actions = renderTaskActions(rec, 'matrix');
+                        const _matrixMenuExtras = [
+                        { icon: '\uD83D\uDCE6', label: 'Archive', title: 'Archive (remove from everywhere)', color: '#6b7280', onclick: `archiveMatrixTask('${q}', ${idx})` },
+                        { icon: '\uD83D\uDDD1', label: 'Delete permanently', title: 'Delete permanently', color: '#dc2626', onclick: `deleteMatrixTask('${q}', ${idx})` },
+                        { icon: '\u2715', label: 'Remove from Matrix', title: 'Remove from this quadrant', color: '#6b7280', onclick: `removeFromMatrix('${q}', ${idx})` }
+                    ];
+                    const _matrixCompleted = [
+                        { icon: '\u21A9', label: 'Uncheck', title: 'Undo (uncheck)', color: '#6b7280', onclick: `uncheckMatrixTask('${q}', ${idx})` },
+                        { icon: '\uD83D\uDCE6', label: 'Archive', title: 'Archive (remove from everywhere)', color: '#6b7280', onclick: `archiveMatrixTask('${q}', ${idx})` },
+                        { icon: '\uD83D\uDDD1', label: 'Delete', title: 'Delete permanently', color: '#dc2626', onclick: `deleteMatrixTask('${q}', ${idx})` }
+                    ];
+                    const actions = renderTaskActions(rec, 'matrix', { menuExtras: _matrixMenuExtras, completedCluster: _matrixCompleted });
                         return `
                         <div class="matrix-task ${rec.done ? 'completed' : ''}" draggable="true"
                              data-quadrant="${q}" data-idx="${idx}"
@@ -18129,17 +18234,9 @@ Return ONLY the JSON array:`;
                              ondragend="dragEnd(event)">
                             <input type="checkbox" class="matrix-check" onclick="completeMatrixTask('${q}', ${idx})" ${rec.done ? 'checked' : ''}>
                             <span class="task-text-editable" ondblclick="editMatrixTask('${q}', ${idx})" title="Double-click to edit" style="flex:1;${rec.done ? 'text-decoration: line-through; opacity: 0.5;' : ''}">${rockIcon}${rec.text || ''}</span>
-                            <div class="matrix-task-meta" style="display:flex;align-items:center;gap:4px;justify-content:flex-end;">
+                            <div class="shared-task-actions matrix-task-meta">
                                 ${actions}
                             </div>
-                            ${rec.done ? `
-                                <div class="task-actions" style="display: flex; gap: 4px; margin-left: 8px;">
-                                    <button class="action-btn archive" onclick="archiveMatrixTask('${q}', ${idx})" title="Archive (remove from everywhere)">\uD83D\uDCE6</button>
-                                    <button class="action-btn uncheck" onclick="uncheckMatrixTask('${q}', ${idx})" title="Uncheck">\u21A9</button>
-                                    <button class="action-btn delete" onclick="deleteMatrixTask('${q}', ${idx})" title="Delete permanently">\uD83D\uDDD1</button>
-                                </div>
-                            ` : ''}
-                            <button class="remove-btn" onclick="removeFromMatrix('${q}', ${idx})">\u2715</button>
                         </div>
                     `;
                     }).join('');
@@ -18542,6 +18639,16 @@ Return ONLY the JSON array:`;
                     // Rule-of-3-local flag, so completing in To-Dos reflects here too.
                     const isCompleted = !!task.done;
                     const rockPrefix = task.type === 'rock' ? '\uD83E\uDEA8 ' : '';
+                    const _ruleMenuExtras = [
+                        { icon: '\uD83D\uDCE6', label: 'Archive', title: 'Archive (remove from everywhere)', color: '#6b7280', onclick: `archiveRuleTask(${idx})` },
+                        { icon: '\uD83D\uDDD1', label: 'Delete permanently', title: 'Delete permanently', color: '#dc2626', onclick: `deleteRuleTask(${idx})` },
+                        { icon: '\u2715', label: 'Remove from Rule of 3', title: 'Remove from Top 3 (keeps the task)', color: '#6b7280', onclick: `removeRuleTask(${idx})` }
+                    ];
+                    const _ruleCompleted = [
+                        { icon: '\u21A9', label: 'Uncheck', title: 'Undo (uncheck)', color: '#6b7280', onclick: `uncheckRuleTask(${idx})` },
+                        { icon: '\uD83D\uDCE6', label: 'Archive', title: 'Archive (remove from everywhere)', color: '#6b7280', onclick: `archiveRuleTask(${idx})` },
+                        { icon: '\uD83D\uDDD1', label: 'Delete', title: 'Delete permanently', color: '#dc2626', onclick: `deleteRuleTask(${idx})` }
+                    ];
                     return `
                         <div class="rule-slot ${isCompleted ? 'completed' : ''}" data-slot="${idx}" draggable="true"
                              ondragstart="dragRuleItem(event, ${idx})"
@@ -18555,9 +18662,8 @@ Return ONLY the JSON array:`;
                             <span class="task-text ${isCompleted ? 'done' : ''}" ondblclick="editRuleTask(${idx})"
                                   title="Double-click to edit" style="flex:1;${isCompleted ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${rockPrefix}${task.text || ''}</span>
                             ${!isCompleted ? `<button class="focus-btn" onclick="focusOnTask(${idx})">\uD83C\uDFAF Focus</button>` : ''}
-                            <div class="task-actions" style="display:flex;align-items:center;gap:2px;margin-left:6px;">
-                                ${renderTaskActions(task, 'ruleOf3')}
-                                <button class="complete-btn-gray" onclick="removeRuleTask(${idx})" title="Remove from Rule of 3">\u2715</button>
+                            <div class="shared-task-actions" style="margin-left:6px;">
+                                ${renderTaskActions(task, 'ruleOf3', { menuExtras: _ruleMenuExtras, completedCluster: _ruleCompleted })}
                             </div>
                         </div>
                     `;
