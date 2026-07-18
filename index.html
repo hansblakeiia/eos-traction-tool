@@ -4087,9 +4087,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.49.4';
+        const EOS_VERSION = '3.49.5';
         const EOS_BUILD_DATE = '2026-07-18';
-        const EOS_BUILD_TIME = '22:00'; // v3.49.4: Focus now actually runs the Pomodoro - it starts the timer immediately in focus mode and shows the task name under the clock. Focus moved into the more-menu as a target-icon item on the Matrix AND Rule of 3, and only appears on the My Daily Plan tab (where the timer lives); removed the standalone Rule-of-3 Focus button. Snooze: fixed unsnooze not repainting the Daily Plan card (wording stayed 'Unsnooze' until tab switch); added an interactive Snoozed Tasks section in My Daily Plan with a per-task Unsnooze button. No .gs change.
+        const EOS_BUILD_TIME = '22:45'; // v3.49.5: snooze fix - the rich snooze modal (Tomorrow / 1 week / 1 month / 3 months quick-picks + date picker) now serves EVERY task kind. Rocks/completed tasks were getting an ugly text prompt because the modal was todo-index-based; it's now id-based, so all surfaces get the same nice popup. Removed the prompt-based fallback entirely. No .gs change.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -6007,36 +6007,8 @@ Example:
         function snoozeTaskById(id) {
             const r = resolveTaskById(id);
             if (!r) return;
-            if (r.kind === 'todo') {
-                snoozeTask(r.idx);             // opens the snooze modal (todo-indexed)
-                return;
-            }
-            // rocks / completedTodos: same modal, but addressed by id so confirmSnooze
-            // can find the right record regardless of surface. (snoozeTaskGeneric below.)
-            snoozeRecordById(id);
-        }
-
-        // Snooze any record kind by id (used for rocks/completedTodos where the
-        // todo-index modal path doesn't apply).
-        function snoozeRecordById(id) {
-            const r = resolveTaskById(id);
-            if (!r) return;
-            const rec = r.record;
-            if (rec.snoozedUntil) {
-                if (confirm('This is snoozed until ' + rec.snoozedUntil + '.\n\nUnsnooze it now?')) {
-                    delete rec.snoozedUntil;
-                    autoSave();
-                    rerenderAllTaskSurfaces();
-                }
-                return;
-            }
-            const d = new Date(); d.setDate(d.getDate() + 7);
-            const val = prompt('Snooze until (YYYY-MM-DD):', d.toISOString().split('T')[0]);
-            if (val && /^\d{4}-\d{2}-\d{2}$/.test(val.trim())) {
-                rec.snoozedUntil = val.trim();
-                autoSave();
-                rerenderAllTaskSurfaces();
-            }
+            // Every kind gets the rich modal (quick-picks + date picker), not a prompt.
+            openSnoozeModalById(id);
         }
 
         // updateTaskById: single-record edit. For todos, delegate to updateTodo so
@@ -6357,7 +6329,13 @@ Example:
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.49.4 &mdash; 2026-07-18 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.49.5 &mdash; 2026-07-18 (Current)</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Fixed the snooze popup.</strong> Snoozing a Rock (or a completed task) was showing a bare &ldquo;type a date&rdquo; prompt instead of the proper snooze window. Every task now gets the full popup with the Tomorrow / 1&nbsp;week / 1&nbsp;month / 3&nbsp;months quick-picks and the date picker, on every surface.</li>'
+                + '</ul></div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.49.4 &mdash; 2026-07-18</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Focus now actually runs the Pomodoro.</strong> Choosing Focus on a task starts the timer immediately in focus mode and shows the task&rsquo;s name right under the clock, so you can see what you&rsquo;re working on.</li>'
                 + '<li><strong>Focus moved into the &ldquo;&middot;&middot;&middot;&rdquo; menu</strong> (target icon) on both the Matrix and Rule&nbsp;of&nbsp;3, and it only shows on the My Daily Plan tab &mdash; the one place the Pomodoro timer lives.</li>'
@@ -16169,16 +16147,28 @@ Return ONLY the JSON array:`;
         }
         
         // ==================== SNOOZE TASK ====================
+        // The rich modal (quick-pick buttons + date picker) is id-based so it works for
+        // ANY record kind (todo, rock, completedTodo) shown on any surface. snoozeTask
+        // keeps its old idx signature as a thin wrapper for legacy callers.
         function snoozeTask(idx) {
-            const todos = yearData.quarters[currentQuarter].todos;
-            const todo = todos[idx];
+            const todo = yearData.quarters[currentQuarter].todos[idx];
             if (!todo) return;
-            if (todo.snoozedUntil) {
-                if (confirm('This task is snoozed until ' + todo.snoozedUntil + '.\n\nUnsnooze it now?')) {
-                    delete todo.snoozedUntil;
+            if (!todo.id) todo.id = generateTaskId();
+            openSnoozeModalById(todo.id);
+        }
+
+        function openSnoozeModalById(id) {
+            const r = resolveTaskById(id);
+            if (!r || !r.record) return;
+            const rec = r.record;
+            // Already snoozed -> offer unsnooze (same as before).
+            if (rec.snoozedUntil) {
+                if (confirm('This task is snoozed until ' + rec.snoozedUntil + '.\n\nUnsnooze it now?')) {
+                    delete rec.snoozedUntil;
                     autoSave();
-                    sortAndRenderTodos();
+                    if (typeof sortAndRenderTodos === 'function') sortAndRenderTodos();
                     rerenderAllTaskSurfaces();
+                    if (typeof updateSnoozedBadge === 'function') updateSnoozedBadge();
                     showToast('Task unsnoozed', 'success');
                 }
                 return;
@@ -16190,7 +16180,7 @@ Return ONLY the JSON array:`;
             const todayMin = today.toISOString().split('T')[0];
             const existing = document.getElementById('snoozeModal');
             if (existing) existing.remove();
-            const taskLabel = (todo.text || '').substring(0, 50) + ((todo.text || '').length > 50 ? '...' : '');
+            const taskLabel = (rec.text || '').substring(0, 50) + ((rec.text || '').length > 50 ? '...' : '');
             const modal = document.createElement('div');
             modal.id = 'snoozeModal';
             modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);z-index:9999;display:flex;align-items:center;justify-content:center;';
@@ -16209,7 +16199,7 @@ Return ONLY the JSON array:`;
                     </div>
                     <div style="display:flex;gap:8px;justify-content:flex-end;">
                         <button onclick="document.getElementById('snoozeModal').remove()" style="padding:8px 16px;border:1px solid #d1d5db;border-radius:6px;background:white;cursor:pointer;">Cancel</button>
-                        <button onclick="confirmSnooze(${idx})" style="padding:8px 16px;border:none;border-radius:6px;background:#f59e0b;color:white;font-weight:600;cursor:pointer;">Snooze</button>
+                        <button onclick="confirmSnooze('${id}')" style="padding:8px 16px;border:none;border-radius:6px;background:#f59e0b;color:white;font-weight:600;cursor:pointer;">Snooze</button>
                     </div>
                 </div>
             `;
@@ -16224,32 +16214,35 @@ Return ONLY the JSON array:`;
             if (el) el.value = d.toISOString().split('T')[0];
         }
 
-        function confirmSnooze(idx) {
+        // id-based confirm: works for any record kind. For todos it also removes the
+        // task from the active user's Daily Plan slots (snoozed tasks are hidden).
+        function confirmSnooze(id) {
             const dateEl = document.getElementById('snoozeDate');
             if (!dateEl || !dateEl.value) return;
-            const todos = yearData.quarters[currentQuarter].todos;
-            const todo = todos[idx];
-            if (!todo) return;
-            todo.snoozedUntil = dateEl.value;
-            document.getElementById('snoozeModal').remove();
+            const r = resolveTaskById(id);
+            if (!r || !r.record) return;
+            const rec = r.record;
+            rec.snoozedUntil = dateEl.value;
+            const modalEl = document.getElementById('snoozeModal');
+            if (modalEl) modalEl.remove();
             autoSave();
-            sortAndRenderTodos();
-            removeTodoFromAllDailyPlans(todo.text);
-            // removeTodoFromAllDailyPlans matches inactive teammates by text, but the
-            // ACTIVE user's Matrix/Rule-of-3 are now id-referenced (no .text), so remove
-            // this task's reference by id from the active plan and repaint.
-            if (todo.id && dailyPlanData) {
+            if (typeof sortAndRenderTodos === 'function') sortAndRenderTodos();
+            if (typeof removeTodoFromAllDailyPlans === 'function' && rec.text) removeTodoFromAllDailyPlans(rec.text);
+            // Active user's Matrix/Rule-of-3 are id-referenced (no .text), so remove this
+            // record's reference by id from the active plan and repaint.
+            if (rec.id && dailyPlanData) {
                 ['q1', 'q2', 'q3', 'q4'].forEach(q => {
                     if (Array.isArray(dailyPlanData.matrix?.[q])) {
-                        dailyPlanData.matrix[q] = dailyPlanData.matrix[q].filter(e => !(e && e.id === todo.id));
+                        dailyPlanData.matrix[q] = dailyPlanData.matrix[q].filter(e => !(e && e.id === rec.id));
                     }
                 });
                 if (Array.isArray(dailyPlanData.ruleOf3)) {
-                    dailyPlanData.ruleOf3 = dailyPlanData.ruleOf3.map(e => (e && e.id === todo.id) ? null : e);
+                    dailyPlanData.ruleOf3 = dailyPlanData.ruleOf3.map(e => (e && e.id === rec.id) ? null : e);
                 }
                 try { saveDailyPlan(); } catch (e) {}
-                rerenderAllTaskSurfaces();
             }
+            rerenderAllTaskSurfaces();
+            if (typeof updateSnoozedBadge === 'function') updateSnoozedBadge();
             showToast('Task snoozed until ' + dateEl.value, 'success');
         }
 
