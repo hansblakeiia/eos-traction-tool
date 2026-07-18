@@ -4060,9 +4060,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.47.0';
+        const EOS_VERSION = '3.48.0';
         const EOS_BUILD_DATE = '2026-07-17';
-        const EOS_BUILD_TIME = '00:00'; // v3.47.0 Phase 0: stable local task/rock id + idempotent one-time migration (migrateTaskIdentities). No behavior change; foundation for cross-surface action consistency. Google Tasks reconciliation untouched.
+        const EOS_BUILD_TIME = '01:00'; // v3.48.0 Phase 1: shared id-addressed task actions (renderTaskActions + ⋯ popover); Matrix converted to reference-by-id (full action set on Matrix cards, mutations reflect across surfaces); group-by-list headers on To-Dos; list pill on Matrix; emailLink field (additive, Case A). Rule-of-3/Kanban unchanged; Google Tasks reconciliation untouched.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -4863,6 +4863,11 @@ Example:
                             updated = true;
                             console.log('Sync: Marked complete in EOS:', existing.text);
                         }
+
+                        // Phase 1: backfill source-Gmail link if Google now reports one.
+                        if (task.emailLink && !existing.emailLink) {
+                            existing.emailLink = task.emailLink; updated = true;
+                        }
                         
                         if (updated) updatedCount++;
                     });
@@ -4925,6 +4930,8 @@ Example:
                                 dueDate: task.due ? task.due.split('T')[0] : '',
                                 notes: task.notes || '',
                                 parentTaskId: task.parent || null,
+                                emailLink: task.emailLink || '',
+                                id: generateTaskId(),
                                 pulledAt: new Date().toISOString()
                             });
                         });
@@ -5255,6 +5262,12 @@ Example:
                                 updated = true;
                             }
 
+                            // Phase 1: backfill source-Gmail link if Google now reports one.
+                            if (task.emailLink && !existing.emailLink) {
+                                existing.emailLink = task.emailLink;
+                                updated = true;
+                            }
+
                             // Sync completion
                             console.log(`  Completion compare: local done=${existing.done} vs google completed=${isCompleted}`);
                             if (isCompleted && !existing.done) {
@@ -5289,6 +5302,8 @@ Example:
                                     dueDate: dueDate,
                                     notes: task.notes || '',
                                     parentTaskId: task.parent || null,
+                                    emailLink: task.emailLink || '',
+                                    id: generateTaskId(),
                                     pulledAt: new Date().toISOString()
                                 });
                                 existingTexts.add(taskTitle.toLowerCase().trim());
@@ -5550,6 +5565,8 @@ Example:
                                     googleListName: task.listName,
                                     dueDate: dueDate,
                                     parentTaskId: task.parent || null,
+                                    emailLink: task.emailLink || '',
+                                    id: generateTaskId(),
                                     pulledAt: new Date().toISOString()
                                 });
                                 existingTexts.add(taskTitle.toLowerCase().trim());
@@ -5866,6 +5883,265 @@ Example:
             }
         }
         
+
+        // ============================================================
+        // Phase 1 (v3.48.0): Cross-surface task identity — shared id-addressed
+        // action layer + single renderTaskActions. Additive; index-based handlers
+        // are kept as thin idx->id wrappers. Rule-of-3 and Kanban stay on the old
+        // path (Phases 2/3). See EOS_MASTER_SUMMARY.md §5.11b.
+        // ============================================================
+
+        // Viewport helper (no existing isMobile helper in the codebase).
+        function isNarrowViewport() {
+            try { return window.matchMedia('(max-width: 640px)').matches; }
+            catch (e) { return (window.innerWidth || 9999) <= 640; }
+        }
+
+        // Resolve a task/rock by its stable local id. Search order matters:
+        // active todos -> completedTodos -> rocks. Returns {record, kind, idx} or null.
+        function resolveTaskById(id) {
+            if (!id) return null;
+            const q = yearData && yearData.quarters && yearData.quarters[currentQuarter];
+            if (!q) return null;
+            const todos = q.todos || [];
+            let i = todos.findIndex(t => t && t.id === id);
+            if (i >= 0) return { record: todos[i], kind: 'todo', idx: i };
+            const comp = q.completedTodos || [];
+            i = comp.findIndex(t => t && t.id === id);
+            if (i >= 0) return { record: comp[i], kind: 'completedTodo', idx: i };
+            const rocks = q.rocks || [];
+            i = rocks.findIndex(r => r && r.id === id);
+            if (i >= 0) return { record: rocks[i], kind: 'rock', idx: i };
+            return null;
+        }
+
+        // Re-render every task surface that is currently mounted. Guarded so a
+        // To-Dos action doesn't blow up when the Daily Plan tab isn't in the DOM.
+        function rerenderAllTaskSurfaces() {
+            try { if (typeof sortAndRenderTodos === 'function' && document.getElementById('todoList')) sortAndRenderTodos(); } catch (e) {}
+            try { if (typeof renderMatrix === 'function' && document.getElementById('matrixQ1')) renderMatrix(); } catch (e) {}
+            try { if (typeof renderRuleOf3 === 'function' && document.getElementById('ruleOf3Slots')) renderRuleOf3(); } catch (e) {}
+            try { if (typeof renderRepository === 'function' && document.getElementById('taskRepository')) renderRepository(); } catch (e) {}
+        }
+
+        // --- id-addressed action handlers ---------------------------------
+        // These are the canonical entry points. Where a todo has rich side effects
+        // (Google Tasks sync, daily-plan propagation), we resolve the record's live
+        // index and delegate to the existing index-based function so no side effect
+        // is lost or duplicated. For rocks/completedTodos we act directly.
+
+        function toggleTaskDoneById(id) {
+            const r = resolveTaskById(id);
+            if (!r) return;
+            if (r.kind === 'todo') {
+                // Delegate to the full-featured index handler (Google + daily-plan sync).
+                toggleTodo(r.idx);
+                return;
+            }
+            // rocks / completedTodos: flip in place.
+            r.record.done = !r.record.done;
+            if (r.kind === 'rock') {
+                if (r.record.done) r.record.completedAt = new Date().toISOString();
+                else delete r.record.completedAt;
+            }
+            autoSave();
+            rerenderAllTaskSurfaces();
+        }
+
+        function toggleStarredById(id) {
+            const r = resolveTaskById(id);
+            if (!r || r.kind !== 'todo') return;
+            toggleStarred(r.idx);
+        }
+
+        function snoozeTaskById(id) {
+            const r = resolveTaskById(id);
+            if (!r || r.kind !== 'todo') return;
+            snoozeTask(r.idx);
+        }
+
+        // updateTaskById: single-record edit. For todos, delegate to updateTodo so
+        // Google-sync side effects on text/dueDate/owner still fire. Because it's one
+        // record, no text-propagation is needed — every surface resolves the same object.
+        function updateTaskById(id, field, val) {
+            const r = resolveTaskById(id);
+            if (!r) return;
+            if (r.kind === 'todo') {
+                updateTodo(r.idx, field, val);
+                return;
+            }
+            r.record[field] = val;
+            autoSave();
+            rerenderAllTaskSurfaces();
+        }
+
+        function toggleNotesById(id) {
+            // Notes panel is keyed by todo idx in the To-Dos list DOM.
+            const r = resolveTaskById(id);
+            if (!r || r.kind !== 'todo') return;
+            if (typeof toggleTaskNotes === 'function') toggleTaskNotes(r.idx);
+        }
+
+        function addSubtaskById(id) {
+            const r = resolveTaskById(id);
+            if (!r || r.kind !== 'todo') return;
+            if (typeof addSubtask === 'function') addSubtask(r.idx);
+        }
+
+        function emailTaskById(id) {
+            const r = resolveTaskById(id);
+            if (!r || r.kind !== 'todo') return;
+            if (typeof openMeetingEmailModal === 'function') openMeetingEmailModal(r.idx);
+        }
+
+        // Phase 1 reserved AI slot — behavior lands in Phase 5 (§5.11b Q4).
+        function aiAssistTaskById(id) {
+            showToast('AI actions for a task are coming in a later update.', 'info');
+        }
+
+        // --- shared per-task action popover ("⋯") -------------------------
+        let _openTaskMenuId = null;
+        function toggleTaskActionMenu(id, ev) {
+            if (ev) { ev.stopPropagation(); }
+            const menu = document.getElementById('taskMenu_' + id);
+            if (!menu) return;
+            const willOpen = menu.style.display === 'none' || !menu.style.display;
+            // Close any other open menu first.
+            document.querySelectorAll('.task-action-menu').forEach(m => { m.style.display = 'none'; });
+            menu.style.display = willOpen ? 'block' : 'none';
+            _openTaskMenuId = willOpen ? id : null;
+        }
+        // One document-level outside-click listener (added once).
+        if (!window._taskMenuOutsideBound) {
+            window._taskMenuOutsideBound = true;
+            document.addEventListener('click', function (e) {
+                if (_openTaskMenuId && !e.target.closest('.task-action-wrap')) {
+                    const m = document.getElementById('taskMenu_' + _openTaskMenuId);
+                    if (m) m.style.display = 'none';
+                    _openTaskMenuId = null;
+                }
+            });
+        }
+
+        // Build a single action button (icon-only). `promoted` renders inline;
+        // otherwise it's a full-width row inside the ⋯ menu.
+        function _taskActionBtn(spec, promoted) {
+            const color = spec.color || '#6b7280';
+            if (promoted) {
+                return `<button onclick="${spec.onclick}" title="${spec.title}"
+                        style="background:none;border:none;cursor:pointer;font-size:0.9rem;padding:2px 6px;flex-shrink:0;color:${color};">${spec.icon}</button>`;
+            }
+            return `<button onclick="${spec.onclick}" title="${spec.title}"
+                    style="display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;cursor:pointer;font-size:0.85rem;padding:7px 12px;color:#374151;text-align:left;">
+                    <span style="width:1.2em;text-align:center;">${spec.icon}</span><span>${spec.label}</span></button>`;
+        }
+
+        // The single shared action set. context ∈ {'todos','matrix'} for Phase 1.
+        // Returns an HTML string of id-addressed action controls (star + promoted
+        // icons + ⋯ menu). The done checkbox is drawn by the row, not here.
+        function renderTaskActions(task, context) {
+            if (!task || !task.id) return '';
+            const id = task.id;
+            const mobile = isNarrowViewport();
+
+            // Star (always visible, left cluster is drawn by the row; star sits with actions).
+            const starBtn = `<button onclick="toggleStarredById('${id}')" title="${task.starred ? 'Unstar' : 'Star this task'}"
+                    style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 4px;flex-shrink:0;">${task.starred ? '⭐' : '☆'}</button>`;
+
+            // Email affordance: if the task carries a source email link, the envelope
+            // opens it directly; otherwise it opens the outreach drafter.
+            const emailSpec = task.emailLink
+                ? { key: 'email', icon: `<a href="${task.emailLink}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="text-decoration:none;color:#6366f1;">✉️</a>`,
+                    rawLink: true, title: 'Open source email', label: 'Open source email', color: '#6366f1',
+                    onclick: `window.open('${task.emailLink}','_blank')` }
+                : { key: 'email', icon: '✉️', title: 'Draft a coffee/lunch email from this task', label: 'Draft outreach email',
+                    color: '#6366f1', onclick: `emailTaskById('${id}')` };
+
+            const notesSpec = { key: 'notes', icon: '📝', title: 'Task details/notes', label: 'Notes',
+                color: (task.notes ? '#3b82f6' : '#9ca3af'), onclick: `toggleNotesById('${id}')` };
+            const snoozeSpec = { key: 'snooze', icon: (task.snoozedUntil ? '🔕' : '🔔'),
+                title: task.snoozedUntil ? ('Snoozed until ' + task.snoozedUntil + ' — click to unsnooze') : 'Snooze this task',
+                label: task.snoozedUntil ? 'Unsnooze' : 'Snooze', color: (task.snoozedUntil ? '#f59e0b' : '#9ca3af'),
+                onclick: `snoozeTaskById('${id}')` };
+            const subtaskEligible = (context === 'todos') && (task.depth === 0 || task.depth === undefined) && !!task.googleTaskId;
+            const subtaskSpec = { key: 'subtask', icon: '➕', title: 'Add subtask', label: 'Add subtask',
+                color: '#10b981', onclick: `addSubtaskById('${id}')` };
+            const aiSpec = { key: 'ai', icon: '🤖', title: 'AI actions (coming soon)', label: 'AI: help with this task',
+                color: '#8b5cf6', onclick: `aiAssistTaskById('${id}')` };
+
+            // Ranked promotion order (locked): Snooze, Email, Add-subtask, Notes.
+            // Mobile promotes top 2; desktop top 3. Add-subtask only when eligible.
+            const ranked = [snoozeSpec, emailSpec];
+            if (subtaskEligible) ranked.push(subtaskSpec);
+            ranked.push(notesSpec);
+            const promoteCount = mobile ? 2 : 3;
+            const promoted = ranked.slice(0, promoteCount);
+            const overflow = ranked.slice(promoteCount);
+            // AI always lives in the ⋯ menu in Phase 1 (reserved slot).
+            overflow.push(aiSpec);
+
+            let promotedHtml = promoted.map(s => s.rawLink
+                ? `<span style="padding:2px 6px;flex-shrink:0;font-size:0.9rem;">${s.icon}</span>`
+                : _taskActionBtn(s, true)).join('');
+
+            let menuItems = overflow.map(s => s.rawLink
+                ? `<a href="${task.emailLink}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;width:100%;padding:7px 12px;color:#374151;text-decoration:none;font-size:0.85rem;"><span style="width:1.2em;text-align:center;">✉️</span><span>${s.label}</span></a>`
+                : _taskActionBtn(s, false)).join('');
+
+            const menuHtml = `<div class="task-action-wrap" style="position:relative;display:inline-block;flex-shrink:0;">
+                    <button onclick="toggleTaskActionMenu('${id}', event)" title="More actions"
+                        style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 6px;color:#6b7280;">⋯</button>
+                    <div id="taskMenu_${id}" class="task-action-menu" style="display:none;position:absolute;right:0;top:100%;z-index:1000;min-width:190px;background:white;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.14);padding:4px 0;">
+                        ${menuItems}
+                    </div>
+                </div>`;
+
+            return starBtn + promotedHtml + menuHtml;
+        }
+
+        // Matrix stores {id,type} references (Phase 1). Resolve to the live record.
+        function resolveMatrixEntry(entry) {
+            if (!entry) return null;
+            // Back-compat: a legacy full-object entry (pre-migration) resolves to itself.
+            if (entry.text !== undefined && entry.id === undefined) return entry;
+            const r = resolveTaskById(entry.id);
+            return r ? r.record : null;
+        }
+
+        // One-time idempotent migration of existing matrix entries (full objects ->
+        // {id,type}). The ONLY sanctioned text-match in this plan: a legacy entry
+        // whose id didn't survive Phase 0 is resolved by text once, then stamped.
+        function migrateMatrixToReferences(plan) {
+            if (!plan || !plan.matrix) return 0;
+            let converted = 0;
+            const q = yearData && yearData.quarters && yearData.quarters[currentQuarter];
+            const todos = (q && q.todos) || [];
+            const rocks = (q && q.rocks) || [];
+            ['q1', 'q2', 'q3', 'q4'].forEach(function (quad) {
+                const arr = plan.matrix[quad];
+                if (!Array.isArray(arr)) return;
+                plan.matrix[quad] = arr.map(function (entry) {
+                    if (!entry) return null;
+                    // Already a reference.
+                    if (entry.text === undefined && entry.id !== undefined) return entry;
+                    let id = entry.id;
+                    const type = entry.type || 'todo';
+                    if (!id) {
+                        const src = (type === 'rock' ? rocks : todos).find(function (x) { return x.text === entry.text; });
+                        if (src) { if (!src.id) src.id = generateTaskId(); id = src.id; }
+                    }
+                    if (!id) {
+                        console.warn('Matrix migration: could not resolve entry, dropping:', entry.text);
+                        return null;
+                    }
+                    converted++;
+                    return { id: id, type: type };
+                }).filter(function (e) { return e !== null; });
+            });
+            return converted;
+        }
+
+
         function initRatingButtons() {
             const container = document.getElementById('ratingButtons');
             for (let i = 1; i <= 10; i++) {
@@ -5892,7 +6168,18 @@ Example:
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.47.0 &mdash; 2026-07-17 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.48.0 &mdash; 2026-07-17 (Current)</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Task actions now follow a task everywhere.</strong> When you drag a to-do into the Eisenhower Matrix, it now carries its full action set &mdash; star, notes, snooze, add-subtask, email, and a &ldquo;&middot;&middot;&middot;&rdquo; menu &mdash; instead of a stripped-down card. Snoozing, completing, editing, or deleting on a Matrix card updates the one underlying task, so it reflects instantly back in To-Dos (and vice-versa). No more actions disappearing when a task moves.</li>'
+                + '<li>Behind the scenes, the Matrix now references each task by its permanent ID (added in v3.47.0) rather than keeping a separate text-matched copy. This is what kills the long-standing &ldquo;edited it here but not there&rdquo; class of bug.</li>'
+                + '<li><strong>Cleaner action row.</strong> Each task shows a due-date pill and, on the Matrix, a small list label; the most useful actions sit inline (Snooze and Email on phones; Snooze, Email, and Add-subtask on desktop) and the rest live in the &ldquo;&middot;&middot;&middot;&rdquo; menu. To-Dos now show a simple list heading above each group.</li>'
+                + '<li><strong>Email-sourced tasks.</strong> If a to-do was created from a Gmail message (starred into Google Tasks), its envelope now opens the original email directly. Nothing to set up; it appears only when a source email exists.</li>'
+                + '<li><em>Unchanged on purpose:</em> Rule&nbsp;of&nbsp;3 and Kanban keep their current behavior for now (coming in later phases), and Google Tasks syncing is untouched.</li>'
+                + '</ul></div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.47.0 &mdash; 2026-07-17</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Groundwork only &mdash; nothing looks different.</strong> Every to-do, subtask, and rock now quietly gets a permanent internal ID the first time you open this version. You will not see any change; this is the foundation for the upcoming fix where task actions (snooze, notes, email, delete) stay with a task when it moves into the Eisenhower Matrix or Rule of 3.</li>'
                 + '<li>The one-time tagging runs automatically on load and is safe to re-run &mdash; it only fills in IDs that are missing and never touches anything already tagged. Your Google Tasks syncing is completely untouched.</li>'
@@ -10337,7 +10624,12 @@ Example:
                     return { ...t, originalIndex: origIdx };
                 }).filter(t => t !== null);
                 const hierarchicalTasks = buildTaskHierarchy(tasksInList);
-                todosHtml = renderTaskHierarchy(hierarchicalTasks, 0);
+                // Phase 1: static, always-expanded group-by-list header (single default list).
+                const singleListName = (listNames[0] || 'To-Dos');
+                const groupHeader = tasksInList.length > 0
+                    ? `<div style="font-size: 0.8rem; font-weight: 600; color: var(--gray-500); margin-bottom: 4px; padding-left: 4px; user-select: none;">${singleListName}</div>`
+                    : '';
+                todosHtml = groupHeader + renderTaskHierarchy(hierarchicalTasks, 0);
             }
             
             container.innerHTML = headerRow + todosHtml;
@@ -10760,29 +11052,7 @@ Example:
                 <div class="todo-item ${t.done ? 'completed' : ''} ${t.starred ? 'starred' : ''}" style="margin-left: ${indentPx}px; ${depth > 0 ? 'border-left: 3px solid #c4b5fd; background: #faf5ff; border-radius: 0 6px 6px 0;' : ''}">
                     ${expandButton}
                     <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTodo(${idx})">
-                    <button onclick="toggleStarred(${idx})" style="background: none; border: none; cursor: pointer; font-size: 1rem; padding: 2px 4px; flex-shrink: 0;" 
-                            title="${t.starred ? 'Unstar' : 'Star this task'}">
-                        ${t.starred ? '⭐' : '☆'}
-                    </button>
-                    <button onclick="toggleTaskNotes(${idx})" style="background: none; border: none; cursor: pointer; font-size: 0.9rem; padding: 2px 6px; flex-shrink: 0; color: ${t.notes ? '#3b82f6' : '#9ca3af'};" 
-                            title="Task details/notes">
-                        📝
-                    </button>
-                    <button onclick="snoozeTask(${idx})" style="background: none; border: none; cursor: pointer; font-size: 0.9rem; padding: 2px 6px; flex-shrink: 0; color: ${t.snoozedUntil ? '#f59e0b' : '#9ca3af'};"
-                            title="${t.snoozedUntil ? 'Snoozed until ' + t.snoozedUntil + ' — click to unsnooze' : 'Snooze this task'}">
-                        ${t.snoozedUntil ? '🔕' : '🔔'}
-                    </button>
-                    ${depth === 0 && t.googleTaskId ? `
-                        <button onclick="addSubtask(${idx})" 
-                                style="background: none; border: none; cursor: pointer; font-size: 0.75rem; padding: 2px 6px; flex-shrink: 0; color: #10b981;"
-                                title="Add subtask">
-                            ➕
-                        </button>
-                    ` : ''}
-                    <button onclick="openMeetingEmailModal(${idx})" style="background: none; border: none; cursor: pointer; font-size: 0.9rem; padding: 2px 6px; flex-shrink: 0; color: #6366f1;"
-                            title="Draft a coffee/lunch email from this task">
-                        ✉️
-                    </button>
+                    ${renderTaskActions({ ...t, depth: depth }, 'todos')}
                     <div class="todo-text" contenteditable="true" 
                          onblur="updateTodo(${idx}, 'text', this.textContent)"
                          onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); this.blur();}"
@@ -16446,6 +16716,8 @@ Return ONLY the JSON array:`;
                                     googleTaskId: task.id,
                                     googleListId: task.listId || '',
                                     googleListName: task.listName || '',
+                                    emailLink: task.emailLink || '',
+                                    id: generateTaskId(),
                                     pullId: importId
                                 });
                                 lastPulledTaskIds.push(importId);
@@ -16757,6 +17029,16 @@ Return ONLY the JSON array:`;
                 pomoCount: 0,
                 lastDate: ''
             };
+
+            // Phase 1 (v3.48.0): convert this plan's matrix entries from full-object
+            // copies to {id,type} references (idempotent; one-time in practice).
+            try {
+                const _mConv = migrateMatrixToReferences(dailyPlanData);
+                if (_mConv > 0) {
+                    console.log('Matrix reference migration: converted ' + _mConv + ' entr(ies) to id-references.');
+                    localStorage.setItem(storageKey, JSON.stringify(dailyPlanData));
+                }
+            } catch (e) { console.warn('Matrix migration skipped:', e); }
             
             // Check if there are notes to show (either from End Day or next day)
             if (dailyPlanData.tomorrowNotes && dailyPlanData.notesShown) {
@@ -17621,39 +17903,59 @@ Return ONLY the JSON array:`;
                 return;
             }
             
-            let task;
-            
-            // From repository
+            // Phase 1: matrix stores {id,type} references. `entry` is what we push.
+            let entry = null;
+
+            // From repository — resolve the full record, ensure it (and its source)
+            // has an id, store {id,type}. getTaskData returns a spread COPY, so a
+            // defensive id stamp must be written back to the underlying record.
             if (data.source === 'repository') {
-                task = getTaskData(data.type, data.idx);
+                const rec = getTaskData(data.type, data.idx);
+                if (rec) {
+                    if (!rec.id) {
+                        const newId = generateTaskId();
+                        rec.id = newId;
+                        // Write the id back to the real source record (defensive; post-Phase-0 all records already have one).
+                        const user = document.getElementById('dailyPlanUser')?.value;
+                        if (data.type === 'rock') {
+                            const srcRocks = (yearData.quarters[currentQuarter].rocks || []).filter(r => r.owner === user);
+                            if (srcRocks[data.idx]) srcRocks[data.idx].id = newId;
+                        } else if (data.type === 'todo') {
+                            const srcTodos = (yearData.quarters[currentQuarter].todos || []).filter(t => t.owner === user && !t.done);
+                            if (srcTodos[data.idx]) srcTodos[data.idx].id = newId;
+                        }
+                        autoSave();
+                    }
+                    entry = { id: rec.id, type: rec.type || data.type };
+                }
             }
-            // From another matrix quadrant
+            // From another matrix quadrant — entry is already {id,type}.
             else if (data.source === 'matrix') {
-                task = dailyPlanData.matrix[data.quadrant][data.idx];
-                if (task && data.quadrant !== quadrant) {
+                entry = dailyPlanData.matrix[data.quadrant][data.idx];
+                if (entry && data.quadrant !== quadrant) {
                     dailyPlanData.matrix[data.quadrant].splice(data.idx, 1);
                 }
             }
-            // From Rule of 3
+            // From Rule of 3 — Rule-of-3 stays object-based (Phase 2); convert to a reference.
             else if (data.source === 'rule3') {
-                task = dailyPlanData.ruleOf3[data.slotIdx];
-                if (task) {
+                const obj = dailyPlanData.ruleOf3[data.slotIdx];
+                if (obj) {
+                    if (!obj.id) { obj.id = generateTaskId(); }
+                    entry = { id: obj.id, type: obj.type || 'todo' };
                     dailyPlanData.ruleOf3[data.slotIdx] = null; // Clear the slot
                 }
             }
             
-            if (task) {
-                // Remove from other quadrants first (in case dragged from repo and was already in matrix)
+            if (entry) {
+                // Remove from other quadrants first (dedup by id, not text).
                 if (data.source === 'repository') {
                     ['q1', 'q2', 'q3', 'q4'].forEach(q => {
-                        dailyPlanData.matrix[q] = dailyPlanData.matrix[q].filter(t => 
-                            !(t.text === task.text && t.type === task.type)
-                        );
+                        dailyPlanData.matrix[q] = dailyPlanData.matrix[q].filter(t => t.id !== entry.id);
                     });
                 }
                 
                 // Add to target quadrant
-                dailyPlanData.matrix[quadrant].push(task);
+                dailyPlanData.matrix[quadrant].push(entry);
                 saveDailyPlan();
                 renderMatrix();
                 renderRuleOf3();
@@ -17666,28 +17968,82 @@ Return ONLY the JSON array:`;
         function renderMatrix() {
             ['q1', 'q2', 'q3', 'q4'].forEach(q => {
                 const el = document.getElementById(`matrix${q.toUpperCase()}`);
-                if (el) {
-                    const tasks = dailyPlanData.matrix[q] || [];
-                    el.innerHTML = tasks.map((t, idx) => `
-                        <div class="matrix-task ${t.done ? 'completed' : ''}" draggable="true" 
+                if (!el) return;
+                const entries = dailyPlanData.matrix[q] || [];
+                let prunedAny = false;
+                const html = entries.map((entry, idx) => {
+                    const rec = resolveMatrixEntry(entry);
+                    if (!rec) { prunedAny = true; return ''; }
+                    const isRock = (entry.type === 'rock') || (rec.type === 'rock');
+                    const rockIcon = isRock ? '\uD83E\uDEA8 ' : '';
+                    const listName = rec.googleListName || 'To-Dos';
+                    const listPill = `<span class="matrix-list-pill" title="List" style="font-size:0.65rem;padding:1px 6px;border-radius:4px;background:#f3f4f6;color:#6b7280;white-space:nowrap;flex-shrink:0;">${listName}</span>`;
+                    const duePill = rec.dueDate ? `<span class="matrix-due-pill" title="Due ${rec.dueDate}" style="font-size:0.65rem;padding:1px 6px;border-radius:4px;white-space:nowrap;flex-shrink:0;${(isOverdue(rec.dueDate) && !rec.done) ? 'background:#fee2e2;color:#b91c1c;' : 'background:#eef2ff;color:#4f46e5;'}">${rec.dueDate}</span>` : '';
+                    const actions = renderTaskActions(rec, 'matrix');
+                    return `
+                        <div class="matrix-task ${rec.done ? 'completed' : ''}" draggable="true"
                              data-quadrant="${q}" data-idx="${idx}"
                              ondragstart="dragMatrixItem(event, '${q}', ${idx})"
                              ondragover="matrixItemDragOver(event, '${q}', ${idx})"
                              ondragleave="matrixItemDragLeave(event)"
                              ondrop="dropOnMatrixItem(event, '${q}', ${idx})"
                              ondragend="dragEnd(event)">
-                            <input type="checkbox" class="matrix-check" onclick="completeMatrixTask('${q}', ${idx})" ${t.done ? 'checked' : ''}>
-                            <span class="task-text-editable" ondblclick="editMatrixTask('${q}', ${idx})" title="Double-click to edit" style="${t.done ? 'text-decoration: line-through; opacity: 0.5;' : ''}">${t.type === 'rock' ? '🪨 ' : ''}${t.text}</span>
-                            ${t.done ? `
+                            <input type="checkbox" class="matrix-check" onclick="completeMatrixTask('${q}', ${idx})" ${rec.done ? 'checked' : ''}>
+                            <span class="task-text-editable" ondblclick="editMatrixTask('${q}', ${idx})" title="Double-click to edit" style="flex:1;${rec.done ? 'text-decoration: line-through; opacity: 0.5;' : ''}">${rockIcon}${rec.text || ''}</span>
+                            <div class="matrix-task-meta" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;justify-content:flex-end;">
+                                ${duePill}${listPill}${actions}
+                            </div>
+                            ${rec.done ? `
                                 <div class="task-actions" style="display: flex; gap: 4px; margin-left: 8px;">
-                                    <button class="action-btn archive" onclick="archiveMatrixTask('${q}', ${idx})" title="Archive (remove from everywhere)">📦</button>
-                                    <button class="action-btn uncheck" onclick="uncheckMatrixTask('${q}', ${idx})" title="Uncheck">↩</button>
-                                    <button class="action-btn delete" onclick="deleteMatrixTask('${q}', ${idx})" title="Delete permanently">🗑</button>
+                                    <button class="action-btn archive" onclick="archiveMatrixTask('${q}', ${idx})" title="Archive (remove from everywhere)">\uD83D\uDCE6</button>
+                                    <button class="action-btn uncheck" onclick="uncheckMatrixTask('${q}', ${idx})" title="Uncheck">\u21A9</button>
+                                    <button class="action-btn delete" onclick="deleteMatrixTask('${q}', ${idx})" title="Delete permanently">\uD83D\uDDD1</button>
                                 </div>
                             ` : ''}
-                            <button class="remove-btn" onclick="removeFromMatrix('${q}', ${idx})">✕</button>
+                            <button class="remove-btn" onclick="removeFromMatrix('${q}', ${idx})">\u2715</button>
                         </div>
-                    `).join('');
+                    `;
+                }).join('');
+                el.innerHTML = html;
+                if (prunedAny) {
+                    // Drop orphaned references (source record was deleted), persist,
+                    // and re-render this quadrant once so DOM indices realign.
+                    dailyPlanData.matrix[q] = entries.filter(e => resolveMatrixEntry(e) !== null);
+                    try { saveDailyPlan(); } catch (e) {}
+                    const entries2 = dailyPlanData.matrix[q];
+                    el.innerHTML = entries2.map((entry, idx) => {
+                        const rec = resolveMatrixEntry(entry);
+                        if (!rec) return '';
+                        const isRock = (entry.type === 'rock') || (rec.type === 'rock');
+                        const rockIcon = isRock ? '\uD83E\uDEA8 ' : '';
+                        const listName = rec.googleListName || 'To-Dos';
+                        const listPill = `<span class="matrix-list-pill" title="List" style="font-size:0.65rem;padding:1px 6px;border-radius:4px;background:#f3f4f6;color:#6b7280;white-space:nowrap;flex-shrink:0;">${listName}</span>`;
+                        const duePill = rec.dueDate ? `<span class="matrix-due-pill" title="Due ${rec.dueDate}" style="font-size:0.65rem;padding:1px 6px;border-radius:4px;white-space:nowrap;flex-shrink:0;${(isOverdue(rec.dueDate) && !rec.done) ? 'background:#fee2e2;color:#b91c1c;' : 'background:#eef2ff;color:#4f46e5;'}">${rec.dueDate}</span>` : '';
+                        const actions = renderTaskActions(rec, 'matrix');
+                        return `
+                        <div class="matrix-task ${rec.done ? 'completed' : ''}" draggable="true"
+                             data-quadrant="${q}" data-idx="${idx}"
+                             ondragstart="dragMatrixItem(event, '${q}', ${idx})"
+                             ondragover="matrixItemDragOver(event, '${q}', ${idx})"
+                             ondragleave="matrixItemDragLeave(event)"
+                             ondrop="dropOnMatrixItem(event, '${q}', ${idx})"
+                             ondragend="dragEnd(event)">
+                            <input type="checkbox" class="matrix-check" onclick="completeMatrixTask('${q}', ${idx})" ${rec.done ? 'checked' : ''}>
+                            <span class="task-text-editable" ondblclick="editMatrixTask('${q}', ${idx})" title="Double-click to edit" style="flex:1;${rec.done ? 'text-decoration: line-through; opacity: 0.5;' : ''}">${rockIcon}${rec.text || ''}</span>
+                            <div class="matrix-task-meta" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;justify-content:flex-end;">
+                                ${duePill}${listPill}${actions}
+                            </div>
+                            ${rec.done ? `
+                                <div class="task-actions" style="display: flex; gap: 4px; margin-left: 8px;">
+                                    <button class="action-btn archive" onclick="archiveMatrixTask('${q}', ${idx})" title="Archive (remove from everywhere)">\uD83D\uDCE6</button>
+                                    <button class="action-btn uncheck" onclick="uncheckMatrixTask('${q}', ${idx})" title="Uncheck">\u21A9</button>
+                                    <button class="action-btn delete" onclick="deleteMatrixTask('${q}', ${idx})" title="Delete permanently">\uD83D\uDDD1</button>
+                                </div>
+                            ` : ''}
+                            <button class="remove-btn" onclick="removeFromMatrix('${q}', ${idx})">\u2715</button>
+                        </div>
+                    `;
+                    }).join('');
                 }
             });
         }
@@ -17771,168 +18127,108 @@ Return ONLY the JSON array:`;
         }
         
         function archiveMatrixTask(quadrant, idx) {
-            const task = dailyPlanData.matrix[quadrant][idx];
-            if (!task) return;
-            
-            // Remove from matrix
+            const entry = dailyPlanData.matrix[quadrant][idx];
+            const rec = resolveMatrixEntry(entry);
+            if (!rec) { dailyPlanData.matrix[quadrant].splice(idx, 1); saveDailyPlan(); renderMatrix(); return; }
+            const label = (rec.text || '').substring(0, 30);
+
+            // Remove the reference from the matrix.
             dailyPlanData.matrix[quadrant].splice(idx, 1);
-            
-            // If it's a todo, mark as done AND archived
-            if (task.type === 'todo') {
-                const todos = yearData.quarters[currentQuarter].todos;
-                const found = todos.find(t => t.text === task.text);
-                if (found) {
-                    found.done = true;
-                    found.archived = true;
-                    found.archivedAt = new Date().toISOString();
-                    autoSave();
-                    sortAndRenderTodos();
-                }
+
+            // Mutate the single source record.
+            if ((entry.type || rec.type) === 'todo') {
+                rec.done = true;
+                rec.archived = true;
+                rec.archivedAt = new Date().toISOString();
+                autoSave();
+            } else if ((entry.type || rec.type) === 'rock') {
+                rec.done = true;
+                rec.completedAt = new Date().toISOString();
+                autoSave();
             }
-            
-            // If it's a rock, ensure it's marked done
-            if (task.type === 'rock') {
-                const rocks = yearData.quarters[currentQuarter].rocks;
-                const found = rocks.find(r => r.text === task.text);
-                if (found) {
-                    found.done = true;
-                    found.completedAt = new Date().toISOString();
-                    autoSave();
-                }
-            }
-            
+
             saveDailyPlan();
-            renderMatrix();
-            renderRepository();
-            addLogEntry(`Archived: "${task.text.substring(0, 30)}..."`);
+            rerenderAllTaskSurfaces();
+            addLogEntry(`Archived: "${label}..."`);
         }
         
         function uncheckMatrixTask(quadrant, idx) {
-            const task = dailyPlanData.matrix[quadrant][idx];
-            if (!task) return;
-            
-            task.done = false;
-            
-            // If it's a todo, uncheck in the main list too
-            if (task.type === 'todo') {
-                const todos = yearData.quarters[currentQuarter].todos;
-                const found = todos.find(t => t.text === task.text);
-                if (found) {
-                    found.done = false;
-                    autoSave();
-                    sortAndRenderTodos();
-                }
-            }
-            
-            // If it's a rock, uncheck it
-            if (task.type === 'rock') {
-                const rocks = yearData.quarters[currentQuarter].rocks;
-                const found = rocks.find(r => r.text === task.text);
-                if (found) {
-                    found.done = false;
-                    delete found.completedAt;
-                    autoSave();
-                }
-            }
-            
+            const entry = dailyPlanData.matrix[quadrant][idx];
+            const rec = resolveMatrixEntry(entry);
+            if (!rec) return;
+
+            rec.done = false;
+            if ((entry.type || rec.type) === 'rock') { delete rec.completedAt; }
+            autoSave();
+
             saveDailyPlan();
-            renderMatrix();
-            renderRepository();
+            rerenderAllTaskSurfaces();
         }
         
         function deleteMatrixTask(quadrant, idx) {
-            const task = dailyPlanData.matrix[quadrant][idx];
-            if (!task) return;
-            
-            if (!confirm(`Permanently delete "${task.text.substring(0, 40)}..."?\n\nThis will remove it from everywhere.`)) {
+            const entry = dailyPlanData.matrix[quadrant][idx];
+            const rec = resolveMatrixEntry(entry);
+            if (!rec) { dailyPlanData.matrix[quadrant].splice(idx, 1); saveDailyPlan(); renderMatrix(); return; }
+            const label = (rec.text || '').substring(0, 40);
+
+            if (!confirm(`Permanently delete "${label}..."?\n\nThis will remove it from everywhere.`)) {
                 return;
             }
-            
-            // Remove from matrix
+
+            // Remove the reference from the matrix.
             dailyPlanData.matrix[quadrant].splice(idx, 1);
-            
-            // If it's a todo, delete from the main list
-            if (task.type === 'todo') {
+
+            const entryType = entry.type || rec.type;
+            if (entryType === 'todo') {
                 const todos = yearData.quarters[currentQuarter].todos;
-                const foundIdx = todos.findIndex(t => t.text === task.text);
+                const foundIdx = todos.findIndex(t => t.id === rec.id);
                 if (foundIdx >= 0) {
                     todos.splice(foundIdx, 1);
                     autoSave();
-                    sortAndRenderTodos();
                 }
-            }
-            
-            // Note: We don't delete rocks from here - they should be deleted from Quarterly Rocks tab
-            if (task.type === 'rock') {
+            } else if (entryType === 'rock') {
                 alert('Rocks can only be deleted from the Quarterly Rocks tab.');
             }
-            
+
             saveDailyPlan();
-            renderMatrix();
-            renderRepository();
-            addLogEntry(`Deleted: "${task.text.substring(0, 30)}..."`);
+            rerenderAllTaskSurfaces();
+            addLogEntry(`Deleted: "${(rec.text || '').substring(0, 30)}..."`);
         }
         
         function editMatrixTask(quadrant, idx) {
-            const task = dailyPlanData.matrix[quadrant][idx];
-            if (!task) return;
-            
-            const newText = prompt('Edit task:', task.text);
-            if (newText && newText.trim() && newText.trim() !== task.text) {
-                const oldText = task.text;
-                task.text = newText.trim();
-                
-                // Sync back to original source (Weekly Meeting todos)
-                if (task.type === 'todo') {
-                    const todos = yearData.quarters[currentQuarter].todos || [];
-                    const found = todos.find(t => t.text === oldText);
-                    if (found) {
-                        found.text = newText.trim();
-                        autoSave();
-                        sortAndRenderTodos();
-                        addLogEntry(`Task updated: "${oldText.substring(0, 30)}..." → "${newText.trim().substring(0, 30)}..."`);
-                    }
+            const entry = dailyPlanData.matrix[quadrant][idx];
+            const rec = resolveMatrixEntry(entry);
+            if (!rec) return;
+
+            const oldText = rec.text || '';
+            const newText = prompt('Edit task:', oldText);
+            if (newText && newText.trim() && newText.trim() !== oldText) {
+                const entryType = entry.type || rec.type;
+                if (entryType === 'todo') {
+                    updateTaskById(rec.id, 'text', newText.trim());
+                    addLogEntry(`Task updated: "${oldText.substring(0, 30)}..." → "${newText.trim().substring(0, 30)}..."`);
+                } else {
+                    rec.text = newText.trim();
+                    autoSave();
                 }
-                
                 saveDailyPlan();
-                renderMatrix();
-                renderRepository();
-                renderRuleOf3();
+                rerenderAllTaskSurfaces();
             }
         }
         
         function completeMatrixTask(quadrant, idx) {
-            const task = dailyPlanData.matrix[quadrant][idx];
-            if (task) {
-                task.done = !task.done;
-                
-                // If it's a real todo, mark it complete in the main list too
-                if (task.type === 'todo' && task.done) {
-                    const todos = yearData.quarters[currentQuarter].todos;
-                    const found = todos.find(t => t.text === task.text);
-                    if (found) {
-                        found.done = true;
-                        autoSave();
-                        sortAndRenderTodos();
-                    }
-                }
-                
-                // If it's a rock, mark it complete in the Quarterly Rocks
-                if (task.type === 'rock' && task.done) {
-                    const rocks = yearData.quarters[currentQuarter].rocks;
-                    const found = rocks.find(r => r.text === task.text);
-                    if (found) {
-                        found.done = true;
-                        found.completedAt = new Date().toISOString();
-                        autoSave();
-                        addLogEntry(`Rock completed: "${task.text.substring(0, 30)}..."`);
-                    }
-                }
-                
-                saveDailyPlan();
-                renderMatrix();
-                renderRepository();
+            const entry = dailyPlanData.matrix[quadrant][idx];
+            const rec = resolveMatrixEntry(entry);
+            if (!rec) return;
+            const wasDone = !!rec.done;
+            // Single source of truth: flip the one record (todos also fire Google/daily sync).
+            toggleTaskDoneById(rec.id);
+            if (!wasDone && (entry.type || rec.type) === 'rock') {
+                addLogEntry(`Rock completed: "${(rec.text || '').substring(0, 30)}..."`);
             }
+            saveDailyPlan();
+            // toggleTaskDoneById already re-renders all surfaces; ensure repository too.
+            try { if (document.getElementById('taskRepository')) renderRepository(); } catch (e) {}
         }
         
         function dragMatrixItem(event, quadrant, idx) {
@@ -17983,10 +18279,14 @@ Return ONLY the JSON array:`;
             if (data.source === 'repository') {
                 task = getTaskData(data.type, data.idx);
             }
-            // From matrix
+            // From matrix — matrix holds {id,type} references; resolve to a full
+            // object (spread copy carrying id) before handing to Rule-of-3, which
+            // stays object-based (Phase 2).
             else if (data.source === 'matrix') {
-                task = dailyPlanData.matrix[data.quadrant][data.idx];
-                if (task) {
+                const entry = dailyPlanData.matrix[data.quadrant][data.idx];
+                const rec = resolveMatrixEntry(entry);
+                if (rec) {
+                    task = { ...rec, type: (entry.type || rec.type || 'todo') };
                     dailyPlanData.matrix[data.quadrant].splice(data.idx, 1);
                 }
             }
@@ -18033,13 +18333,17 @@ Return ONLY the JSON array:`;
                     return;
                 }
             }
-            // From matrix
+            // From matrix — resolve reference to a full object on the way into
+            // Rule-of-3; on swap, convert the returning object back to {id,type}.
             else if (data.source === 'matrix') {
-                task = dailyPlanData.matrix[data.quadrant][data.idx];
-                if (task) {
+                const entry = dailyPlanData.matrix[data.quadrant][data.idx];
+                const rec = resolveMatrixEntry(entry);
+                if (rec) {
+                    task = { ...rec, type: (entry.type || rec.type || 'todo') };
                     if (existingTask) {
-                        // Swap: move existing task back to matrix
-                        dailyPlanData.matrix[data.quadrant][data.idx] = existingTask;
+                        // Swap: move the existing Rule-of-3 object back into the matrix as a reference.
+                        if (!existingTask.id) { existingTask.id = generateTaskId(); }
+                        dailyPlanData.matrix[data.quadrant][data.idx] = { id: existingTask.id, type: existingTask.type || 'todo' };
                     } else {
                         dailyPlanData.matrix[data.quadrant].splice(data.idx, 1);
                     }
@@ -18800,7 +19104,9 @@ Return ONLY the JSON array:`;
                                 importedAt: new Date().toISOString(),
                                 googleTaskId: task.id,
                                 googleListId: task.listId || '',
-                                googleListName: task.listName || ''
+                                googleListName: task.listName || '',
+                                emailLink: task.emailLink || '',
+                                id: generateTaskId()
                             });
                             imported++;
                             existingTexts.add(taskTitle.toLowerCase().trim());
