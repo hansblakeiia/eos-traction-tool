@@ -4060,9 +4060,15 @@ Example:
         };
         
         // ==================== VERSION ====================
+<<<<<<< HEAD
+        const EOS_VERSION = '3.48.1';
+        const EOS_BUILD_DATE = '2026-07-17';
+        const EOS_BUILD_TIME = '02:00'; // v3.48.1 Phase 1 patch: Matrix repaints immediately on complete/uncheck (checkbox + To-Dos paths); completedTodo completions now sync to Google (fixes archived-task flakiness); Matrix cards decluttered — no due-date/list pills, all actions in the ⋯ menu (checkbox + star + text + ⋯ only). No .gs change.
+=======
         const EOS_VERSION = '3.48.0';
         const EOS_BUILD_DATE = '2026-07-17';
         const EOS_BUILD_TIME = '01:00'; // v3.48.0 Phase 1: shared id-addressed task actions (renderTaskActions + ⋯ popover); Matrix converted to reference-by-id (full action set on Matrix cards, mutations reflect across surfaces); group-by-list headers on To-Dos; list pill on Matrix; emailLink field (additive, Case A). Rule-of-3/Kanban unchanged; Google Tasks reconciliation untouched.
+>>>>>>> ee9af30aa012823a51653fb15ce689d0a254f691
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -5938,7 +5944,25 @@ Example:
                 toggleTodo(r.idx);
                 return;
             }
+<<<<<<< HEAD
+            // completedTodos: flip in place AND fire Google sync (mirrors toggleTodo),
+            // because a task archived from the To-Dos tab can still be referenced from
+            // a Matrix card — without this, un/re-completing it never reaches Google.
+            if (r.kind === 'completedTodo') {
+                r.record.done = !r.record.done;
+                autoSave();
+                try { if (typeof syncTodoDoneStateToDailyPlan === 'function') syncTodoDoneStateToDailyPlan(r.record); } catch (e) {}
+                if (r.record.googleTaskId && !r.record.googleTaskId.startsWith('synced_')) {
+                    if (r.record.done) syncTaskCompletionToGoogle(r.record);
+                    else syncTaskUncompleteToGoogle(r.record);
+                }
+                rerenderAllTaskSurfaces();
+                return;
+            }
+            // rocks: flip in place.
+=======
             // rocks / completedTodos: flip in place.
+>>>>>>> ee9af30aa012823a51653fb15ce689d0a254f691
             r.record.done = !r.record.done;
             if (r.kind === 'rock') {
                 if (r.record.done) r.record.completedAt = new Date().toISOString();
@@ -6071,10 +6095,19 @@ Example:
 
             // Ranked promotion order (locked): Snooze, Email, Add-subtask, Notes.
             // Mobile promotes top 2; desktop top 3. Add-subtask only when eligible.
+<<<<<<< HEAD
+            // Matrix cards stay minimal (v3.48.1): promote NOTHING — checkbox + star +
+            // text + ⋯ only; every action lives in the ⋯ menu to avoid card cramming.
+            const ranked = [snoozeSpec, emailSpec];
+            if (subtaskEligible) ranked.push(subtaskSpec);
+            ranked.push(notesSpec);
+            const promoteCount = (context === 'matrix') ? 0 : (mobile ? 2 : 3);
+=======
             const ranked = [snoozeSpec, emailSpec];
             if (subtaskEligible) ranked.push(subtaskSpec);
             ranked.push(notesSpec);
             const promoteCount = mobile ? 2 : 3;
+>>>>>>> ee9af30aa012823a51653fb15ce689d0a254f691
             const promoted = ranked.slice(0, promoteCount);
             const overflow = ranked.slice(promoteCount);
             // AI always lives in the ⋯ menu in Phase 1 (reserved slot).
@@ -6168,7 +6201,20 @@ Example:
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
+<<<<<<< HEAD
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.48.1 &mdash; 2026-07-17 (Current)</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Fixed: unchecking a task on the Matrix now updates instantly.</strong> Previously the checkmark cleared but the text stayed crossed out until you left and came back. The Matrix now repaints immediately whether you complete/uncheck from the Matrix card or from the To-Dos list.</li>'
+                + '<li><strong>Fixed: completing a Matrix task now reliably syncs to Google Tasks.</strong> A task that had been archived from the To-Dos tab but was still sitting on a Matrix card did not always reach Google when completed there; it does now.</li>'
+                + '<li><strong>Cleaner Matrix cards.</strong> Removed the due-date and list labels from Matrix cards and moved every action into the &ldquo;&middot;&middot;&middot;&rdquo; menu, so a card is just checkbox + star + text + &ldquo;&middot;&middot;&middot;&rdquo;. Much less cramped, especially on mobile. (To-Dos still show due dates, list headers, and the inline actions.)</li>'
+                + '</ul></div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.48.0 &mdash; 2026-07-17</div>'
+=======
                 + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.48.0 &mdash; 2026-07-17 (Current)</div>'
+>>>>>>> ee9af30aa012823a51653fb15ce689d0a254f691
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Task actions now follow a task everywhere.</strong> When you drag a to-do into the Eisenhower Matrix, it now carries its full action set &mdash; star, notes, snooze, add-subtask, email, and a &ldquo;&middot;&middot;&middot;&rdquo; menu &mdash; instead of a stripped-down card. Snoozing, completing, editing, or deleting on a Matrix card updates the one underlying task, so it reflects instantly back in To-Dos (and vice-versa). No more actions disappearing when a task moves.</li>'
                 + '<li>Behind the scenes, the Matrix now references each task by its permanent ID (added in v3.47.0) rather than keeping a separate text-matched copy. This is what kills the long-standing &ldquo;edited it here but not there&rdquo; class of bug.</li>'
@@ -11601,6 +11647,10 @@ Example:
             sortAndRenderTodos();
             autoSave();
             syncTodoDoneStateToDailyPlan(todo);
+            // v3.48.1: the Matrix now stores {id} references, so the text-based
+            // propagation above no longer repaints the active user's Matrix. Repaint
+            // it directly when it's mounted so done-state reflects immediately.
+            try { if (typeof renderMatrix === 'function' && document.getElementById('matrixQ1')) renderMatrix(); } catch (e) {}
             
             // Sync to Google Tasks if task has a Google Task ID
             if (todo.googleTaskId && !todo.googleTaskId.startsWith('synced_')) {
@@ -17990,8 +18040,13 @@ Return ONLY the JSON array:`;
                              ondragend="dragEnd(event)">
                             <input type="checkbox" class="matrix-check" onclick="completeMatrixTask('${q}', ${idx})" ${rec.done ? 'checked' : ''}>
                             <span class="task-text-editable" ondblclick="editMatrixTask('${q}', ${idx})" title="Double-click to edit" style="flex:1;${rec.done ? 'text-decoration: line-through; opacity: 0.5;' : ''}">${rockIcon}${rec.text || ''}</span>
+<<<<<<< HEAD
+                            <div class="matrix-task-meta" style="display:flex;align-items:center;gap:4px;justify-content:flex-end;">
+                                ${actions}
+=======
                             <div class="matrix-task-meta" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;justify-content:flex-end;">
                                 ${duePill}${listPill}${actions}
+>>>>>>> ee9af30aa012823a51653fb15ce689d0a254f691
                             </div>
                             ${rec.done ? `
                                 <div class="task-actions" style="display: flex; gap: 4px; margin-left: 8px;">
@@ -18030,8 +18085,13 @@ Return ONLY the JSON array:`;
                              ondragend="dragEnd(event)">
                             <input type="checkbox" class="matrix-check" onclick="completeMatrixTask('${q}', ${idx})" ${rec.done ? 'checked' : ''}>
                             <span class="task-text-editable" ondblclick="editMatrixTask('${q}', ${idx})" title="Double-click to edit" style="flex:1;${rec.done ? 'text-decoration: line-through; opacity: 0.5;' : ''}">${rockIcon}${rec.text || ''}</span>
+<<<<<<< HEAD
+                            <div class="matrix-task-meta" style="display:flex;align-items:center;gap:4px;justify-content:flex-end;">
+                                ${actions}
+=======
                             <div class="matrix-task-meta" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;justify-content:flex-end;">
                                 ${duePill}${listPill}${actions}
+>>>>>>> ee9af30aa012823a51653fb15ce689d0a254f691
                             </div>
                             ${rec.done ? `
                                 <div class="task-actions" style="display: flex; gap: 4px; margin-left: 8px;">
@@ -18227,8 +18287,16 @@ Return ONLY the JSON array:`;
                 addLogEntry(`Rock completed: "${(rec.text || '').substring(0, 30)}..."`);
             }
             saveDailyPlan();
+<<<<<<< HEAD
+            // v3.48.1: repaint every surface so the Matrix card's checkbox AND
+            // strikethrough update immediately (toggleTaskDoneById -> toggleTodo only
+            // re-rendered To-Dos; the old text-based Matrix propagation is dead now
+            // that the Matrix stores {id} references).
+            rerenderAllTaskSurfaces();
+=======
             // toggleTaskDoneById already re-renders all surfaces; ensure repository too.
             try { if (document.getElementById('taskRepository')) renderRepository(); } catch (e) {}
+>>>>>>> ee9af30aa012823a51653fb15ce689d0a254f691
         }
         
         function dragMatrixItem(event, quadrant, idx) {
