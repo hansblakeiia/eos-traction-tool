@@ -4060,9 +4060,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.48.1';
-        const EOS_BUILD_DATE = '2026-07-17';
-        const EOS_BUILD_TIME = '02:00'; // v3.48.1 Phase 1 patch: Matrix repaints immediately on complete/uncheck (checkbox + To-Dos paths); completedTodo completions now sync to Google (fixes archived-task flakiness); Matrix cards decluttered — no due-date/list pills, all actions in the ⋯ menu (checkbox + star + text + ⋯ only). No .gs change.
+        const EOS_VERSION = '3.49.0';
+        const EOS_BUILD_DATE = '2026-07-18';
+        const EOS_BUILD_TIME = '14:00'; // v3.49.0 Phase 2: Rule of 3 converted to {id,type} references (like the Matrix); Rule-of-3 cards route through the shared renderTaskActions (full action set + more-menu) instead of just checkbox/focus/x; all six Rule-of-3 actions + drop seams are id-native; rocks-by-text -> by-id; completion now reads the single source record's done state; repository/print/daily-plan-print consumers resolve references (also repairs a Phase-1 Matrix regression). Kanban + autoPullFromGoogleTasks dedup untouched. No .gs change.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -6090,7 +6090,7 @@ Example:
             const ranked = [snoozeSpec, emailSpec];
             if (subtaskEligible) ranked.push(subtaskSpec);
             ranked.push(notesSpec);
-            const promoteCount = (context === 'matrix') ? 0 : (mobile ? 2 : 3);
+            const promoteCount = (context === 'matrix' || context === 'ruleOf3') ? 0 : (mobile ? 2 : 3);
             const promoted = ranked.slice(0, promoteCount);
             const overflow = ranked.slice(promoteCount);
             // AI always lives in the ⋯ menu in Phase 1 (reserved slot).
@@ -6157,6 +6157,49 @@ Example:
             return converted;
         }
 
+        // Rule of 3 stores {id,type} references (Phase 2). Resolve to the live record.
+        // Mirrors resolveMatrixEntry. A null slot stays null; a legacy full-object
+        // slot (pre-migration) resolves to itself for back-compat.
+        function resolveRuleEntry(entry) {
+            if (!entry) return null;
+            // Back-compat: a legacy full-object slot (has text, no id) resolves to itself.
+            if (entry.text !== undefined && entry.id === undefined) return entry;
+            const r = resolveTaskById(entry.id);
+            return r ? r.record : null;
+        }
+
+        // One-time idempotent migration of Rule-of-3 slots (full objects -> {id,type}).
+        // Mirrors migrateMatrixToReferences. The ONLY sanctioned text-match here: a
+        // legacy slot whose id didn't survive Phase 0 is resolved by text once, stamped,
+        // never again. Null slots are preserved (Rule of 3 is a fixed [a,b,c] array).
+        function migrateRuleOf3ToReferences(plan) {
+            if (!plan || !Array.isArray(plan.ruleOf3)) return 0;
+            let converted = 0;
+            const q = yearData && yearData.quarters && yearData.quarters[currentQuarter];
+            const todos = (q && q.todos) || [];
+            const rocks = (q && q.rocks) || [];
+            plan.ruleOf3 = plan.ruleOf3.map(function (entry) {
+                if (!entry) return null;
+                // Already a reference.
+                if (entry.text === undefined && entry.id !== undefined) return entry;
+                let id = entry.id;
+                const type = entry.type || 'todo';
+                if (!id) {
+                    const src = (type === 'rock' ? rocks : todos).find(function (x) { return x.text === entry.text; });
+                    if (src) { if (!src.id) src.id = generateTaskId(); id = src.id; }
+                }
+                if (!id) {
+                    // Could not resolve (e.g. a 'local' task or an orphan). Preserve the
+                    // legacy object rather than dropping the user's Top-3 slot.
+                    console.warn('Rule-of-3 migration: could not resolve slot, keeping legacy object:', entry.text);
+                    return entry;
+                }
+                converted++;
+                return { id: id, type: type };
+            });
+            return converted;
+        }
+
 
         function initRatingButtons() {
             const container = document.getElementById('ratingButtons');
@@ -6184,7 +6227,17 @@ Example:
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.48.1 &mdash; 2026-07-17 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.49.0 &mdash; 2026-07-18 (Current)</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Rule of 3 now carries the full task action set.</strong> A task in one of your Top&nbsp;3 slots now shows the same star, notes, snooze, email, and &ldquo;&middot;&middot;&middot;&rdquo; menu as everywhere else &mdash; not just a checkbox and Focus button. Completing, editing, archiving, or deleting a Top&nbsp;3 task updates the one underlying task, so it reflects instantly in To-Dos and the Matrix (and vice-versa).</li>'
+                + '<li><strong>Completion is now unified.</strong> Checking a task off in To-Dos or the Matrix now correctly shows it complete in Rule&nbsp;of&nbsp;3 too, because all three read the same task rather than separate copies. Completing a Top&nbsp;3 to-do still syncs to Google Tasks as before.</li>'
+                + '<li>Behind the scenes, Rule&nbsp;of&nbsp;3 now references each task by its permanent ID (the same change the Matrix got in v3.48.0), removing another source of &ldquo;edited here but not there&rdquo; drift.</li>'
+                + '<li><strong>Fixed:</strong> tasks placed on the Matrix now correctly show as &ldquo;in use&rdquo; (grayed out) in the task repository again, and print/PDF views render Matrix and Rule&nbsp;of&nbsp;3 tasks correctly.</li>'
+                + '<li><em>Unchanged on purpose:</em> Kanban keeps its current behavior for now (a later phase), and Google Tasks syncing is untouched.</li>'
+                + '</ul></div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.48.1 &mdash; 2026-07-17</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Fixed: unchecking a task on the Matrix now updates instantly.</strong> Previously the checkmark cleared but the text stayed crossed out until you left and came back. The Matrix now repaints immediately whether you complete/uncheck from the Matrix card or from the To-Dos list.</li>'
                 + '<li><strong>Fixed: completing a Matrix task now reliably syncs to Google Tasks.</strong> A task that had been archived from the To-Dos tab but was still sitting on a Matrix card did not always reach Google when completed there; it does now.</li>'
@@ -13892,35 +13945,50 @@ Make sure your suggestions directly address the specific root cause and discussi
                 </div>
             ` : '';
             
-            // Build Rule of 3 HTML
-            const rule3Html = plan.ruleOf3.map((task, idx) => {
-                if (task) {
+            // Build Rule of 3 HTML (slots are {id,type} references -> resolve).
+            // A legacy full-object slot resolves to itself. Completion reads from the
+            // resolved record's .done. Todos live in shared yearData, so ids resolve
+            // even when printing another team member's plan.
+            const _resolvePlanEntry = (entry) => {
+                if (!entry) return null;
+                if (entry.text !== undefined && entry.id === undefined) return entry;
+                const r = resolveTaskById(entry.id);
+                return r ? r.record : null;
+            };
+            const rule3Html = plan.ruleOf3.map((entry, idx) => {
+                const task = _resolvePlanEntry(entry);
+                if (entry && task) {
+                    const isDone = (entry.completed !== undefined) ? entry.completed : !!task.done;
                     const listBadge = task.googleListName ? `<span style="font-size: 7pt; color: #666; margin-left: 8px;">[${task.googleListName}]</span>` : '';
+                    const rockPrefix = (entry.type || task.type) === 'rock' ? '\uD83E\uDEA8 ' : '';
                     return `
-                        <div class="item-row" style="${task.completed ? 'background: #f0fdf4; border-left: 3px solid #22c55e;' : ''}">
-                            <span class="item-num" style="${task.completed ? 'background: #22c55e;' : ''}">${idx + 1}</span>
-                            <input type="checkbox" ${task.completed ? 'checked' : ''} style="margin-right: 8px;">
-                            <span style="flex: 1; ${task.completed ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${task.type === 'rock' ? '🪨 ' : ''}${task.text}${listBadge}</span>
+                        <div class="item-row" style="${isDone ? 'background: #f0fdf4; border-left: 3px solid #22c55e;' : ''}">
+                            <span class="item-num" style="${isDone ? 'background: #22c55e;' : ''}">${idx + 1}</span>
+                            <input type="checkbox" ${isDone ? 'checked' : ''} style="margin-right: 8px;">
+                            <span style="flex: 1; ${isDone ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${rockPrefix}${task.text || ''}${listBadge}</span>
                         </div>
                     `;
                 } else {
                     return `<div class="item-row" style="color: #999; border: 1px dashed #ccc;"><span class="item-num" style="background: #ccc;">${idx + 1}</span> (Empty slot)</div>`;
                 }
             }).join('');
-            
+
             // Build Matrix HTML
-            const quadrantNames = { q1: '🔴 Urgent + Important', q2: '🨢 Important (Not Urgent)', q3: '🨡 Urgent (Not Important)', q4: '⚪ Neither' };
+            const quadrantNames = { q1: '\uD83D\uDD34 Urgent + Important', q2: '\uD83D\uDFE2 Important (Not Urgent)', q3: '\uD83D\uDFE1 Urgent (Not Important)', q4: '\u26AA Neither' };
             const matrixHtml = ['q1', 'q2', 'q3', 'q4'].map(q => {
-                const tasks = plan.matrix[q] || [];
+                const entries = plan.matrix[q] || [];
                 return `
                     <div class="section no-break" style="margin-bottom: 8px;">
                         <h3 style="font-size: 9pt; margin-bottom: 4px;">${quadrantNames[q]}</h3>
-                        ${tasks.length ? tasks.map(t => {
+                        ${entries.length ? entries.map(entry => {
+                            const t = _resolvePlanEntry(entry);
+                            if (!t) return '';
                             const listBadge = t.googleListName ? `<span style="font-size: 7pt; color: #666; margin-left: 6px;">[${t.googleListName}]</span>` : '';
+                            const rockPrefix = (entry.type || t.type) === 'rock' ? '\uD83E\uDEA8 ' : '';
                             return `
                             <div class="item-row" style="${t.done ? 'text-decoration: line-through; opacity: 0.6;' : ''}">
                                 <input type="checkbox" ${t.done ? 'checked' : ''} style="margin-right: 6px;">
-                                ${t.type === 'rock' ? '🪨 ' : ''}${t.text}${listBadge}
+                                ${rockPrefix}${t.text || ''}${listBadge}
                             </div>
                         `}).join('') : '<p style="color: #999; font-size: 8pt; margin: 4px 0;">No tasks</p>'}
                     </div>
@@ -17063,11 +17131,14 @@ Return ONLY the JSON array:`;
             // copies to {id,type} references (idempotent; one-time in practice).
             try {
                 const _mConv = migrateMatrixToReferences(dailyPlanData);
-                if (_mConv > 0) {
-                    console.log('Matrix reference migration: converted ' + _mConv + ' entr(ies) to id-references.');
+                // Phase 2 (v3.49.0): convert Rule-of-3 slots to {id,type} references too.
+                const _rConv = migrateRuleOf3ToReferences(dailyPlanData);
+                if (_mConv > 0 || _rConv > 0) {
+                    if (_mConv > 0) console.log('Matrix reference migration: converted ' + _mConv + ' entr(ies) to id-references.');
+                    if (_rConv > 0) console.log('Rule-of-3 reference migration: converted ' + _rConv + ' slot(s) to id-references.');
                     localStorage.setItem(storageKey, JSON.stringify(dailyPlanData));
                 }
-            } catch (e) { console.warn('Matrix migration skipped:', e); }
+            } catch (e) { console.warn('Daily-plan reference migration skipped:', e); }
             
             // Check if there are notes to show (either from End Day or next day)
             if (dailyPlanData.tomorrowNotes && dailyPlanData.notesShown) {
@@ -17406,14 +17477,22 @@ Return ONLY the JSON array:`;
             const user = document.getElementById('dailyPlanUser')?.value;
             const search = document.getElementById('repoSearch')?.value?.toLowerCase() || '';
             
-            // Get all tasks currently in Matrix or Rule of 3
+            // Get all tasks currently in Matrix or Rule of 3.
+            // Both now store {id,type} references (Matrix: Phase 1; Rule-of-3: Phase 2),
+            // so resolve each reference to its live record to key by text. (A legacy
+            // full-object entry still resolves to itself via the resolvers.)
             const tasksInUse = new Set();
+            const _markInUse = (entry) => {
+                if (!entry) return;
+                const rec = (entry.text !== undefined && entry.id === undefined)
+                    ? entry
+                    : (resolveTaskById(entry.id) ? resolveTaskById(entry.id).record : null);
+                if (rec && rec.text) tasksInUse.add(`${entry.type || rec.type}:${rec.text}`);
+            };
             ['q1', 'q2', 'q3', 'q4'].forEach(q => {
-                (dailyPlanData.matrix[q] || []).forEach(t => tasksInUse.add(`${t.type}:${t.text}`));
+                (dailyPlanData.matrix[q] || []).forEach(_markInUse);
             });
-            dailyPlanData.ruleOf3.forEach(t => {
-                if (t) tasksInUse.add(`${t.type}:${t.text}`);
-            });
+            dailyPlanData.ruleOf3.forEach(_markInUse);
             
             // Rocks for this user (exclude completed rocks)
             const rocks = (yearData.quarters[currentQuarter].rocks || [])
@@ -17787,19 +17866,10 @@ Return ONLY the JSON array:`;
                     syncTaskUpdateToGoogle(todo, { title: title });
                 }
                 
-                // Also update in Eisenhower Matrix if task is there
-                ['q1', 'q2', 'q3', 'q4'].forEach(q => {
-                    const found = dailyPlanData.matrix[q]?.find(t => t.type === 'todo' && t.text === oldText);
-                    if (found) found.text = newText;
-                });
-                
-                // Also update in Rule of 3 if task is there
-                dailyPlanData.ruleOf3?.forEach(task => {
-                    if (task && task.type === 'todo' && task.text === oldText) {
-                        task.text = newText;
-                    }
-                });
-                
+                // Matrix (Phase 1) and Rule-of-3 (Phase 2) now store {id,type}
+                // references to this same todo record, so editing todo.text above is
+                // already reflected everywhere — no cross-surface text propagation
+                // needed. Just repaint the surfaces from the live record.
                 saveDailyPlan();
                 renderMatrix();
                 renderRuleOf3();
@@ -18289,93 +18359,119 @@ Return ONLY the JSON array:`;
         function dropToRuleOf3(event) {
             event.preventDefault();
             event.currentTarget.classList.remove('drag-over');
-            
+
             // Find first empty slot
             const emptySlotIdx = dailyPlanData.ruleOf3.findIndex(s => s === null);
-            
+
             if (emptySlotIdx === -1) {
-                alert('⚠️ Productivity Rule: Finish one of your Top 3 before adding another!');
+                alert('\u26A0\uFE0F Productivity Rule: Finish one of your Top 3 before adding another!');
                 return;
             }
-            
+
             let data;
             try {
                 data = JSON.parse(event.dataTransfer.getData('text/plain'));
             } catch (e) {
                 return;
             }
-            
-            let task;
-            
-            // From repository
+
+            // Phase 2: Rule-of-3 slots store {id,type} references (like the Matrix).
+            let entry = null;
+
+            // From repository — resolve the record, ensure it (and its source) has an
+            // id, store {id,type}. getTaskData returns a spread COPY, so a defensive id
+            // stamp is written back to the underlying source record.
             if (data.source === 'repository') {
-                task = getTaskData(data.type, data.idx);
-            }
-            // From matrix — matrix holds {id,type} references; resolve to a full
-            // object (spread copy carrying id) before handing to Rule-of-3, which
-            // stays object-based (Phase 2).
-            else if (data.source === 'matrix') {
-                const entry = dailyPlanData.matrix[data.quadrant][data.idx];
-                const rec = resolveMatrixEntry(entry);
+                const rec = getTaskData(data.type, data.idx);
                 if (rec) {
-                    task = { ...rec, type: (entry.type || rec.type || 'todo') };
-                    dailyPlanData.matrix[data.quadrant].splice(data.idx, 1);
+                    if (!rec.id) {
+                        const newId = generateTaskId();
+                        rec.id = newId;
+                        const user = document.getElementById('dailyPlanUser')?.value;
+                        if (data.type === 'rock') {
+                            const srcRocks = (yearData.quarters[currentQuarter].rocks || []).filter(r => r.owner === user);
+                            if (srcRocks[data.idx]) srcRocks[data.idx].id = newId;
+                        } else if (data.type === 'todo') {
+                            const srcTodos = (yearData.quarters[currentQuarter].todos || []).filter(t => t.owner === user && !t.done);
+                            if (srcTodos[data.idx]) srcTodos[data.idx].id = newId;
+                        }
+                        autoSave();
+                    }
+                    entry = { id: rec.id, type: rec.type || data.type };
                 }
             }
-            // From another Rule of 3 slot (reordering)
+            // From matrix — matrix already holds {id,type}; move the reference over.
+            else if (data.source === 'matrix') {
+                entry = dailyPlanData.matrix[data.quadrant][data.idx];
+                if (entry) dailyPlanData.matrix[data.quadrant].splice(data.idx, 1);
+            }
+            // From another Rule of 3 slot (reordering) — slots are references now.
             else if (data.source === 'rule3') {
-                task = dailyPlanData.ruleOf3[data.slotIdx];
-                if (task && data.slotIdx !== emptySlotIdx) {
+                entry = dailyPlanData.ruleOf3[data.slotIdx];
+                if (entry && data.slotIdx !== emptySlotIdx) {
                     dailyPlanData.ruleOf3[data.slotIdx] = null;
                 }
             }
-            
-            if (task) {
-                dailyPlanData.ruleOf3[emptySlotIdx] = task;
+
+            if (entry) {
+                dailyPlanData.ruleOf3[emptySlotIdx] = entry;
                 saveDailyPlan();
                 renderRuleOf3();
                 renderMatrix();
                 renderRepository(); // Update grayed-out status
             }
-            
+
             draggedItem = null;
         }
-        
+
         // Drop to a specific Rule of 3 slot (allows swapping)
         function dropToRuleSlot(event, targetSlotIdx) {
             event.preventDefault();
             event.stopPropagation();
             event.currentTarget.classList.remove('drag-over');
-            
+
             let data;
             try {
                 data = JSON.parse(event.dataTransfer.getData('text/plain'));
             } catch (e) {
                 return;
             }
-            
-            let task;
-            const existingTask = dailyPlanData.ruleOf3[targetSlotIdx];
-            
+
+            // Phase 2: slots are {id,type} references.
+            let entry = null;
+            const existingEntry = dailyPlanData.ruleOf3[targetSlotIdx];
+
             // From repository
             if (data.source === 'repository') {
-                task = getTaskData(data.type, data.idx);
-                if (existingTask) {
-                    alert('⚠️ Slot is occupied. Remove the existing task first, or drag to an empty slot.');
+                if (existingEntry) {
+                    alert('\u26A0\uFE0F Slot is occupied. Remove the existing task first, or drag to an empty slot.');
                     return;
                 }
-            }
-            // From matrix — resolve reference to a full object on the way into
-            // Rule-of-3; on swap, convert the returning object back to {id,type}.
-            else if (data.source === 'matrix') {
-                const entry = dailyPlanData.matrix[data.quadrant][data.idx];
-                const rec = resolveMatrixEntry(entry);
+                const rec = getTaskData(data.type, data.idx);
                 if (rec) {
-                    task = { ...rec, type: (entry.type || rec.type || 'todo') };
-                    if (existingTask) {
-                        // Swap: move the existing Rule-of-3 object back into the matrix as a reference.
-                        if (!existingTask.id) { existingTask.id = generateTaskId(); }
-                        dailyPlanData.matrix[data.quadrant][data.idx] = { id: existingTask.id, type: existingTask.type || 'todo' };
+                    if (!rec.id) {
+                        const newId = generateTaskId();
+                        rec.id = newId;
+                        const user = document.getElementById('dailyPlanUser')?.value;
+                        if (data.type === 'rock') {
+                            const srcRocks = (yearData.quarters[currentQuarter].rocks || []).filter(r => r.owner === user);
+                            if (srcRocks[data.idx]) srcRocks[data.idx].id = newId;
+                        } else if (data.type === 'todo') {
+                            const srcTodos = (yearData.quarters[currentQuarter].todos || []).filter(t => t.owner === user && !t.done);
+                            if (srcTodos[data.idx]) srcTodos[data.idx].id = newId;
+                        }
+                        autoSave();
+                    }
+                    entry = { id: rec.id, type: rec.type || data.type };
+                }
+            }
+            // From matrix — reference↔reference. On swap, the displaced Rule-of-3
+            // reference goes back into the matrix; otherwise splice it out of the matrix.
+            else if (data.source === 'matrix') {
+                entry = dailyPlanData.matrix[data.quadrant][data.idx];
+                if (entry) {
+                    if (existingEntry) {
+                        dailyPlanData.matrix[data.quadrant][data.idx] = existingEntry;
                     } else {
                         dailyPlanData.matrix[data.quadrant].splice(data.idx, 1);
                     }
@@ -18384,22 +18480,21 @@ Return ONLY the JSON array:`;
             // From another Rule of 3 slot (reordering/swapping)
             else if (data.source === 'rule3') {
                 if (data.slotIdx === targetSlotIdx) return;
-                
-                task = dailyPlanData.ruleOf3[data.slotIdx];
-                if (task) {
-                    // Swap the two slots
-                    dailyPlanData.ruleOf3[data.slotIdx] = existingTask;
+                entry = dailyPlanData.ruleOf3[data.slotIdx];
+                if (entry) {
+                    // Swap the two slots.
+                    dailyPlanData.ruleOf3[data.slotIdx] = existingEntry;
                 }
             }
-            
-            if (task) {
-                dailyPlanData.ruleOf3[targetSlotIdx] = task;
+
+            if (entry) {
+                dailyPlanData.ruleOf3[targetSlotIdx] = entry;
                 saveDailyPlan();
                 renderRuleOf3();
                 renderMatrix();
                 renderRepository();
             }
-            
+
             draggedItem = null;
         }
         
@@ -18438,30 +18533,42 @@ Return ONLY the JSON array:`;
         function renderRuleOf3() {
             const container = document.getElementById('ruleOf3Slots');
             if (!container) return;
-            
-            container.innerHTML = dailyPlanData.ruleOf3.map((task, idx) => {
-                if (task) {
-                    const isCompleted = task.completed;
+
+            container.innerHTML = dailyPlanData.ruleOf3.map((entry, idx) => {
+                // Phase 2: slots hold {id,type} references. Resolve to the live record.
+                const task = resolveRuleEntry(entry);
+                if (entry && task) {
+                    // Completion is read from the single source record (.done), not a
+                    // Rule-of-3-local flag, so completing in To-Dos reflects here too.
+                    const isCompleted = !!task.done;
+                    const rockPrefix = task.type === 'rock' ? '\uD83E\uDEA8 ' : '';
                     return `
                         <div class="rule-slot ${isCompleted ? 'completed' : ''}" data-slot="${idx}" draggable="true"
                              ondragstart="dragRuleItem(event, ${idx})"
                              ondragend="dragEnd(event)"
                              ondrop="dropToRuleSlot(event, ${idx})" ondragover="allowDrop(event)" ondragleave="dragLeave(event)">
                             <span class="slot-number">${idx + 1}</span>
-                            <input type="checkbox" ${isCompleted ? 'checked' : ''} 
-                                   onchange="toggleRuleTaskComplete(${idx})" 
+                            <input type="checkbox" ${isCompleted ? 'checked' : ''}
+                                   onchange="toggleRuleTaskComplete(${idx})"
                                    style="width: 18px; height: 18px; margin-right: 8px; cursor: pointer;"
                                    title="Mark as complete">
-                            <span class="task-text ${isCompleted ? 'done' : ''}" ondblclick="editRuleTask(${idx})" 
-                                  title="Double-click to edit" style="${isCompleted ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${task.type === 'rock' ? '🪨 ' : ''}${task.text}</span>
-                            ${!isCompleted ? `<button class="focus-btn" onclick="focusOnTask(${idx})">🎯 Focus</button>` : `
-                                <div class="task-actions" style="display: flex; gap: 4px; margin-left: 8px;">
-                                    <button class="action-btn archive" onclick="archiveRuleTask(${idx})" title="Archive (remove from everywhere)">📦</button>
-                                    <button class="action-btn uncheck" onclick="uncheckRuleTask(${idx})" title="Uncheck">↩</button>
-                                    <button class="action-btn delete" onclick="deleteRuleTask(${idx})" title="Delete permanently">🗑</button>
-                                </div>
-                            `}
-                            <button class="complete-btn-gray" onclick="removeRuleTask(${idx})" title="Remove from Rule of 3">✕</button>
+                            <span class="task-text ${isCompleted ? 'done' : ''}" ondblclick="editRuleTask(${idx})"
+                                  title="Double-click to edit" style="flex:1;${isCompleted ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${rockPrefix}${task.text || ''}</span>
+                            ${!isCompleted ? `<button class="focus-btn" onclick="focusOnTask(${idx})">\uD83C\uDFAF Focus</button>` : ''}
+                            <div class="task-actions" style="display:flex;align-items:center;gap:2px;margin-left:6px;">
+                                ${renderTaskActions(task, 'ruleOf3')}
+                                <button class="complete-btn-gray" onclick="removeRuleTask(${idx})" title="Remove from Rule of 3">\u2715</button>
+                            </div>
+                        </div>
+                    `;
+                } else if (entry && !task) {
+                    // Reference points at a record that no longer exists (deleted at source).
+                    // Show a self-clearing placeholder rather than crashing on task.text.
+                    return `
+                        <div class="rule-slot empty" data-slot="${idx}"
+                             ondrop="dropToRuleSlot(event, ${idx})" ondragover="allowDrop(event)" ondragleave="dragLeave(event)">
+                            <span class="slot-number">${idx + 1}</span>
+                            <span class="slot-placeholder" style="color:#b91c1c;">Task no longer exists \u2014 <a href="#" onclick="removeRuleTask(${idx});return false;" style="color:#b91c1c;">clear slot</a></span>
                         </div>
                     `;
                 } else {
@@ -18476,216 +18583,137 @@ Return ONLY the JSON array:`;
             }).join('');
         }
         
+        // Phase 2 (v3.49.0): Rule-of-3 slots hold {id,type} references. Each action
+        // resolves the slot to the single source record and mutates by id. Completion
+        // paths delegate to toggleTaskDoneById so Google-sync + daily-plan side effects
+        // + rerenderAllTaskSurfaces all fire (the same unification the Matrix got).
+
         function archiveRuleTask(slotIdx) {
-            const task = dailyPlanData.ruleOf3[slotIdx];
-            if (!task) return;
-            
-            // Remove from Rule of 3
+            const entry = dailyPlanData.ruleOf3[slotIdx];
+            const rec = resolveRuleEntry(entry);
+            if (!rec) { dailyPlanData.ruleOf3[slotIdx] = null; saveDailyPlan(); renderRuleOf3(); renderRepository(); return; }
+            const label = (rec.text || '').substring(0, 30);
+            const entryType = (entry && entry.type) || rec.type;
+
+            // Remove the reference from the slot.
             dailyPlanData.ruleOf3[slotIdx] = null;
-            
-            // If it's a todo, mark as done AND archived
-            if (task.type === 'todo') {
-                const todos = yearData.quarters[currentQuarter].todos;
-                const found = todos.find(t => t.text === task.text);
-                if (found) {
-                    found.done = true;
-                    found.archived = true;
-                    found.archivedAt = new Date().toISOString();
-                    autoSave();
-                    sortAndRenderTodos();
-                }
+
+            // Mutate the single source record.
+            if (entryType === 'todo') {
+                rec.done = true;
+                rec.archived = true;
+                rec.archivedAt = new Date().toISOString();
+                autoSave();
+            } else if (entryType === 'rock') {
+                rec.done = true;
+                rec.completedAt = new Date().toISOString();
+                autoSave();
             }
-            
-            // If it's a rock, ensure it's marked done
-            if (task.type === 'rock') {
-                const rocks = yearData.quarters[currentQuarter].rocks;
-                const found = rocks.find(r => r.text === task.text);
-                if (found) {
-                    found.done = true;
-                    found.completedAt = new Date().toISOString();
-                    autoSave();
-                }
-            }
-            
+
             saveDailyPlan();
-            renderRuleOf3();
-            renderRepository();
-            renderMatrix();
-            addLogEntry(`Archived: "${task.text.substring(0, 30)}..."`);
+            rerenderAllTaskSurfaces();
+            addLogEntry(`Archived: "${label}..."`);
         }
-        
+
         function uncheckRuleTask(slotIdx) {
-            const task = dailyPlanData.ruleOf3[slotIdx];
-            if (!task) return;
-            
-            task.completed = false;
-            
-            // If it's a todo, uncheck in the main list too
-            if (task.type === 'todo') {
-                const todos = yearData.quarters[currentQuarter].todos;
-                const found = todos.find(t => t.text === task.text);
-                if (found) {
-                    found.done = false;
-                    autoSave();
-                    sortAndRenderTodos();
-                }
-            }
-            
-            // If it's a rock, uncheck it
-            if (task.type === 'rock') {
-                const rocks = yearData.quarters[currentQuarter].rocks;
-                const found = rocks.find(r => r.text === task.text);
-                if (found) {
-                    found.done = false;
-                    delete found.completedAt;
-                    autoSave();
-                }
-            }
-            
+            const entry = dailyPlanData.ruleOf3[slotIdx];
+            const rec = resolveRuleEntry(entry);
+            if (!rec) return;
+            // Only flip if currently done (toggleTaskDoneById is a toggle).
+            if (rec.done) toggleTaskDoneById(rec.id);
             saveDailyPlan();
-            renderRuleOf3();
-            renderRepository();
+            rerenderAllTaskSurfaces();
         }
-        
+
         function deleteRuleTask(slotIdx) {
-            const task = dailyPlanData.ruleOf3[slotIdx];
-            if (!task) return;
-            
-            if (!confirm(`Permanently delete "${task.text.substring(0, 40)}..."?\n\nThis will remove it from everywhere.`)) {
+            const entry = dailyPlanData.ruleOf3[slotIdx];
+            const rec = resolveRuleEntry(entry);
+            if (!rec) { dailyPlanData.ruleOf3[slotIdx] = null; saveDailyPlan(); renderRuleOf3(); renderRepository(); return; }
+            const label = (rec.text || '').substring(0, 40);
+            const entryType = (entry && entry.type) || rec.type;
+
+            if (!confirm(`Permanently delete "${label}..."?\n\nThis will remove it from everywhere.`)) {
                 return;
             }
-            
-            // Remove from Rule of 3
+
+            // Remove the reference from the slot.
             dailyPlanData.ruleOf3[slotIdx] = null;
-            
-            // If it's a todo, delete from the main list
-            if (task.type === 'todo') {
+
+            if (entryType === 'todo') {
                 const todos = yearData.quarters[currentQuarter].todos;
-                const foundIdx = todos.findIndex(t => t.text === task.text);
+                const foundIdx = todos.findIndex(t => t.id === rec.id);
                 if (foundIdx >= 0) {
                     todos.splice(foundIdx, 1);
                     autoSave();
-                    sortAndRenderTodos();
                 }
-            }
-            
-            // Note: We don't delete rocks from here - they should be deleted from Quarterly Rocks tab
-            if (task.type === 'rock') {
+            } else if (entryType === 'rock') {
                 alert('Rocks can only be deleted from the Quarterly Rocks tab.');
             }
-            
+
             saveDailyPlan();
-            renderRuleOf3();
-            renderRepository();
-            renderMatrix();
-            addLogEntry(`Deleted: "${task.text.substring(0, 30)}..."`);
+            rerenderAllTaskSurfaces();
+            addLogEntry(`Deleted: "${(rec.text || '').substring(0, 30)}..."`);
         }
-        
+
         function toggleRuleTaskComplete(slotIdx) {
-            const task = dailyPlanData.ruleOf3[slotIdx];
-            if (!task) return;
-            
-            task.completed = !task.completed;
-            
-            // Also mark the original todo as done if completing
-            if (task.completed && task.type === 'todo') {
-                const todos = yearData.quarters[currentQuarter].todos;
-                const found = todos.find(t => t.text === task.text);
-                if (found) {
-                    found.done = true;
-                    autoSave();
-                    sortAndRenderTodos();
-                }
+            const entry = dailyPlanData.ruleOf3[slotIdx];
+            const rec = resolveRuleEntry(entry);
+            if (!rec) return;
+            const wasDone = !!rec.done;
+            const entryType = (entry && entry.type) || rec.type;
+            // Single source of truth: flip the one record (todos also fire Google/daily sync).
+            toggleTaskDoneById(rec.id);
+            if (!wasDone && entryType === 'rock') {
+                addLogEntry(`Rock completed: "${(rec.text || '').substring(0, 30)}..."`);
             }
-            
-            // Also mark the original rock as done if completing
-            if (task.completed && task.type === 'rock') {
-                const rocks = yearData.quarters[currentQuarter].rocks;
-                const found = rocks.find(r => r.text === task.text);
-                if (found) {
-                    found.done = true;
-                    found.completedAt = new Date().toISOString();
-                    autoSave();
-                    addLogEntry(`Rock completed: "${task.text.substring(0, 30)}..."`);
-                }
-            }
-            
             saveDailyPlan();
-            renderRuleOf3();
-            renderRepository();
+            rerenderAllTaskSurfaces();
         }
-        
+
         function removeRuleTask(slotIdx) {
             dailyPlanData.ruleOf3[slotIdx] = null;
             saveDailyPlan();
             renderRuleOf3();
             renderRepository();
         }
-        
+
         function editRuleTask(slotIdx) {
-            const task = dailyPlanData.ruleOf3[slotIdx];
-            if (!task) return;
-            
-            const newText = prompt('Edit task:', task.text);
-            if (newText && newText.trim() && newText.trim() !== task.text) {
-                const oldText = task.text;
-                task.text = newText.trim();
-                
-                // Sync back to original source (Weekly Meeting todos)
-                if (task.type === 'todo') {
-                    const todos = yearData.quarters[currentQuarter].todos || [];
-                    const found = todos.find(t => t.text === oldText);
-                    if (found) {
-                        found.text = newText.trim();
-                        autoSave();
-                        sortAndRenderTodos();
-                        addLogEntry(`Task updated: "${oldText.substring(0, 30)}..." → "${newText.trim().substring(0, 30)}..."`);
-                    }
+            const entry = dailyPlanData.ruleOf3[slotIdx];
+            const rec = resolveRuleEntry(entry);
+            if (!rec) return;
+
+            const oldText = rec.text || '';
+            const newText = prompt('Edit task:', oldText);
+            if (newText && newText.trim() && newText.trim() !== oldText) {
+                const entryType = (entry && entry.type) || rec.type;
+                if (entryType === 'todo') {
+                    // Delegate: updateTaskById -> updateTodo fires Google-sync on text change.
+                    // No cross-surface text propagation needed; every surface resolves the
+                    // one record by id.
+                    updateTaskById(rec.id, 'text', newText.trim());
+                    addLogEntry(`Task updated: "${oldText.substring(0, 30)}..." \u2192 "${newText.trim().substring(0, 30)}..."`);
+                } else {
+                    rec.text = newText.trim();
+                    autoSave();
                 }
-                
-                // Also update in matrix if it's there
-                ['q1', 'q2', 'q3', 'q4'].forEach(q => {
-                    const found = dailyPlanData.matrix[q]?.find(t => t.text === oldText);
-                    if (found) found.text = newText.trim();
-                });
-                
                 saveDailyPlan();
-                renderRuleOf3();
-                renderMatrix();
-                renderRepository();
+                rerenderAllTaskSurfaces();
             }
         }
-        
+
         function focusOnTask(slotIdx) {
-            const task = dailyPlanData.ruleOf3[slotIdx];
-            if (task) {
+            const entry = dailyPlanData.ruleOf3[slotIdx];
+            const rec = resolveRuleEntry(entry);
+            if (rec) {
                 startPomodoro('focus');
-                // Could add more focus features here
+                // Could add more focus features here (task-specific focus context).
             }
         }
-        
+
+        // Legacy duplicate kept as a thin alias so any stray caller still works;
+        // routes through the canonical id-native toggle.
         function completeRuleTask(slotIdx) {
-            const task = dailyPlanData.ruleOf3[slotIdx];
-            if (task) {
-                // If it's a real todo, mark it complete
-                if (task.type === 'todo') {
-                    const todos = yearData.quarters[currentQuarter].todos;
-                    const found = todos.find(t => t.text === task.text);
-                    if (found) {
-                        found.done = true;
-                        autoSave();
-                        sortAndRenderTodos();
-                    }
-                } else if (task.type === 'local' && task.localIdx !== undefined) {
-                    dailyPlanData.localTasks[task.localIdx].done = true;
-                }
-                
-                // Remove from Rule of 3
-                dailyPlanData.ruleOf3[slotIdx] = null;
-                saveDailyPlan();
-                renderRuleOf3();
-                renderRepository();
-            }
+            toggleRuleTaskComplete(slotIdx);
         }
         
         // Pomodoro Timer with persistence
@@ -18970,9 +18998,12 @@ Return ONLY the JSON array:`;
         }
         
         function endDayRoutine() {
-            // Check how many incomplete tasks are in Rule of 3
-            const incompleteTasks = dailyPlanData.ruleOf3.filter(t => t && !t.completed);
-            const completedTasks = dailyPlanData.ruleOf3.filter(t => t && t.completed);
+            // Check how many incomplete tasks are in Rule of 3.
+            // Completion now lives on the single source record (.done), resolved from
+            // the slot's {id,type} reference — not a Rule-of-3-local flag.
+            const _isSlotDone = (entry) => { const r = resolveRuleEntry(entry); return !!(r && r.done); };
+            const incompleteTasks = dailyPlanData.ruleOf3.filter(t => t && !_isSlotDone(t));
+            const completedTasks = dailyPlanData.ruleOf3.filter(t => t && _isSlotDone(t));
             
             let message = 'End your day? This will:\n';
             if (completedTasks.length > 0) {
@@ -18991,15 +19022,13 @@ Return ONLY the JSON array:`;
             // Save tomorrow notes
             dailyPlanData.tomorrowNotes = document.getElementById('tomorrowNotes')?.value || '';
             
-            // Only clear COMPLETED tasks from Rule of 3 - keep incomplete ones
-            dailyPlanData.ruleOf3 = dailyPlanData.ruleOf3.map(task => {
-                if (task && task.completed) {
-                    return null; // Clear completed tasks
-                }
-                if (task) {
-                    task.completed = false; // Reset completion status for tomorrow
-                }
-                return task; // Keep incomplete tasks
+            // Only clear COMPLETED tasks from Rule of 3 - keep incomplete ones.
+            // Completion is read from the resolved source record (.done). We do NOT
+            // touch the source record's done state here (that's the user's real task
+            // status); we just drop the reference for finished items.
+            dailyPlanData.ruleOf3 = dailyPlanData.ruleOf3.map(entry => {
+                if (entry && _isSlotDone(entry)) return null; // Clear completed slots
+                return entry; // Keep incomplete slots (references untouched)
             });
             
             saveDailyPlan();
@@ -19342,15 +19371,17 @@ Return ONLY the JSON array:`;
                 </div>
             ` : '';
             
-            // Get Rule of 3 tasks
-            const ruleOf3Html = dailyPlanData.ruleOf3.map((task, idx) => {
-                if (task) {
+            // Get Rule of 3 tasks (slots are {id,type} references -> resolve to record).
+            const ruleOf3Html = dailyPlanData.ruleOf3.map((entry, idx) => {
+                const task = resolveRuleEntry(entry);
+                if (entry && task) {
                     const notesHtml = task.notes ? `<div style="font-size: 7pt; color: #6b7280; margin-left: 36px; font-style: italic; margin-top: 4px;">${task.notes.substring(0, 250)}${task.notes.length > 250 ? '...' : ''}</div>` : '';
+                    const rockPrefix = (entry.type || task.type) === 'rock' ? '\uD83E\uDEA8 ' : '';
                     return `
                         <div style="display: flex; flex-direction: column; padding: 10px; margin: 6px 0; background: #fffbeb; border-radius: 6px; border-left: 4px solid #f59e0b;">
                             <div style="display: flex; align-items: center;">
-                                <span style="width: 20px; height: 20px; border: 2px solid #9ca3af; border-radius: 4px; margin-right: 12px;"></span>
-                                <span style="font-weight: 600;">${idx + 1}. ${task.type === 'rock' ? '🪨 ' : ''}${task.text}</span>
+                                <span style="width: 20px; height: 20px; border: 2px solid #9ca3af; border-radius: 4px; margin-right: 12px;${task.done ? 'background: #22c55e; border-color: #22c55e;' : ''}"></span>
+                                <span style="font-weight: 600;${task.done ? 'text-decoration: line-through; opacity: 0.5;' : ''}">${idx + 1}. ${rockPrefix}${task.text || ''}</span>
                             </div>
                             ${notesHtml}
                         </div>
@@ -19374,13 +19405,16 @@ Return ONLY the JSON array:`;
                 matrixHtml += `
                     <div style="background: ${label.bg}; border: 2px solid ${label.color}40; border-radius: 8px; padding: 8px; min-height: 80px;">
                         <div style="font-weight: 700; font-size: 9pt; color: ${label.color}; margin-bottom: 6px;">${label.name}</div>
-                        ${tasks.map(t => {
+                        ${tasks.map(entry => {
+                            const t = resolveMatrixEntry(entry);
+                            if (!t) return '';
                             const notesHtml = t.notes ? `<div style="font-size: 6.5pt; color: #6b7280; margin-left: 18px; margin-top: 3px; font-style: italic;">${t.notes.substring(0, 150)}${t.notes.length > 150 ? '...' : ''}</div>` : '';
+                            const rockPrefix = (entry.type || t.type) === 'rock' ? '\uD83E\uDEA8 ' : '';
                             return `
                                 <div>
                                     <div style="display: flex; align-items: center; padding: 3px 0; font-size: 8pt;">
                                         <span style="width: 12px; height: 12px; border: 1.5px solid #9ca3af; border-radius: 2px; margin-right: 6px; ${t.done ? 'background: #22c55e; border-color: #22c55e;' : ''}"></span>
-                                        <span style="${t.done ? 'text-decoration: line-through; opacity: 0.5;' : ''}">${t.type === 'rock' ? '🪨 ' : ''}${t.text}</span>
+                                        <span style="${t.done ? 'text-decoration: line-through; opacity: 0.5;' : ''}">${rockPrefix}${t.text || ''}</span>
                                     </div>
                                     ${notesHtml}
                                 </div>
@@ -19407,16 +19441,20 @@ Return ONLY the JSON array:`;
             const todos = (yearData.quarters[currentQuarter].todos || [])
                 .filter(t => t.owner === user && t.text && !t.done);
             
-            // Filter out tasks that are already in Matrix or Rule of 3
+            // Filter out tasks that are already in Matrix or Rule of 3.
+            // Both hold {id,type} references now — resolve to the record for its text.
             const tasksInMatrix = new Set();
+            const _addInUse = (entry) => {
+                if (!entry) return;
+                const rec = (entry.text !== undefined && entry.id === undefined)
+                    ? entry
+                    : (resolveTaskById(entry.id) ? resolveTaskById(entry.id).record : null);
+                if (rec && rec.text) tasksInMatrix.add(rec.text + '|' + (entry.type || rec.type || 'todo'));
+            };
             ['q1', 'q2', 'q3', 'q4'].forEach(q => {
-                (dailyPlanData.matrix[q] || []).forEach(t => {
-                    tasksInMatrix.add(t.text + '|' + (t.type || 'todo'));
-                });
+                (dailyPlanData.matrix[q] || []).forEach(_addInUse);
             });
-            (dailyPlanData.ruleOf3 || []).forEach(t => {
-                if (t) tasksInMatrix.add(t.text + '|' + (t.type || 'todo'));
-            });
+            (dailyPlanData.ruleOf3 || []).forEach(_addInUse);
             
             const repositoryTodos = todos.filter(t => 
                 !tasksInMatrix.has(t.text + '|todo')
