@@ -1289,6 +1289,16 @@
                 flex: 0 0 auto;
                 order: 3;
             }
+            /* Issue 2 fix: on mobile the To-Do row wraps, and the action cluster
+               (star + ⋯) must stay visible on the top line with the checkbox instead of
+               getting shoved off-screen. Checkbox + star + ⋯ lead (order 0), the editable
+               text takes its own full line (order 1), then date/selects follow. The ⋯ tap
+               target is enlarged for touch. */
+            .todo-item input[type="checkbox"] { order: 0; }
+            .todo-item > button { order: 0; }               /* promoted star + inline actions */
+            .todo-item .task-action-wrap { order: 0; margin-left: auto; }
+            .todo-item .task-action-wrap > button { font-size: 1.25rem; padding: 4px 10px; }
+            .todo-item .todo-text { flex: 1 1 100%; order: 1; }
             
             /* Issue items */
             .issue-item {
@@ -4110,9 +4120,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.50.0';
+        const EOS_VERSION = '3.50.1';
         const EOS_BUILD_DATE = '2026-07-20';
-        const EOS_BUILD_TIME = '14:30'; // v3.50.0: Phase 3 (Kanban) - cards get the shared action set (Star/Notes/Move/AI/Delete, Email when present) via the ⋯ menu; NO done/subtask/snooze (a card's column IS its status). New owner-grouped Move-to-cell picker is the mobile move mechanism, routed through the same mutation as drag (WIP limits + history + position identical). Mobile board is now single-column with a top pill switcher; desktop drag unchanged. No .gs change.
+        const EOS_BUILD_TIME = '18:05'; // v3.50.1: mobile-layout fixes. (1) Task/card ⋯ menus + the Kanban Move picker no longer open off-screen - they flip left/right/up to stay in view (was clipping on left-edge Kanban cards, even on desktop Backlog). (2) To-Dos rows on mobile now keep the star + ⋯ visible on the top line (was clipped off the right edge - the full menu was only reachable via Matrix/Rule-of-3). (3) Marketing Pipeline gets the same mobile treatment as Kanban: single column + top pill switcher instead of horizontal overflow. No .gs change.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -6105,6 +6115,27 @@ Example:
             document.querySelectorAll('.task-action-menu').forEach(m => { m.style.display = 'none'; });
             menu.style.display = willOpen ? 'block' : 'none';
             _openTaskMenuEl = willOpen ? menu : null;
+            // Viewport-aware placement: the menu defaults to right:0 (extends LEFT from the
+            // ⋯). On a narrow column near the left edge (Kanban card, mobile To-Do) that
+            // pushes it off-screen. After opening, if its left edge would clip, flip it to
+            // extend RIGHT instead; if the bottom would clip, open upward.
+            if (willOpen) _placeTaskActionMenu(menu);
+        }
+        // Flip an absolutely-positioned .task-action-menu so it stays fully on-screen.
+        function _placeTaskActionMenu(menu) {
+            // Reset to defaults before measuring.
+            menu.style.left = ''; menu.style.right = '0'; menu.style.top = '100%'; menu.style.bottom = '';
+            let rect = menu.getBoundingClientRect();
+            const vw = window.innerWidth || document.documentElement.clientWidth;
+            const vh = window.innerHeight || document.documentElement.clientHeight;
+            // Off the left edge? anchor left:0 so it extends rightward instead.
+            if (rect.left < 4) { menu.style.right = ''; menu.style.left = '0'; }
+            // Re-measure after a horizontal flip, then guard the right edge too.
+            rect = menu.getBoundingClientRect();
+            if (rect.right > vw - 4) { menu.style.left = ''; menu.style.right = '0'; }
+            // Off the bottom edge? open upward.
+            rect = menu.getBoundingClientRect();
+            if (rect.bottom > vh - 4) { menu.style.top = ''; menu.style.bottom = '100%'; }
         }
         // One document-level outside-click listener (added once).
         if (!window._taskMenuOutsideBound) {
@@ -6352,7 +6383,14 @@ Example:
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.50.0 &mdash; 2026-07-20 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.50.1 &mdash; 2026-07-20 (Current)</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Menus no longer open off-screen.</strong> The &ldquo;\u22EF&rdquo; menu on a task or card &mdash; and the Kanban &ldquo;Move to\u2026&rdquo; picker &mdash; now flip left, right, or upward as needed to stay on screen. Before, a card in a left-hand column (like Backlog) opened its menu off the left edge where you couldn&rsquo;t see it, on phone and desktop alike.</li>'
+                + '<li><strong>To-Do rows work on mobile.</strong> The star and &ldquo;\u22EF&rdquo; menu now stay visible on each To-Do row on a phone. Before, they were pushed off the right edge, so the only way to reach Snooze / Focus / Notes was to move the task into the Matrix or Rule of 3 first.</li>'
+                + '<li><strong>Marketing Pipeline on mobile.</strong> The Marketing tab now shows one column at a time with a row of column &ldquo;pills&rdquo; to switch between them &mdash; the same phone layout as the Kanban board &mdash; instead of running off the side of the screen.</li>'
+                + '</ul></div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.50.0 &mdash; 2026-07-20</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Kanban cards now have the same quick actions as your tasks.</strong> Every card has a &ldquo;\u22EF&rdquo; menu with Star, Notes, Move, an AI slot (coming soon), and Delete &mdash; matching how To-Dos and the Daily Plan already work. On desktop, Star / Notes / AI sit right on the card; the rest are in the menu.</li>'
                 + '<li><strong>New &ldquo;Move to\u2026&rdquo; picker.</strong> Tap Move on any card to send it to an exact spot &mdash; destinations are grouped by owner, with that owner&rsquo;s columns underneath, so one tap moves the card to the right person and column at once. WIP limits and card history behave exactly as they do when you drag.</li>'
@@ -7853,6 +7891,7 @@ Example:
         const MKT_STATUS_LABEL = { none: '\u2014', draft: 'draft', approved: 'ok', sent: 'sent' };
 
         let mktData = { cards: [] };
+        let mktMobileColId = null; // Issue 3: which column the mobile single-column view shows (session, device-local)
         let mktEditingId = null;
 
         function mktLoad() {
@@ -8031,11 +8070,9 @@ Example:
                 return (c.company || 'ii') === mktActiveCompany;
             });
 
-            board.innerHTML = MKT_COLUMNS.map(function(col) {
-                const cards = visible.filter(function(c) { return (c.columnId || 'ideas') === col.id; });
-                const isReview = col.id === 'review';
-
-                const cardHtml = cards.map(function(c) {
+            // Shared card-HTML builder (identical markup desktop + mobile).
+            function mktCardsHtml(cards) {
+                return cards.map(function(c) {
                     let badges = '';
                     if (c.kind === 'blog') badges += mktBadge('Blog', c.blogStatus);
                     badges += mktBadge('Social', c.socialStatus);
@@ -8045,16 +8082,52 @@ Example:
                            '<div class="mkt-badges">' + badges + '</div>' +
                            '</div>';
                 }).join('');
+            }
 
+            if (isNarrowViewport()) { mktRenderMobile(board, visible, mktCardsHtml); return; }
+
+            board.innerHTML = MKT_COLUMNS.map(function(col) {
+                const cards = visible.filter(function(c) { return (c.columnId || 'ideas') === col.id; });
+                const isReview = col.id === 'review';
                 return '<div class="mkt-col' + (isReview ? ' mkt-col-review' : '') + '">' +
                        '<div class="mkt-col-head">' +
                        '<span>' + escapeHtml(col.name) + '</span>' +
                        (col.who ? '<span class="mkt-who">' + escapeHtml(col.who) + '</span>' : '') +
                        '<span class="mkt-count">' + cards.length + '</span>' +
                        '</div>' +
-                       (cardHtml || '<div class="mkt-empty">Nothing here</div>') +
+                       (mktCardsHtml(cards) || '<div class="mkt-empty">Nothing here</div>') +
                        '</div>';
             }).join('');
+        }
+
+        // Issue 3: Marketing mobile view — single column + top pill switcher, mirroring
+        // the Kanban mobile pattern so both boards behave identically on a phone.
+        function mktRenderMobile(board, visible, mktCardsHtml) {
+            if (!mktMobileColId || !MKT_COLUMNS.some(c => c.id === mktMobileColId)) {
+                mktMobileColId = MKT_COLUMNS[0].id;
+            }
+            const pills = '<div class="kanban-mobile-switcher">' + MKT_COLUMNS.map(function(col) {
+                const count = visible.filter(c => (c.columnId || 'ideas') === col.id).length;
+                const active = col.id === mktMobileColId;
+                return '<button class="kanban-mobile-pill' + (active ? ' active' : '') + '" onclick="mktMobileSelectColumn(\'' + col.id + '\')">' +
+                       escapeHtml(col.name) + ' <span class="kanban-mobile-pill-count">' + count + '</span></button>';
+            }).join('') + '</div>';
+
+            const col = MKT_COLUMNS.find(c => c.id === mktMobileColId);
+            const cards = visible.filter(c => (c.columnId || 'ideas') === col.id);
+            const isReview = col.id === 'review';
+            const body = '<div class="mkt-col' + (isReview ? ' mkt-col-review' : '') + '" style="width:100%; box-sizing:border-box;">' +
+                   '<div class="mkt-col-head"><span>' + escapeHtml(col.name) + '</span>' +
+                   (col.who ? '<span class="mkt-who">' + escapeHtml(col.who) + '</span>' : '') +
+                   '<span class="mkt-count">' + cards.length + '</span></div>' +
+                   (mktCardsHtml(cards) || '<div class="mkt-empty">Nothing here</div>') +
+                   '</div>';
+            board.innerHTML = pills + body;
+        }
+
+        function mktMobileSelectColumn(colId) {
+            mktMobileColId = colId;
+            mktRender();
         }
 
         // ==================== WORDPRESS BOILERPLATE (v3.38.0) ====================
@@ -9607,15 +9680,23 @@ Example:
             panel.innerHTML = '<div class="kanban-move-picker-title">Move to\u2026</div>' + rows;
             panel.addEventListener('click', function (e) { e.stopPropagation(); });
             document.body.appendChild(panel);
-            // Position near the button; fall back to centered if it would overflow.
+            // Position near the button, clamped to stay fully on-screen (left/right AND
+            // bottom - a card low on the page would otherwise open a tall picker off the
+            // bottom edge).
             const rect = btn.getBoundingClientRect();
-            panel.style.top = (window.scrollY + rect.bottom + 4) + 'px';
-            let left = window.scrollX + rect.left;
             const pw = panel.offsetWidth || 220;
-            if (left + pw > window.scrollX + window.innerWidth - 8) {
-                left = window.scrollX + window.innerWidth - pw - 8;
-            }
+            const ph = panel.offsetHeight || 240;
+            const vw = window.innerWidth, vh = window.innerHeight;
+            // Horizontal: prefer aligned to the button's left; clamp to the viewport.
+            let left = window.scrollX + rect.left;
+            if (left + pw > window.scrollX + vw - 8) left = window.scrollX + vw - pw - 8;
             panel.style.left = Math.max(8, left) + 'px';
+            // Vertical: below the button by default; if that clips the bottom, open above.
+            let top = window.scrollY + rect.bottom + 4;
+            if (rect.bottom + 4 + ph > vh - 8 && rect.top - 4 - ph > 8) {
+                top = window.scrollY + rect.top - 4 - ph; // flip above
+            }
+            panel.style.top = Math.max(window.scrollY + 8, top) + 'px';
             // Outside-click closes (bind once, next tick so this click doesn't close it).
             setTimeout(function () {
                 function close(e) {
