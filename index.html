@@ -2106,6 +2106,29 @@
         .kanban-card-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 4px; }
         .kanban-tag { display: inline-block; padding: 2px 8px; border-radius: 5px; font-size: 0.72rem; font-weight: 600; }
         .kanban-card-meta { display: flex; align-items: center; gap: 10px; margin-top: 6px; font-size: 0.72rem; color: var(--gray-500); }
+        /* Phase 3: card action row (star/notes/AI promoted + ⋯). Reuses the shared
+           .task-action-wrap/.task-action-menu chrome so the DOM-local menu works. */
+        .kanban-card-actions { display: flex; align-items: center; gap: 2px; margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--gray-100); }
+        .kanban-card-star { color: #eab308; margin-right: 3px; }
+        /* Phase 3: mobile single-column switcher */
+        .kanban-mobile-switcher { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 8px; -webkit-overflow-scrolling: touch; }
+        .kanban-mobile-pill { flex-shrink: 0; background: white; border: 1.5px solid var(--gray-200); border-radius: 999px; padding: 6px 12px; font-size: 0.82rem; font-weight: 600; color: var(--gray-600); cursor: pointer; white-space: nowrap; }
+        .kanban-mobile-pill.active { color: var(--gray-900); background: var(--gray-50); }
+        .kanban-mobile-pill-count { display: inline-block; margin-left: 4px; font-size: 0.72rem; color: var(--gray-400); font-weight: 700; }
+        .kanban-mobile-pill-count.limit { color: #b91c1c; }
+        .kanban-mobile-pill-add { color: var(--gray-400); font-size: 1rem; padding: 6px 14px; }
+        .kanban-mobile-col { display: flex; flex-direction: column; gap: 14px; }
+        .kanban-mobile-owner-section { }
+        .kanban-mobile-owner-head { margin-bottom: 4px; }
+        .kanban-mobile-col .kanban-col-cell { width: 100%; }
+        /* Phase 3: owner-grouped move-to-cell picker (mobile move mechanism) */
+        .kanban-move-picker { position: absolute; z-index: 10002; min-width: 200px; max-width: 280px; max-height: 60vh; overflow-y: auto; background: white; border: 1px solid var(--gray-200); border-radius: 10px; box-shadow: 0 12px 32px rgba(0,0,0,0.18); padding: 6px 0; }
+        .kanban-move-picker-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--gray-400); padding: 6px 14px 4px; }
+        .kanban-move-owner-head { font-size: 0.76rem; font-weight: 700; color: var(--gray-500); padding: 8px 14px 2px; }
+        .kanban-move-cell-btn { display: block; width: 100%; text-align: left; background: none; border: none; cursor: pointer; font-size: 0.86rem; color: var(--gray-700); padding: 7px 14px 7px 24px; }
+        .kanban-move-cell-btn:hover:not([disabled]) { background: var(--gray-100); }
+        .kanban-move-cell-btn.current { color: var(--gray-400); cursor: default; }
+        .kanban-move-here { font-size: 0.72rem; color: var(--accent); font-weight: 700; }
         .kanban-due-badge { padding: 1px 6px; border-radius: 4px; font-weight: 600; }
         .kanban-due-badge.overdue { background: #fee2e2; color: #b91c1c; }
         .kanban-due-badge.soon { background: #fef3c7; color: #92400e; }
@@ -4087,9 +4110,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.49.5';
-        const EOS_BUILD_DATE = '2026-07-18';
-        const EOS_BUILD_TIME = '22:45'; // v3.49.5: snooze fix - the rich snooze modal (Tomorrow / 1 week / 1 month / 3 months quick-picks + date picker) now serves EVERY task kind. Rocks/completed tasks were getting an ugly text prompt because the modal was todo-index-based; it's now id-based, so all surfaces get the same nice popup. Removed the prompt-based fallback entirely. No .gs change.
+        const EOS_VERSION = '3.50.0';
+        const EOS_BUILD_DATE = '2026-07-20';
+        const EOS_BUILD_TIME = '14:30'; // v3.50.0: Phase 3 (Kanban) - cards get the shared action set (Star/Notes/Move/AI/Delete, Email when present) via the ⋯ menu; NO done/subtask/snooze (a card's column IS its status). New owner-grouped Move-to-cell picker is the mobile move mechanism, routed through the same mutation as drag (WIP limits + history + position identical). Mobile board is now single-column with a top pill switcher; desktop drag unchanged. No .gs change.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -6329,7 +6352,15 @@ Example:
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.49.5 &mdash; 2026-07-18 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.50.0 &mdash; 2026-07-20 (Current)</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Kanban cards now have the same quick actions as your tasks.</strong> Every card has a &ldquo;\u22EF&rdquo; menu with Star, Notes, Move, an AI slot (coming soon), and Delete &mdash; matching how To-Dos and the Daily Plan already work. On desktop, Star / Notes / AI sit right on the card; the rest are in the menu.</li>'
+                + '<li><strong>New &ldquo;Move to\u2026&rdquo; picker.</strong> Tap Move on any card to send it to an exact spot &mdash; destinations are grouped by owner, with that owner&rsquo;s columns underneath, so one tap moves the card to the right person and column at once. WIP limits and card history behave exactly as they do when you drag.</li>'
+                + '<li><strong>Kanban works properly on your phone.</strong> The board now shows one column at a time with a row of column &ldquo;pills&rdquo; across the top to switch between them, and you move cards with the new Move picker instead of fighting a drag on a small screen. Desktop drag-and-drop is unchanged.</li>'
+                + '<li>A card in a Done column stays fully editable &mdash; no cards get &ldquo;locked&rdquo; as completed. (A card&rsquo;s column is its status, so there&rsquo;s no separate done checkbox, sub-task, or snooze on a card.)</li>'
+                + '</ul></div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.49.5 &mdash; 2026-07-18</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Fixed the snooze popup.</strong> Snoozing a Rock (or a completed task) was showing a bare &ldquo;type a date&rdquo; prompt instead of the proper snooze window. Every task now gets the full popup with the Tomorrow / 1&nbsp;week / 1&nbsp;month / 3&nbsp;months quick-picks and the date picker, on every surface.</li>'
                 + '</ul></div>'
@@ -8326,6 +8357,7 @@ Example:
         const KANBAN_GLOBAL_SEARCH_KEY = 'eos_kanban_global_search';
         let kanbanDragCardId = null;
         let kanbanEditingCardId = null;
+        let kanbanMobileColId = null; // Phase 3: which column the mobile single-column view shows (per-session, device-local)
         let kanbanPushDebounceTimer = null;
         let kanbanLastPullAttempt = 0;
         let kanbanRegistryDragIndex = null;
@@ -9263,6 +9295,7 @@ Example:
         }
 
         function renderKanbanColumns() {
+            if (isNarrowViewport()) { renderKanbanColumnsMobile(); return; }
             const board = getActiveKanbanBoard();
             const headerWrap = document.getElementById('kanbanColumnsHeader');
             headerWrap.innerHTML = board.columns.map(col => {
@@ -9309,6 +9342,63 @@ Example:
             }).join('');
         }
 
+        // Phase 3 mobile view: ONE column at a time (chosen via a top pill/tab switcher),
+        // owner-grouped cells stacked vertically. Cards move via the owner-grouped
+        // move-picker (no drag) - so the full column x owner grid stays reachable on a
+        // phone. Filter/sort/search still apply (same helpers as desktop).
+        function renderKanbanColumnsMobile() {
+            const board = getActiveKanbanBoard();
+            const headerWrap = document.getElementById('kanbanColumnsHeader');
+            const groupsWrap = document.getElementById('kanbanGroups');
+            if (!board.columns.length) {
+                headerWrap.innerHTML = '';
+                groupsWrap.innerHTML = '<div style="padding:20px; text-align:center; color:var(--gray-400); font-size:0.9rem;">No columns yet. <button class="kanban-add-col-btn" onclick="addKanbanColumn()">+ Add one</button></div>';
+                return;
+            }
+            // Resolve the selected column (default first; heal a stale selection).
+            if (!kanbanMobileColId || !board.columns.some(c => c.id === kanbanMobileColId)) {
+                kanbanMobileColId = board.columns[0].id;
+            }
+            // Pill/tab switcher - one pill per column, with live (unfiltered) counts.
+            headerWrap.innerHTML = '<div class="kanban-mobile-switcher">' + board.columns.map(col => {
+                const count = board.cards.filter(c => c.columnId === col.id && !c.archived).length;
+                const active = col.id === kanbanMobileColId;
+                const atLimit = !!(col.wipLimit && count >= col.wipLimit);
+                const countLabel = col.wipLimit ? (count + '/' + col.wipLimit) : String(count);
+                return `<button class="kanban-mobile-pill${active ? ' active' : ''}" onclick="kanbanMobileSelectColumn('${col.id}')" style="${active ? 'border-color:' + (col.color || '#94a3b8') + ';' : ''}">
+                        ${escapeHtml(col.name)} <span class="kanban-mobile-pill-count${atLimit ? ' limit' : ''}">${countLabel}</span>
+                    </button>`;
+            }).join('') + '<button class="kanban-mobile-pill kanban-mobile-pill-add" onclick="addKanbanColumn()" title="Add column">+</button></div>';
+
+            const col = board.columns.find(c => c.id === kanbanMobileColId);
+            const filterActive = kanbanFilterActive(board);
+            const groups = kanbanOwnerGroups(board).filter(groupName => {
+                if (!filterActive) return true;
+                const raw = board.cards.filter(c => !c.archived && c.columnId === col.id && (c.owner || '').trim() === (groupName === 'No Owner' ? '' : groupName));
+                return kanbanApplyFilterSearch(board, raw).length > 0;
+            });
+            if (!groups.length) {
+                groupsWrap.innerHTML = '<div style="padding:24px; text-align:center; color:var(--gray-400); font-size:0.9rem;">No cards in this column match your filters/search. <button class="kanban-add-group-btn" onclick="kanbanClearAllViewPrefs()">Clear filters</button></div>';
+                return;
+            }
+            // One vertical section per owner, each holding this column's cell for that owner.
+            groupsWrap.innerHTML = '<div class="kanban-mobile-col">' + groups.map(groupName => {
+                const tagColor = kanbanOwnerColor(board, groupName === 'No Owner' ? '' : groupName);
+                const isAgent = /agent|ai\b/i.test(groupName);
+                return `<div class="kanban-mobile-owner-section">
+                        <div class="kanban-mobile-owner-head">
+                            <span class="kanban-tag" style="background:${tagColor.bg}; color:${tagColor.fg};">${isAgent ? '<span class="kanban-agent-icon">&#129302;</span>' : ''}${escapeHtml(groupName)}</span>
+                        </div>
+                        ${renderKanbanCell(board, col, groupName)}
+                    </div>`;
+            }).join('') + '</div>';
+        }
+
+        function kanbanMobileSelectColumn(colId) {
+            kanbanMobileColId = colId;
+            renderKanbanColumns();
+        }
+
         function renderKanbanCell(board, col, groupName) {
             let cards = board.cards
                 .filter(c => !c.archived && c.columnId === col.id && (c.owner || '').trim() === (groupName === 'No Owner' ? '' : groupName));
@@ -9343,13 +9433,20 @@ Example:
             const lastMoved = (c.history || []).slice().reverse().find(h => h.action === 'moved');
             const movedHtml = lastMoved ? `<span title="${escapeHtml(lastMoved.to)} since ${new Date(lastMoved.at).toLocaleDateString()}">&#128337; ${kanbanRelativeTime(lastMoved.at)}</span>` : '';
             const descIcon = c.description ? `<span title="Has description">&#128221;</span>` : '';
+            const starIcon = c.starred ? `<span class="kanban-card-star" title="Starred">&#11088;</span>` : '';
+            // Card action row (Phase 3): star/notes/AI promoted (desktop) + ⋯ menu with
+            // Move/Email?/Delete. Card-addressed - never touches the task registry.
+            // A click on any action must NOT bubble up to openKanbanCard, so the row
+            // stops propagation.
+            const actions = renderKanbanCardActions(c);
             return `<div class="kanban-card" draggable="true" data-card-id="${c.id}"
                     ondragstart="kanbanCardDragStart(event, '${c.id}')"
                     ondragend="kanbanCardDragEnd(event)"
                     onclick="openKanbanCard('${c.id}')">
-                    <div class="kanban-card-title">${escapeHtml(c.title)}</div>
+                    <div class="kanban-card-title">${starIcon}${escapeHtml(c.title)}</div>
                     <div class="kanban-card-tags">${labels}</div>
                     <div class="kanban-card-meta">${dueHtml}${descIcon}${movedHtml}</div>
+                    <div class="kanban-card-actions" onclick="event.stopPropagation()">${actions}</div>
                 </div>`;
         }
 
@@ -9364,6 +9461,239 @@ Example:
             if (days < 30) return days + 'd ago';
             return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         }
+
+        // ==================== PHASE 3: KANBAN CARD ACTIONS (v3.50.0) ====================
+        // A Kanban card is a CONTAINER, not a task: the column is its status, sibling
+        // cards are its "subtasks", and "waiting" is a column. So task-row concepts that
+        // don't map (done checkbox, add-subtask, snooze) are DROPPED, not faked.
+        //
+        // Adapter at the seam (Option A - NOT a data-model unify). kanbanCardToTaskView
+        // maps title->text, description->notes and hands that VIEW to the shared action
+        // primitives (_taskActionBtn + the .task-action-wrap/.task-action-menu popover
+        // chrome), so the card gets the same look and the same DOM-local ⋯ menu as every
+        // other surface. The card keeps its native shape; its Google-Sheet sync
+        // serialization is untouched. Card-addressed handlers stay SEPARATE from
+        // resolveTaskById - a kanbanUid() card id must never reach the task registry, and
+        // a task id must never reach the board. (id-namespace-collision watch item.)
+
+        // The shim: a read-only view for display/labelling only. We never write through it.
+        function kanbanCardToTaskView(card) {
+            if (!card) return null;
+            return {
+                id: card.id,               // kanbanUid() id - stays out of resolveTaskById
+                text: card.title || '',    // title -> text
+                notes: card.description || '', // description -> notes
+                starred: !!card.starred,
+                emailLink: card.emailLink || '' // conditional; absent on cards today
+            };
+        }
+
+        // Resolve a card by id on the active board. The Kanban-side mirror of
+        // resolveTaskById, deliberately a DIFFERENT registry (board.cards), so the two
+        // id namespaces never cross.
+        function resolveKanbanCard(cardId) {
+            const board = getActiveKanbanBoard();
+            if (!board) return null;
+            const card = board.cards.find(c => c.id === cardId);
+            return card ? { board: board, card: card } : null;
+        }
+
+        // --- card-addressed action handlers -------------------------------
+        // Every one repaints renderKanban() (NOT rerenderAllTaskSurfaces) - a card
+        // mutation that repainted the task surfaces would silently no-op the board.
+
+        function kanbanToggleStarredByCard(cardId) {
+            const r = resolveKanbanCard(cardId);
+            if (!r) return;
+            r.card.starred = !r.card.starred;
+            saveKanbanData();
+            renderKanban();
+        }
+
+        function kanbanToggleNotesByCard(cardId) {
+            // Cards have no inline notes panel on the board; Notes == description, which
+            // is edited in the card detail modal. Open it rather than leaving a dead
+            // button. (The modal's Description field IS the card's notes.)
+            openKanbanCard(cardId);
+        }
+
+        function kanbanEmailByCard(cardId) {
+            const r = resolveKanbanCard(cardId);
+            if (!r || !r.card.emailLink) return; // only rendered when emailLink present
+            window.open(r.card.emailLink, '_blank');
+        }
+
+        // Reserved AI slot -> future "Claude AI Agent" swimlane (§5.1). Behavior lands
+        // later; today it's the same friendly stub as aiAssistTaskById, card-addressed.
+        function kanbanAiAssistByCard(cardId) {
+            showToast('AI actions for a card are coming in a later update.', 'info');
+        }
+
+        function kanbanDeleteByCard(cardId) {
+            const r = resolveKanbanCard(cardId);
+            if (!r) return;
+            if (!confirm('Delete this card? This cannot be undone.')) return;
+            r.board.cards = r.board.cards.filter(c => c.id !== cardId);
+            saveKanbanData();
+            renderKanban();
+        }
+
+        // --- the shared move mutation (extracted so drag and the picker are identical) ---
+        // Moves a card to an exact (columnId x owner) cell. Fires WIP-limit blocking,
+        // history "moved"/"reassigned" entries, and position recompute - so a menu tap
+        // and a drag are literally the same mutation. Returns true on success, false if
+        // blocked by a WIP limit. `repaint` lets the drag path keep its lighter
+        // renderKanbanColumns() while menu callers use the full renderKanban().
+        function kanbanMoveCardToCell(card, board, columnId, owner, repaint) {
+            const colChanged = card.columnId !== columnId;
+            if (colChanged && kanbanWipLimitBlocking(board, columnId, card.id)) {
+                const targetCol = board.columns.find(c => c.id === columnId);
+                showToast('"' + (targetCol ? targetCol.name : '?') + '" is at its WIP limit (' + (targetCol ? targetCol.wipLimit : '') + '). Finish or move something out first.', 'error');
+                return false;
+            }
+            const fromColName = (board.columns.find(c => c.id === card.columnId) || {}).name || '?';
+            const toColName = (board.columns.find(c => c.id === columnId) || {}).name || '?';
+            const newOwner = owner === 'No Owner' ? '' : owner;
+            const ownerChanged = (card.owner || '') !== newOwner;
+            card.columnId = columnId;
+            card.owner = newOwner;
+            const siblings = board.cards.filter(c => c.columnId === columnId && (c.owner || '') === newOwner);
+            card.position = siblings.length ? Math.max.apply(null, siblings.map(c => c.position || 0)) + 1 : 0;
+            card.history = card.history || [];
+            if (colChanged) {
+                card.history.push({ action: 'moved', from: fromColName, to: toColName, at: new Date().toISOString() });
+            } else if (ownerChanged) {
+                card.history.push({ action: 'reassigned', to: newOwner || 'No Owner', at: new Date().toISOString() });
+            }
+            saveKanbanData();
+            if (repaint) repaint();
+            return true;
+        }
+
+        // --- Move-to-cell picker (the mobile move mechanism) --------------
+        // Opens a DOM-local panel (sibling of the card's ⋯, never getElementById)
+        // listing every destination grouped by OWNER: owner headers, columns under each.
+        // One tap = one exact cell, routed through kanbanMoveCardToCell -> identical to a
+        // drag across the column x owner grid.
+        function kanbanOpenMovePicker(btn, cardId, ev) {
+            if (ev) ev.stopPropagation();
+            const wrap = btn && btn.closest ? btn.closest('.task-action-wrap') : null;
+            if (wrap) { // close the ⋯ menu that spawned this
+                const m = wrap.querySelector('.task-action-menu');
+                if (m) m.style.display = 'none';
+            }
+            const r = resolveKanbanCard(cardId);
+            if (!r) return;
+            const board = r.board, card = r.card;
+            // Remove any existing picker.
+            const existing = document.getElementById('kanbanMovePicker');
+            if (existing) existing.remove();
+            const owners = kanbanOwnerGroups(board);
+            const safe = s => String(s).replace(/'/g, "\\'");
+            let rows = '';
+            owners.forEach(function (ownerName) {
+                rows += '<div class="kanban-move-owner-head">' + escapeHtml(ownerName) + '</div>';
+                board.columns.forEach(function (col) {
+                    const here = (card.columnId === col.id) && ((card.owner || '') === (ownerName === 'No Owner' ? '' : ownerName));
+                    rows += '<button class="kanban-move-cell-btn' + (here ? ' current' : '') + '"'
+                        + ' onclick="kanbanMovePicked(\'' + safe(cardId) + '\', \'' + safe(col.id) + '\', \'' + safe(ownerName) + '\', event)"'
+                        + (here ? ' disabled title="Card is already here"' : '')
+                        + '>' + escapeHtml(col.name) + (here ? ' <span class="kanban-move-here">\u2022 here</span>' : '') + '</button>';
+                });
+            });
+            const panel = document.createElement('div');
+            panel.id = 'kanbanMovePicker';
+            panel.className = 'kanban-move-picker';
+            panel.innerHTML = '<div class="kanban-move-picker-title">Move to\u2026</div>' + rows;
+            panel.addEventListener('click', function (e) { e.stopPropagation(); });
+            document.body.appendChild(panel);
+            // Position near the button; fall back to centered if it would overflow.
+            const rect = btn.getBoundingClientRect();
+            panel.style.top = (window.scrollY + rect.bottom + 4) + 'px';
+            let left = window.scrollX + rect.left;
+            const pw = panel.offsetWidth || 220;
+            if (left + pw > window.scrollX + window.innerWidth - 8) {
+                left = window.scrollX + window.innerWidth - pw - 8;
+            }
+            panel.style.left = Math.max(8, left) + 'px';
+            // Outside-click closes (bind once, next tick so this click doesn't close it).
+            setTimeout(function () {
+                function close(e) {
+                    const p = document.getElementById('kanbanMovePicker');
+                    if (p && !p.contains(e.target)) { p.remove(); document.removeEventListener('click', close); }
+                }
+                document.addEventListener('click', close);
+            }, 0);
+        }
+
+        function kanbanMovePicked(cardId, columnId, ownerName, ev) {
+            if (ev) ev.stopPropagation();
+            const r = resolveKanbanCard(cardId);
+            if (!r) return;
+            const ok = kanbanMoveCardToCell(r.card, r.board, columnId, ownerName, renderKanban);
+            const p = document.getElementById('kanbanMovePicker');
+            if (ok && p) p.remove(); // on WIP block leave it open so they can pick elsewhere
+        }
+
+        // --- the card action renderer (via the shared primitives) ---------
+        // Assembles CARD-ADDRESSED specs and renders them with _taskActionBtn + the exact
+        // .task-action-wrap/.task-action-menu chrome the other surfaces use, so the
+        // DOM-local toggleTaskActionMenu + outside-click handler work unchanged. NO done
+        // checkbox, NO subtask, NO snooze, NO completed-state branch - a card in Done is a
+        // normal, fully editable card.
+        //   Desktop: star / notes / AI promoted inline, Move + Email + Delete in ⋯.
+        //   Mobile:  star inline, everything else in ⋯ (Move is the key mobile action).
+        function renderKanbanCardActions(card) {
+            if (!card || !card.id) return '';
+            const view = kanbanCardToTaskView(card);
+            const id = card.id;
+
+            const starSpec = { icon: (card.starred ? '\u2B50' : '\u2606'),
+                title: (card.starred ? 'Unstar' : 'Star this card'), label: (card.starred ? 'Unstar' : 'Star'),
+                color: '#eab308', onclick: `kanbanToggleStarredByCard('${id}')` };
+            const notesSpec = { icon: '\uD83D\uDCDD', title: 'Card description/notes', label: 'Notes',
+                color: (card.description ? '#3b82f6' : '#9ca3af'), onclick: `kanbanToggleNotesByCard('${id}')` };
+            const aiSpec = { icon: '\uD83E\uDD16', title: 'AI actions (coming soon)', label: 'AI: help with this card',
+                color: '#8b5cf6', onclick: `kanbanAiAssistByCard('${id}')` };
+            const moveSpec = { icon: '\u2197\uFE0F', title: 'Move to another column/owner', label: 'Move to\u2026',
+                color: '#0ea5e9', onclick: `kanbanOpenMovePicker(this, '${id}', event)`, needsBtn: true };
+            const deleteSpec = { icon: '\uD83D\uDDD1\uFE0F', title: 'Delete this card', label: 'Delete',
+                color: '#ef4444', onclick: `kanbanDeleteByCard('${id}')` };
+            const emailSpec = card.emailLink
+                ? { icon: `<a href="${card.emailLink}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="text-decoration:none;color:#6366f1;">\u2709\uFE0F</a>`,
+                    rawLink: true, title: 'Open source email', label: 'Open source email', color: '#6366f1',
+                    onclick: `kanbanEmailByCard('${id}')` }
+                : null;
+
+            const mobile = isNarrowViewport();
+            // Promotion: desktop shows star/notes/AI inline; mobile shows only star.
+            const promoted = mobile ? [starSpec] : [starSpec, notesSpec, aiSpec];
+            // Everything else lives in ⋯. Order: (notes/AI on mobile) then Move, Email?, Delete.
+            const overflow = [];
+            if (mobile) { overflow.push(notesSpec, aiSpec); }
+            overflow.push(moveSpec);
+            if (emailSpec) overflow.push(emailSpec);
+            overflow.push(deleteSpec);
+
+            // Menu-row renderer: mirrors renderTaskActions' menuRow (rawLink anchor case).
+            const menuRow = (s) => s.rawLink
+                ? `<a href="${card.emailLink}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;width:100%;padding:7px 12px;color:#374151;text-decoration:none;font-size:0.85rem;"><span style="width:1.2em;text-align:center;">\u2709\uFE0F</span><span>${s.label}</span></a>`
+                : (s.needsBtn
+                    ? `<button onclick="${s.onclick}" title="${s.title}" style="display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;cursor:pointer;font-size:0.85rem;padding:7px 12px;color:#374151;text-align:left;"><span style="width:1.2em;text-align:center;">${s.icon}</span><span>${s.label}</span></button>`
+                    : _taskActionBtn(s, false));
+
+            const promotedHtml = promoted.map(s => _taskActionBtn(s, true)).join('');
+            const menuItems = overflow.map(menuRow).join('');
+            const menuHtml = `<div class="task-action-wrap">
+                    <button onclick="toggleTaskActionMenu(this, event)" title="More actions"
+                        style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 6px;color:#6b7280;">\u22EF</button>
+                    <div class="task-action-menu" style="display:none;position:absolute;right:0;top:100%;min-width:190px;background:white;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.14);padding:4px 0;">
+                        ${menuItems}
+                    </div>
+                </div>`;
+            return promotedHtml + menuHtml;
+        }
+
 
         // ---- Drag and drop ----
         function kanbanCardDragStart(e, cardId) {
@@ -9387,31 +9717,12 @@ Example:
             if (!kanbanDragCardId) return;
             const board = getActiveKanbanBoard();
             const card = board.cards.find(c => c.id === kanbanDragCardId);
-            if (!card) return;
-            const colChanged = card.columnId !== columnId;
-            if (colChanged && kanbanWipLimitBlocking(board, columnId, card.id)) {
-                const targetCol = board.columns.find(c => c.id === columnId);
-                kanbanDragCardId = null;
-                showToast(`"${targetCol.name}" is at its WIP limit (${targetCol.wipLimit}). Finish or move something out first.`, 'error');
-                return;
-            }
-            const fromColName = (board.columns.find(c => c.id === card.columnId) || {}).name || '?';
-            const toColName = (board.columns.find(c => c.id === columnId) || {}).name || '?';
-            const newOwner = groupName === 'No Owner' ? '' : groupName;
-            const ownerChanged = (card.owner || '') !== newOwner;
-            card.columnId = columnId;
-            card.owner = newOwner;
-            const siblings = board.cards.filter(c => c.columnId === columnId && (c.owner || '') === newOwner);
-            card.position = siblings.length ? Math.max(...siblings.map(c => c.position || 0)) + 1 : 0;
-            card.history = card.history || [];
-            if (colChanged) {
-                card.history.push({ action: 'moved', from: fromColName, to: toColName, at: new Date().toISOString() });
-            } else if (ownerChanged) {
-                card.history.push({ action: 'reassigned', to: newOwner || 'No Owner', at: new Date().toISOString() });
-            }
             kanbanDragCardId = null;
-            saveKanbanData();
-            renderKanbanColumns();
+            if (!card) return;
+            // Phase 3: drag and the mobile move-picker are the SAME mutation - both go
+            // through kanbanMoveCardToCell (WIP block + history + position recompute +
+            // save). Drag keeps its lighter renderKanbanColumns() repaint.
+            kanbanMoveCardToCell(card, board, columnId, groupName, renderKanbanColumns);
         }
 
         // ---- Columns ----
