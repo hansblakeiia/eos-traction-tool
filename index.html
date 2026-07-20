@@ -2303,6 +2303,11 @@
         .key-status { font-size:0.72rem; font-weight:600; padding:3px 8px; border-radius:10px; display:inline-block; margin-bottom:5px; }
         .key-status-ok { background:#d1fae5; color:#065f46; border:1px solid #a7f3d0; }
         .key-status-missing { background:#fee2e2; color:#991b1b; border:1px solid #fecaca; }
+        .mkt-step { margin-bottom:2px; }
+        .mkt-step-head { display:flex; align-items:center; gap:8px; font-weight:700; font-size:0.9rem; color:var(--gray-700, #374151); margin-bottom:8px; }
+        .mkt-step-num { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; background:var(--primary, #2563eb); color:#fff; font-size:0.78rem; font-weight:700; flex:0 0 auto; }
+        .mkt-quote-opt { display:block; width:100%; text-align:left; background:#fff; border:1px solid var(--gray-200); border-radius:6px; padding:8px 10px; margin-bottom:6px; font-size:0.85rem; cursor:pointer; line-height:1.4; }
+        .mkt-quote-opt:hover { border-color:var(--primary, #2563eb); background:#f8faff; }
         .mkt-company-toggle { display:inline-flex; border:1px solid var(--gray-200); border-radius:6px; overflow:hidden; }
         .mkt-company-btn { background:#fff; border:none; padding:6px 12px; font-size:0.8rem; font-weight:600; cursor:pointer; color:var(--gray-500); }
         .mkt-company-btn:not(:last-child) { border-right:1px solid var(--gray-200); }
@@ -3155,41 +3160,14 @@
                     <button onclick="closeModal('mktCardModal')" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray-500);">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <label style="font-size:0.8rem;font-weight:600;color:var(--gray-500);">Title / Headline</label>
-                    <input type="text" id="mktTitle" style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-size:0.95rem; box-sizing:border-box; margin-bottom:6px;">
-                    <div style="margin-bottom:8px;">
-                        <button type="button" class="btn btn-secondary" id="mktTitlesBtn" onclick="mktSuggestTitles()" style="font-size:0.78rem; padding:5px 10px; color:var(--primary);">AI: Suggest Titles</button>
-                    </div>
-                    <div id="mktTitleOptions" style="display:none; margin-bottom:12px;"></div>
-                    <label style="font-size:0.8rem;font-weight:600;color:var(--gray-500);">Company</label>
-                    <select id="mktCompany" style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; box-sizing:border-box; margin-bottom:12px;"></select>
-
-                    <div id="mktAngleBox" style="display:none; margin-bottom:12px; padding:8px 10px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; font-size:0.82rem;"></div>
-
-                    <div id="mktBlogFields">
-                        <label style="font-size:0.8rem;font-weight:600;color:var(--gray-500);">
-                            Your Take
-                            <span style="font-weight:400;color:var(--gray-500);">&mdash; press Win+H and just talk. Stories, opinions, what clients ask you. This is what makes it sound like you.</span>
-                        </label>
-                        <textarea id="mktTake" rows="5" placeholder="What do you actually think about this? What do clients get wrong? What have you seen?"
-                            style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; box-sizing:border-box; resize:vertical; margin-bottom:12px;"></textarea>
-
-                        <label style="font-size:0.8rem;font-weight:600;color:var(--gray-500);">Blog Draft</label>
-                        <textarea id="mktBlog" rows="10" placeholder="Markdown. This is what gets sent to WordPress."
-                            style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; box-sizing:border-box; resize:vertical; margin-bottom:12px;"></textarea>
-                    </div>
-
-                    <label style="font-size:0.8rem;font-weight:600;color:var(--gray-500);">Social Post Copy</label>
-                    <textarea id="mktSocial" rows="4" placeholder="LinkedIn / Facebook wording. Generated from the final blog, or written directly for a standalone post."
-                        style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; box-sizing:border-box; resize:vertical; margin-bottom:12px;"></textarea>
-
-                    <label style="font-size:0.8rem;font-weight:600;color:var(--gray-500);">Quote (for IntelliQuotes)</label>
-                    <textarea id="mktQuote" rows="2" placeholder="The line from the blog worth turning into a branded image."
-                        style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; box-sizing:border-box; resize:vertical; margin-bottom:6px;"></textarea>
-                    <div id="mktQuoteOptions" style="display:none; margin-bottom:12px;"></div>
-
-                    <div style="display:flex; gap:12px; flex-wrap:wrap;">
-                        <div style="flex:1; min-width:180px;">
+                    <!-- Card meta: company + column + status. Kept at top as a compact strip so the -->
+                    <!-- creative flow below reads as an uninterrupted top-to-bottom sequence.        -->
+                    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid var(--gray-200);">
+                        <div style="flex:1; min-width:150px;">
+                            <label style="font-size:0.8rem;font-weight:600;color:var(--gray-500);">Company</label>
+                            <select id="mktCompany" style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; box-sizing:border-box;"></select>
+                        </div>
+                        <div style="flex:1; min-width:150px;">
                             <label style="font-size:0.8rem;font-weight:600;color:var(--gray-500);">Column</label>
                             <select id="mktColumn" style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; box-sizing:border-box;"></select>
                         </div>
@@ -3203,14 +3181,105 @@
                         </div>
                     </div>
 
-                    <div id="mktWpInfo" style="display:none; margin-top:12px; padding:8px 10px; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:6px; font-size:0.82rem;"></div>
+                    <!-- ============ STEP 1 — BRAINSTORMING ============ -->
+                    <div class="mkt-step" id="mktStepBrainstorm">
+                        <div class="mkt-step-head"><span class="mkt-step-num">1</span> Brainstorming</div>
+                        <div style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; margin-bottom:6px;">
+                            <div style="flex:1; min-width:180px;">
+                                <label style="font-size:0.78rem;font-weight:600;color:var(--gray-500);">Source</label>
+                                <select id="mktBrainstormSource" style="width:100%; padding:7px; border:1px solid var(--gray-200); border-radius:6px; box-sizing:border-box; font-size:0.85rem;">
+                                    <option value="rss">Advisor / finance RSS feeds</option>
+                                    <option value="paste">Paste-in (I'll seed my own)</option>
+                                </select>
+                            </div>
+                            <button type="button" class="btn btn-secondary" id="mktBrainstormBtn" onclick="mktBrainstorm()" style="font-size:0.78rem; padding:7px 12px; color:var(--primary);">AI: Brainstorm</button>
+                        </div>
+                        <textarea id="mktBrainstormIdeas" rows="5" placeholder="What's popular in advisor/finance media + your firm context, turned into topic ideas. Or seed your own here and use paste-in mode."
+                            style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; box-sizing:border-box; resize:vertical; margin-bottom:14px;"></textarea>
+                    </div>
+
+                    <!-- ============ STEP 2 — ANGLES ============ -->
+                    <div class="mkt-step" id="mktStepAngles">
+                        <div class="mkt-step-head"><span class="mkt-step-num">2</span> Angles</div>
+                        <div id="mktAngleBox" style="display:none; margin-bottom:6px; padding:8px 10px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; font-size:0.82rem;"></div>
+                        <div id="mktAngleEmpty" style="font-size:0.8rem; color:var(--gray-500); margin-bottom:14px;">No angle yet. Draft the blog (Step 4) to have the AI propose one, or add your take first.</div>
+                    </div>
+
+                    <div id="mktBlogFields">
+                        <!-- ============ STEP 3 — MY TAKE ============ -->
+                        <div class="mkt-step" id="mktStepTake">
+                            <div class="mkt-step-head"><span class="mkt-step-num">3</span> My Take</div>
+                            <label style="font-size:0.78rem;font-weight:400;color:var(--gray-500); display:block; margin-bottom:4px;">Press Win+H and just talk. Stories, opinions, what clients ask you. This is what makes it sound like you.</label>
+                            <textarea id="mktTake" rows="5" placeholder="What do you actually think about this? What do clients get wrong? What have you seen?"
+                                style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; box-sizing:border-box; resize:vertical; margin-bottom:14px;"></textarea>
+                        </div>
+
+                        <!-- ============ STEP 4 — BLOG DRAFT ============ -->
+                        <div class="mkt-step" id="mktStepBlog">
+                            <div class="mkt-step-head">
+                                <span class="mkt-step-num">4</span> Blog Draft
+                                <button type="button" class="btn btn-secondary" id="mktDraftBtn" onclick="mktDraftBlog()" style="font-size:0.75rem; padding:4px 10px; margin-left:auto; color:var(--primary);">AI: Draft Blog</button>
+                            </div>
+                            <textarea id="mktBlog" rows="10" placeholder="Markdown. This is what gets sent to WordPress."
+                                style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; box-sizing:border-box; resize:vertical; margin-bottom:14px;"></textarea>
+                        </div>
+
+                        <!-- ============ STEP 5 — FINALIZE DRAFT ============ -->
+                        <div class="mkt-step" id="mktStepFinalize">
+                            <div class="mkt-step-head">
+                                <span class="mkt-step-num">5</span> Finalize Draft
+                                <button type="button" class="btn btn-secondary" id="mktTightenBtn" onclick="mktTightenBlog()" style="font-size:0.75rem; padding:4px 10px; margin-left:auto; color:var(--primary);">AI: Tighten</button>
+                            </div>
+                            <div style="font-size:0.8rem; color:var(--gray-500); margin-bottom:14px;">Hand-edit the draft above until it's yours. &ldquo;AI: Tighten&rdquo; does one editorial pass &mdash; grammar, flow, cutting fluff &mdash; without changing your meaning.</div>
+                        </div>
+
+                        <!-- ============ STEP 6 — TITLE / HEADLINE ============ -->
+                        <div class="mkt-step" id="mktStepTitle">
+                            <div class="mkt-step-head">
+                                <span class="mkt-step-num">6</span> Title / Headline
+                                <button type="button" class="btn btn-secondary" id="mktTitlesBtn" onclick="mktSuggestTitles()" style="font-size:0.75rem; padding:4px 10px; margin-left:auto; color:var(--primary);">AI: Suggest Titles</button>
+                            </div>
+                            <input type="text" id="mktTitle" placeholder="Generated last, from the finished blog."
+                                style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-size:0.95rem; box-sizing:border-box; margin-bottom:6px;">
+                            <div id="mktTitleOptions" style="display:none; margin-bottom:14px;"></div>
+                        </div>
+                    </div>
+
+                    <!-- ============ STEP 7 — SOCIAL POST COPY ============ -->
+                    <div class="mkt-step" id="mktStepSocial">
+                        <div class="mkt-step-head">
+                            <span class="mkt-step-num">7</span> Social Post Copy
+                            <button type="button" class="btn btn-secondary" id="mktSocialBtn" onclick="mktSuggestSocial()" style="font-size:0.75rem; padding:4px 10px; margin-left:auto; color:var(--primary);">AI: Write Social</button>
+                        </div>
+                        <textarea id="mktSocial" rows="4" placeholder="LinkedIn / Facebook wording. Generated from the final blog, or written directly for a standalone post."
+                            style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; box-sizing:border-box; resize:vertical; margin-bottom:14px;"></textarea>
+                    </div>
+
+                    <!-- ============ STEP 8 — QUOTES ============ -->
+                    <div class="mkt-step" id="mktStepQuote">
+                        <div class="mkt-step-head">
+                            <span class="mkt-step-num">8</span> Quote (for IntelliQuotes)
+                            <button type="button" class="btn btn-secondary" id="mktQuotesBtn" onclick="mktSuggestQuotes()" style="font-size:0.75rem; padding:4px 10px; margin-left:auto; color:var(--primary);">AI: Suggest Quotes</button>
+                        </div>
+                        <div id="mktQuoteOptions" style="display:none; margin-bottom:8px;"></div>
+                        <textarea id="mktQuote" rows="2" placeholder="The line from the blog worth turning into a branded image. Pick one above or write your own."
+                            style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; box-sizing:border-box; resize:vertical; margin-bottom:14px;"></textarea>
+                    </div>
+
+                    <!-- ============ STEP 9 — PACKAGE & SEND ============ -->
+                    <div class="mkt-step" id="mktStepPackage">
+                        <div class="mkt-step-head"><span class="mkt-step-num">9</span> Package &amp; Send</div>
+                        <div id="mktWpInfo" style="display:none; margin-bottom:8px; padding:8px 10px; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:6px; font-size:0.82rem;"></div>
+                        <div id="mktPackagedInfo" style="display:none; margin-bottom:8px; padding:8px 10px; background:#fef3c7; border:1px solid #fde68a; border-radius:6px; font-size:0.82rem;"></div>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button class="btn btn-secondary" id="mktWpBtn" onclick="mktSendToWordPress()" style="color:var(--primary);">Send Blog to WordPress</button>
+                            <button class="btn btn-secondary" id="mktTrevorBtn" onclick="mktPackageToTrevor()" style="color:var(--primary);">Package to Trevor</button>
+                            <button class="btn btn-secondary" id="mktDriveBtn" onclick="mktSaveBlogToDrive()">Save to Drive</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" onclick="mktDeleteCard()" style="color:var(--danger);">Delete</button>
-                    <button class="btn btn-secondary" id="mktWpBtn" onclick="mktSendToWordPress()" style="color:var(--primary);">Send Blog to WordPress</button>
-                    <button class="btn btn-secondary" id="mktDraftBtn" onclick="mktDraftBlog()" style="color:var(--primary);">AI: Draft Blog</button>
-                    <button class="btn btn-secondary" id="mktPackageBtn" onclick="mktDraftPackage()" style="color:var(--primary);">AI: Social + Quote</button>
-                    <button class="btn btn-secondary" id="mktDriveBtn" onclick="mktSaveBlogToDrive()">Save to Drive</button>
                     <button class="btn btn-primary" onclick="mktSaveCard()">Save</button>
                 </div>
             </div>
@@ -4163,9 +4232,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.51.0';
+        const EOS_VERSION = '3.52.0';
         const EOS_BUILD_DATE = '2026-07-20';
-        const EOS_BUILD_TIME = '19:40'; // v3.51.0: mobile task-detail + Kanban fixes. (1) Fixed the ⋯ menu floating on top of Kanban Card Details when you tap Notes (the menu now closes when the card opens). (2) New To-Do Detail modal - tap the (i) on a To-Do to edit due date, owner (reassign), Google Task list (move), and notes in one place, like Google Tasks; on mobile the row hides those controls so it stays clean and full-width, checkbox on the far left. (3) Kanban Card Details: Owner is now a reassign dropdown and Column is labeled as the move control (both already fired the proper WIP/history move on Save; now they are obvious). (4) Weekly Meeting agenda wraps instead of overflowing on mobile. No .gs change.
+        const EOS_BUILD_TIME = '21:15'; // v3.52.0: Marketing card modal rebuilt as a guided 9-step stepper (Brainstorm, Angles, My Take, Blog Draft, Finalize/Tighten, Title, Social, Quotes, Package & Send). New AI actions: Brainstorm (RSS-fed topic ideas via Apps Script), Tighten (editorial pass), split Social/Quotes, and Package to Trevor (emails social+quote+WP link via the existing editor-email path). All existing field ids preserved. Requires .gs v3.43.0 (adds brainstormFeeds + notifyTrevorPackage - paste it in and redeploy). // prior: v3.51.0 mobile task-detail + Kanban fixes. (1) Fixed the ⋯ menu floating on top of Kanban Card Details when you tap Notes (the menu now closes when the card opens). (2) New To-Do Detail modal - tap the (i) on a To-Do to edit due date, owner (reassign), Google Task list (move), and notes in one place, like Google Tasks; on mobile the row hides those controls so it stays clean and full-width, checkbox on the far left. (3) Kanban Card Details: Owner is now a reassign dropdown and Column is labeled as the move control (both already fired the proper WIP/history move on Save; now they are obvious). (4) Weekly Meeting agenda wraps instead of overflowing on mobile. No .gs change.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -6426,7 +6495,17 @@ Example:
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.51.0 &mdash; 2026-07-20 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.52.0 &mdash; 2026-07-20 (Current)</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>The Marketing card is now a guided, top-to-bottom checklist.</strong> Opening a content card walks you through it in order: 1) Brainstorm, 2) Angles, 3) Your Take, 4) Blog Draft, 5) Finalize, 6) Title, 7) Social, 8) Quote, 9) Package &amp; Send &mdash; instead of hunting for scattered buttons. Each step has its AI action right next to it.</li>'
+                + '<li><strong>New: AI Brainstorm.</strong> Step 1 pulls what&rsquo;s currently in advisor/finance media (Kitces, Financial Planning, ThinkAdvisor, WSJ Markets, Morningstar, Advisor Perspectives) and turns it into 6 blog ideas grounded in real headlines &mdash; or switch to paste-in and seed your own notes. The feeds are read on the server, so nothing generic gets invented.</li>'
+                + '<li><strong>New: AI Tighten.</strong> Step 5 does one editorial pass on your draft &mdash; grammar, flow, cutting fluff &mdash; without changing your meaning or inventing anything.</li>'
+                + '<li><strong>Social and Quotes are now separate steps.</strong> Step 7 writes the social post; Step 8 suggests several pull-quotes as clickable options you pick from, then finalize.</li>'
+                + '<li><strong>New: Package to Trevor.</strong> Step 9 emails Trevor the social copy, the chosen quote, and the WordPress link in one message &mdash; closing the gap where those got written after the blog was already handed off. Uses the same email path as the WordPress handoff.</li>'
+                + '<li>Needs the matching Apps Script update (v3.43.0) for Brainstorm and Package to Trevor to work.</li>'
+                + '</ul></div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.51.0 &mdash; 2026-07-20</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Tap a To-Do to open its details.</strong> Each To-Do now has an &ldquo;\u24D8&rdquo; button that opens a detail window &mdash; set the due date, reassign the owner, move it to a different Google Task list, and edit notes, all in one place, the way Google Tasks does it. On a phone the row now hides those controls so it stays clean and fills the screen, with the checkbox on the far left.</li>'
                 + '<li><strong>Fixed the menu covering Card Details.</strong> On Kanban, tapping Notes in a card&rsquo;s &ldquo;\u22EF&rdquo; menu used to leave the little menu floating on top of the Card Details window. It now closes properly when the card opens.</li>'
@@ -7812,105 +7891,369 @@ Example:
             });
         }
 
-        // Generates the social copy and the pull-quote FROM THE FINAL BLOG, in one call.
-        // Deliberately not run earlier: derivatives generated before the blog is frozen
-        // go stale the moment the blog is edited.
-        async function mktDraftPackage() {
+        // ==================== STEP 1 - BRAINSTORM (v3.52.0) ====================
+        // Pulls what's currently in advisor/finance media (server-side, via Apps Script
+        // UrlFetchApp + XmlService parsing an allowlist of RSS feeds - the browser never
+        // names a fetch target) and combines it with firm context so the AI proposes topic
+        // ideas grounded in real recent signal, not invented ones ("Bill the retired
+        // engineer" lesson). Source 'paste' skips the fetch: Hans seeds his own material
+        // in the box and the AI shapes THAT into ideas. The .gs 'brainstormFeeds' endpoint
+        // is the pluggable seam: swapping RSS for a paid search API or a web-search-tool AI
+        // call later is a server-side branch, no front-end change.
+        async function mktBrainstorm() {
             const card = mktGetCard(mktEditingId);
             if (!card) return;
 
-            const title = document.getElementById('mktTitle').value.trim();
-            const blog  = document.getElementById('mktBlog').value.trim();
-
-            if (!blog) { showToast('There is no blog draft to work from yet.'); return; }
+            const sourceMode = document.getElementById('mktBrainstormSource').value;
+            const seed = document.getElementById('mktBrainstormIdeas').value.trim();
+            if (sourceMode === 'paste' && !seed) {
+                showToast('Paste-in mode: put your raw notes/links in the box first, then Brainstorm.');
+                return;
+            }
 
             const cfg = getAIProviderConfig('marketing');
             if (!requireApiKey('Marketing AI', cfg)) return;
 
-            const pkgCompany = card.company || 'ii';
-            const ctxPkg = await fetchFirmContext(pkgCompany, false);
-            const ctxPkgBlock = buildFirmContextBlock(ctxPkg, pkgCompany);
+            const companyKey = card.company || 'ii';
+            const ctx = await fetchFirmContext(companyKey, false);
+            const ctxBlock = buildFirmContextBlock(ctx, companyKey);
 
-            const prompt =
-                MKT_FIRM_CONTEXT + ctxPkgBlock + '\n\n' +
-                'Below is a finished blog post. Produce two things from it.\n\n' +
-                'BLOG TITLE: ' + title + '\n\nBLOG:\n"""\n' + blog + '\n"""\n\n' +
-                '1. SOCIAL: a LinkedIn/Facebook post introducing the article. 80-150 words. ' +
-                'Hook the reader with the specific problem the article solves - not a summary, ' +
-                'not "check out my new blog." No hashtag spam, at most 2-3 relevant hashtags. ' +
-                'End with a light call to action to read it.\n\n' +
-                '2. QUOTES: FIVE options for a branded quote image (IntelliQuotes). Each must ' +
-                'stand alone without context, carry a real idea (not a platitude), and be under ' +
-                '25 words. Each option is an object with "text" and "author":\n' +
-                '   - Lines you distill from the blog or that express Hans\'s own view: set ' +
-                '"author" to "Hans Blake, CFA, CPA".\n' +
-                '   - You MAY instead offer a genuinely well-known quote from a famous figure ' +
-                '(e.g. Warren Buffett, Jack Bogle, Peter Lynch, Albert Einstein, Abraham Lincoln) ' +
-                'IF it fits the blog\'s theme AND you are confident of BOTH the exact wording AND ' +
-                'the real author. Set "author" to that person\'s name. If you are not confident a ' +
-                'famous quote is real and correctly attributed, DO NOT use it - distill an original ' +
-                'line and attribute it to Hans instead. Never invent a quote and attribute it to a ' +
-                'real person. A misattributed quote is worse than none.\n' +
-                '   - Do not put quotation marks inside "text".\n\n' +
-                'Return ONLY a JSON object. No fences, no preamble:\n' +
-                '{"social": "...", "quotes": [{"text": "...", "author": "..."}, ...]}';
-
-            const btn = document.getElementById('mktPackageBtn');
+            const btn = document.getElementById('mktBrainstormBtn');
             const original = btn.textContent;
-            btn.disabled = true;
-            btn.textContent = 'Working...';
+            btn.disabled = true; btn.textContent = 'Brainstorming...';
 
             try {
+                let signalBlock = '';
+
+                if (sourceMode === 'rss') {
+                    const settings = getSettings();
+                    const member = settings.teamMembers && settings.teamMembers.find(function(m) { return m.webAppUrl; });
+                    if (!member || !member.webAppUrl) {
+                        showToast('No Apps Script Web App URL configured in Settings - switch to paste-in, or set it up.');
+                        return;
+                    }
+                    btn.textContent = 'Fetching feeds...';
+                    let headlines = [];
+                    try {
+                        const resp = await fetch(member.webAppUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify({
+                                action: 'brainstormFeeds',
+                                secretKey: member.webAppSecret || '',
+                                max: 30
+                            })
+                        });
+                        const res = await resp.json();
+                        if (!res.success) {
+                            showToast('Feed fetch failed: ' + (res.error || 'unknown') + '. You can switch to paste-in.');
+                            return;
+                        }
+                        headlines = Array.isArray(res.items) ? res.items : [];
+                    } catch (fe) {
+                        showToast('Could not reach Apps Script for feeds: ' + fe.message);
+                        return;
+                    }
+                    if (!headlines.length) {
+                        showToast('No feed items came back. Try paste-in, or check the feed endpoint.');
+                        return;
+                    }
+                    // Record which feeds were used (audit trail, not fetch targets).
+                    const feedNames = Array.from(new Set(headlines.map(function(h) { return h.source || ''; }).filter(Boolean)));
+                    card.brainstormSources = 'rss: ' + feedNames.join(', ');
+                    signalBlock = 'RECENT ADVISOR/FINANCE HEADLINES (real, pulled just now):\n' +
+                        headlines.slice(0, 30).map(function(h) {
+                            return '- ' + (h.title || '') + (h.source ? ' [' + h.source + ']' : '');
+                        }).join('\n') + '\n\n';
+                    btn.textContent = 'Thinking...';
+                } else {
+                    card.brainstormSources = 'paste';
+                    signalBlock = 'HANS\'S RAW SEED MATERIAL (his notes / links / rough ideas):\n"""\n' + seed + '\n"""\n\n';
+                }
+
+                const prompt =
+                    MKT_FIRM_CONTEXT + ctxBlock + '\n\n' +
+                    signalBlock +
+                    'You are helping Hans, an independent RIA, decide what to write about next. ' +
+                    'Using the material above and the firm context, propose 6 specific blog topic ' +
+                    'ideas that (a) connect to something genuinely current or evergreen-important ' +
+                    'for his clients, and (b) fit his plainspoken, educational, non-salesy voice. ' +
+                    'For each idea give a one-line working angle - what makes it worth reading, not ' +
+                    'just the subject. Avoid generic personal-finance filler; each idea should be ' +
+                    'something only an advisor with a point of view would pitch. Do NOT invent ' +
+                    'statistics, clients, or firm services.\n\n' +
+                    'Return plain text, numbered 1-6, each as: Topic - the angle in one sentence. ' +
+                    'No preamble.';
+
                 const raw = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt,
-                                             { temperature: 0.75, maxTokens: 1200 });
-                const clean = String(raw).replace(/```json/gi, '').replace(/```/g, '').trim();
-                const s = clean.indexOf('{'), e = clean.lastIndexOf('}');
-                if (s === -1 || e === -1) throw new Error('The model did not return the expected format.');
+                                             { temperature: 0.85, maxTokens: 900 });
+                const clean = String(raw).replace(/^```(?:\w+)?\s*/i, '').replace(/```\s*$/, '').trim();
+                if (!clean) throw new Error('The model returned nothing.');
 
-                const pkg = JSON.parse(clean.slice(s, e + 1));
+                document.getElementById('mktBrainstormIdeas').value = clean;
+                card.brainstormIdeas = clean;
+                mktSave();
+                showToast('Ideas ready. Pick one, then move to Angles / Your Take.');
 
-                document.getElementById('mktSocial').value = pkg.social || '';
+            } catch (error) {
+                showToast('Brainstorm failed: ' + error.message);
+                console.error('mktBrainstorm error:', error);
+            } finally {
+                btn.disabled = false; btn.textContent = original;
+            }
+        }
+
+        // ==================== STEP 5 - TIGHTEN (v3.52.0) ====================
+        // One editorial pass over the CURRENT blog textarea - grammar, flow, cutting fluff -
+        // without changing Hans's meaning or inventing anything. Operates on whatever is in
+        // the field (drafted or hand-written), so it works whether or not AI drafted it.
+        async function mktTightenBlog() {
+            const card = mktGetCard(mktEditingId);
+            if (!card) return;
+            const blog = document.getElementById('mktBlog').value.trim();
+            if (!blog) { showToast('There is no draft to tighten yet.'); return; }
+
+            const cfg = getAIProviderConfig('marketing');
+            if (!requireApiKey('Marketing AI', cfg)) return;
+
+            if (!confirm('Tighten will rewrite the Blog Draft in place (one editorial pass). Your current text stays until it returns, but this replaces the field. Continue?')) return;
+
+            const btn = document.getElementById('mktTightenBtn');
+            const original = btn.textContent;
+            btn.disabled = true; btn.textContent = 'Tightening...';
+
+            try {
+                const prompt =
+                    'Below is a finished blog draft by Hans, an independent RIA who writes in a ' +
+                    'plainspoken, educational, non-salesy voice. Do ONE editorial pass: fix grammar ' +
+                    'and clumsy sentences, improve flow, cut filler and repetition, tighten wordy ' +
+                    'passages. Preserve his meaning, his voice, his structure, and every concrete ' +
+                    'fact, number, story, and quote EXACTLY - do not add, invent, or remove ideas, ' +
+                    'and do not make it sound more corporate or hyped. If a claim looks uncertain, ' +
+                    'leave it as-is rather than "correcting" it. Keep the Markdown headings.\n\n' +
+                    'DRAFT:\n"""\n' + blog + '\n"""\n\n' +
+                    'Return ONLY the tightened blog body in Markdown. No preamble, no commentary, ' +
+                    'no code fences, no H1 title.';
+
+                const raw = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt,
+                                             { temperature: 0.4, maxTokens: 4000 });
+                const clean = String(raw).replace(/^```(?:markdown)?\s*/i, '').replace(/```\s*$/, '').trim();
+                if (!clean) throw new Error('The model returned nothing.');
+
+                document.getElementById('mktBlog').value = clean;
+                card.blog = clean;
+                mktSave();
+                showToast('Tightened. Re-read it - the pass is a suggestion, not gospel.');
+
+            } catch (error) {
+                showToast('Tighten failed: ' + error.message);
+                console.error('mktTightenBlog error:', error);
+            } finally {
+                btn.disabled = false; btn.textContent = original;
+            }
+        }
+
+        // ==================== STEP 7 - SOCIAL ONLY (v3.52.0) ====================
+        // The social half of mktDraftPackage, split out so the stepper's Step 7 has its own
+        // action independent of Step 8's quotes. Generates from the final blog.
+        async function mktSuggestSocial() {
+            const card = mktGetCard(mktEditingId);
+            if (!card) return;
+            const title = document.getElementById('mktTitle').value.trim();
+            const blog  = document.getElementById('mktBlog').value.trim();
+            if (!blog) { showToast('Write/finalize the blog first, so the social post has something to introduce.'); return; }
+
+            const cfg = getAIProviderConfig('marketing');
+            if (!requireApiKey('Marketing AI', cfg)) return;
+
+            const companyKey = card.company || 'ii';
+            const ctx = await fetchFirmContext(companyKey, false);
+            const ctxBlock = buildFirmContextBlock(ctx, companyKey);
+
+            const btn = document.getElementById('mktSocialBtn');
+            const original = btn.textContent;
+            btn.disabled = true; btn.textContent = 'Writing...';
+
+            try {
+                const prompt =
+                    MKT_FIRM_CONTEXT + ctxBlock + '\n\n' +
+                    'Write a LinkedIn/Facebook post introducing the blog below. 80-150 words. ' +
+                    'Hook the reader with the specific problem the article solves - not a summary, ' +
+                    'not "check out my new blog." Plainspoken, no hype. At most 2-3 relevant ' +
+                    'hashtags. End with a light call to action to read it. Do not invent facts.\n\n' +
+                    'BLOG TITLE: ' + title + '\n\nBLOG:\n"""\n' + blog + '\n"""\n\n' +
+                    'Return ONLY the post text. No preamble, no quotes around it, no code fences.';
+
+                const raw = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt,
+                                             { temperature: 0.75, maxTokens: 500 });
+                const clean = String(raw).replace(/^```\s*/i, '').replace(/```\s*$/, '').trim();
+                if (!clean) throw new Error('The model returned nothing.');
+
+                document.getElementById('mktSocial').value = clean;
                 document.getElementById('mktSocialStatus').value = 'draft';
-                card.social = pkg.social || '';
+                card.social = clean;
                 card.socialStatus = 'draft';
+                mktSave();
+                mktRender();
+                showToast('Social copy drafted.');
 
-                // Normalize quotes to [{text, author}] and render as pickable chips.
-                let quotes = Array.isArray(pkg.quotes) ? pkg.quotes : [];
-                if (!quotes.length && pkg.quote) quotes = [{ text: pkg.quote, author: 'Hans Blake, CFA, CPA' }];
+            } catch (error) {
+                showToast('Social generation failed: ' + error.message);
+                console.error('mktSuggestSocial error:', error);
+            } finally {
+                btn.disabled = false; btn.textContent = original;
+            }
+        }
+
+        // ==================== STEP 8 - QUOTES ONLY (v3.52.0) ====================
+        // Several pull-quote options FROM the final blog, as pickable chips (same pattern as
+        // titles). Split out of mktDraftPackage so Step 8 stands alone. Enforces the same
+        // attribution safety: original lines -> Hans; famous quotes only if real + correct.
+        async function mktSuggestQuotes() {
+            const card = mktGetCard(mktEditingId);
+            if (!card) return;
+            const blog  = document.getElementById('mktBlog').value.trim();
+            const take  = document.getElementById('mktTake').value.trim();
+            if (!blog && !take) { showToast('Draft the blog (or at least Your Take) first, so quotes have something to distill.'); return; }
+
+            const cfg = getAIProviderConfig('marketing');
+            if (!requireApiKey('Marketing AI', cfg)) return;
+
+            const companyKey = card.company || 'ii';
+            const ctx = await fetchFirmContext(companyKey, false);
+            const ctxBlock = buildFirmContextBlock(ctx, companyKey);
+
+            const source = blog ? ('BLOG:\n"""\n' + blog + '\n"""') : ('HANS\'S TAKE:\n"""\n' + take + '\n"""');
+
+            const btn = document.getElementById('mktQuotesBtn');
+            const original = btn.textContent;
+            btn.disabled = true; btn.textContent = 'Thinking...';
+
+            try {
+                const prompt =
+                    MKT_FIRM_CONTEXT + ctxBlock + '\n\n' +
+                    'Produce FIVE options for a branded quote image (IntelliQuotes) drawn from the ' +
+                    'piece below. Each must stand alone without context, carry a real idea (not a ' +
+                    'platitude), and be under 25 words. Each option is an object with "text" and ' +
+                    '"author":\n' +
+                    '- Lines you distill from the piece or that express Hans\'s own view: set ' +
+                    '"author" to "Hans Blake, CFA, CPA".\n' +
+                    '- You MAY instead offer a genuinely well-known quote from a famous figure ' +
+                    '(e.g. Warren Buffett, Jack Bogle, Peter Lynch, Albert Einstein, Abraham ' +
+                    'Lincoln) IF it fits the theme AND you are confident of BOTH exact wording AND ' +
+                    'real author. Otherwise distill an original line and attribute it to Hans. ' +
+                    'Never invent a quote and attribute it to a real person - a misattributed ' +
+                    'quote is worse than none.\n' +
+                    '- Do not put quotation marks inside "text".\n\n' +
+                    source + '\n\n' +
+                    'Return ONLY a JSON array: [{"text":"...","author":"..."}, ...]. No fences, no preamble.';
+
+                const raw = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt,
+                                             { temperature: 0.8, maxTokens: 700 });
+                const clean = String(raw).replace(/```json/gi, '').replace(/```/g, '').trim();
+                const s = clean.indexOf('['), e = clean.lastIndexOf(']');
+                if (s === -1 || e === -1) throw new Error('The model did not return the expected format.');
+                const quotes = JSON.parse(clean.slice(s, e + 1));
+                if (!Array.isArray(quotes) || !quotes.length) throw new Error('No quotes came back.');
+
                 const chipData = quotes.map(function(q) {
                     const t = (q && q.text) ? String(q.text).trim() : '';
                     const a = (q && q.author) ? String(q.author).trim() : 'Hans Blake, CFA, CPA';
                     return t ? { text: t + '\n~ ' + a } : null;
                 }).filter(Boolean);
+                if (!chipData.length) throw new Error('No usable quotes came back.');
 
-                if (chipData.length) {
-                    mktRenderOptionChips('mktQuoteOptions', chipData, function(choice) {
-                        document.getElementById('mktQuote').value = choice;
-                        document.getElementById('mktQuoteStatus').value = 'draft';
-                        card.quote = choice;
-                        card.quoteStatus = 'draft';
-                        mktSave();
-                    });
-                    // Pre-fill with the first option so the card isn't empty if he doesn't
-                    // click, but the chips let him swap.
-                    const first = chipData[0].text;
-                    document.getElementById('mktQuote').value = first;
+                mktRenderOptionChips('mktQuoteOptions', chipData, function(choice) {
+                    document.getElementById('mktQuote').value = choice;
                     document.getElementById('mktQuoteStatus').value = 'draft';
-                    card.quote = first;
+                    card.quote = choice;
                     card.quoteStatus = 'draft';
+                    mktSave();
+                });
+
+            } catch (error) {
+                showToast('Quote suggestions failed: ' + error.message);
+                console.error('mktSuggestQuotes error:', error);
+            } finally {
+                btn.disabled = false; btn.textContent = original;
+            }
+        }
+
+        // ==================== STEP 9 - PACKAGE TO TREVOR (v3.52.0) ====================
+        // Closes the real gap: mktSendToWordPress emails Trevor at blog-send time, but the
+        // social copy and chosen quote are produced AFTER that, so there was no way to hand
+        // them off. This composes ONE message (social + quote + WP edit link + note) and
+        // routes it through the SAME Apps Script email path the WordPress notify uses - no
+        // new send mechanism. Sets packagedToTrevorAt and keeps the card in With Trevor.
+        async function mktPackageToTrevor() {
+            const card = mktGetCard(mktEditingId);
+            if (!card) return;
+
+            const social = document.getElementById('mktSocial').value.trim();
+            const quote  = document.getElementById('mktQuote').value.trim();
+            if (!social && !quote) {
+                showToast('Nothing to package yet - write the Social copy or pick a Quote first.');
+                return;
+            }
+
+            const settings = getSettings();
+            const member = settings.teamMembers && settings.teamMembers.find(function(m) { return m.webAppUrl; });
+            if (!member || !member.webAppUrl) {
+                showToast('No Apps Script Web App URL configured in Settings.');
+                return;
+            }
+
+            const title = document.getElementById('mktTitle').value.trim() || (card.title || 'the current post');
+            const wpNote = card.wordpressEditUrl
+                ? 'The blog draft is already in WordPress (link below).'
+                : 'The blog draft is NOT yet in WordPress - it may be coming separately.';
+
+            if (!confirm('Email Trevor the social copy + chosen quote for "' + title + '"? This uses the same email path as the WordPress handoff.')) return;
+
+            const btn = document.getElementById('mktTrevorBtn');
+            const original = btn.textContent;
+            btn.disabled = true; btn.textContent = 'Sending...';
+
+            try {
+                const resp = await fetch(member.webAppUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'notifyTrevorPackage',
+                        secretKey: member.webAppSecret || '',
+                        title: title,
+                        social: social,
+                        quote: quote,
+                        wpNote: wpNote,
+                        editUrl: card.wordpressEditUrl || ''
+                    })
+                });
+                const res = await resp.json();
+                if (!res.success) {
+                    showToast('Package email failed: ' + (res.error || 'unknown'));
+                    console.error('notifyTrevorPackage failed:', res);
+                    return;
                 }
 
+                card.packagedToTrevorAt = new Date().toISOString();
+                if (card.columnId !== 'trevor') { card.columnId = 'trevor'; }
+                document.getElementById('mktColumn').value = 'trevor';
                 mktSave();
                 mktRender();
 
-                showToast('Social post drafted. Pick a quote from the options.');
+                const pkgInfo = document.getElementById('mktPackagedInfo');
+                if (pkgInfo) {
+                    pkgInfo.style.display = 'block';
+                    pkgInfo.innerHTML = 'Packaged to Trevor on ' +
+                        escapeHtml(new Date(card.packagedToTrevorAt).toLocaleString()) + '.';
+                }
+                showToast(res.emailSent ? 'Packaged and emailed to Trevor.' : 'Saved, but email did not send: ' + (res.emailError || 'unknown'));
 
             } catch (error) {
-                showToast('Package generation failed: ' + error.message);
-                console.error('mktDraftPackage error:', error);
+                showToast('Could not reach Apps Script: ' + error.message);
+                console.error('mktPackageToTrevor error:', error);
             } finally {
-                btn.disabled = false;
-                btn.textContent = original;
+                btn.disabled = false; btn.textContent = original;
             }
         }
 
@@ -7972,6 +8315,8 @@ Example:
                 kind: kind === 'standalone' ? 'standalone' : 'blog',
                 company: mktActiveCompany,
                 title: '',
+                brainstormSources: '',
+                brainstormIdeas: '',
                 take: '',
                 blog: '',
                 social: '',
@@ -7980,6 +8325,7 @@ Example:
                 blogStatus: kind === 'standalone' ? 'none' : 'none',
                 socialStatus: 'none',
                 quoteStatus: 'none',
+                packagedToTrevorAt: '',
                 created: new Date().toISOString()
             };
             mktData.cards.push(card);
@@ -8004,6 +8350,8 @@ Example:
                 card.kind === 'blog' ? 'block' : 'none';
 
             document.getElementById('mktTitle').value  = card.title  || '';
+            document.getElementById('mktBrainstormIdeas').value = card.brainstormIdeas || '';
+            document.getElementById('mktBrainstormSource').value = card.brainstormSources || 'rss';
             document.getElementById('mktTake').value   = card.take   || '';
             document.getElementById('mktBlog').value   = card.blog   || '';
             document.getElementById('mktSocial').value = card.social || '';
@@ -8039,13 +8387,16 @@ Example:
             document.getElementById('mktQuoteStatus').innerHTML  = statusOpts(card.quoteStatus  || 'none', 'Quote');
 
             const angleBox = document.getElementById('mktAngleBox');
+            const angleEmpty = document.getElementById('mktAngleEmpty');
             if (card.aiAngle || card.aiWhy) {
                 angleBox.style.display = 'block';
+                if (angleEmpty) angleEmpty.style.display = 'none';
                 angleBox.innerHTML =
                     (card.aiAngle ? '<div><strong>Angle:</strong> ' + escapeHtml(card.aiAngle) + '</div>' : '') +
                     (card.aiWhy ? '<div style="margin-top:4px;"><strong>Why:</strong> ' + escapeHtml(card.aiWhy) + '</div>' : '');
             } else {
                 angleBox.style.display = 'none';
+                if (angleEmpty) angleEmpty.style.display = 'block';
             }
 
             const wpBtn = document.getElementById('mktWpBtn');
@@ -8061,6 +8412,17 @@ Example:
                 wpInfo.style.display = 'none';
             }
 
+            const pkgInfo = document.getElementById('mktPackagedInfo');
+            if (pkgInfo) {
+                if (card.packagedToTrevorAt) {
+                    pkgInfo.style.display = 'block';
+                    pkgInfo.innerHTML = 'Packaged to Trevor on ' +
+                        escapeHtml(new Date(card.packagedToTrevorAt).toLocaleString()) + '.';
+                } else {
+                    pkgInfo.style.display = 'none';
+                }
+            }
+
             document.getElementById('mktCardModal').classList.add('active');
         }
 
@@ -8069,6 +8431,8 @@ Example:
             if (!card) return;
 
             card.title  = document.getElementById('mktTitle').value.trim();
+            card.brainstormIdeas   = document.getElementById('mktBrainstormIdeas').value;
+            card.brainstormSources = document.getElementById('mktBrainstormSource').value;
             card.take   = document.getElementById('mktTake').value;
             card.blog   = document.getElementById('mktBlog').value;
             card.social = document.getElementById('mktSocial').value;
