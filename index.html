@@ -3195,14 +3195,22 @@
                             <button type="button" class="btn btn-secondary" id="mktBrainstormBtn" onclick="mktBrainstorm()" style="font-size:0.78rem; padding:7px 12px; color:var(--primary);">AI: Brainstorm</button>
                         </div>
                         <textarea id="mktBrainstormIdeas" rows="5" placeholder="What's popular in advisor/finance media + your firm context, turned into topic ideas. Or seed your own here and use paste-in mode."
-                            style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; box-sizing:border-box; resize:vertical; margin-bottom:14px;"></textarea>
+                            style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; box-sizing:border-box; resize:vertical; margin-bottom:8px;"></textarea>
+                        <!-- Structured, selectable topic rows (populated by mktBrainstorm; falls back to the textarea above for paste-in / legacy cards). -->
+                        <div id="mktTopicPicker" style="display:none; margin-bottom:14px;"></div>
                     </div>
 
                     <!-- ============ STEP 2 — ANGLES ============ -->
                     <div class="mkt-step" id="mktStepAngles">
                         <div class="mkt-step-head"><span class="mkt-step-num">2</span> Angles</div>
+                        <div id="mktChosenTopic" style="display:none; margin-bottom:6px; padding:7px 10px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px; font-size:0.82rem;"></div>
+                        <div style="margin-bottom:6px;">
+                            <button type="button" class="btn btn-secondary" id="mktAnglesBtn" onclick="mktSuggestAngles()" style="font-size:0.78rem; padding:7px 12px; color:var(--primary);">AI: Angles</button>
+                            <span style="font-size:0.75rem; color:var(--gray-500); margin-left:6px;">Pick a topic in Step 1 first, then get angles for it.</span>
+                        </div>
+                        <div id="mktAngleOptions" style="display:none; margin-bottom:8px;"></div>
                         <div id="mktAngleBox" style="display:none; margin-bottom:6px; padding:8px 10px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; font-size:0.82rem;"></div>
-                        <div id="mktAngleEmpty" style="font-size:0.8rem; color:var(--gray-500); margin-bottom:14px;">No angle yet. Draft the blog (Step 4) to have the AI propose one, or add your take first.</div>
+                        <div id="mktAngleEmpty" style="font-size:0.8rem; color:var(--gray-500); margin-bottom:14px;">No angle yet. Pick a topic in Step 1 and click AI: Angles, or draft the blog (Step 4) to have the AI propose one, or add your take first.</div>
                     </div>
 
                     <div id="mktBlogFields">
@@ -4232,9 +4240,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.52.1';
+        const EOS_VERSION = '3.52.2';
         const EOS_BUILD_DATE = '2026-07-20';
-        const EOS_BUILD_TIME = '21:40'; // v3.52.1: Fix Brainstorm truncation - maxTokens on the AI: Brainstorm call raised 900 -> 2000 so all six topics return in full (was cutting off partway through Topic 1 on Claude, at Topic 5 on Gemini). One-line change, no .gs change, no backend redeploy. // v3.52.0: Marketing card modal rebuilt as a guided 9-step stepper (Brainstorm, Angles, My Take, Blog Draft, Finalize/Tighten, Title, Social, Quotes, Package & Send). New AI actions: Brainstorm (RSS-fed topic ideas via Apps Script), Tighten (editorial pass), split Social/Quotes, and Package to Trevor (emails social+quote+WP link via the existing editor-email path). All existing field ids preserved. Requires .gs v3.43.0 (adds brainstormFeeds + notifyTrevorPackage - paste it in and redeploy). // prior: v3.51.0 mobile task-detail + Kanban fixes. (1) Fixed the ⋯ menu floating on top of Kanban Card Details when you tap Notes (the menu now closes when the card opens). (2) New To-Do Detail modal - tap the (i) on a To-Do to edit due date, owner (reassign), Google Task list (move), and notes in one place, like Google Tasks; on mobile the row hides those controls so it stays clean and full-width, checkbox on the far left. (3) Kanban Card Details: Owner is now a reassign dropdown and Column is labeled as the move control (both already fired the proper WIP/history move on Save; now they are obvious). (4) Weekly Meeting agenda wraps instead of overflowing on mobile. No .gs change.
+        const EOS_BUILD_TIME = '22:30'; // v3.52.2: Brainstorm->Angles guided funnel. Step 1 now parses the 6 topics into SELECTABLE rows (Use it now / Park / Kill / -> Backlog) instead of an inert text blob; parked topics can spin into their own Backlog card. New Step 2 "AI: Angles" button proposes ~4 angles for the CHOSEN topic as pickable chips that fill card.aiAngle (consumed by Step 4 draft). Brainstorm prompt rebalanced: RSS headlines weighted UP, newest firm-voice sample DOWN, so suggestions track current client-mind signal instead of echoing the last post. New card fields brainstormTopics[]/chosenTopic (additive; legacy blob cards lazily parsed on open). All existing field ids preserved. No .gs change. // v3.52.1: Fix Brainstorm truncation - maxTokens on the AI: Brainstorm call raised 900 -> 2000 so all six topics return in full (was cutting off partway through Topic 1 on Claude, at Topic 5 on Gemini). One-line change, no .gs change, no backend redeploy. // v3.52.0: Marketing card modal rebuilt as a guided 9-step stepper (Brainstorm, Angles, My Take, Blog Draft, Finalize/Tighten, Title, Social, Quotes, Package & Send). New AI actions: Brainstorm (RSS-fed topic ideas via Apps Script), Tighten (editorial pass), split Social/Quotes, and Package to Trevor (emails social+quote+WP link via the existing editor-email path). All existing field ids preserved. Requires .gs v3.43.0 (adds brainstormFeeds + notifyTrevorPackage - paste it in and redeploy). // prior: v3.51.0 mobile task-detail + Kanban fixes. (1) Fixed the ⋯ menu floating on top of Kanban Card Details when you tap Notes (the menu now closes when the card opens). (2) New To-Do Detail modal - tap the (i) on a To-Do to edit due date, owner (reassign), Google Task list (move), and notes in one place, like Google Tasks; on mobile the row hides those controls so it stays clean and full-width, checkbox on the far left. (3) Kanban Card Details: Owner is now a reassign dropdown and Column is labeled as the move control (both already fired the proper WIP/history move on Save; now they are obvious). (4) Weekly Meeting agenda wraps instead of overflowing on mobile. No .gs change.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -7974,16 +7982,21 @@ Example:
                 const prompt =
                     MKT_FIRM_CONTEXT + ctxBlock + '\n\n' +
                     signalBlock +
-                    'You are helping Hans, an independent RIA, decide what to write about next. ' +
-                    'Using the material above and the firm context, propose 6 specific blog topic ' +
-                    'ideas that (a) connect to something genuinely current or evergreen-important ' +
-                    'for his clients, and (b) fit his plainspoken, educational, non-salesy voice. ' +
-                    'For each idea give a one-line working angle - what makes it worth reading, not ' +
-                    'just the subject. Avoid generic personal-finance filler; each idea should be ' +
-                    'something only an advisor with a point of view would pitch. Do NOT invent ' +
-                    'statistics, clients, or firm services.\n\n' +
-                    'Return plain text, numbered 1-6, each as: Topic - the angle in one sentence. ' +
-                    'No preamble.';
+                    'You are helping Hans, an independent RIA, decide what to write about next.\n\n' +
+                    'PRIORITY OF SIGNAL: the RECENT HEADLINES / SEED MATERIAL above is the PRIMARY ' +
+                    'driver of what to write about - it reflects what is actually on clients\' minds ' +
+                    'right now. The firm context is there ONLY to keep the voice and the client profile ' +
+                    'right; do NOT let the most recent writing sample dictate the topics or you will just ' +
+                    'echo the last post. Pull topics from the current signal, not from what he wrote last.\n\n' +
+                    'Propose 6 specific blog topic ideas that (a) connect to something genuinely current ' +
+                    'in the headlines above (or evergreen-important for his clients), and (b) fit his ' +
+                    'plainspoken, educational, non-salesy voice. For each idea give a one-line working ' +
+                    'angle - what makes it worth reading, not just the subject. Avoid generic ' +
+                    'personal-finance filler; each idea should be something only an advisor with a point ' +
+                    'of view would pitch. Do NOT invent statistics, clients, or firm services.\n\n' +
+                    'Return plain text, numbered 1-6, each on its own line in EXACTLY this format:\n' +
+                    '1. Topic title - the angle in one sentence.\n' +
+                    'The title and the angle MUST be separated by " - " (space hyphen space). No preamble, no blank lines between items.';
 
                 const raw = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt,
                                              { temperature: 0.85, maxTokens: 2000 });
@@ -7992,8 +8005,15 @@ Example:
 
                 document.getElementById('mktBrainstormIdeas').value = clean;
                 card.brainstormIdeas = clean;
+                // Parse the numbered list into structured, selectable topics. A new brainstorm
+                // replaces the prior topic set (and clears any prior selection), but keeps
+                // whatever the user already parked via a separate action from being silently lost:
+                // parked/killed states only exist within a topic set, so a fresh set starts clean.
+                card.brainstormTopics = mktParseTopics(clean);
+                card.chosenTopic = '';
                 mktSave();
-                showToast('Ideas ready. Pick one, then move to Angles / Your Take.');
+                mktRenderTopics(card);
+                showToast('Ideas ready. Pick one in Step 1, then get Angles for it.');
 
             } catch (error) {
                 showToast('Brainstorm failed: ' + error.message);
@@ -8002,6 +8022,242 @@ Example:
                 btn.disabled = false; btn.textContent = original;
             }
         }
+
+        // ==================== STEP 1/2 - BRAINSTORM->ANGLES FUNNEL (v3.52.2) ====================
+        // Turns the 6-topic blob into selectable topic rows. Pick one (active), park the rest,
+        // kill duds, or spin a parked topic into its own Backlog card for next time. The chosen
+        // topic then feeds mktSuggestAngles, which proposes ~4 angles as pickable chips that fill
+        // the existing card.aiAngle field (consumed by mktDraftBlog). No .gs change.
+
+        // Parse the numbered "1. Title - angle" list into structured topics.
+        function mktParseTopics(text) {
+            if (!text) return [];
+            const out = [];
+            String(text).split('\n').forEach(function(line) {
+                const m = line.match(/^\s*\d+[.)]\s*(.+)$/);
+                if (!m) return;
+                const body = m[1].trim();
+                if (!body) return;
+                // Split title from angle on the first " - " (space hyphen space).
+                let title = body, angle = '';
+                const sep = body.indexOf(' - ');
+                if (sep !== -1) {
+                    title = body.slice(0, sep).trim();
+                    angle = body.slice(sep + 3).trim();
+                }
+                out.push({ text: title, angle: angle, state: 'open' }); // open | parked | killed
+            });
+            return out;
+        }
+
+        // Render the selectable topic rows into #mktTopicPicker.
+        function mktRenderTopics(card) {
+            const wrap = document.getElementById('mktTopicPicker');
+            if (!wrap) return;
+            const topics = Array.isArray(card.brainstormTopics) ? card.brainstormTopics : [];
+            if (!topics.length) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+            wrap.style.display = 'block';
+            wrap.innerHTML = '';
+
+            const heading = document.createElement('div');
+            heading.style.cssText = 'font-size:0.72rem;color:var(--gray-500);margin:2px 0 6px;';
+            heading.textContent = 'Pick one to work on. Park the rest for later, kill duds, or send a parked idea to its own Backlog card.';
+            wrap.appendChild(heading);
+
+            topics.forEach(function(t, i) {
+                if (t.state === 'killed') return; // killed topics disappear from the picker
+                const isChosen = (card.chosenTopic && card.chosenTopic === t.text);
+                const parked = (t.state === 'parked');
+
+                const row = document.createElement('div');
+                row.style.cssText = 'border:1px solid ' + (isChosen ? '#86efac' : 'var(--gray-200)') + ';'
+                    + 'background:' + (isChosen ? '#f0fdf4' : (parked ? '#f9fafb' : '#fff')) + ';'
+                    + 'border-radius:6px;padding:8px 9px;margin-bottom:6px;'
+                    + (parked && !isChosen ? 'opacity:0.7;' : '');
+
+                const txt = document.createElement('div');
+                txt.style.cssText = 'font-size:0.84rem;line-height:1.35;color:#111;margin-bottom:6px;'
+                    + (isChosen ? 'font-weight:600;' : '');
+                txt.textContent = t.text + (t.angle ? ' - ' + t.angle : '');
+                row.appendChild(txt);
+
+                const bar = document.createElement('div');
+                bar.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
+
+                function mkBtn(label, handler, primary) {
+                    const b = document.createElement('button');
+                    b.type = 'button';
+                    b.textContent = label;
+                    b.style.cssText = 'font-size:0.72rem;padding:4px 9px;border-radius:5px;cursor:pointer;'
+                        + 'border:1px solid ' + (primary ? '#86efac' : 'var(--gray-200)') + ';'
+                        + 'background:' + (primary ? '#dcfce7' : '#f8fafc') + ';color:#111;';
+                    b.onclick = handler;
+                    return b;
+                }
+
+                if (isChosen) {
+                    const badge = document.createElement('span');
+                    badge.textContent = 'Chosen';
+                    badge.style.cssText = 'font-size:0.72rem;padding:4px 9px;color:#16a34a;font-weight:600;';
+                    bar.appendChild(badge);
+                } else {
+                    bar.appendChild(mkBtn('Use it now', function() { mktSelectTopic(i); }, true));
+                    bar.appendChild(mkBtn(parked ? 'Un-park' : 'Park', function() { mktParkTopic(i); }));
+                }
+                bar.appendChild(mkBtn('Kill', function() { mktKillTopic(i); }));
+                if (parked) bar.appendChild(mkBtn('-> Backlog', function() { mktTopicToBacklog(i); }));
+
+                row.appendChild(bar);
+                wrap.appendChild(row);
+            });
+        }
+
+        // Reflect the chosen topic into Step 2's header.
+        function mktRenderChosenTopic(card) {
+            const el = document.getElementById('mktChosenTopic');
+            if (!el) return;
+            if (card.chosenTopic) {
+                el.style.display = 'block';
+                el.innerHTML = '<strong>Topic:</strong> ' + mktEscape(card.chosenTopic);
+            } else {
+                el.style.display = 'none';
+                el.innerHTML = '';
+            }
+        }
+
+        function mktSelectTopic(i) {
+            const card = mktGetCard(mktEditingId);
+            if (!card || !card.brainstormTopics || !card.brainstormTopics[i]) return;
+            card.chosenTopic = card.brainstormTopics[i].text;
+            card.brainstormTopics[i].state = 'open';
+            mktSave();
+            mktRenderTopics(card);
+            mktRenderChosenTopic(card);
+            showToast('Topic chosen. Click AI: Angles in Step 2.');
+        }
+
+        function mktParkTopic(i) {
+            const card = mktGetCard(mktEditingId);
+            if (!card || !card.brainstormTopics || !card.brainstormTopics[i]) return;
+            const t = card.brainstormTopics[i];
+            t.state = (t.state === 'parked') ? 'open' : 'parked';
+            if (t.state === 'parked' && card.chosenTopic === t.text) card.chosenTopic = '';
+            mktSave();
+            mktRenderTopics(card);
+            mktRenderChosenTopic(card);
+        }
+
+        function mktKillTopic(i) {
+            const card = mktGetCard(mktEditingId);
+            if (!card || !card.brainstormTopics || !card.brainstormTopics[i]) return;
+            const t = card.brainstormTopics[i];
+            if (card.chosenTopic === t.text) card.chosenTopic = '';
+            t.state = 'killed';
+            mktSave();
+            mktRenderTopics(card);
+            mktRenderChosenTopic(card);
+        }
+
+        // Spin a parked topic into its own new Marketing Backlog (Ideas) card, pre-seeded
+        // with that topic already chosen so next session can jump straight to Angles.
+        function mktTopicToBacklog(i) {
+            const card = mktGetCard(mktEditingId);
+            if (!card || !card.brainstormTopics || !card.brainstormTopics[i]) return;
+            const t = card.brainstormTopics[i];
+            const newCard = {
+                id: 'mkt_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+                kind: 'blog',
+                company: card.company || mktActiveCompany,
+                title: '',
+                brainstormSources: card.brainstormSources || '',
+                brainstormIdeas: t.text + (t.angle ? ' - ' + t.angle : ''),
+                brainstormTopics: [{ text: t.text, angle: t.angle || '', state: 'open' }],
+                chosenTopic: t.text,
+                take: '', blog: '', social: '', quote: '',
+                columnId: 'ideas',
+                blogStatus: 'none', socialStatus: 'none', quoteStatus: 'none',
+                packagedToTrevorAt: '',
+                created: new Date().toISOString()
+            };
+            mktData.cards.push(newCard);
+            // Remove the parked topic from the source card so it isn't in two places.
+            t.state = 'killed';
+            mktSave();
+            mktRenderTopics(card);
+            mktRender();
+            showToast('Sent to a new Backlog card (Ideas), topic pre-selected.');
+        }
+
+        // Small HTML-escape helper for injecting topic text into innerHTML.
+        function mktEscape(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        // Step 2: propose ~4 angles for the CHOSEN topic only, as pickable chips -> card.aiAngle.
+        async function mktSuggestAngles() {
+            const card = mktGetCard(mktEditingId);
+            if (!card) return;
+            if (!card.chosenTopic) {
+                showToast('Pick a topic in Step 1 first (Use it now), then get angles.');
+                return;
+            }
+            const cfg = getAIProviderConfig('marketing');
+            if (!requireApiKey('Marketing AI', cfg)) return;
+
+            const companyKey = card.company || 'ii';
+            const ctx = await fetchFirmContext(companyKey, false);
+            const ctxBlock = buildFirmContextBlock(ctx, companyKey);
+
+            const btn = document.getElementById('mktAnglesBtn');
+            const original = btn.textContent;
+            btn.disabled = true; btn.textContent = 'Thinking...';
+
+            try {
+                const prompt =
+                    MKT_FIRM_CONTEXT + ctxBlock + '\n\n' +
+                    'Hans has chosen this blog TOPIC to write about:\n"""\n' + card.chosenTopic + '\n"""\n\n' +
+                    'Propose FOUR distinct ANGLES he could take on this one topic. An angle is the ' +
+                    'specific point of view or entry point - the thing that makes the piece worth ' +
+                    'reading rather than a generic explainer. Each should be genuinely different from ' +
+                    'the others (e.g. a contrarian take, a client-question framing, a story-led entry, ' +
+                    'a myth-to-bust), fit his plainspoken, educational, non-salesy voice, and require ' +
+                    'no invented statistics, clients, or firm services.\n\n' +
+                    'Each angle is one or two sentences. Return ONLY a JSON array of strings: ' +
+                    '["angle one", "angle two", "angle three", "angle four"]. No fences, no preamble.';
+
+                const raw = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt,
+                                             { temperature: 0.85, maxTokens: 900 });
+                const cleaned = String(raw).replace(/```json/gi, '').replace(/```/g, '').trim();
+                const s = cleaned.indexOf('['), e = cleaned.lastIndexOf(']');
+                if (s === -1 || e === -1) throw new Error('The model did not return the expected format.');
+                const angles = JSON.parse(cleaned.slice(s, e + 1));
+                if (!Array.isArray(angles) || !angles.length) throw new Error('No angles came back.');
+
+                const chipData = angles
+                    .map(function(a) { return (typeof a === 'string') ? a.trim() : ''; })
+                    .filter(Boolean)
+                    .map(function(a) { return { text: a }; });
+                if (!chipData.length) throw new Error('No usable angles came back.');
+
+                mktRenderOptionChips('mktAngleOptions', chipData, function(choice) {
+                    card.aiAngle = choice;
+                    mktSave();
+                    const box = document.getElementById('mktAngleBox');
+                    const empty = document.getElementById('mktAngleEmpty');
+                    if (box) { box.style.display = 'block'; box.innerHTML = '<strong>Angle:</strong> ' + mktEscape(choice); }
+                    if (empty) empty.style.display = 'none';
+                });
+
+            } catch (error) {
+                showToast('Angle suggestions failed: ' + error.message);
+                console.error('mktSuggestAngles error:', error);
+            } finally {
+                btn.disabled = false; btn.textContent = original;
+            }
+        }
+
 
         // ==================== STEP 5 - TIGHTEN (v3.52.0) ====================
         // One editorial pass over the CURRENT blog textarea - grammar, flow, cutting fluff -
@@ -8317,6 +8573,8 @@ Example:
                 title: '',
                 brainstormSources: '',
                 brainstormIdeas: '',
+                brainstormTopics: [],
+                chosenTopic: '',
                 take: '',
                 blog: '',
                 social: '',
@@ -8358,10 +8616,18 @@ Example:
             document.getElementById('mktQuote').value  = card.quote  || '';
 
             // Clear any option chips left over from a previously-opened card.
-            ['mktTitleOptions', 'mktQuoteOptions'].forEach(function(cid) {
+            ['mktTitleOptions', 'mktQuoteOptions', 'mktAngleOptions'].forEach(function(cid) {
                 const el = document.getElementById(cid);
                 if (el) { el.innerHTML = ''; el.style.display = 'none'; }
             });
+
+            // Brainstorm->Angles funnel (v3.52.2): lazily parse legacy blob text into topics
+            // so older cards get selectable rows too, then render picker + chosen-topic header.
+            if ((!Array.isArray(card.brainstormTopics) || !card.brainstormTopics.length) && card.brainstormIdeas) {
+                card.brainstormTopics = mktParseTopics(card.brainstormIdeas);
+            }
+            mktRenderTopics(card);
+            mktRenderChosenTopic(card);
 
             const compSel = document.getElementById('mktCompany');
             compSel.innerHTML = Object.keys(MKT_COMPANIES).map(function(k) {
