@@ -3542,10 +3542,49 @@
                                 Sets your preferred provider now so it's ready when card-assignment execution ships.
                             </div>
                         </div>
+
+                        <!-- AI Output Length (v3.53.0) -->
+                        <div style="padding: 10px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; margin-top: 14px;">
+                            <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 8px;">AI Output Length (max tokens per task)</div>
+                            <p style="font-size: 0.75rem; color: var(--gray-500); margin: 0 0 8px;">
+                                Raise a task's budget if its output keeps getting cut off mid-sentence. A higher number costs more per call.
+                                Draft and Tighten auto-retry once at 1.5&times; if a result comes back truncated.
+                            </p>
+                            <div style="display:flex; flex-wrap:wrap; gap:10px;">
+                                <div style="min-width:100px;">
+                                    <label style="font-size:0.72rem;font-weight:600;color:var(--gray-500);display:block;">Brainstorm</label>
+                                    <input type="number" id="aiTokensBrainstorm" min="200" step="100" style="width:100%; padding:6px; font-size:0.82rem;">
+                                </div>
+                                <div style="min-width:100px;">
+                                    <label style="font-size:0.72rem;font-weight:600;color:var(--gray-500);display:block;">Topics</label>
+                                    <input type="number" id="aiTokensTopics" min="200" step="100" style="width:100%; padding:6px; font-size:0.82rem;">
+                                </div>
+                                <div style="min-width:100px;">
+                                    <label style="font-size:0.72rem;font-weight:600;color:var(--gray-500);display:block;">Angles</label>
+                                    <input type="number" id="aiTokensAngles" min="200" step="100" style="width:100%; padding:6px; font-size:0.82rem;">
+                                </div>
+                                <div style="min-width:100px;">
+                                    <label style="font-size:0.72rem;font-weight:600;color:var(--gray-500);display:block;">Blog Draft</label>
+                                    <input type="number" id="aiTokensDraft" min="500" step="100" style="width:100%; padding:6px; font-size:0.82rem;">
+                                </div>
+                                <div style="min-width:100px;">
+                                    <label style="font-size:0.72rem;font-weight:600;color:var(--gray-500);display:block;">Tighten</label>
+                                    <input type="number" id="aiTokensTighten" min="500" step="100" style="width:100%; padding:6px; font-size:0.82rem;">
+                                </div>
+                                <div style="min-width:100px;">
+                                    <label style="font-size:0.72rem;font-weight:600;color:var(--gray-500);display:block;">Social</label>
+                                    <input type="number" id="aiTokensSocial" min="100" step="50" style="width:100%; padding:6px; font-size:0.82rem;">
+                                </div>
+                                <div style="min-width:100px;">
+                                    <label style="font-size:0.72rem;font-weight:600;color:var(--gray-500);display:block;">Titles</label>
+                                    <input type="number" id="aiTokensTitles" min="100" step="50" style="width:100%; padding:6px; font-size:0.82rem;">
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-            
+
             <!-- SECTION 2: EOS CONFIGURATION -->
             <div style="margin-bottom: 24px;">
                 <div style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 12px 16px; border-radius: 8px 8px 0 0; font-weight: 600; font-size: 1.1rem;">
@@ -4240,9 +4279,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.52.2';
-        const EOS_BUILD_DATE = '2026-07-20';
-        const EOS_BUILD_TIME = '22:30'; // v3.52.2: Brainstorm->Angles guided funnel. Step 1 now parses the 6 topics into SELECTABLE rows (Use it now / Park / Kill / -> Backlog) instead of an inert text blob; parked topics can spin into their own Backlog card. New Step 2 "AI: Angles" button proposes ~4 angles for the CHOSEN topic as pickable chips that fill card.aiAngle (consumed by Step 4 draft). Brainstorm prompt rebalanced: RSS headlines weighted UP, newest firm-voice sample DOWN, so suggestions track current client-mind signal instead of echoing the last post. New card fields brainstormTopics[]/chosenTopic (additive; legacy blob cards lazily parsed on open). All existing field ids preserved. No .gs change. // v3.52.1: Fix Brainstorm truncation - maxTokens on the AI: Brainstorm call raised 900 -> 2000 so all six topics return in full (was cutting off partway through Topic 1 on Claude, at Topic 5 on Gemini). One-line change, no .gs change, no backend redeploy. // v3.52.0: Marketing card modal rebuilt as a guided 9-step stepper (Brainstorm, Angles, My Take, Blog Draft, Finalize/Tighten, Title, Social, Quotes, Package & Send). New AI actions: Brainstorm (RSS-fed topic ideas via Apps Script), Tighten (editorial pass), split Social/Quotes, and Package to Trevor (emails social+quote+WP link via the existing editor-email path). All existing field ids preserved. Requires .gs v3.43.0 (adds brainstormFeeds + notifyTrevorPackage - paste it in and redeploy). // prior: v3.51.0 mobile task-detail + Kanban fixes. (1) Fixed the ⋯ menu floating on top of Kanban Card Details when you tap Notes (the menu now closes when the card opens). (2) New To-Do Detail modal - tap the (i) on a To-Do to edit due date, owner (reassign), Google Task list (move), and notes in one place, like Google Tasks; on mobile the row hides those controls so it stays clean and full-width, checkbox on the far left. (3) Kanban Card Details: Owner is now a reassign dropdown and Column is labeled as the move control (both already fired the proper WIP/history move on Save; now they are obvious). (4) Weekly Meeting agenda wraps instead of overflowing on mobile. No .gs change.
+        const EOS_VERSION = '3.53.0';
+        const EOS_BUILD_DATE = '2026-07-21';
+        const EOS_BUILD_TIME = '11:00'; // v3.53.0: Blog Draft no longer requires a title first (drafts from Take + Angle; title still generated in Step 6). New opts.withMeta on callAIText (additive - existing callers unaffected) reports a finish-reason truncation across Claude/Gemini/OpenAI. New per-task AI token budgets in Settings > AI Tools > AI Output Length (brainstorm/topics/angles/draft/tighten/social/titles), wired through getTaskTokens() at every marketing call site; Blog Draft and Tighten use withMeta to auto-retry once at 1.5x budget on a truncated result, keeping the longer output and toasting if it's still cut off. New debounced (800ms) autosave scoped to the open marketing card modal, separate from the global autoSave's .modal exclusion. Requires .gs v3.44.0 for the Firm Context Drive-folder recursion (subfolders to depth 5, new "Market Commentary Archives" reserved tier). // v3.52.2: Brainstorm->Angles guided funnel. Step 1 now parses the 6 topics into SELECTABLE rows (Use it now / Park / Kill / -> Backlog) instead of an inert text blob; parked topics can spin into their own Backlog card. New Step 2 "AI: Angles" button proposes ~4 angles for the CHOSEN topic as pickable chips that fill card.aiAngle (consumed by Step 4 draft). Brainstorm prompt rebalanced: RSS headlines weighted UP, newest firm-voice sample DOWN, so suggestions track current client-mind signal instead of echoing the last post. New card fields brainstormTopics[]/chosenTopic (additive; legacy blob cards lazily parsed on open). All existing field ids preserved. No .gs change. // v3.52.1: Fix Brainstorm truncation - maxTokens on the AI: Brainstorm call raised 900 -> 2000 so all six topics return in full (was cutting off partway through Topic 1 on Claude, at Topic 5 on Gemini). One-line change, no .gs change, no backend redeploy. // v3.52.0: Marketing card modal rebuilt as a guided 9-step stepper (Brainstorm, Angles, My Take, Blog Draft, Finalize/Tighten, Title, Social, Quotes, Package & Send). New AI actions: Brainstorm (RSS-fed topic ideas via Apps Script), Tighten (editorial pass), split Social/Quotes, and Package to Trevor (emails social+quote+WP link via the existing editor-email path). All existing field ids preserved. Requires .gs v3.43.0 (adds brainstormFeeds + notifyTrevorPackage - paste it in and redeploy). // prior: v3.51.0 mobile task-detail + Kanban fixes. (1) Fixed the ⋯ menu floating on top of Kanban Card Details when you tap Notes (the menu now closes when the card opens). (2) New To-Do Detail modal - tap the (i) on a To-Do to edit due date, owner (reassign), Google Task list (move), and notes in one place, like Google Tasks; on mobile the row hides those controls so it stays clean and full-width, checkbox on the far left. (3) Kanban Card Details: Owner is now a reassign dropdown and Column is labeled as the move control (both already fired the proper WIP/history move on Save; now they are obvious). (4) Weekly Meeting agenda wraps instead of overflowing on mobile. No .gs change.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -6503,7 +6542,17 @@ Example:
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.52.0 &mdash; 2026-07-20 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.53.0 &mdash; 2026-07-21 (Current)</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Blog Draft no longer requires a title first.</strong> Step 4 now drafts straight from Your Take and the chosen Angle &mdash; the headline still gets generated in Step 6, so you no longer have to invent a placeholder title just to unlock drafting.</li>'
+                + '<li><strong>New: per-task AI output length.</strong> Settings &gt; AI Tools has a new &ldquo;AI Output Length&rdquo; block &mdash; a max-tokens budget for each marketing step (Brainstorm, Topics, Angles, Blog Draft, Tighten, Social, Titles). Raise a task&rsquo;s number if its output keeps getting cut off.</li>'
+                + '<li><strong>Blog Draft and Tighten now auto-retry a cut-off result.</strong> If either comes back truncated, it automatically retries once at 1.5&times; the budget and keeps the longer of the two; if it&rsquo;s still cut off you get a toast telling you which task&rsquo;s tokens to raise, rather than the field silently ending up with a truncated draft.</li>'
+                + '<li><strong>The card modal now autosaves as you type.</strong> Your Take, Blog Draft, and every other field in an open content card save themselves about a second after you stop typing, so reopening a card mid-edit restores your in-progress work.</li>'
+                + '<li><strong>Firm Context now reads subfolders, not just the top-level folder.</strong> The Google Drive context folder is walked up to 5 levels deep. New: a &ldquo;Market Commentary Archives&rdquo; subfolder (exact name, any case) reserves one slot for your single most-recently-updated commentary file as ground truth, separate from the writing-sample pool. The Test Folder readout in Settings now shows all three tiers &mdash; Firm Facts, Market Commentary, and Writing Samples.</li>'
+                + '<li>Needs the matching Apps Script update (v3.44.0) for the Firm Context subfolder recursion to take effect.</li>'
+                + '</ul></div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.52.0 &mdash; 2026-07-20</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>The Marketing card is now a guided, top-to-bottom checklist.</strong> Opening a content card walks you through it in order: 1) Brainstorm, 2) Angles, 3) Your Take, 4) Blog Draft, 5) Finalize, 6) Title, 7) Social, 8) Quote, 9) Package &amp; Send &mdash; instead of hunting for scattered buttons. Each step has its AI action right next to it.</li>'
                 + '<li><strong>New: AI Brainstorm.</strong> Step 1 pulls what&rsquo;s currently in advisor/finance media (Kitces, Financial Planning, ThinkAdvisor, WSJ Markets, Morningstar, Advisor Perspectives) and turns it into 6 blog ideas grounded in real headlines &mdash; or switch to paste-in and seed your own notes. The feeds are read on the server, so nothing generic gets invented.</li>'
@@ -7385,7 +7434,9 @@ Example:
                     fetchedAt: Date.now(),
                     folderName: result.folderName,
                     totalChars: result.totalChars,
-                    sampleTotal: result.sampleTotal
+                    sampleTotal: result.sampleTotal,
+                    commentaryFile: result.commentaryFile || '',
+                    commentaryFolderName: result.commentaryFolderName || ''
                 };
                 return firmContextCache[key];
             } catch (error) {
@@ -7397,17 +7448,19 @@ Example:
 
         // Builds the context block prepended to every marketing prompt.
         //
-        // The two kinds are labelled separately and given DIFFERENT instructions, because
-        // they serve different jobs. Firm facts are ground truth the model must use verbatim.
-        // Past blogs are style references it should imitate but never copy from.
+        // Three kinds, labelled separately and given DIFFERENT instructions, because they
+        // serve different jobs. Firm facts are ground truth the model must use verbatim.
+        // Market commentary is current, dated ground truth on markets/the economy - use it,
+        // don't imitate its voice. Past blogs are style references to imitate but never copy.
         function buildFirmContextBlock(ctx, companyKey) {
             const company = MKT_COMPANIES[companyKey] || MKT_COMPANIES.ii;
             if (!ctx || !ctx.files || !ctx.files.length) {
                 return '\n\nYou are writing for ' + company.name + '.\n';
             }
 
-            const evergreen = ctx.files.filter(function(f) { return f.kind === 'evergreen'; });
-            const samples   = ctx.files.filter(function(f) { return f.kind !== 'evergreen'; });
+            const evergreen  = ctx.files.filter(function(f) { return f.kind === 'evergreen'; });
+            const commentary = ctx.files.filter(function(f) { return f.kind === 'commentary'; });
+            const samples    = ctx.files.filter(function(f) { return f.kind !== 'evergreen' && f.kind !== 'commentary'; });
 
             let block = '\n\n===== CONTEXT FOR ' + company.name.toUpperCase() + ' =====\n' +
                         'You are writing for ' + company.name + '. Everything below belongs to this ' +
@@ -7417,6 +7470,12 @@ Example:
             if (evergreen.length) {
                 block += '\n--- FIRM FACTS (ground truth - use these exactly; never invent alternatives) ---\n' +
                          evergreen.map(function(f) { return '[' + f.name + ']\n' + f.text; }).join('\n\n') + '\n';
+            }
+
+            if (commentary.length) {
+                block += '\n--- LATEST MARKET COMMENTARY (ground truth on current markets/economy - use ' +
+                         'the facts and figures, do not imitate this as a voice sample) ---\n' +
+                         commentary.map(function(f) { return '[' + f.name + ']\n' + f.text; }).join('\n\n') + '\n';
             }
 
             if (samples.length) {
@@ -7460,7 +7519,8 @@ Example:
             }
 
             const ever = ctx.files.filter(function(f) { return f.kind === 'evergreen'; });
-            const samp = ctx.files.filter(function(f) { return f.kind !== 'evergreen'; });
+            const commentary = ctx.files.filter(function(f) { return f.kind === 'commentary'; });
+            const samp = ctx.files.filter(function(f) { return f.kind !== 'evergreen' && f.kind !== 'commentary'; });
 
             if (!ctx.files.length) {
                 status.style.background = '#fff3cd';
@@ -7472,10 +7532,13 @@ Example:
 
             status.style.background = '#e6f4ea';
             status.style.color = '#1e8e3e';
-            let msg = company.name + ' - folder "' + ctx.folderName + '" (' + Math.round(ctx.totalChars / 1000) + 'k chars).';
+            let msg = company.name + ' - folder "' + ctx.folderName + '" (' + Math.round(ctx.totalChars / 1000) + 'k chars). Reads subfolders up to 5 levels deep.';
             msg += '\n\nFIRM FACTS (' + ever.length + '): ' + (ever.length
                 ? ever.map(function(f) { return f.name; }).join(', ')
                 : 'none - add a file whose name starts with an underscore, e.g. "_Firm Summary.md"');
+            msg += '\n\nMARKET COMMENTARY (' + commentary.length + '): ' + (commentary.length
+                ? commentary.map(function(f) { return f.name; }).join(', ') + ' (most recent in the "' + (ctx.commentaryFolderName || 'Market Commentary Archives') + '" subfolder)'
+                : 'none - add a subfolder named "Market Commentary Archives" with your latest commentary in it');
             msg += '\n\nWRITING SAMPLES (' + samp.length + ' of ' + (ctx.sampleTotal || samp.length) + ' most recent): ' + (samp.length
                 ? samp.map(function(f) { return f.name; }).join(', ')
                 : 'none yet');
@@ -7593,7 +7656,7 @@ Example:
 
             try {
                 const raw = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt,
-                                             { temperature: 0.8, maxTokens: 1600 });
+                                             { temperature: 0.8, maxTokens: getTaskTokens('topics') });
                 const clean = String(raw).replace(/```json/gi, '').replace(/```/g, '').trim();
                 const start = clean.indexOf('[');
                 const end = clean.lastIndexOf(']');
@@ -7714,8 +7777,6 @@ Example:
             const take  = document.getElementById('mktTake').value.trim();
             const existing = document.getElementById('mktBlog').value.trim();
 
-            if (!title) { showToast('Give the card a title first.'); return; }
-
             if (!take) {
                 if (!confirm(
                     'You have not recorded Your Take yet.\n\n' +
@@ -7740,7 +7801,7 @@ Example:
             const prompt =
                 MKT_FIRM_CONTEXT + ctxBlock + '\n\n' +
                 'Write a blog post for his website.\n\n' +
-                'HEADLINE: ' + title + '\n\n' +
+                (title ? 'HEADLINE: ' + title + '\n\n' : '') +
                 (card.aiAngle ? 'THE ANGLE: ' + card.aiAngle + '\n\n' : '') +
                 (take
                     ? 'HANS\'S OWN TAKE (dictated, unedited - this is the heart of the piece. ' +
@@ -7785,8 +7846,7 @@ Example:
             btn.textContent = 'Drafting...';
 
             try {
-                const raw = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt,
-                                             { temperature: 0.7, maxTokens: 4000 });
+                const raw = await callAIWithBudgetRetry(cfg, prompt, { temperature: 0.7 }, 'draft', 'Blog draft');
                 const clean = String(raw).replace(/^```(?:markdown)?\s*/i, '').replace(/```\s*$/, '').trim();
                 if (!clean) throw new Error('The model returned nothing.');
 
@@ -7848,7 +7908,7 @@ Example:
             btn.disabled = true; btn.textContent = 'Thinking...';
             try {
                 const raw = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt,
-                                             { temperature: 0.8, maxTokens: 500 });
+                                             { temperature: 0.8, maxTokens: getTaskTokens('titles') });
                 const clean = String(raw).replace(/```json/gi, '').replace(/```/g, '').trim();
                 const s = clean.indexOf('['), e = clean.lastIndexOf(']');
                 if (s === -1 || e === -1) throw new Error('The model did not return the expected format.');
@@ -7999,7 +8059,7 @@ Example:
                     'The title and the angle MUST be separated by " - " (space hyphen space). No preamble, no blank lines between items.';
 
                 const raw = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt,
-                                             { temperature: 0.85, maxTokens: 2000 });
+                                             { temperature: 0.85, maxTokens: getTaskTokens('brainstorm') });
                 const clean = String(raw).replace(/^```(?:\w+)?\s*/i, '').replace(/```\s*$/, '').trim();
                 if (!clean) throw new Error('The model returned nothing.');
 
@@ -8228,7 +8288,7 @@ Example:
                     '["angle one", "angle two", "angle three", "angle four"]. No fences, no preamble.';
 
                 const raw = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt,
-                                             { temperature: 0.85, maxTokens: 900 });
+                                             { temperature: 0.85, maxTokens: getTaskTokens('angles') });
                 const cleaned = String(raw).replace(/```json/gi, '').replace(/```/g, '').trim();
                 const s = cleaned.indexOf('['), e = cleaned.lastIndexOf(']');
                 if (s === -1 || e === -1) throw new Error('The model did not return the expected format.');
@@ -8291,8 +8351,7 @@ Example:
                     'Return ONLY the tightened blog body in Markdown. No preamble, no commentary, ' +
                     'no code fences, no H1 title.';
 
-                const raw = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt,
-                                             { temperature: 0.4, maxTokens: 4000 });
+                const raw = await callAIWithBudgetRetry(cfg, prompt, { temperature: 0.4 }, 'tighten', 'Tightened blog');
                 const clean = String(raw).replace(/^```(?:markdown)?\s*/i, '').replace(/```\s*$/, '').trim();
                 if (!clean) throw new Error('The model returned nothing.');
 
@@ -8341,7 +8400,7 @@ Example:
                     'Return ONLY the post text. No preamble, no quotes around it, no code fences.';
 
                 const raw = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt,
-                                             { temperature: 0.75, maxTokens: 500 });
+                                             { temperature: 0.75, maxTokens: getTaskTokens('social') });
                 const clean = String(raw).replace(/^```\s*/i, '').replace(/```\s*$/, '').trim();
                 if (!clean) throw new Error('The model returned nothing.');
 
@@ -8715,6 +8774,44 @@ Example:
             closeModal('mktCardModal');
         }
 
+        // Debounced autosave for the open card modal (v3.53.0). Persists the same fields
+        // as mktSaveCard, minus the modal close, so switching tabs or an accidental
+        // refresh mid-edit doesn't lose the AI drafts and take notes typed so far.
+        // Reopening the card (mktOpenCard) already reads straight from mktData, so once
+        // this has written to the card object, the in-progress work is restored for free.
+        let mktAutosaveTimer = null;
+
+        function mktAutosaveCard() {
+            const card = mktGetCard(mktEditingId);
+            if (!card) return;
+
+            card.title  = document.getElementById('mktTitle').value.trim();
+            card.brainstormIdeas   = document.getElementById('mktBrainstormIdeas').value;
+            card.brainstormSources = document.getElementById('mktBrainstormSource').value;
+            card.take   = document.getElementById('mktTake').value;
+            card.blog   = document.getElementById('mktBlog').value;
+            card.social = document.getElementById('mktSocial').value;
+            card.quote  = document.getElementById('mktQuote').value;
+            card.company     = document.getElementById('mktCompany').value;
+            card.columnId    = document.getElementById('mktColumn').value;
+            card.blogStatus   = document.getElementById('mktBlogStatus').value;
+            card.socialStatus = document.getElementById('mktSocialStatus').value;
+            card.quoteStatus  = document.getElementById('mktQuoteStatus').value;
+            card.updated = new Date().toISOString();
+
+            mktSave();
+        }
+
+        // Scoped to #mktCardModal only - the global autoSave listener already excludes
+        // anything inside .modal, so this does not double-save or fight with it.
+        ['input', 'change'].forEach(function(evt) {
+            document.addEventListener(evt, function(e) {
+                if (!e.target.closest || !e.target.closest('#mktCardModal')) return;
+                clearTimeout(mktAutosaveTimer);
+                mktAutosaveTimer = setTimeout(mktAutosaveCard, 800);
+            });
+        });
+
         function mktDeleteCard() {
             const card = mktGetCard(mktEditingId);
             if (!card) return;
@@ -8922,7 +9019,7 @@ Example:
 
             let titles = [];
             try {
-                const raw = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt1, { temperature: 0.8, maxTokens: 400 });
+                const raw = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt1, { temperature: 0.8, maxTokens: getTaskTokens('titles') });
                 const clean = String(raw).replace(/```json/gi, '').replace(/```/g, '').trim();
                 const s = clean.indexOf('['), e = clean.lastIndexOf(']');
                 if (s !== -1 && e !== -1) titles = JSON.parse(clean.slice(s, e + 1));
@@ -13929,6 +14026,42 @@ Make sure your suggestions directly address the specific root cause and discussi
             return { provider: provider, apiKey: keyMap[provider], model: modelMap[provider] };
         }
 
+        // Per-task max-token budgets for the marketing AI steps (v3.53.0). Defaults match
+        // what each step used to hardcode; Settings > AI Tools lets Hans raise a task's
+        // budget if its output keeps getting cut off mid-sentence.
+        const AI_TASK_TOKEN_DEFAULTS = {
+            brainstorm: 2000, topics: 1600, angles: 1200, draft: 4000,
+            tighten: 4000, social: 500, titles: 500
+        };
+
+        function getTaskTokens(key) {
+            const settings = getSettings();
+            const configured = parseInt((settings.aiTokens || {})[key], 10);
+            return (configured && configured > 0) ? configured : (AI_TASK_TOKEN_DEFAULTS[key] || 1024);
+        }
+
+        // Runs a marketing AI call at its configured token budget, watching for a
+        // finish-reason truncation via callAIText's opts.withMeta. If the first pass came
+        // back cut off, retries once at 1.5x the budget. Keeps whichever result is longer
+        // either way, but if the retry is STILL truncated it warns with a toast rather than
+        // silently handing back a result that may be missing its ending.
+        async function callAIWithBudgetRetry(cfg, prompt, baseOpts, taskKey, taskLabel) {
+            const budget = getTaskTokens(taskKey);
+            const first = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt,
+                Object.assign({}, baseOpts, { maxTokens: budget, withMeta: true }));
+            if (!first.truncated) return first.text;
+
+            const retryBudget = Math.round(budget * 1.5);
+            const second = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt,
+                Object.assign({}, baseOpts, { maxTokens: retryBudget, withMeta: true }));
+
+            const longer = (second.text.length >= first.text.length) ? second.text : first.text;
+            if (second.truncated) {
+                showToast(taskLabel + ' may be cut off - raise ' + taskKey + ' tokens in Settings.');
+            }
+            return longer;
+        }
+
         // Google periodically retires older Gemini models; when that happens the API
         // returns an error like "model X is no longer available" instead of a normal
         // response. Rather than hardcoding one model name that eventually breaks, we
@@ -13953,7 +14086,9 @@ Make sure your suggestions directly address the specific root cause and discussi
             });
             const data = await response.json();
             if (data.error) throw new Error(data.error.message || 'Gemini API error');
-            return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const finishReason = data.candidates?.[0]?.finishReason || '';
+            return { text: text, finishReason: finishReason };
         }
 
         async function callGeminiWithFallback(apiKey, model, promptText, opts) {
@@ -13962,9 +14097,10 @@ Make sure your suggestions directly address the specific root cause and discussi
             let lastError = null;
             for (let i = 0; i < chain.length; i++) {
                 try {
-                    const text = await callGeminiOnce(apiKey, chain[i], promptText, opts);
+                    const result = await callGeminiOnce(apiKey, chain[i], promptText, opts);
                     if (i > 0) console.warn(`Gemini model "${chain[0]}" is unavailable; auto-fell back to "${chain[i]}". Consider updating the Model field in Settings.`);
-                    return text;
+                    const truncated = result.finishReason === 'MAX_TOKENS';
+                    return opts.withMeta === true ? { text: result.text, truncated: truncated } : result.text;
                 } catch (error) {
                     lastError = error;
                     if (!isGeminiModelUnavailableError(error.message)) throw error; // real error (bad key, quota, safety block) - surface it immediately
@@ -13974,6 +14110,10 @@ Make sure your suggestions directly address the specific root cause and discussi
             throw lastError || new Error('Gemini API error');
         }
 
+        // opts.withMeta (additive, default off): when true, returns { text, truncated }
+        // instead of the plain string so callers can detect a finish-reason cutoff and
+        // decide whether to retry at a larger token budget. Every existing caller omits
+        // it and keeps getting the plain string unchanged.
         async function callAIText(provider, apiKey, model, promptText, opts) {
             opts = opts || {};
             if (provider === 'gemini') {
@@ -13996,7 +14136,11 @@ Make sure your suggestions directly address the specific root cause and discussi
                 });
                 const data = await response.json();
                 if (data.error) throw new Error(data.error.message || 'Claude API error');
-                return (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
+                const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
+                if (opts.withMeta === true) {
+                    return { text: text, truncated: data.stop_reason === 'max_tokens' };
+                }
+                return text;
             }
             if (provider === 'openai') {
                 const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -14011,7 +14155,11 @@ Make sure your suggestions directly address the specific root cause and discussi
                 });
                 const data = await response.json();
                 if (data.error) throw new Error(data.error.message || 'OpenAI API error');
-                return data.choices?.[0]?.message?.content || '';
+                const text = data.choices?.[0]?.message?.content || '';
+                if (opts.withMeta === true) {
+                    return { text: text, truncated: data.choices?.[0]?.finish_reason === 'length' };
+                }
+                return text;
             }
             throw new Error('Unknown AI provider: ' + provider);
         }
@@ -15933,6 +16081,15 @@ Make sure your suggestions directly address the specific root cause and discussi
             document.getElementById('aiRouteMarketing').value = routing.marketing || 'claude';
             document.getElementById('aiRouteMeetingEmail').value = routing.meetingEmail || 'claude';
 
+            const aiTokens = settings.aiTokens || {};
+            document.getElementById('aiTokensBrainstorm').value = aiTokens.brainstorm || AI_TASK_TOKEN_DEFAULTS.brainstorm;
+            document.getElementById('aiTokensTopics').value = aiTokens.topics || AI_TASK_TOKEN_DEFAULTS.topics;
+            document.getElementById('aiTokensAngles').value = aiTokens.angles || AI_TASK_TOKEN_DEFAULTS.angles;
+            document.getElementById('aiTokensDraft').value = aiTokens.draft || AI_TASK_TOKEN_DEFAULTS.draft;
+            document.getElementById('aiTokensTighten').value = aiTokens.tighten || AI_TASK_TOKEN_DEFAULTS.tighten;
+            document.getElementById('aiTokensSocial').value = aiTokens.social || AI_TASK_TOKEN_DEFAULTS.social;
+            document.getElementById('aiTokensTitles').value = aiTokens.titles || AI_TASK_TOKEN_DEFAULTS.titles;
+
             document.getElementById('calendlyCoffee').value = settings.calendlyCoffee || '';
             document.getElementById('calendlyLunch').value = settings.calendlyLunch || '';
 
@@ -16224,6 +16381,15 @@ Make sure your suggestions directly address the specific root cause and discussi
                 marketing: document.getElementById('aiRouteMarketing').value,
                 meetingEmail: document.getElementById('aiRouteMeetingEmail').value
             };
+            settings.aiTokens = {
+                brainstorm: parseInt(document.getElementById('aiTokensBrainstorm').value, 10) || AI_TASK_TOKEN_DEFAULTS.brainstorm,
+                topics: parseInt(document.getElementById('aiTokensTopics').value, 10) || AI_TASK_TOKEN_DEFAULTS.topics,
+                angles: parseInt(document.getElementById('aiTokensAngles').value, 10) || AI_TASK_TOKEN_DEFAULTS.angles,
+                draft: parseInt(document.getElementById('aiTokensDraft').value, 10) || AI_TASK_TOKEN_DEFAULTS.draft,
+                tighten: parseInt(document.getElementById('aiTokensTighten').value, 10) || AI_TASK_TOKEN_DEFAULTS.tighten,
+                social: parseInt(document.getElementById('aiTokensSocial').value, 10) || AI_TASK_TOKEN_DEFAULTS.social,
+                titles: parseInt(document.getElementById('aiTokensTitles').value, 10) || AI_TASK_TOKEN_DEFAULTS.titles
+            };
             settings.calendlyCoffee = document.getElementById('calendlyCoffee').value.trim();
             settings.calendlyLunch = document.getElementById('calendlyLunch').value.trim();
             settings.firmContextFolderId_ii = document.getElementById('firmContextFolderId_ii').value.trim();
@@ -16281,6 +16447,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                 openaiApiKey: settings.openaiApiKey || '',
                 openaiModel: settings.openaiModel || '',
                 aiRouting: settings.aiRouting || { idsSuggestions: 'gemini', dailyPlanning: 'gemini', kanbanAgent: 'gemini' },
+                aiTokens: settings.aiTokens || AI_TASK_TOKEN_DEFAULTS,
                 otterSheetUrl: settings.otterSheetUrl || '',
                 ntfyTopic: settings.ntfyTopic || '',
                 meetingDay: settings.meetingDay || 'Mondays',
@@ -16349,6 +16516,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                 if (importedData.openaiApiKey) settings.openaiApiKey = importedData.openaiApiKey;
                 if (importedData.openaiModel) settings.openaiModel = importedData.openaiModel;
                 if (importedData.aiRouting) settings.aiRouting = importedData.aiRouting;
+                if (importedData.aiTokens) settings.aiTokens = importedData.aiTokens;
                 if (importedData.otterSheetUrl) settings.otterSheetUrl = importedData.otterSheetUrl;
                 if (importedData.ntfyTopic) settings.ntfyTopic = importedData.ntfyTopic;
                 if (importedData.meetingDay) settings.meetingDay = importedData.meetingDay;
