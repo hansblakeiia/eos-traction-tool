@@ -2283,6 +2283,8 @@
         /* ==================== MARKETING PIPELINE (v3.28.0) ==================== */
         .mkt-board { display:flex; gap:12px; overflow-x:auto; padding-bottom:12px; align-items:flex-start; }
         .mkt-col { flex:0 0 230px; background:var(--gray-50, #f9fafb); border:1px solid var(--gray-200); border-radius:8px; padding:10px; min-height:120px; }
+        .mkt-col.drag-over { background: var(--gray-100); outline: 2px dashed var(--accent); }
+        .mkt-card.dragging { opacity: 0.4; }
         .mkt-col-review { border-color:#047857; background:#ecfdf5; box-shadow:0 0 0 1px #a7f3d0; }
         .mkt-col-head { display:flex; align-items:center; gap:6px; font-weight:700; font-size:0.85rem; margin-bottom:10px; color:var(--gray-700, #374151); }
         .mkt-who { font-weight:500; font-size:0.7rem; color:var(--gray-500); background:#fff; border:1px solid var(--gray-200); border-radius:10px; padding:1px 7px; }
@@ -3107,6 +3109,25 @@
             </div>
         </div>
 
+        <!-- MANAGE MARKETING COLUMNS MODAL (v3.54.0) -->
+        <div class="modal-overlay" id="mktColumnManagerModal">
+            <div class="modal" style="max-width:440px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <h2 style="margin-bottom:0;">Manage Columns</h2>
+                    <button onclick="closeModal('mktColumnManagerModal')" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray-500);">&times;</button>
+                </div>
+                <p style="font-size:0.8rem; color:var(--gray-500); margin:0 0 12px;">Drag to reorder, rename to fix a label, or add/delete a column. Shared across both companies' boards. Ideas, My Review, and With Trevor are used by automatic AI/handoff moves, so they can be renamed but not deleted.</p>
+                <div id="mktColumnManagerList"></div>
+                <div style="display:flex; gap:8px; margin-top:12px;">
+                    <input type="text" id="mktNewColumnName" placeholder="Add a column (e.g. Scheduled)..." style="flex:1; padding:8px; border:1px solid var(--gray-200); border-radius:6px; box-sizing:border-box;" onkeydown="if(event.key==='Enter'){event.preventDefault();mktAddColumnEntry();}">
+                    <button class="btn btn-secondary" onclick="mktAddColumnEntry()">+ Add</button>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-primary" onclick="closeModal('mktColumnManagerModal')">Done</button>
+                </div>
+            </div>
+        </div>
+
         <!-- COMPARE/HISTORY PAGE -->
         <!-- ==================== MARKETING PIPELINE (v3.28.0) ==================== -->
         <div id="marketing" class="page">
@@ -3119,6 +3140,7 @@
                 </div>
                 <div style="display:flex; gap:8px; align-items:center;">
                     <div id="mktCompanyToggle" class="mkt-company-toggle"></div>
+                    <button class="btn btn-secondary" onclick="openMktColumnManager()">Manage Columns</button>
                     <button class="btn btn-secondary" onclick="mktOpenResearch()">Suggest Topics</button>
                     <button class="btn btn-secondary" onclick="mktNewCard('standalone')">+ Social / Quote</button>
                     <button class="btn btn-primary" onclick="mktNewCard('blog')">+ New Blog</button>
@@ -4279,9 +4301,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.53.0';
-        const EOS_BUILD_DATE = '2026-07-21';
-        const EOS_BUILD_TIME = '11:00'; // v3.53.0: Blog Draft no longer requires a title first (drafts from Take + Angle; title still generated in Step 6). New opts.withMeta on callAIText (additive - existing callers unaffected) reports a finish-reason truncation across Claude/Gemini/OpenAI. New per-task AI token budgets in Settings > AI Tools > AI Output Length (brainstorm/topics/angles/draft/tighten/social/titles), wired through getTaskTokens() at every marketing call site; Blog Draft and Tighten use withMeta to auto-retry once at 1.5x budget on a truncated result, keeping the longer output and toasting if it's still cut off. New debounced (800ms) autosave scoped to the open marketing card modal, separate from the global autoSave's .modal exclusion. Requires .gs v3.44.0 for the Firm Context Drive-folder recursion (subfolders to depth 5, new "Market Commentary Archives" reserved tier). // v3.52.2: Brainstorm->Angles guided funnel. Step 1 now parses the 6 topics into SELECTABLE rows (Use it now / Park / Kill / -> Backlog) instead of an inert text blob; parked topics can spin into their own Backlog card. New Step 2 "AI: Angles" button proposes ~4 angles for the CHOSEN topic as pickable chips that fill card.aiAngle (consumed by Step 4 draft). Brainstorm prompt rebalanced: RSS headlines weighted UP, newest firm-voice sample DOWN, so suggestions track current client-mind signal instead of echoing the last post. New card fields brainstormTopics[]/chosenTopic (additive; legacy blob cards lazily parsed on open). All existing field ids preserved. No .gs change. // v3.52.1: Fix Brainstorm truncation - maxTokens on the AI: Brainstorm call raised 900 -> 2000 so all six topics return in full (was cutting off partway through Topic 1 on Claude, at Topic 5 on Gemini). One-line change, no .gs change, no backend redeploy. // v3.52.0: Marketing card modal rebuilt as a guided 9-step stepper (Brainstorm, Angles, My Take, Blog Draft, Finalize/Tighten, Title, Social, Quotes, Package & Send). New AI actions: Brainstorm (RSS-fed topic ideas via Apps Script), Tighten (editorial pass), split Social/Quotes, and Package to Trevor (emails social+quote+WP link via the existing editor-email path). All existing field ids preserved. Requires .gs v3.43.0 (adds brainstormFeeds + notifyTrevorPackage - paste it in and redeploy). // prior: v3.51.0 mobile task-detail + Kanban fixes. (1) Fixed the ⋯ menu floating on top of Kanban Card Details when you tap Notes (the menu now closes when the card opens). (2) New To-Do Detail modal - tap the (i) on a To-Do to edit due date, owner (reassign), Google Task list (move), and notes in one place, like Google Tasks; on mobile the row hides those controls so it stays clean and full-width, checkbox on the far left. (3) Kanban Card Details: Owner is now a reassign dropdown and Column is labeled as the move control (both already fired the proper WIP/history move on Save; now they are obvious). (4) Weekly Meeting agenda wraps instead of overflowing on mobile. No .gs change.
+        const EOS_VERSION = '3.54.0';
+        const EOS_BUILD_DATE = '2026-07-22';
+        const EOS_BUILD_TIME = '16:00'; // v3.54.0: Marketing Pipeline board now works like Kanban. Cards are draggable between columns (mktCardDragStart/mktCellDrop, mirrors kanbanCardDragStart/kanbanCellDrop). New "Manage Columns" button opens a drag-to-reorder/rename/add/delete panel (mktData.columns, seeded from the old hardcoded MKT_COLUMNS on first load via mktEnsureColumns). Ideas/My Review/With Trevor are protected from deletion (renaming is fine) because mktDraftBlog/mktSendToWordPress/mktPackageToTrevor auto-move cards to those column ids by id, not by name. Deleting a non-protected column moves its cards to Ideas rather than deleting them (deliberately different from Kanban's column-delete, since a Marketing card can be a finished blog draft). Columns are shared across both companies' boards, same as before; still localStorage-only/per-device, same limitation cards already had. index.html-only, no `.gs` change. // v3.53.0: Blog Draft no longer requires a title first (drafts from Take + Angle; title still generated in Step 6). New opts.withMeta on callAIText (additive - existing callers unaffected) reports a finish-reason truncation across Claude/Gemini/OpenAI. New per-task AI token budgets in Settings > AI Tools > AI Output Length (brainstorm/topics/angles/draft/tighten/social/titles), wired through getTaskTokens() at every marketing call site; Blog Draft and Tighten use withMeta to auto-retry once at 1.5x budget on a truncated result, keeping the longer output and toasting if it's still cut off. New debounced (800ms) autosave scoped to the open marketing card modal, separate from the global autoSave's .modal exclusion. Requires .gs v3.44.0 for the Firm Context Drive-folder recursion (subfolders to depth 5, new "Market Commentary Archives" reserved tier). // v3.52.2: Brainstorm->Angles guided funnel. Step 1 now parses the 6 topics into SELECTABLE rows (Use it now / Park / Kill / -> Backlog) instead of an inert text blob; parked topics can spin into their own Backlog card. New Step 2 "AI: Angles" button proposes ~4 angles for the CHOSEN topic as pickable chips that fill card.aiAngle (consumed by Step 4 draft). Brainstorm prompt rebalanced: RSS headlines weighted UP, newest firm-voice sample DOWN, so suggestions track current client-mind signal instead of echoing the last post. New card fields brainstormTopics[]/chosenTopic (additive; legacy blob cards lazily parsed on open). All existing field ids preserved. No .gs change. // v3.52.1: Fix Brainstorm truncation - maxTokens on the AI: Brainstorm call raised 900 -> 2000 so all six topics return in full (was cutting off partway through Topic 1 on Claude, at Topic 5 on Gemini). One-line change, no .gs change, no backend redeploy. // v3.52.0: Marketing card modal rebuilt as a guided 9-step stepper (Brainstorm, Angles, My Take, Blog Draft, Finalize/Tighten, Title, Social, Quotes, Package & Send). New AI actions: Brainstorm (RSS-fed topic ideas via Apps Script), Tighten (editorial pass), split Social/Quotes, and Package to Trevor (emails social+quote+WP link via the existing editor-email path). All existing field ids preserved. Requires .gs v3.43.0 (adds brainstormFeeds + notifyTrevorPackage - paste it in and redeploy). // prior: v3.51.0 mobile task-detail + Kanban fixes. (1) Fixed the ⋯ menu floating on top of Kanban Card Details when you tap Notes (the menu now closes when the card opens). (2) New To-Do Detail modal - tap the (i) on a To-Do to edit due date, owner (reassign), Google Task list (move), and notes in one place, like Google Tasks; on mobile the row hides those controls so it stays clean and full-width, checkbox on the far left. (3) Kanban Card Details: Owner is now a reassign dropdown and Column is labeled as the move control (both already fired the proper WIP/history move on Save; now they are obvious). (4) Weekly Meeting agenda wraps instead of overflowing on mobile. No .gs change.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -6542,7 +6564,14 @@ Example:
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.53.0 &mdash; 2026-07-21 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.54.0 &mdash; 2026-07-22 (Current)</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Marketing Pipeline cards are now draggable</strong> between columns, the same as the Kanban board &mdash; drag a card from Ideas straight to My Review instead of opening it just to change the Column dropdown.</li>'
+                + '<li><strong>New: Manage Columns.</strong> A button on the Marketing tab opens a panel to rename, reorder (drag), add, or delete columns &mdash; the same drag-to-reorder pattern as Manage Owners/Manage Labels on Kanban. <strong>Ideas, My Review, and With Trevor can be renamed but not deleted</strong>, since AI Draft/Send-to-WordPress/Package-to-Trevor automatically move a card into one of those three. Deleting any other column moves its cards to Ideas rather than deleting them.</li>'
+                + '<li>Columns are still shared across both companies&rsquo; boards and still localStorage-only per device (not yet synced to teammates) &mdash; same limitation the cards already had.</li>'
+                + '</ul></div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.53.0 &mdash; 2026-07-21</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Blog Draft no longer requires a title first.</strong> Step 4 now drafts straight from Your Take and the chosen Angle &mdash; the headline still gets generated in Step 6, so you no longer have to invent a placeholder title just to unlock drafting.</li>'
                 + '<li><strong>New: per-task AI output length.</strong> Settings &gt; AI Tools has a new &ldquo;AI Output Length&rdquo; block &mdash; a max-tokens budget for each marketing step (Brainstorm, Topics, Angles, Blog Draft, Tighten, Social, Titles). Raise a task&rsquo;s number if its output keeps getting cut off.</li>'
@@ -8587,7 +8616,7 @@ Example:
         //
         const MKT_STORAGE_KEY = 'eos_marketing_data';
 
-        const MKT_COLUMNS = [
+        const MKT_DEFAULT_COLUMNS = [
             { id: 'ideas',    name: 'Ideas',       who: '' },
             { id: 'approved', name: 'Approved',    who: 'Hans' },
             { id: 'drafting', name: 'Drafting',    who: 'AI' },
@@ -8595,6 +8624,22 @@ Example:
             { id: 'trevor',   name: 'With Trevor', who: 'Trevor' },
             { id: 'done',     name: 'Done',        who: '' }
         ];
+
+        // Column ids a few AI/handoff actions move a card to automatically:
+        // 'ideas' (new-card default), 'review' (after a Blog Draft), 'trevor' (after
+        // WordPress send or Package to Trevor). Renaming is always safe (automation
+        // references the id, never the display name) - only deletion is blocked (v3.54.0).
+        const MKT_PROTECTED_COLUMN_IDS = ['ideas', 'review', 'trevor'];
+
+        // Seeds mktData.columns from the historical fixed set on first load after the
+        // v3.54.0 upgrade; a no-op once columns exist. Columns now live in the same
+        // localStorage blob as cards (MKT_STORAGE_KEY) - editable, but still
+        // localStorage-only/per-device, same limitation the cards already have.
+        function mktEnsureColumns() {
+            if (!Array.isArray(mktData.columns) || !mktData.columns.length) {
+                mktData.columns = MKT_DEFAULT_COLUMNS.map(function(c) { return Object.assign({}, c); });
+            }
+        }
 
         const MKT_STATUSES = ['none', 'draft', 'approved', 'sent'];
         const MKT_STATUS_LABEL = { none: '\u2014', draft: 'draft', approved: 'ok', sent: 'sent' };
@@ -8612,6 +8657,7 @@ Example:
                 console.error('Marketing load failed:', e);
                 mktData = { cards: [] };
             }
+            mktEnsureColumns();
         }
 
         function mktSave() {
@@ -8695,7 +8741,7 @@ Example:
             compSel.value = card.company || 'ii';
 
             const colSel = document.getElementById('mktColumn');
-            colSel.innerHTML = MKT_COLUMNS.map(function(c) {
+            colSel.innerHTML = mktData.columns.map(function(c) {
                 const who = c.who ? ' (' + c.who + ')' : '';
                 return '<option value="' + c.id + '">' + escapeHtml(c.name + who) + '</option>';
             }).join('');
@@ -8848,14 +8894,18 @@ Example:
                 return (c.company || 'ii') === mktActiveCompany;
             });
 
-            // Shared card-HTML builder (identical markup desktop + mobile).
+            // Shared card-HTML builder (identical markup desktop + mobile). draggable
+            // (v3.54.0): dragstart records the id, dragend just clears the visual state -
+            // the actual move happens in mktCellDrop on the column that receives it.
             function mktCardsHtml(cards) {
                 return cards.map(function(c) {
                     let badges = '';
                     if (c.kind === 'blog') badges += mktBadge('Blog', c.blogStatus);
                     badges += mktBadge('Social', c.socialStatus);
                     badges += mktBadge('Quote', c.quoteStatus);
-                    return '<div class="mkt-card" onclick="mktOpenCard(\'' + c.id + '\')">' +
+                    return '<div class="mkt-card" draggable="true" ' +
+                           'ondragstart="mktCardDragStart(event,\'' + c.id + '\')" ondragend="mktCardDragEnd(event)" ' +
+                           'onclick="mktOpenCard(\'' + c.id + '\')">' +
                            '<div class="mkt-card-title">' + escapeHtml(c.title || 'Untitled') + '</div>' +
                            '<div class="mkt-badges">' + badges + '</div>' +
                            '</div>';
@@ -8864,10 +8914,11 @@ Example:
 
             if (isNarrowViewport()) { mktRenderMobile(board, visible, mktCardsHtml); return; }
 
-            board.innerHTML = MKT_COLUMNS.map(function(col) {
+            board.innerHTML = mktData.columns.map(function(col) {
                 const cards = visible.filter(function(c) { return (c.columnId || 'ideas') === col.id; });
                 const isReview = col.id === 'review';
-                return '<div class="mkt-col' + (isReview ? ' mkt-col-review' : '') + '">' +
+                return '<div class="mkt-col' + (isReview ? ' mkt-col-review' : '') + '" ' +
+                       'ondrop="mktCellDrop(event,\'' + col.id + '\',this)" ondragover="mktCellDragOver(event,this)" ondragleave="mktCellDragLeave(this)">' +
                        '<div class="mkt-col-head">' +
                        '<span>' + escapeHtml(col.name) + '</span>' +
                        (col.who ? '<span class="mkt-who">' + escapeHtml(col.who) + '</span>' : '') +
@@ -8881,20 +8932,21 @@ Example:
         // Issue 3: Marketing mobile view — single column + top pill switcher, mirroring
         // the Kanban mobile pattern so both boards behave identically on a phone.
         function mktRenderMobile(board, visible, mktCardsHtml) {
-            if (!mktMobileColId || !MKT_COLUMNS.some(c => c.id === mktMobileColId)) {
-                mktMobileColId = MKT_COLUMNS[0].id;
+            if (!mktMobileColId || !mktData.columns.some(c => c.id === mktMobileColId)) {
+                mktMobileColId = mktData.columns[0].id;
             }
-            const pills = '<div class="kanban-mobile-switcher">' + MKT_COLUMNS.map(function(col) {
+            const pills = '<div class="kanban-mobile-switcher">' + mktData.columns.map(function(col) {
                 const count = visible.filter(c => (c.columnId || 'ideas') === col.id).length;
                 const active = col.id === mktMobileColId;
                 return '<button class="kanban-mobile-pill' + (active ? ' active' : '') + '" onclick="mktMobileSelectColumn(\'' + col.id + '\')">' +
                        escapeHtml(col.name) + ' <span class="kanban-mobile-pill-count">' + count + '</span></button>';
             }).join('') + '</div>';
 
-            const col = MKT_COLUMNS.find(c => c.id === mktMobileColId);
+            const col = mktData.columns.find(c => c.id === mktMobileColId);
             const cards = visible.filter(c => (c.columnId || 'ideas') === col.id);
             const isReview = col.id === 'review';
-            const body = '<div class="mkt-col' + (isReview ? ' mkt-col-review' : '') + '" style="width:100%; box-sizing:border-box;">' +
+            const body = '<div class="mkt-col' + (isReview ? ' mkt-col-review' : '') + '" style="width:100%; box-sizing:border-box;" ' +
+                   'ondrop="mktCellDrop(event,\'' + col.id + '\',this)" ondragover="mktCellDragOver(event,this)" ondragleave="mktCellDragLeave(this)">' +
                    '<div class="mkt-col-head"><span>' + escapeHtml(col.name) + '</span>' +
                    (col.who ? '<span class="mkt-who">' + escapeHtml(col.who) + '</span>' : '') +
                    '<span class="mkt-count">' + cards.length + '</span></div>' +
@@ -8905,6 +8957,144 @@ Example:
 
         function mktMobileSelectColumn(colId) {
             mktMobileColId = colId;
+            mktRender();
+        }
+
+        // ==================== MARKETING DRAG-AND-DROP (v3.54.0) ====================
+        // Mirrors the Kanban card-drag pattern (kanbanCardDragStart/kanbanCellDrop):
+        // native HTML5 drag events, a single module-level "what's being dragged" var,
+        // drop just reassigns columnId + re-renders. No WIP limits/owner-swimlane
+        // dimension here - a Marketing column is a single drop target, not a cell grid.
+        let mktDragCardId = null;
+
+        function mktCardDragStart(e, cardId) {
+            mktDragCardId = cardId;
+            e.target.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+        function mktCardDragEnd(e) {
+            e.target.classList.remove('dragging');
+        }
+        function mktCellDragOver(e, el) {
+            e.preventDefault();
+            el.classList.add('drag-over');
+        }
+        function mktCellDragLeave(el) {
+            el.classList.remove('drag-over');
+        }
+        function mktCellDrop(e, columnId, el) {
+            e.preventDefault();
+            el.classList.remove('drag-over');
+            if (!mktDragCardId) return;
+            mktLoad();
+            const card = mktData.cards.find(function(c) { return c.id === mktDragCardId; });
+            mktDragCardId = null;
+            if (!card) return;
+            if ((card.columnId || 'ideas') === columnId) return;
+            card.columnId = columnId;
+            card.updated = new Date().toISOString();
+            mktSave();
+            mktRender();
+        }
+
+        // ==================== MARKETING COLUMN MANAGER (v3.54.0) ====================
+        // Same shape as Kanban's Manage Owners/Labels registries (drag-to-reorder rows,
+        // rename-in-place, delete), scoped to columns instead. Deliberately no color/WIP
+        // here - not asked for, and columns are shared across both companies today.
+        //
+        // Deliberately DIFFERENT from Kanban's column delete, on purpose: a Marketing
+        // card can be a finished blog draft, not a disposable task, so deleting a column
+        // moves its cards to Ideas instead of deleting the cards.
+        let mktColDragIndex = null;
+
+        function openMktColumnManager() {
+            mktLoad();
+            renderMktColumnManager();
+            openModal('mktColumnManagerModal');
+        }
+
+        function renderMktColumnManager() {
+            const wrap = document.getElementById('mktColumnManagerList');
+            if (!wrap) return;
+            wrap.innerHTML = mktData.columns.map(function(col, i) {
+                const isProtected = MKT_PROTECTED_COLUMN_IDS.indexOf(col.id) !== -1;
+                const deleteTitle = isProtected
+                    ? 'This column is used by automatic AI/handoff moves and can\'t be deleted (renaming is fine)'
+                    : 'Delete this column';
+                return '<div class="kanban-registry-row" draggable="true" ' +
+                    'ondragstart="mktColDragStart(event,' + i + ')" ondragover="mktColDragOver(event,this)" ' +
+                    'ondragleave="mktColDragLeave(this)" ondrop="mktColDrop(event,' + i + ')">' +
+                    '<span class="kanban-registry-handle" title="Drag to reorder">&#9776;</span>' +
+                    '<input type="text" class="kanban-registry-name" value="' + escapeHtml(col.name) + '" onblur="mktRenameColumnEntry(' + i + ', this.value)">' +
+                    '<button class="kanban-registry-icon-btn"' + (isProtected ? ' disabled style="opacity:0.35;cursor:not-allowed;"' : '') + ' onclick="mktDeleteColumnEntry(' + i + ')" title="' + deleteTitle + '">&#128465;&#65039;</button>' +
+                    '</div>';
+            }).join('');
+        }
+
+        function mktRenameColumnEntry(index, newName) {
+            mktLoad();
+            const col = mktData.columns[index];
+            const trimmed = (newName || '').trim();
+            if (!col || !trimmed || trimmed === col.name) { renderMktColumnManager(); return; }
+            col.name = trimmed;
+            mktSave();
+            renderMktColumnManager();
+            mktRender();
+        }
+
+        function mktAddColumnEntry() {
+            const input = document.getElementById('mktNewColumnName');
+            const name = (input.value || '').trim();
+            if (!name) return;
+            mktLoad();
+            mktData.columns.push({ id: 'col_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: name, who: '' });
+            input.value = '';
+            mktSave();
+            renderMktColumnManager();
+            mktRender();
+        }
+
+        function mktDeleteColumnEntry(index) {
+            mktLoad();
+            const col = mktData.columns[index];
+            if (!col) return;
+            if (MKT_PROTECTED_COLUMN_IDS.indexOf(col.id) !== -1) {
+                showToast('"' + col.name + '" is used by automatic AI/handoff moves and can\'t be deleted - renaming is fine.');
+                return;
+            }
+            if (mktData.columns.length <= 1) {
+                showToast('At least one column is required.');
+                return;
+            }
+            const cardCount = mktData.cards.filter(function(c) { return (c.columnId || 'ideas') === col.id; }).length;
+            if (cardCount > 0 && !confirm(cardCount + ' card(s) are in "' + col.name + '". Delete this column? Those cards will move to Ideas - they will not be deleted.')) return;
+            mktData.cards.forEach(function(c) { if ((c.columnId || 'ideas') === col.id) c.columnId = 'ideas'; });
+            mktData.columns.splice(index, 1);
+            mktSave();
+            renderMktColumnManager();
+            mktRender();
+        }
+
+        function mktColDragStart(e, index) {
+            mktColDragIndex = index;
+            e.dataTransfer.effectAllowed = 'move';
+        }
+        function mktColDragOver(e, el) {
+            e.preventDefault();
+            el.classList.add('kanban-registry-drag-over');
+        }
+        function mktColDragLeave(el) {
+            el.classList.remove('kanban-registry-drag-over');
+        }
+        function mktColDrop(e, index) {
+            e.preventDefault();
+            if (mktColDragIndex === null || mktColDragIndex === index) return;
+            mktLoad();
+            const [moved] = mktData.columns.splice(mktColDragIndex, 1);
+            mktData.columns.splice(index, 0, moved);
+            mktColDragIndex = null;
+            mktSave();
+            renderMktColumnManager();
             mktRender();
         }
 
