@@ -8,5 +8,10 @@ window.EOS_CONFIG = {
     googleClientId: "827608282435-4d263lgsjtclrqogahmi6bdebsd4lju5.apps.googleusercontent.com",
     allowedDomain: "investedwithyou.com",
     sharedSheetId: "1YV93QI3f-3Eww-TUxFnP3uZmhPpXZiV4KVqWAsdU3pc",
-    bootstrapWebAppUrl: "https://script.google.com/macros/s/AKfycbyoIlqnHljqXJ0hyNBY9D3YTXDA_oi_gG7ewGeGWHspvooknPIgGOrc2-45jx2d8iLk/exec"
+    bootstrapWebAppUrl: "https://script.google.com/macros/s/AKfycbyoIlqnHljqXJ0hyNBY9D3YTXDA_oi_gG7ewGeGWHspvooknPIgGOrc2-45jx2d8iLk/exec",
+    // Marketing-tab access control (2026-07-23, EOS_MASTER_SUMMARY.md Sec 5.3).
+    // supabaseAnonKey is a PUBLISHABLE key by design - safe in client-side code.
+    // Row Level Security in the database is the real security boundary, not key secrecy.
+    supabaseUrl: "https://fhmvvnwubzqfgdokenog.supabase.co",
+    supabaseAnonKey: "sb_publishable_4dwVyTyhpdzjsaMDry-68Q_Ifq45T7S"
 };
