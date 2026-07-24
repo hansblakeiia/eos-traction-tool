@@ -4348,9 +4348,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.56.0';
-        const EOS_BUILD_DATE = '2026-07-23';
-        const EOS_BUILD_TIME = '20:00'; // v3.56.0: One sign-in covers the whole app, including Marketing - no more separate prompt. handleGoogleSignInResponse() now piggybacks a real Supabase session onto the SAME Google ID token GIS already produces (sb.auth.signInWithIdToken) right after the existing hd-domain check passes - additive, wrapped in try/catch, the tested GIS/applySignedInUser path is completely untouched. New checkAppWideSupabaseSession(), called first thing in initGoogleSignIn() (before the old rememberedEmail fast path): if a Supabase session already exists on this device (from here or from an earlier Marketing sign-in), honor it instead of re-running GIS - a team-member email gets the full app-wide identity via the existing applySignedInUser(); a signed-in profile that ISN'T a team member (e.g. Trevor) gets no app-wide identity, just a decluttered tab bar (new mktHideNonAccessibleTabs(), Marketing-only, explicitly COSMETIC not a security boundary - Settings, direct showPage() calls, and the public Sheets data are all untouched by this and still need their own real RBAC project if that's ever wanted). Also fixes a dual-modal bug: #googleSignInGate and #mktAuthGate were independent, non-exclusive .active toggles, so signing in via one could leave the other stuck showing a stale "please sign in" gate - both new sign-in paths now re-run mktCheckAccess() if Marketing is the active page. Explicitly did NOT touch isCurrentUserAdmin() (still the dropdown + teamMembers[].isAdmin, unrelated to this) or replace GIS with a redirect-based flow (considered and rejected - a full-page OAuth redirect would drop any in-progress edit, unlike today's in-page button). No `.gs` change. // v3.55.1: Fix a startup crash that broke showPage() on any load where the default-tab setting fell back to its default. The setting has always stored "weeklyMeeting" but the actual page element's id has always been "meeting" - showPage() crashed calling classList on a null element, silently aborting the rest of the startup sequence (including the new v3.55.0 post-sign-in return-to-Marketing-tab logic, which is what surfaced this - Hans landed back on the default tab instead of Marketing after signing in). Fixed at the point of failure: showPage() now translates the legacy alias and guards against a missing target instead of assuming pageId always matches a real element. Also hardened the event.target.classList.add('active') line below it - window.event isn't always a real click when showPage() is called programmatically (startup, mktHandleAuthReturn's fallback), and a non-Element event target (e.g. document) has no classList either. No `.gs` change. // v3.55.0: Marketing tab access control (EOS_MASTER_SUMMARY.md Sec 5.3), first real use of the new Supabase backend. New sign-in gate (#mktAuthGate) scoped ONLY to the Marketing tab - Google OAuth or magic-link email via Supabase Auth (mktSignInWithGoogle/mktSendMagicLink/mktCheckAccess) - checked every time the tab opens (showPage's marketing branch). The rest of the app (Rocks, Kanban, To-Dos, Weekly Meeting, the existing app-wide Google Sign-In / isCurrentUserAdmin) is completely untouched - deliberately NOT a full-app auth swap, to avoid any risk to the daily-driver sign-in Hans and Amanda already depend on. New "Manage Access" panel (owners only, gated on the real Supabase profiles.is_owner - not the client-side isAdmin flag) lets an owner grant/revoke view or edit per non-owner user, plus an email-invite flow. config.js gains supabaseUrl/supabaseAnonKey (anon key is a publishable key by design - RLS in the database is the real boundary, not key secrecy). Requires the schema.sql migration (six tables + RLS policies) to have been run in the Supabase project, and the Google OAuth provider configured there - both one-time setup, done this session. NOTE: card/column DATA still lives in localStorage as of this version - this ships the access GATE only; the data migration onto the new marketing_columns/marketing_cards tables is separate, later work, so a non-owner granted access today sees an empty board until that lands. No `.gs` change. // v3.54.0: Marketing Pipeline board now works like Kanban. Cards are draggable between columns (mktCardDragStart/mktCellDrop, mirrors kanbanCardDragStart/kanbanCellDrop). New "Manage Columns" button opens a drag-to-reorder/rename/add/delete panel (mktData.columns, seeded from the old hardcoded MKT_COLUMNS on first load via mktEnsureColumns). Ideas/My Review/With Trevor are protected from deletion (renaming is fine) because mktDraftBlog/mktSendToWordPress/mktPackageToTrevor auto-move cards to those column ids by id, not by name. Deleting a non-protected column moves its cards to Ideas rather than deleting them (deliberately different from Kanban's column-delete, since a Marketing card can be a finished blog draft). Columns are shared across both companies' boards, same as before; still localStorage-only/per-device, same limitation cards already had. index.html-only, no `.gs` change. // v3.53.0: Blog Draft no longer requires a title first (drafts from Take + Angle; title still generated in Step 6). New opts.withMeta on callAIText (additive - existing callers unaffected) reports a finish-reason truncation across Claude/Gemini/OpenAI. New per-task AI token budgets in Settings > AI Tools > AI Output Length (brainstorm/topics/angles/draft/tighten/social/titles), wired through getTaskTokens() at every marketing call site; Blog Draft and Tighten use withMeta to auto-retry once at 1.5x budget on a truncated result, keeping the longer output and toasting if it's still cut off. New debounced (800ms) autosave scoped to the open marketing card modal, separate from the global autoSave's .modal exclusion. Requires .gs v3.44.0 for the Firm Context Drive-folder recursion (subfolders to depth 5, new "Market Commentary Archives" reserved tier). // v3.52.2: Brainstorm->Angles guided funnel. Step 1 now parses the 6 topics into SELECTABLE rows (Use it now / Park / Kill / -> Backlog) instead of an inert text blob; parked topics can spin into their own Backlog card. New Step 2 "AI: Angles" button proposes ~4 angles for the CHOSEN topic as pickable chips that fill card.aiAngle (consumed by Step 4 draft). Brainstorm prompt rebalanced: RSS headlines weighted UP, newest firm-voice sample DOWN, so suggestions track current client-mind signal instead of echoing the last post. New card fields brainstormTopics[]/chosenTopic (additive; legacy blob cards lazily parsed on open). All existing field ids preserved. No .gs change. // v3.52.1: Fix Brainstorm truncation - maxTokens on the AI: Brainstorm call raised 900 -> 2000 so all six topics return in full (was cutting off partway through Topic 1 on Claude, at Topic 5 on Gemini). One-line change, no .gs change, no backend redeploy. // v3.52.0: Marketing card modal rebuilt as a guided 9-step stepper (Brainstorm, Angles, My Take, Blog Draft, Finalize/Tighten, Title, Social, Quotes, Package & Send). New AI actions: Brainstorm (RSS-fed topic ideas via Apps Script), Tighten (editorial pass), split Social/Quotes, and Package to Trevor (emails social+quote+WP link via the existing editor-email path). All existing field ids preserved. Requires .gs v3.43.0 (adds brainstormFeeds + notifyTrevorPackage - paste it in and redeploy). // prior: v3.51.0 mobile task-detail + Kanban fixes. (1) Fixed the ⋯ menu floating on top of Kanban Card Details when you tap Notes (the menu now closes when the card opens). (2) New To-Do Detail modal - tap the (i) on a To-Do to edit due date, owner (reassign), Google Task list (move), and notes in one place, like Google Tasks; on mobile the row hides those controls so it stays clean and full-width, checkbox on the far left. (3) Kanban Card Details: Owner is now a reassign dropdown and Column is labeled as the move control (both already fired the proper WIP/history move on Save; now they are obvious). (4) Weekly Meeting agenda wraps instead of overflowing on mobile. No .gs change.
+        const EOS_VERSION = '3.57.0';
+        const EOS_BUILD_DATE = '2026-07-24';
+        const EOS_BUILD_TIME = '12:30'; // v3.57.0: SECURITY FIX (pairs with .gs v3.45.0) - closes a real unauthenticated read/write hole. getTeamSettings/saveTeamSettings/getSharedEOSData/saveSharedEOSData used to be reachable by anyone with the Web App URL (public in config.js on GitHub Pages regardless of repo visibility) with ZERO authentication - readable secrets included every team member's webAppSecret (the same value used to authenticate every OTHER action in the app) and the raw Gemini/Claude/OpenAI API keys; writable meant an anonymous POST could overwrite team settings or the shared Kanban/Rocks data outright. Fix: loadTeamSettingsFromCloud() now splits into the still-public, now-TRIMMED getTeamSettings call ({initials,name,email} only - still needed pre-sign-in for the "who am I" dropdown/Google-Sign-In matching) plus a new getFullTeamSettings call gated behind the current Supabase access token (new getCurrentSupabaseToken() helper); saveTeamSettingsToCloud()/pushKanbanToCloud()/pullKanbanFromCloud() all now attach that same token and fail gracefully (new 'partial' cloud-sync-status badge) rather than erroring when there's no session yet. REAL TRADEOFF: all cloud sync now requires having signed in with Google at least once on that device - "Skip for now" becomes genuine local-only mode instead of sync-with-zero-auth. Also re-runs loadTeamSettingsFromCloud() right after the v3.56.0 sign-in piggyback resolves, so a fresh sign-in upgrades sync from 'partial' to fully synced within that same load instead of waiting for the next scheduled cycle. Server-side verification (Apps Script calling Supabase's own /auth/v1/user endpoint, cached, fails closed) already tested directly against the live deployment before this client change - see EOS_MASTER_SUMMARY.md for the full writeup and the discovery story (found while evaluating whether paying for private-repo GitHub Pages was worth it - it wasn't the real protection either way). // v3.56.0: One sign-in covers the whole app, including Marketing - no more separate prompt. handleGoogleSignInResponse() now piggybacks a real Supabase session onto the SAME Google ID token GIS already produces (sb.auth.signInWithIdToken) right after the existing hd-domain check passes - additive, wrapped in try/catch, the tested GIS/applySignedInUser path is completely untouched. New checkAppWideSupabaseSession(), called first thing in initGoogleSignIn() (before the old rememberedEmail fast path): if a Supabase session already exists on this device (from here or from an earlier Marketing sign-in), honor it instead of re-running GIS - a team-member email gets the full app-wide identity via the existing applySignedInUser(); a signed-in profile that ISN'T a team member (e.g. Trevor) gets no app-wide identity, just a decluttered tab bar (new mktHideNonAccessibleTabs(), Marketing-only, explicitly COSMETIC not a security boundary - Settings, direct showPage() calls, and the public Sheets data are all untouched by this and still need their own real RBAC project if that's ever wanted). Also fixes a dual-modal bug: #googleSignInGate and #mktAuthGate were independent, non-exclusive .active toggles, so signing in via one could leave the other stuck showing a stale "please sign in" gate - both new sign-in paths now re-run mktCheckAccess() if Marketing is the active page. Explicitly did NOT touch isCurrentUserAdmin() (still the dropdown + teamMembers[].isAdmin, unrelated to this) or replace GIS with a redirect-based flow (considered and rejected - a full-page OAuth redirect would drop any in-progress edit, unlike today's in-page button). No `.gs` change. // v3.55.1: Fix a startup crash that broke showPage() on any load where the default-tab setting fell back to its default. The setting has always stored "weeklyMeeting" but the actual page element's id has always been "meeting" - showPage() crashed calling classList on a null element, silently aborting the rest of the startup sequence (including the new v3.55.0 post-sign-in return-to-Marketing-tab logic, which is what surfaced this - Hans landed back on the default tab instead of Marketing after signing in). Fixed at the point of failure: showPage() now translates the legacy alias and guards against a missing target instead of assuming pageId always matches a real element. Also hardened the event.target.classList.add('active') line below it - window.event isn't always a real click when showPage() is called programmatically (startup, mktHandleAuthReturn's fallback), and a non-Element event target (e.g. document) has no classList either. No `.gs` change. // v3.55.0: Marketing tab access control (EOS_MASTER_SUMMARY.md Sec 5.3), first real use of the new Supabase backend. New sign-in gate (#mktAuthGate) scoped ONLY to the Marketing tab - Google OAuth or magic-link email via Supabase Auth (mktSignInWithGoogle/mktSendMagicLink/mktCheckAccess) - checked every time the tab opens (showPage's marketing branch). The rest of the app (Rocks, Kanban, To-Dos, Weekly Meeting, the existing app-wide Google Sign-In / isCurrentUserAdmin) is completely untouched - deliberately NOT a full-app auth swap, to avoid any risk to the daily-driver sign-in Hans and Amanda already depend on. New "Manage Access" panel (owners only, gated on the real Supabase profiles.is_owner - not the client-side isAdmin flag) lets an owner grant/revoke view or edit per non-owner user, plus an email-invite flow. config.js gains supabaseUrl/supabaseAnonKey (anon key is a publishable key by design - RLS in the database is the real boundary, not key secrecy). Requires the schema.sql migration (six tables + RLS policies) to have been run in the Supabase project, and the Google OAuth provider configured there - both one-time setup, done this session. NOTE: card/column DATA still lives in localStorage as of this version - this ships the access GATE only; the data migration onto the new marketing_columns/marketing_cards tables is separate, later work, so a non-owner granted access today sees an empty board until that lands. No `.gs` change. // v3.54.0: Marketing Pipeline board now works like Kanban. Cards are draggable between columns (mktCardDragStart/mktCellDrop, mirrors kanbanCardDragStart/kanbanCellDrop). New "Manage Columns" button opens a drag-to-reorder/rename/add/delete panel (mktData.columns, seeded from the old hardcoded MKT_COLUMNS on first load via mktEnsureColumns). Ideas/My Review/With Trevor are protected from deletion (renaming is fine) because mktDraftBlog/mktSendToWordPress/mktPackageToTrevor auto-move cards to those column ids by id, not by name. Deleting a non-protected column moves its cards to Ideas rather than deleting them (deliberately different from Kanban's column-delete, since a Marketing card can be a finished blog draft). Columns are shared across both companies' boards, same as before; still localStorage-only/per-device, same limitation cards already had. index.html-only, no `.gs` change. // v3.53.0: Blog Draft no longer requires a title first (drafts from Take + Angle; title still generated in Step 6). New opts.withMeta on callAIText (additive - existing callers unaffected) reports a finish-reason truncation across Claude/Gemini/OpenAI. New per-task AI token budgets in Settings > AI Tools > AI Output Length (brainstorm/topics/angles/draft/tighten/social/titles), wired through getTaskTokens() at every marketing call site; Blog Draft and Tighten use withMeta to auto-retry once at 1.5x budget on a truncated result, keeping the longer output and toasting if it's still cut off. New debounced (800ms) autosave scoped to the open marketing card modal, separate from the global autoSave's .modal exclusion. Requires .gs v3.44.0 for the Firm Context Drive-folder recursion (subfolders to depth 5, new "Market Commentary Archives" reserved tier). // v3.52.2: Brainstorm->Angles guided funnel. Step 1 now parses the 6 topics into SELECTABLE rows (Use it now / Park / Kill / -> Backlog) instead of an inert text blob; parked topics can spin into their own Backlog card. New Step 2 "AI: Angles" button proposes ~4 angles for the CHOSEN topic as pickable chips that fill card.aiAngle (consumed by Step 4 draft). Brainstorm prompt rebalanced: RSS headlines weighted UP, newest firm-voice sample DOWN, so suggestions track current client-mind signal instead of echoing the last post. New card fields brainstormTopics[]/chosenTopic (additive; legacy blob cards lazily parsed on open). All existing field ids preserved. No .gs change. // v3.52.1: Fix Brainstorm truncation - maxTokens on the AI: Brainstorm call raised 900 -> 2000 so all six topics return in full (was cutting off partway through Topic 1 on Claude, at Topic 5 on Gemini). One-line change, no .gs change, no backend redeploy. // v3.52.0: Marketing card modal rebuilt as a guided 9-step stepper (Brainstorm, Angles, My Take, Blog Draft, Finalize/Tighten, Title, Social, Quotes, Package & Send). New AI actions: Brainstorm (RSS-fed topic ideas via Apps Script), Tighten (editorial pass), split Social/Quotes, and Package to Trevor (emails social+quote+WP link via the existing editor-email path). All existing field ids preserved. Requires .gs v3.43.0 (adds brainstormFeeds + notifyTrevorPackage - paste it in and redeploy). // prior: v3.51.0 mobile task-detail + Kanban fixes. (1) Fixed the ⋯ menu floating on top of Kanban Card Details when you tap Notes (the menu now closes when the card opens). (2) New To-Do Detail modal - tap the (i) on a To-Do to edit due date, owner (reassign), Google Task list (move), and notes in one place, like Google Tasks; on mobile the row hides those controls so it stays clean and full-width, checkbox on the far left. (3) Kanban Card Details: Owner is now a reassign dropdown and Column is labeled as the move control (both already fired the proper WIP/history move on Save; now they are obvious). (4) Weekly Meeting agenda wraps instead of overflowing on mobile. No .gs change.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -4548,9 +4548,34 @@ Example:
         let cloudSettingsLoaded = false;
         
         // Load team settings from shared Google Sheet
+        // Returns the current Supabase access token, or null if there's no signed-in
+        // session (either Supabase isn't configured, or the user hasn't signed in
+        // yet / clicked "Skip for now"). Shared by settings + Kanban cloud sync as
+        // of v3.45.0 - see the security-fix changelog entry.
+        async function getCurrentSupabaseToken() {
+            const sb = mktGetSupabaseClient();
+            if (!sb) return null;
+            try {
+                const { data: { session } } = await sb.auth.getSession();
+                return session ? session.access_token : null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        // v3.45.0 SECURITY FIX: this used to fetch everything (webAppUrl,
+        // webAppSecret, raw AI provider API keys) from a single unauthenticated
+        // call - anyone with the Web App URL could read every team member's
+        // secrets with zero sign-in. Now split in two: the public getTeamSettings
+        // call only ever returns {initials, name, email} (still zero-touch, still
+        // needed pre-sign-in for the "who am I" dropdown + Google Sign-In
+        // matching); the sensitive data requires a real signed-in Supabase session
+        // and comes from the new getFullTeamSettings action. No session yet = the
+        // roster loads fine, but webAppSecret/AI keys wait until sign-in - that's
+        // the fix working as intended, not a bug.
         async function loadTeamSettingsFromCloud() {
             const settings = getSettings();
-            
+
             // Find first team member with a configured Web App URL. On a brand new
             // device (e.g. first time opening on mobile) there won't be one yet -
             // fall back to the bootstrap URL from config.js so sync can self-start
@@ -4567,63 +4592,97 @@ Example:
                 updateCloudSyncStatus('none');
                 return false;
             }
-            
+
             try {
                 console.log('Cloud Settings: Loading from shared sheet...' + (usedBootstrapFallback ? ' (via config.js bootstrap URL)' : ''));
                 updateCloudSyncStatus('loading');
                 const url = bootstrapUrl + '?action=getTeamSettings';
-                
+
                 const response = await fetch(url);
                 const data = await response.json();
-                
-                if (data.success && data.teamMembers && data.teamMembers.length > 0) {
-                    console.log('Cloud Settings: Loaded', data.teamMembers.length, 'team members from', data.sheetName);
-                    
-                    // Merge cloud settings with local settings
-                    const localSettings = getSettings();
-                    
-                    // Update team members from cloud
-                    data.teamMembers.forEach(cloudMember => {
-                        const localMember = localSettings.teamMembers?.find(m => m.initials === cloudMember.initials);
-                        if (localMember) {
-                            // Update local member with cloud data
-                            Object.assign(localMember, cloudMember);
-                        } else {
-                            // Add new member from cloud
-                            localSettings.teamMembers = localSettings.teamMembers || [];
-                            localSettings.teamMembers.push(cloudMember);
-                        }
-                    });
-                    
-                    // Merge shared AI provider settings (keys/models/routing) so every
-                    // team member's device stays in sync with no manual re-entry
-                    if (data.aiSettings) {
-                        localSettings.geminiApiKey = data.aiSettings.geminiApiKey || localSettings.geminiApiKey || '';
-                        localSettings.geminiModel = data.aiSettings.geminiModel || localSettings.geminiModel || '';
-                        localSettings.claudeApiKey = data.aiSettings.claudeApiKey || localSettings.claudeApiKey || '';
-                        localSettings.claudeModel = data.aiSettings.claudeModel || localSettings.claudeModel || '';
-                        localSettings.openaiApiKey = data.aiSettings.openaiApiKey || localSettings.openaiApiKey || '';
-                        localSettings.openaiModel = data.aiSettings.openaiModel || localSettings.openaiModel || '';
-                        if (data.aiSettings.aiRouting) localSettings.aiRouting = data.aiSettings.aiRouting;
-                    }
-                    
-                    // Save merged settings locally
-                    seededData._settings = localSettings;
-                    localStorage.setItem('eos_traction_data', JSON.stringify(seededData));
-                    
-                    cloudSettingsLoaded = true;
-                    updateCloudSyncStatus('synced');
-                    showToast('Team settings synced from cloud', 'success');
-                    
-                    // Update owner filter dropdown
-                    populateOwnerFilter();
-                    
-                    return true;
-                } else {
+
+                if (!data.success || !data.teamMembers || !data.teamMembers.length) {
                     console.log('Cloud Settings: No team members found in sheet or error:', data.error);
                     updateCloudSyncStatus('empty');
                     return false;
                 }
+
+                console.log('Cloud Settings: Loaded', data.teamMembers.length, 'team members from', data.sheetName);
+
+                // Merge cloud settings with local settings
+                const localSettings = getSettings();
+
+                // Update team members from cloud (roster fields only at this point -
+                // initials/name/email; see the gated fetch below for the rest)
+                data.teamMembers.forEach(cloudMember => {
+                    const localMember = localSettings.teamMembers?.find(m => m.initials === cloudMember.initials);
+                    if (localMember) {
+                        Object.assign(localMember, cloudMember);
+                    } else {
+                        localSettings.teamMembers = localSettings.teamMembers || [];
+                        localSettings.teamMembers.push(cloudMember);
+                    }
+                });
+
+                // Gated fetch: webAppUrl/webAppSecret/aiSettings, only if signed in.
+                const token = await getCurrentSupabaseToken();
+                let gotFullData = false;
+                if (token) {
+                    try {
+                        const fullResponse = await fetch(bootstrapUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({ action: 'getFullTeamSettings', supabaseToken: token })
+                        });
+                        const fullData = await fullResponse.json();
+                        if (fullData.success) {
+                            fullData.teamMembers.forEach(cloudMember => {
+                                const localMember = localSettings.teamMembers?.find(m => m.initials === cloudMember.initials);
+                                if (localMember) {
+                                    Object.assign(localMember, cloudMember);
+                                } else {
+                                    localSettings.teamMembers = localSettings.teamMembers || [];
+                                    localSettings.teamMembers.push(cloudMember);
+                                }
+                            });
+                            // Merge shared AI provider settings (keys/models/routing) so every
+                            // team member's device stays in sync with no manual re-entry
+                            if (fullData.aiSettings) {
+                                localSettings.geminiApiKey = fullData.aiSettings.geminiApiKey || localSettings.geminiApiKey || '';
+                                localSettings.geminiModel = fullData.aiSettings.geminiModel || localSettings.geminiModel || '';
+                                localSettings.claudeApiKey = fullData.aiSettings.claudeApiKey || localSettings.claudeApiKey || '';
+                                localSettings.claudeModel = fullData.aiSettings.claudeModel || localSettings.claudeModel || '';
+                                localSettings.openaiApiKey = fullData.aiSettings.openaiApiKey || localSettings.openaiApiKey || '';
+                                localSettings.openaiModel = fullData.aiSettings.openaiModel || localSettings.openaiModel || '';
+                                if (fullData.aiSettings.aiRouting) localSettings.aiRouting = fullData.aiSettings.aiRouting;
+                            }
+                            gotFullData = true;
+                        } else {
+                            console.log('Cloud Settings: full settings not yet available -', fullData.error);
+                        }
+                    } catch (e) {
+                        console.warn('Cloud Settings: full settings fetch failed:', e);
+                    }
+                } else {
+                    console.log('Cloud Settings: no signed-in session yet - roster loaded; webAppSecret/AI keys wait until sign-in (this is the security fix, not a bug)');
+                }
+
+                // Save merged settings locally
+                seededData._settings = localSettings;
+                localStorage.setItem('eos_traction_data', JSON.stringify(seededData));
+
+                cloudSettingsLoaded = true;
+                if (gotFullData) {
+                    updateCloudSyncStatus('synced');
+                    showToast('Team settings synced from cloud', 'success');
+                } else {
+                    updateCloudSyncStatus('partial');
+                }
+
+                // Update owner filter dropdown
+                populateOwnerFilter();
+
+                return true;
             } catch (error) {
                 console.error('Cloud Settings: Failed to load:', error);
                 updateCloudSyncStatus('error');
@@ -4675,6 +4734,14 @@ Example:
                     badge.style.background = '#f3f4f6';
                     badge.style.color = '#6b7280';
                     break;
+                case 'partial':
+                    // v3.45.0: team roster loaded (public, unauthenticated), but the
+                    // full data (webAppSecret/AI keys) needs a signed-in session -
+                    // that's the actual security fix, not a bug.
+                    badge.textContent = 'Sign in to finish syncing';
+                    badge.style.background = '#fef3c7';
+                    badge.style.color = '#92400e';
+                    break;
                 case 'none':
                 default:
                     badge.textContent = 'Local only';
@@ -4685,9 +4752,13 @@ Example:
         }
         
         // Save team settings to shared Google Sheet
+        // v3.45.0 SECURITY FIX: saveTeamSettings used to accept writes from anyone,
+        // no authentication at all ("admin check is done client-side," per the old
+        // .gs comment) - an anonymous POST could overwrite anyone's webAppSecret or
+        // the shared AI keys. Now requires a real signed-in Supabase session.
         async function saveTeamSettingsToCloud() {
             const settings = getSettings();
-            
+
             // Find first team member with a configured Web App URL
             const memberWithUrl = settings.teamMembers?.find(m => m.webAppUrl);
             if (!memberWithUrl) {
@@ -4695,13 +4766,21 @@ Example:
                 updateCloudSyncStatus('none');
                 return false;
             }
-            
+
+            const token = await getCurrentSupabaseToken();
+            if (!token) {
+                console.log('Cloud Settings: no signed-in session yet, cannot save to cloud (sign in with Google first)');
+                updateCloudSyncStatus('partial');
+                return false;
+            }
+
             try {
                 console.log('Cloud Settings: Saving to shared sheet...');
                 updateCloudSyncStatus('saving');
-                
+
                 const payload = {
                     action: 'saveTeamSettings',
+                    supabaseToken: token,
                     teamMembers: settings.teamMembers,
                     aiSettings: {
                         geminiApiKey: settings.geminiApiKey || '',
@@ -6615,7 +6694,13 @@ Example:
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.56.0 &mdash; 2026-07-23 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.57.0 &mdash; 2026-07-24 (Current)</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Security fix.</strong> A backend endpoint could previously be read (and written to) by anyone with the app\'s URL, with no sign-in required &mdash; that\'s now closed. Reading/writing team settings and the shared Kanban/Rocks data now requires having signed in with Google.</li>'
+                + '<li><strong>What this means day to day:</strong> cloud sync now needs you to have signed in at least once on each device. If you see a "Sign in to finish syncing" badge, that\'s expected until you do.</li>'
+                + '</ul></div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.56.0 &mdash; 2026-07-23</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>One sign-in now covers the whole app.</strong> Signing in with Google the normal way also signs you into the Marketing tab automatically &mdash; no more separate prompt there. Once you have signed in on a device, it stays signed in on that device (same as Gmail); a new device still needs its own first sign-in.</li>'
                 + '<li>Someone signed in who is not on the team roster (e.g. an outside collaborator granted Marketing access) now sees a decluttered menu showing just the tabs relevant to them.</li>'
@@ -7440,6 +7525,13 @@ Example:
                     const mktPage = document.getElementById('marketing');
                     if (mktPage && mktPage.classList.contains('active')) {
                         mktCheckAccess().then(function(ok) { if (ok) mktRender(); });
+                    }
+                    // v3.45.0: this session is what the security fix's gated sync
+                    // depends on (getFullTeamSettings/saveSharedEOSData etc.) - re-run
+                    // the settings load now that it exists, rather than leaving sync
+                    // in 'partial' status until the next scheduled cycle.
+                    if (typeof loadTeamSettingsFromCloud === 'function') {
+                        loadTeamSettingsFromCloud().then(function() { initAutoSync(); });
                     }
                 }).catch(function() { /* silent - GIS sign-in above already succeeded */ });
             }
@@ -10271,6 +10363,10 @@ Example:
             }
         }
 
+        // v3.45.0 SECURITY FIX: saveSharedEOSData used to accept writes from
+        // anyone, no authentication at all - an anonymous POST could overwrite the
+        // shared Kanban board with zero authentication. Now requires a real
+        // signed-in Supabase session, same as team settings above.
         async function pushKanbanToCloud(showFeedback) {
             const webAppUrl = getPrimaryWebAppUrl();
             if (!webAppUrl) {
@@ -10278,10 +10374,16 @@ Example:
                 if (showFeedback) showToast('No Web App URL configured - add one in Settings to sync Kanban', 'error');
                 return false;
             }
+            const token = await getCurrentSupabaseToken();
+            if (!token) {
+                updateKanbanSyncStatus('none');
+                if (showFeedback) showToast('Sign in with Google to sync Kanban to the cloud', 'error');
+                return false;
+            }
             if (!kanbanData) loadKanbanData();
             try {
                 updateKanbanSyncStatus('saving');
-                const payload = { action: 'saveSharedEOSData', data: { kanban: kanbanData } };
+                const payload = { action: 'saveSharedEOSData', supabaseToken: token, data: { kanban: kanbanData } };
                 const response = await fetch(webAppUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain' },
@@ -10312,10 +10414,16 @@ Example:
                 if (showFeedback) showToast('No Web App URL configured - add one in Settings to sync Kanban', 'error');
                 return false;
             }
+            const token = await getCurrentSupabaseToken();
+            if (!token) {
+                updateKanbanSyncStatus('none');
+                if (showFeedback) showToast('Sign in with Google to sync Kanban from the cloud', 'error');
+                return false;
+            }
             if (!kanbanData) loadKanbanData();
             try {
                 updateKanbanSyncStatus('loading');
-                const response = await fetch(webAppUrl + '?action=getSharedEOSData');
+                const response = await fetch(webAppUrl + '?action=getSharedEOSData&supabaseToken=' + encodeURIComponent(token));
                 const data = await response.json();
                 if (!data.success) {
                     updateKanbanSyncStatus('error');
