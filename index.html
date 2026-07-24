@@ -4348,9 +4348,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.55.1';
+        const EOS_VERSION = '3.56.0';
         const EOS_BUILD_DATE = '2026-07-23';
-        const EOS_BUILD_TIME = '18:15'; // v3.55.1: Fix a startup crash that broke showPage() on any load where the default-tab setting fell back to its default. The setting has always stored "weeklyMeeting" but the actual page element's id has always been "meeting" - showPage() crashed calling classList on a null element, silently aborting the rest of the startup sequence (including the new v3.55.0 post-sign-in return-to-Marketing-tab logic, which is what surfaced this - Hans landed back on the default tab instead of Marketing after signing in). Fixed at the point of failure: showPage() now translates the legacy alias and guards against a missing target instead of assuming pageId always matches a real element. Also hardened the event.target.classList.add('active') line below it - window.event isn't always a real click when showPage() is called programmatically (startup, mktHandleAuthReturn's fallback), and a non-Element event target (e.g. document) has no classList either. No `.gs` change. // v3.55.0: Marketing tab access control (EOS_MASTER_SUMMARY.md Sec 5.3), first real use of the new Supabase backend. New sign-in gate (#mktAuthGate) scoped ONLY to the Marketing tab - Google OAuth or magic-link email via Supabase Auth (mktSignInWithGoogle/mktSendMagicLink/mktCheckAccess) - checked every time the tab opens (showPage's marketing branch). The rest of the app (Rocks, Kanban, To-Dos, Weekly Meeting, the existing app-wide Google Sign-In / isCurrentUserAdmin) is completely untouched - deliberately NOT a full-app auth swap, to avoid any risk to the daily-driver sign-in Hans and Amanda already depend on. New "Manage Access" panel (owners only, gated on the real Supabase profiles.is_owner - not the client-side isAdmin flag) lets an owner grant/revoke view or edit per non-owner user, plus an email-invite flow. config.js gains supabaseUrl/supabaseAnonKey (anon key is a publishable key by design - RLS in the database is the real boundary, not key secrecy). Requires the schema.sql migration (six tables + RLS policies) to have been run in the Supabase project, and the Google OAuth provider configured there - both one-time setup, done this session. NOTE: card/column DATA still lives in localStorage as of this version - this ships the access GATE only; the data migration onto the new marketing_columns/marketing_cards tables is separate, later work, so a non-owner granted access today sees an empty board until that lands. No `.gs` change. // v3.54.0: Marketing Pipeline board now works like Kanban. Cards are draggable between columns (mktCardDragStart/mktCellDrop, mirrors kanbanCardDragStart/kanbanCellDrop). New "Manage Columns" button opens a drag-to-reorder/rename/add/delete panel (mktData.columns, seeded from the old hardcoded MKT_COLUMNS on first load via mktEnsureColumns). Ideas/My Review/With Trevor are protected from deletion (renaming is fine) because mktDraftBlog/mktSendToWordPress/mktPackageToTrevor auto-move cards to those column ids by id, not by name. Deleting a non-protected column moves its cards to Ideas rather than deleting them (deliberately different from Kanban's column-delete, since a Marketing card can be a finished blog draft). Columns are shared across both companies' boards, same as before; still localStorage-only/per-device, same limitation cards already had. index.html-only, no `.gs` change. // v3.53.0: Blog Draft no longer requires a title first (drafts from Take + Angle; title still generated in Step 6). New opts.withMeta on callAIText (additive - existing callers unaffected) reports a finish-reason truncation across Claude/Gemini/OpenAI. New per-task AI token budgets in Settings > AI Tools > AI Output Length (brainstorm/topics/angles/draft/tighten/social/titles), wired through getTaskTokens() at every marketing call site; Blog Draft and Tighten use withMeta to auto-retry once at 1.5x budget on a truncated result, keeping the longer output and toasting if it's still cut off. New debounced (800ms) autosave scoped to the open marketing card modal, separate from the global autoSave's .modal exclusion. Requires .gs v3.44.0 for the Firm Context Drive-folder recursion (subfolders to depth 5, new "Market Commentary Archives" reserved tier). // v3.52.2: Brainstorm->Angles guided funnel. Step 1 now parses the 6 topics into SELECTABLE rows (Use it now / Park / Kill / -> Backlog) instead of an inert text blob; parked topics can spin into their own Backlog card. New Step 2 "AI: Angles" button proposes ~4 angles for the CHOSEN topic as pickable chips that fill card.aiAngle (consumed by Step 4 draft). Brainstorm prompt rebalanced: RSS headlines weighted UP, newest firm-voice sample DOWN, so suggestions track current client-mind signal instead of echoing the last post. New card fields brainstormTopics[]/chosenTopic (additive; legacy blob cards lazily parsed on open). All existing field ids preserved. No .gs change. // v3.52.1: Fix Brainstorm truncation - maxTokens on the AI: Brainstorm call raised 900 -> 2000 so all six topics return in full (was cutting off partway through Topic 1 on Claude, at Topic 5 on Gemini). One-line change, no .gs change, no backend redeploy. // v3.52.0: Marketing card modal rebuilt as a guided 9-step stepper (Brainstorm, Angles, My Take, Blog Draft, Finalize/Tighten, Title, Social, Quotes, Package & Send). New AI actions: Brainstorm (RSS-fed topic ideas via Apps Script), Tighten (editorial pass), split Social/Quotes, and Package to Trevor (emails social+quote+WP link via the existing editor-email path). All existing field ids preserved. Requires .gs v3.43.0 (adds brainstormFeeds + notifyTrevorPackage - paste it in and redeploy). // prior: v3.51.0 mobile task-detail + Kanban fixes. (1) Fixed the ⋯ menu floating on top of Kanban Card Details when you tap Notes (the menu now closes when the card opens). (2) New To-Do Detail modal - tap the (i) on a To-Do to edit due date, owner (reassign), Google Task list (move), and notes in one place, like Google Tasks; on mobile the row hides those controls so it stays clean and full-width, checkbox on the far left. (3) Kanban Card Details: Owner is now a reassign dropdown and Column is labeled as the move control (both already fired the proper WIP/history move on Save; now they are obvious). (4) Weekly Meeting agenda wraps instead of overflowing on mobile. No .gs change.
+        const EOS_BUILD_TIME = '20:00'; // v3.56.0: One sign-in covers the whole app, including Marketing - no more separate prompt. handleGoogleSignInResponse() now piggybacks a real Supabase session onto the SAME Google ID token GIS already produces (sb.auth.signInWithIdToken) right after the existing hd-domain check passes - additive, wrapped in try/catch, the tested GIS/applySignedInUser path is completely untouched. New checkAppWideSupabaseSession(), called first thing in initGoogleSignIn() (before the old rememberedEmail fast path): if a Supabase session already exists on this device (from here or from an earlier Marketing sign-in), honor it instead of re-running GIS - a team-member email gets the full app-wide identity via the existing applySignedInUser(); a signed-in profile that ISN'T a team member (e.g. Trevor) gets no app-wide identity, just a decluttered tab bar (new mktHideNonAccessibleTabs(), Marketing-only, explicitly COSMETIC not a security boundary - Settings, direct showPage() calls, and the public Sheets data are all untouched by this and still need their own real RBAC project if that's ever wanted). Also fixes a dual-modal bug: #googleSignInGate and #mktAuthGate were independent, non-exclusive .active toggles, so signing in via one could leave the other stuck showing a stale "please sign in" gate - both new sign-in paths now re-run mktCheckAccess() if Marketing is the active page. Explicitly did NOT touch isCurrentUserAdmin() (still the dropdown + teamMembers[].isAdmin, unrelated to this) or replace GIS with a redirect-based flow (considered and rejected - a full-page OAuth redirect would drop any in-progress edit, unlike today's in-page button). No `.gs` change. // v3.55.1: Fix a startup crash that broke showPage() on any load where the default-tab setting fell back to its default. The setting has always stored "weeklyMeeting" but the actual page element's id has always been "meeting" - showPage() crashed calling classList on a null element, silently aborting the rest of the startup sequence (including the new v3.55.0 post-sign-in return-to-Marketing-tab logic, which is what surfaced this - Hans landed back on the default tab instead of Marketing after signing in). Fixed at the point of failure: showPage() now translates the legacy alias and guards against a missing target instead of assuming pageId always matches a real element. Also hardened the event.target.classList.add('active') line below it - window.event isn't always a real click when showPage() is called programmatically (startup, mktHandleAuthReturn's fallback), and a non-Element event target (e.g. document) has no classList either. No `.gs` change. // v3.55.0: Marketing tab access control (EOS_MASTER_SUMMARY.md Sec 5.3), first real use of the new Supabase backend. New sign-in gate (#mktAuthGate) scoped ONLY to the Marketing tab - Google OAuth or magic-link email via Supabase Auth (mktSignInWithGoogle/mktSendMagicLink/mktCheckAccess) - checked every time the tab opens (showPage's marketing branch). The rest of the app (Rocks, Kanban, To-Dos, Weekly Meeting, the existing app-wide Google Sign-In / isCurrentUserAdmin) is completely untouched - deliberately NOT a full-app auth swap, to avoid any risk to the daily-driver sign-in Hans and Amanda already depend on. New "Manage Access" panel (owners only, gated on the real Supabase profiles.is_owner - not the client-side isAdmin flag) lets an owner grant/revoke view or edit per non-owner user, plus an email-invite flow. config.js gains supabaseUrl/supabaseAnonKey (anon key is a publishable key by design - RLS in the database is the real boundary, not key secrecy). Requires the schema.sql migration (six tables + RLS policies) to have been run in the Supabase project, and the Google OAuth provider configured there - both one-time setup, done this session. NOTE: card/column DATA still lives in localStorage as of this version - this ships the access GATE only; the data migration onto the new marketing_columns/marketing_cards tables is separate, later work, so a non-owner granted access today sees an empty board until that lands. No `.gs` change. // v3.54.0: Marketing Pipeline board now works like Kanban. Cards are draggable between columns (mktCardDragStart/mktCellDrop, mirrors kanbanCardDragStart/kanbanCellDrop). New "Manage Columns" button opens a drag-to-reorder/rename/add/delete panel (mktData.columns, seeded from the old hardcoded MKT_COLUMNS on first load via mktEnsureColumns). Ideas/My Review/With Trevor are protected from deletion (renaming is fine) because mktDraftBlog/mktSendToWordPress/mktPackageToTrevor auto-move cards to those column ids by id, not by name. Deleting a non-protected column moves its cards to Ideas rather than deleting them (deliberately different from Kanban's column-delete, since a Marketing card can be a finished blog draft). Columns are shared across both companies' boards, same as before; still localStorage-only/per-device, same limitation cards already had. index.html-only, no `.gs` change. // v3.53.0: Blog Draft no longer requires a title first (drafts from Take + Angle; title still generated in Step 6). New opts.withMeta on callAIText (additive - existing callers unaffected) reports a finish-reason truncation across Claude/Gemini/OpenAI. New per-task AI token budgets in Settings > AI Tools > AI Output Length (brainstorm/topics/angles/draft/tighten/social/titles), wired through getTaskTokens() at every marketing call site; Blog Draft and Tighten use withMeta to auto-retry once at 1.5x budget on a truncated result, keeping the longer output and toasting if it's still cut off. New debounced (800ms) autosave scoped to the open marketing card modal, separate from the global autoSave's .modal exclusion. Requires .gs v3.44.0 for the Firm Context Drive-folder recursion (subfolders to depth 5, new "Market Commentary Archives" reserved tier). // v3.52.2: Brainstorm->Angles guided funnel. Step 1 now parses the 6 topics into SELECTABLE rows (Use it now / Park / Kill / -> Backlog) instead of an inert text blob; parked topics can spin into their own Backlog card. New Step 2 "AI: Angles" button proposes ~4 angles for the CHOSEN topic as pickable chips that fill card.aiAngle (consumed by Step 4 draft). Brainstorm prompt rebalanced: RSS headlines weighted UP, newest firm-voice sample DOWN, so suggestions track current client-mind signal instead of echoing the last post. New card fields brainstormTopics[]/chosenTopic (additive; legacy blob cards lazily parsed on open). All existing field ids preserved. No .gs change. // v3.52.1: Fix Brainstorm truncation - maxTokens on the AI: Brainstorm call raised 900 -> 2000 so all six topics return in full (was cutting off partway through Topic 1 on Claude, at Topic 5 on Gemini). One-line change, no .gs change, no backend redeploy. // v3.52.0: Marketing card modal rebuilt as a guided 9-step stepper (Brainstorm, Angles, My Take, Blog Draft, Finalize/Tighten, Title, Social, Quotes, Package & Send). New AI actions: Brainstorm (RSS-fed topic ideas via Apps Script), Tighten (editorial pass), split Social/Quotes, and Package to Trevor (emails social+quote+WP link via the existing editor-email path). All existing field ids preserved. Requires .gs v3.43.0 (adds brainstormFeeds + notifyTrevorPackage - paste it in and redeploy). // prior: v3.51.0 mobile task-detail + Kanban fixes. (1) Fixed the ⋯ menu floating on top of Kanban Card Details when you tap Notes (the menu now closes when the card opens). (2) New To-Do Detail modal - tap the (i) on a To-Do to edit due date, owner (reassign), Google Task list (move), and notes in one place, like Google Tasks; on mobile the row hides those controls so it stays clean and full-width, checkbox on the far left. (3) Kanban Card Details: Owner is now a reassign dropdown and Column is labeled as the move control (both already fired the proper WIP/history move on Save; now they are obvious). (4) Weekly Meeting agenda wraps instead of overflowing on mobile. No .gs change.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -6615,7 +6615,13 @@ Example:
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.55.1 &mdash; 2026-07-23 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.56.0 &mdash; 2026-07-23 (Current)</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>One sign-in now covers the whole app.</strong> Signing in with Google the normal way also signs you into the Marketing tab automatically &mdash; no more separate prompt there. Once you have signed in on a device, it stays signed in on that device (same as Gmail); a new device still needs its own first sign-in.</li>'
+                + '<li>Someone signed in who is not on the team roster (e.g. an outside collaborator granted Marketing access) now sees a decluttered menu showing just the tabs relevant to them.</li>'
+                + '</ul></div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.55.1 &mdash; 2026-07-23</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Fixed a startup bug</strong> that could silently break page navigation on load, depending on your saved default-tab setting. Also fixes returning to the Marketing tab automatically right after signing in there.</li>'
                 + '</ul></div>'
@@ -7322,9 +7328,69 @@ Example:
             return JSON.parse(jsonPayload);
         }
 
-        function initGoogleSignIn() {
+        // One login, everywhere (v3.56.0). If a Supabase session already exists on
+        // this device - established here via the ID-token piggyback below, or
+        // earlier via the Marketing tab's own sign-in - honor it instead of
+        // re-running GIS. This is what makes "sign in once" actually stick across
+        // page loads: Supabase persists the session itself (like Gmail), this
+        // function just has to check for it before falling back to the old path.
+        // Team-member emails get the full app-wide identity (dropdown, badge) via
+        // applySignedInUser - identical to what GIS sign-in has always done. A
+        // signed-in profile that ISN'T a team member (e.g. Trevor) gets no app-wide
+        // identity - just a decluttered tab bar (mktHideNonAccessibleTabs) - since
+        // team-member-only concepts like the "who am I" dropdown don't apply to them.
+        async function checkAppWideSupabaseSession() {
+            const sb = mktGetSupabaseClient();
+            if (!sb) return false;
+            const { data: { session } } = await sb.auth.getSession();
+            if (!session) return false;
+
+            const { data: profile } = await sb.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
+            if (!profile) return false;
+
+            const settings = getSettings();
+            const member = (settings.teamMembers || []).find(function(m) {
+                return (m.email || '').toLowerCase() === (profile.email || '').toLowerCase();
+            });
+            if (member) {
+                applySignedInUser(profile.email, profile.display_name);
+            } else {
+                const gate = document.getElementById('googleSignInGate');
+                if (gate) gate.classList.remove('active');
+                mktHideNonAccessibleTabs();
+            }
+
+            // If the Marketing tab is already open and showing its own stale
+            // "please sign in" gate, re-check it now rather than leaving the user
+            // staring at a gate they just satisfied through a different path.
+            const mktPage = document.getElementById('marketing');
+            if (mktPage && mktPage.classList.contains('active')) {
+                mktCheckAccess().then(function(ok) { if (ok) mktRender(); });
+            }
+            return true;
+        }
+
+        // Cosmetic decluttering ONLY - not an access-control boundary. Settings
+        // (a header button, not a .tab-btn), direct showPage() calls, and the
+        // Sheets/Apps-Script data most other tabs pull are all untouched by this;
+        // a real RBAC boundary for those would be its own project, the same shape
+        // as Marketing's (tables + RLS), not built here. This just hides tab
+        // buttons for a signed-in guest who isn't on the team roster, so someone
+        // like Trevor doesn't see buttons for boards that have nothing to do with him.
+        function mktHideNonAccessibleTabs() {
+            document.querySelectorAll('.tab-btn').forEach(function(btn) {
+                const isMarketing = /showPage\('marketing'\)/.test(btn.getAttribute('onclick') || '');
+                btn.style.display = isMarketing ? '' : 'none';
+            });
+        }
+
+        async function initGoogleSignIn() {
             const cfg = window.EOS_CONFIG || {};
             if (!cfg.googleClientId) return;
+
+            const supabaseHandled = await checkAppWideSupabaseSession();
+            if (supabaseHandled) return;
+
             const rememberedEmail = localStorage.getItem('eos_signed_in_email');
             if (rememberedEmail) {
                 applySignedInUser(rememberedEmail);
@@ -7361,6 +7427,22 @@ Example:
                 return;
             }
             applySignedInUser(payload.email, payload.name);
+
+            // Piggyback a real Supabase session onto this SAME Google ID token
+            // (v3.56.0) - additive only, wrapped so any Supabase-side hiccup can
+            // never affect the sign-in path above, which is untouched. This is
+            // what lets a normal app-wide sign-in also cover the Marketing tab
+            // with no second prompt, without replacing GIS or redirecting the page.
+            const sb = mktGetSupabaseClient();
+            if (sb) {
+                sb.auth.signInWithIdToken({ provider: 'google', token: response.credential }).then(function(result) {
+                    if (!result || result.error) return;
+                    const mktPage = document.getElementById('marketing');
+                    if (mktPage && mktPage.classList.contains('active')) {
+                        mktCheckAccess().then(function(ok) { if (ok) mktRender(); });
+                    }
+                }).catch(function() { /* silent - GIS sign-in above already succeeded */ });
+            }
         }
 
         function showSignInGateError(msg) {
