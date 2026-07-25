@@ -3857,6 +3857,13 @@
                                 <option value="openai">OpenAI</option>
                             </select>
 
+                            <label style="font-size: 0.8rem;">Task AI <span style="font-weight:400; color: var(--gray-500);">(the AI button on a to-do, rock or Kanban card)</span></label>
+                            <select id="aiRouteTaskAssist">
+                                <option value="gemini">Gemini</option>
+                                <option value="claude">Claude</option>
+                                <option value="openai">OpenAI</option>
+                            </select>
+
                             <label style="font-size: 0.8rem;">Kanban AI Agent <span style="font-weight:400; color: var(--gray-500);">(coming soon)</span></label>
                             <select id="aiRouteKanban">
                                 <option value="gemini">Gemini</option>
@@ -3903,6 +3910,18 @@
                                 <div style="min-width:100px;">
                                     <label style="font-size:0.72rem;font-weight:600;color:var(--gray-500);display:block;">Titles</label>
                                     <input type="number" id="aiTokensTitles" min="100" step="50" style="width:100%; padding:6px; font-size:0.82rem;">
+                                </div>
+                                <div style="min-width:100px;">
+                                    <label style="font-size:0.72rem;font-weight:600;color:var(--gray-500);display:block;">Task steps</label>
+                                    <input type="number" id="aiTokensTaskSteps" min="100" step="50" style="width:100%; padding:6px; font-size:0.82rem;">
+                                </div>
+                                <div style="min-width:100px;">
+                                    <label style="font-size:0.72rem;font-weight:600;color:var(--gray-500);display:block;">Task deadline</label>
+                                    <input type="number" id="aiTokensTaskDeadline" min="100" step="50" style="width:100%; padding:6px; font-size:0.82rem;">
+                                </div>
+                                <div style="min-width:100px;">
+                                    <label style="font-size:0.72rem;font-weight:600;color:var(--gray-500);display:block;">Task email</label>
+                                    <input type="number" id="aiTokensTaskEmail" min="100" step="50" style="width:100%; padding:6px; font-size:0.82rem;">
                                 </div>
                             </div>
                         </div>
@@ -4209,6 +4228,36 @@
                 <button class="btn btn-secondary" id="meetingEmailCopyBtn" style="display:none;" onclick="copyMeetingEmailDraft()">Copy</button>
                 <button class="btn btn-primary" id="meetingEmailGmailBtn" style="display:none;">Open in Gmail</button>
                 <button class="btn btn-secondary" id="meetingEmailDoneBtn" style="display:none;" onclick="markMeetingEmailTaskDone()">Sent it &mdash; mark done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Per-task / per-card AI actions (v3.63.0). One menu, split by how long you wait
+         (EOS_MASTER_SUMMARY.md Sec 5.11b-5 decision 9). Shared by To-Dos, Rocks, the
+         Daily Plan surfaces and Kanban cards - the row hands it a resolved subject. -->
+    <div class="modal-overlay" id="taskAiModal">
+        <div class="modal" style="max-width: 540px;">
+            <div class="modal-header">
+                <h2>AI: help with this</h2>
+                <button onclick="closeModal('taskAiModal')" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray-500);">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="taskAiSubjectLine" style="padding:9px 11px;background:#f8fafc;border:1px solid var(--gray-200);border-radius:6px;margin-bottom:14px;"></div>
+
+                <div style="font-size:0.72rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--gray-500);margin-bottom:6px;">Answers now</div>
+                <div id="taskAiActions" style="display:flex;flex-direction:column;gap:6px;"></div>
+
+                <div style="margin-top:14px;padding:9px 11px;background:#f8fafc;border:1px solid var(--gray-200);border-radius:6px;">
+                    <div style="font-size:0.72rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--gray-500);margin-bottom:3px;">Runs in the background</div>
+                    <div style="font-size:0.78rem;color:var(--gray-500);line-height:1.45;">
+                        Research this &middot; hand it to an agent. <strong>Not built yet</strong> &mdash; both need the background-agent work, so they are named here rather than shown as buttons that would do nothing.
+                    </div>
+                </div>
+
+                <div id="taskAiResult" style="display:none;margin-top:14px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('taskAiModal')">Close</button>
             </div>
         </div>
     </div>
@@ -4604,9 +4653,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.62.1';
+        const EOS_VERSION = '3.63.0';
         const EOS_BUILD_DATE = '2026-07-25';
-        const EOS_BUILD_TIME = '16:20'; // v3.62.1: Two fixes from Hans live-testing v3.62.0 on his phone. (1) REAL BUG, and it predates this session - it shipped broken with the Marketing mobile view itself. .mkt-board is `display:flex` with `overflow-x:auto` (that IS the desktop board), but mktRenderMobile() sets board.innerHTML = pills + body, so the pill switcher and the single column became flex SIBLINGS laid out side by side in a horizontal scroller instead of stacking - which is why the column-name pills appeared squeezed and clipped at the left edge next to the column rather than sitting above it. Fixed with a .mkt-board-mobile class that flips the board to display:block/overflow-x:visible, toggled from mktRender() rather than a CSS media query so it can never drift from isNarrowViewport()'s own 640px threshold (the desktop board and the mobile renderer disagreeing about what "mobile" means is exactly how this class of bug comes back). Desktop board, drag-and-drop, mktCellDrop and the column manager are untouched. (2) Mobile now uses the full width of the phone. Section content used to start 42px in from the screen edge: 20px of that came from `body { padding: 20px }`, which was simply never overridden in any mobile media query, plus 10px .container and 12px .page. The white .page card now runs edge to edge (border-radius dropped - a rounded corner flush against the screen edge reads as a rendering mistake), while header/.tabs keep a small gutter so the year picker and the Save/Print/Settings buttons don't touch the bezel. Reclaims ~30px, a tenth of the screen at 375px. Verified: section content width 291px -> 321px, document.documentElement.scrollWidth still exactly 375 on all eight pages. No `.gs` change. // v3.62.0: Mobile build phase 1 - the three layout bugs measured on live v3.61.0 at 375x812 (EOS_MASTER_SUMMARY.md Sec 5.11b-5). (1) Weekly Meeting horizontal overflow, ONE root cause and it was never the sections: #ratingButtons is flex-wrap:nowrap with ten fixed 32px buttons (min-content 365px), and because .grid-2's children still carried the default min-width:auto, a grid track can never shrink below its item's min-content - so the "1fr" track resolved to 389px inside a 291px column, the document became 431px wide in a 375px viewport, and every section on the page was shoved 56px off-screen. Fix is both halves: `.grid-2 > * { min-width: 0 }` caps the track at its fair share, and .rating-buttons becomes a horizontal scroll-snap row (overflow-x:auto, scroll-snap-type:x proximity, justify-content:safe center so button 1 stays reachable past the scroll origin) so the ten buttons stay on one line and stop contributing to document scrollWidth. Touch targets go 32px -> 46px under (max-width:768px) OR (hover:none and pointer:coarse). Verified document.documentElement.scrollWidth === 375 at a 375px viewport, was 431. (2) Marketing toolbar: five buttons on flex-wrap:nowrap crushed to 71/67/66/53px with labels wrapping internally (46px vs 61px row heights), and a fifth (Manage Access) renders for admins which is where it tipped into real overflow. Now one primary action inline (+ New Blog) plus an overflow popover carrying + Social / Quote, Suggest Topics, Manage Columns and Manage Access - reusing the existing shared .task-action-wrap/.task-action-menu chrome (DOM-local open, outside-click close, viewport-aware flip) rather than inventing a second menu primitive. #mktManageAccessBtn keeps its id and its display:none/'' toggle contract, so mktCheckAccess() is untouched; each item calls closeOpenTaskMenu() first since a modal-opening action would otherwise leave the menu up behind it. This applies at every width, not just mobile - deliberate, matches the "the menu is the universal floor" rule locked for Kanban in Phase 3. (3) To-Dos control row, which was broken at 1280px too, not only on mobile: two 121x29px selects beside an "All Team Sync" button crushed to 51x53px with its label on three lines, and "+ Add To-Do" rendering as a 538px full-bleed bar. Owner filter is now a segmented control; every control shares one 38px baseline in a wrapping .todo-controls row; "+ Add" is an inline 38px button in that row instead of a full-width bar under the list. IMPORTANT: #todoOwnerFilter itself is still in the DOM (display:none) and is still the only place the filter value lives - renderTodoOwnerSegments() renders buttons FROM its options and setTodoOwnerFilter() writes back to select.value, so all six existing `getElementById('todoOwnerFilter').value` readers are completely unchanged; this is presentation only. The title keeps its own <h3> so updateSnoozedBadge()'s "N snoozed" pill still has somewhere to land. Explicit min-height on .todo-ctl/.seg-btn/.rating-btn is load-bearing - the existing `@media (hover:none) and (pointer:coarse) { button { min-height:44px } }` rule would otherwise silently break the 38px baseline on exactly the device this is meant to fix. Out of scope this session and NOT touched: the drawer, bottom nav, swipe gestures, the per-task AI button, dark mode (all phase 2, and the shared AI-call helper has to land first). No `.gs` change. // v3.61.0: Full lockout, Hans's explicit call after live-testing surfaced that the 2FA gate (v3.60.0-3) only ever covered the app's VISUAL reveal and Marketing's Supabase-backed data - it never touched (a) local data, which has always rendered from localStorage regardless of any sign-in state, by design, since before any auth system existed in this app, or (b) background Google Tasks sync, which runs on a per-device secret (webAppSecret) entirely independent of the current session's Google/Supabase/2FA status. New #appBootGate: an OPAQUE (not the usual translucent) full-viewport overlay, active BY DEFAULT in the raw HTML (zero JS dependency, so there is no flash of real content between first paint and the sign-in/2FA sequence resolving), z-index 9990 - below the actual interactive gates (9997-9999) so their real UI renders normally on top of it, but above everything else, so nothing behind them is visible while they're up. New appRevealApp() is the single point that hides it and - this is the other half of the fix - ALSO now kicks off initAutoSync()/loadTeamSettingsFromCloud()/pullKanbanFromCloud() for the first time, moved out of the DOMContentLoaded handler where they previously fired unconditionally regardless of auth state. Called from every "user should see the app now" branch: applySignedInUser()'s success path (covers the large majority of cases transitively - fresh sign-in, returning session, MFA-satisfied completion via appPendingSignIn), skipGoogleSignIn(), the already-skipped-this-session fast path, checkAppWideSupabaseSession()'s non-team-member branch, and initGoogleSignIn()'s immediate return when Google Sign-In isn't configured at all (so local-only deployments are completely unaffected). Deliberately did NOT touch the internal logic of any of the four sync functions themselves (manualSync/syncAllTeam/pullTasksFromGoogle/autoPullFromGoogleTasks) or their text-match dedup - only WHEN their bootstrap first fires. No `.gs` change. // v3.60.3: Two more real gate-dismissal bugs, both caught by Hans live-testing v3.60.2 within minutes of it going live. (1) Clicking the dimmed backdrop OUTSIDE the "Two-factor authentication required" box silently closed it - a generic app-wide handler (~line 17346) closes ANY .modal-overlay on a backdrop click, built for ordinary dismissible modals (Settings, Manage Access, etc); #appMfaGate was never excluded from it despite being the one truly mandatory, non-skippable gate in the app (unlike #googleSignInGate/#mktAuthGate, which both have an intentional "Skip for now" equivalent - required 2FA has no such escape hatch by design). Fixed: #appMfaGate is now explicitly excluded from that handler. (2) Once dismissed, Hans landed back on the "Sign in to continue" Google screen instead of a re-locked app - because handleGoogleSignInResponse()'s MFA-required branch showed #appMfaGate ON TOP of #googleSignInGate without ever actually hiding the one underneath (only applySignedInUser() does that, and it's deliberately deferred in this branch). Fixed: that branch now explicitly hides #googleSignInGate the same way checkAppWideSupabaseSession()'s already did. Verified both fixes directly: activated the gate, confirmed a backdrop click leaves it active and #googleSignInGate stays hidden, and confirmed document.elementFromPoint() over a "visible" button behind the dimmed overlay returns the overlay div itself, not the button - clicks were never passing through, only the gate's dismissibility was the actual hole. No `.gs` change. // v3.60.2: Fix a real hole in v3.60.0's app-wide 2FA gate, caught by Hans deliberately testing it (turned "Require for everyone" on, fully signed out, signed back in, could still click behind the 2FA prompt and use the whole app). Root cause: a FULL sign-out clears the Supabase session entirely, so the next sign-in is a FRESH one through handleGoogleSignInResponse() - a different code path than the "returning session" one (checkAppWideSupabaseSession, already fixed once this session in v3.60.1's build). handleGoogleSignInResponse() called applySignedInUser() (which reveals the whole app - removes the sign-in gate) IMMEDIATELY, and only re-locked behind #appMfaGate after an async Supabase round-trip completed - not a brief flash, a real window where a fresh sign-in walked straight past the requirement. Fix: applySignedInUser() is now DEFERRED in both app-wide sign-in paths until the MFA check resolves - new appPendingSignIn holds the identity while #appMfaGate is shown, and appEnforceMfaGate()'s "satisfied" branch is what actually calls applySignedInUser(), the ONLY place the app is revealed. Every failure branch (Supabase not configured, piggyback error, no profile, thrown exception) still falls back to applySignedInUser() directly, preserving v3.56.0's original guarantee that a Supabase hiccup can't block basic sign-in - new try/catch in mktGetMfaStatus() itself fails open (not-required) on any infrastructure error for the same reason. Real UX tradeoff, stated plainly: a fresh sign-in with 2FA required now takes a beat longer to reveal the app (waiting on the actual network round-trip) instead of revealing instantly - this is the correct, standard 2FA behavior Hans described from other sites, not a regression. Also this session: removed the redundant Marketing-toolbar "🔒 Security" button (confusing - implied 2FA was Marketing-scoped) now that the header 🔒 link covers everyone app-wide; fixed stale "Marketing board" copy in the owner-toggle description to say "everyone who signs into this app." No `.gs` change. // v3.60.1: Fix a real dead-end, caught by Hans live-testing v3.60.0. "Verified" is per-SESSION, not permanent - a factor stays enrolled across sign-outs, but each fresh session starts unverified (aal1) again until it completes a challenge. Hans enrolled, signed out, signed back in (correctly not prompted - 2FA still wasn't required), then tried to flip "Require for everyone" on and got stuck on "set up and verify your own two-factor authentication first" despite having already enrolled - because the ONLY step-up-challenge UI that existed was the one shown after the requirement was already on, a chicken-and-egg problem for the very first owner trying to turn it on. Fix: mktRenderSecurityPanel() now checks the current session's AAL whenever a factor exists; if the session hasn't verified yet, a new "Verify this session" inline code prompt appears right in the Security panel (new mktMfaVerifySessionPanel + mktMfaVerifySession(), same challengeAndVerify call the forced-challenge screens already use) so an owner can voluntarily step up on demand instead of only reactively. No `.gs` change. // v3.60.0 (+ .gs v3.46.0): 2FA extended app-wide (Hans's call, correctly - since the v3.45.0 security fix + v3.56.0 sign-in unification, the same Supabase session already gates ALL cloud sync, not just Marketing, so a Marketing-only 2FA gate left a real hole: someone could satisfy 2FA to get into Marketing while Rocks/Kanban/To-Dos sign-in never checked it at all). New #appMfaGate full-screen overlay (mirrors #googleSignInGate's styling/z-index) sits ON TOP of the existing sign-in success path - applySignedInUser()/GIS/domain-check are completely untouched, this only adds a re-lockable layer after a normal sign-in completes. New appEnforceMfaGate() (shares mktGetMfaStatus() with the existing Marketing gate - one source of truth) is called from both app-wide sign-in entry points: checkAppWideSupabaseSession() (returning session) and handleGoogleSignInResponse()'s Supabase piggyback callback (fresh sign-in), both of which now also populate mktSupabaseProfile so the shared status check has what it needs. New header 🔒 link (next to the signed-in badge, visible app-wide via new showHeaderSecurityLink()) opens the same Security panel Marketing's toolbar button does - one enrollment, works everywhere, since it's the same Supabase session either way. Server-side backstop: .gs requireTeamMemberFromToken_ - the single choke point getFullTeamSettings/saveTeamSettings/getSharedEOSData/saveSharedEOSData already share - now also calls new checkMfaSatisfied_(token), decoding the already-verified JWT's own `aal` claim and checking it against the firm's mfa_required (queried via Supabase's REST API, RLS-scoped). Closes the gap the client-side gate can't reach alone: a direct API call bypassing the UI. Fails OPEN on infrastructure errors (this is a policy overlay on an already-authenticated request, defaulting off firm-wide - a Supabase blip shouldn't take down sync for a firm that never turned 2FA on) but fails CLOSED whenever it has enough information to know the requirement is violated. **Requires the .gs v3.46.0 deployment** (paste + clasp deploy under the existing deployment id) for the server-side half to take effect; the client-side gate works standalone in the meantime. schema.sql re-run bug also found+fixed this session: none of the file's original 14 create policy statements were actually safe to re-run (Postgres has no CREATE POLICY IF NOT EXISTS) - a re-run failed on "policy already exists" and, since the SQL Editor runs the whole paste as one transaction, silently rolled back everything after the error point too. Every create policy is now preceded by drop policy if exists. // v3.59.0: Two-factor authentication (EOS_MASTER_SUMMARY.md Sec 5.15, decided-not-built until now). Uses Supabase Auth's built-in TOTP MFA directly via the supabase-js client already in place for Marketing/RBAC - no new backend, works with any standard authenticator app (Google Authenticator, Symantec VIP Access, etc, since they're all RFC 6238 TOTP under the hood). New "🔒 Security" toolbar button (any signed-in Supabase user, shown alongside Manage Access) opens a personal panel to enroll (QR code + manual key + 6-digit verify, sb.auth.mfa.enroll + challengeAndVerify) or remove (sb.auth.mfa.unenroll) their own authenticator - available to Hans, Amanda, and any future Marketing grantee like Trevor. Optional by default (firms.mfa_required defaults to false). New owner-only toggle in the same panel ("Require two-factor authentication for everyone") persists firms.mfa_required - guarded so an owner can't enable it before their OWN factor is verified this session (would lock the firm out). Enforcement: new mktEnforceMfaGate(), called from both success paths inside mktCheckAccess() (mirrors the existing owner/access_grants gate pattern), checks the signed-in session's Authenticator Assurance Level (sb.auth.mfa.getAuthenticatorAssuranceLevel()) against firms.mfa_required - aal2 already satisfied lets the board render as before; a verified factor that just needs this session to step up shows an inline 6-digit challenge; no factor at all shows a "set this up to continue" prompt linking to the Security panel. Both render into #mktBoard, same pattern as the existing "you don't have access yet" message. schema.sql gained firms.mfa_required, a firms owner-write policy (previously firms had no write policy at all), and a new mfa_ok() security-definer helper ANDed onto marketing_cards/marketing_columns' write policies for defense-in-depth (a direct API call can't bypass the app-level gate) - provably a no-op today since mfa_required defaults false, so mfa_ok() always returns true until an owner deliberately flips the switch. Scoped to the Marketing/Supabase auth boundary only, same as the rest of Sec 5.3 - the app-wide Google Sign-In (Rocks/Kanban/To-Dos) is completely untouched. No `.gs` change. Requires re-running schema.sql (idempotent) in the Supabase SQL Editor. // v3.58.1: Fix a real sign-out bug, caught by Hans live-testing v3.57.0 (clicking the "signed in as..." badge cleared it, then it immediately reappeared). Since v3.56.0 unified Google sign-in with a piggybacked Supabase session, signOutGoogle() only ever cleared the app's own eos_signed_in_email flag, not the Supabase session itself - on reload, checkAppWideSupabaseSession() runs FIRST (before eos_signed_in_email is even read), found the still-live Supabase session, matched the email to the team roster, and signed back in immediately. Fix: signOutGoogle() now also calls the Supabase client's own sb.auth.signOut() before reloading, wrapped in try/catch so a network hiccup can't block the local sign-out from completing. No `.gs` change. // v3.58.0: Marketing data migration (EOS_MASTER_SUMMARY.md Sec 5.3, the last outstanding piece). mktSave()/mktLoad() and their ~60 call sites are UNCHANGED - localStorage stays the instant, synchronous read/write path, zero behavior change. Instead mktSave() now also kicks off a debounced (800ms) background push (new mktPushToCloud(), via mktScheduleCloudPush()) that upserts the full local cards+columns arrays to the real marketing_cards/marketing_columns Supabase tables (schema.sql, RLS-enforced) and deletes any cloud rows for things removed locally. Pull happens once per Marketing-tab-open (all four mktCheckAccess().then(...) call sites now also call new mktPullFromCloud()), mirroring pullKanbanFromCloud's cadence rather than a new periodic timer - merges cloud into local by per-card last-write-wins (card.updated), skips re-rendering while the card modal is open so it can't disrupt active typing. New mktCardToRow/mktRowToCard/mktColumnToRow/mktRowToColumn mappers translate the existing camelCase card/column shape to/from the schema's snake_case columns; schema.sql gained three additive columns (wordpress_post_id/wordpress_edit_url/wordpress_sent_at) it was missing. Both signed-in team members and any future access_grants holder (Trevor) now see the same real board - this is what makes Marketing actually shared instead of per-device. Falls back to local-only silently (console log, no user-facing error) if not signed in or Supabase isn't configured, same graceful-degradation tradeoff as the rest of the app. No `.gs` change. // v3.57.0: SECURITY FIX (pairs with .gs v3.45.0) - closes a real unauthenticated read/write hole. getTeamSettings/saveTeamSettings/getSharedEOSData/saveSharedEOSData used to be reachable by anyone with the Web App URL (public in config.js on GitHub Pages regardless of repo visibility) with ZERO authentication - readable secrets included every team member's webAppSecret (the same value used to authenticate every OTHER action in the app) and the raw Gemini/Claude/OpenAI API keys; writable meant an anonymous POST could overwrite team settings or the shared Kanban/Rocks data outright. Fix: loadTeamSettingsFromCloud() now splits into the still-public, now-TRIMMED getTeamSettings call ({initials,name,email} only - still needed pre-sign-in for the "who am I" dropdown/Google-Sign-In matching) plus a new getFullTeamSettings call gated behind the current Supabase access token (new getCurrentSupabaseToken() helper); saveTeamSettingsToCloud()/pushKanbanToCloud()/pullKanbanFromCloud() all now attach that same token and fail gracefully (new 'partial' cloud-sync-status badge) rather than erroring when there's no session yet. REAL TRADEOFF: all cloud sync now requires having signed in with Google at least once on that device - "Skip for now" becomes genuine local-only mode instead of sync-with-zero-auth. Also re-runs loadTeamSettingsFromCloud() right after the v3.56.0 sign-in piggyback resolves, so a fresh sign-in upgrades sync from 'partial' to fully synced within that same load instead of waiting for the next scheduled cycle. Server-side verification (Apps Script calling Supabase's own /auth/v1/user endpoint, cached, fails closed) already tested directly against the live deployment before this client change - see EOS_MASTER_SUMMARY.md for the full writeup and the discovery story (found while evaluating whether paying for private-repo GitHub Pages was worth it - it wasn't the real protection either way). // v3.56.0: One sign-in covers the whole app, including Marketing - no more separate prompt. handleGoogleSignInResponse() now piggybacks a real Supabase session onto the SAME Google ID token GIS already produces (sb.auth.signInWithIdToken) right after the existing hd-domain check passes - additive, wrapped in try/catch, the tested GIS/applySignedInUser path is completely untouched. New checkAppWideSupabaseSession(), called first thing in initGoogleSignIn() (before the old rememberedEmail fast path): if a Supabase session already exists on this device (from here or from an earlier Marketing sign-in), honor it instead of re-running GIS - a team-member email gets the full app-wide identity via the existing applySignedInUser(); a signed-in profile that ISN'T a team member (e.g. Trevor) gets no app-wide identity, just a decluttered tab bar (new mktHideNonAccessibleTabs(), Marketing-only, explicitly COSMETIC not a security boundary - Settings, direct showPage() calls, and the public Sheets data are all untouched by this and still need their own real RBAC project if that's ever wanted). Also fixes a dual-modal bug: #googleSignInGate and #mktAuthGate were independent, non-exclusive .active toggles, so signing in via one could leave the other stuck showing a stale "please sign in" gate - both new sign-in paths now re-run mktCheckAccess() if Marketing is the active page. Explicitly did NOT touch isCurrentUserAdmin() (still the dropdown + teamMembers[].isAdmin, unrelated to this) or replace GIS with a redirect-based flow (considered and rejected - a full-page OAuth redirect would drop any in-progress edit, unlike today's in-page button). No `.gs` change. // v3.55.1: Fix a startup crash that broke showPage() on any load where the default-tab setting fell back to its default. The setting has always stored "weeklyMeeting" but the actual page element's id has always been "meeting" - showPage() crashed calling classList on a null element, silently aborting the rest of the startup sequence (including the new v3.55.0 post-sign-in return-to-Marketing-tab logic, which is what surfaced this - Hans landed back on the default tab instead of Marketing after signing in). Fixed at the point of failure: showPage() now translates the legacy alias and guards against a missing target instead of assuming pageId always matches a real element. Also hardened the event.target.classList.add('active') line below it - window.event isn't always a real click when showPage() is called programmatically (startup, mktHandleAuthReturn's fallback), and a non-Element event target (e.g. document) has no classList either. No `.gs` change. // v3.55.0: Marketing tab access control (EOS_MASTER_SUMMARY.md Sec 5.3), first real use of the new Supabase backend. New sign-in gate (#mktAuthGate) scoped ONLY to the Marketing tab - Google OAuth or magic-link email via Supabase Auth (mktSignInWithGoogle/mktSendMagicLink/mktCheckAccess) - checked every time the tab opens (showPage's marketing branch). The rest of the app (Rocks, Kanban, To-Dos, Weekly Meeting, the existing app-wide Google Sign-In / isCurrentUserAdmin) is completely untouched - deliberately NOT a full-app auth swap, to avoid any risk to the daily-driver sign-in Hans and Amanda already depend on. New "Manage Access" panel (owners only, gated on the real Supabase profiles.is_owner - not the client-side isAdmin flag) lets an owner grant/revoke view or edit per non-owner user, plus an email-invite flow. config.js gains supabaseUrl/supabaseAnonKey (anon key is a publishable key by design - RLS in the database is the real boundary, not key secrecy). Requires the schema.sql migration (six tables + RLS policies) to have been run in the Supabase project, and the Google OAuth provider configured there - both one-time setup, done this session. NOTE: card/column DATA still lives in localStorage as of this version - this ships the access GATE only; the data migration onto the new marketing_columns/marketing_cards tables is separate, later work, so a non-owner granted access today sees an empty board until that lands. No `.gs` change. // v3.54.0: Marketing Pipeline board now works like Kanban. Cards are draggable between columns (mktCardDragStart/mktCellDrop, mirrors kanbanCardDragStart/kanbanCellDrop). New "Manage Columns" button opens a drag-to-reorder/rename/add/delete panel (mktData.columns, seeded from the old hardcoded MKT_COLUMNS on first load via mktEnsureColumns). Ideas/My Review/With Trevor are protected from deletion (renaming is fine) because mktDraftBlog/mktSendToWordPress/mktPackageToTrevor auto-move cards to those column ids by id, not by name. Deleting a non-protected column moves its cards to Ideas rather than deleting them (deliberately different from Kanban's column-delete, since a Marketing card can be a finished blog draft). Columns are shared across both companies' boards, same as before; still localStorage-only/per-device, same limitation cards already had. index.html-only, no `.gs` change. // v3.53.0: Blog Draft no longer requires a title first (drafts from Take + Angle; title still generated in Step 6). New opts.withMeta on callAIText (additive - existing callers unaffected) reports a finish-reason truncation across Claude/Gemini/OpenAI. New per-task AI token budgets in Settings > AI Tools > AI Output Length (brainstorm/topics/angles/draft/tighten/social/titles), wired through getTaskTokens() at every marketing call site; Blog Draft and Tighten use withMeta to auto-retry once at 1.5x budget on a truncated result, keeping the longer output and toasting if it's still cut off. New debounced (800ms) autosave scoped to the open marketing card modal, separate from the global autoSave's .modal exclusion. Requires .gs v3.44.0 for the Firm Context Drive-folder recursion (subfolders to depth 5, new "Market Commentary Archives" reserved tier). // v3.52.2: Brainstorm->Angles guided funnel. Step 1 now parses the 6 topics into SELECTABLE rows (Use it now / Park / Kill / -> Backlog) instead of an inert text blob; parked topics can spin into their own Backlog card. New Step 2 "AI: Angles" button proposes ~4 angles for the CHOSEN topic as pickable chips that fill card.aiAngle (consumed by Step 4 draft). Brainstorm prompt rebalanced: RSS headlines weighted UP, newest firm-voice sample DOWN, so suggestions track current client-mind signal instead of echoing the last post. New card fields brainstormTopics[]/chosenTopic (additive; legacy blob cards lazily parsed on open). All existing field ids preserved. No .gs change. // v3.52.1: Fix Brainstorm truncation - maxTokens on the AI: Brainstorm call raised 900 -> 2000 so all six topics return in full (was cutting off partway through Topic 1 on Claude, at Topic 5 on Gemini). One-line change, no .gs change, no backend redeploy. // v3.52.0: Marketing card modal rebuilt as a guided 9-step stepper (Brainstorm, Angles, My Take, Blog Draft, Finalize/Tighten, Title, Social, Quotes, Package & Send). New AI actions: Brainstorm (RSS-fed topic ideas via Apps Script), Tighten (editorial pass), split Social/Quotes, and Package to Trevor (emails social+quote+WP link via the existing editor-email path). All existing field ids preserved. Requires .gs v3.43.0 (adds brainstormFeeds + notifyTrevorPackage - paste it in and redeploy). // prior: v3.51.0 mobile task-detail + Kanban fixes. (1) Fixed the ⋯ menu floating on top of Kanban Card Details when you tap Notes (the menu now closes when the card opens). (2) New To-Do Detail modal - tap the (i) on a To-Do to edit due date, owner (reassign), Google Task list (move), and notes in one place, like Google Tasks; on mobile the row hides those controls so it stays clean and full-width, checkbox on the far left. (3) Kanban Card Details: Owner is now a reassign dropdown and Column is labeled as the move control (both already fired the proper WIP/history move on Save; now they are obvious). (4) Weekly Meeting agenda wraps instead of overflowing on mobile. No .gs change.
+        const EOS_BUILD_TIME = '18:05'; // v3.63.0: The shared AI-call helper (EOS_MASTER_SUMMARY.md Sec 5.11c item 3) plus the two reserved AI stubs wired to real calls. THE HELPER: new callAI(featureKey, prompt, opts) is now the single entry point for every AI call in the app - it resolves getAIProviderConfig() itself, handles "no API key saved for that provider" in ONE place with ONE wording pointing at Settings > AI Tools, and routes through callAIWithBudgetRetry so token budgets and the truncation retry behave identically everywhere. It returns text and throws an Error carrying .aiCode ('no-api-key' vs 'call-failed') so a caller can tell a missing key from a network failure without string-matching a message. Three small companions: requireAI(featureKey, label) is the early guard for sites with real setup work (a firm-context fetch, a disabled button) that must not run before discovering there is no key - it is the SAME message, just earlier; and aiIsConfigured(featureKey) is the silent predicate for the two places where AI is genuinely optional and the flow degrades to a manual prompt (WordPress category picker, mktGenerateTitles). The one call site that still holds a getAIProviderConfig() result is parseNotesWithAI, and only to name the provider in its status line - the call itself goes through callAI and never sees the key or the model. callAIWithBudgetRetry gained two additive knobs (baseOpts.maxTokens wins over the configured budget; baseOpts.noRetry skips the 1.5x retry) which is what lets EVERY call site go through one function without any of them changing what they send. THE MIGRATION: all 12 routed call sites moved onto it - mktRunResearch, mktDraftBlog, mktSuggestTitles, mktBrainstorm, mktSuggestAngles, mktTightenBlog, mktSuggestSocial, mktSuggestQuotes, mktPickWordPressCategory, mktGenerateTitles, generateMeetingEmail, parseNotesWithAI. Behaviour is deliberately identical: same prompts, same temperatures, same token budgets, same which-two-sites-retry-on-truncation (Blog Draft and Tighten, nothing else), same toasts. The ONE intentional behaviour change is parseNotesWithAI's missing-key alert, which had its own bespoke wording and now shares the standard one - that consolidation is the point of the exercise. NOT migrated, deliberately: the three Settings "Test connection" buttons (they exist to test one specific provider's key as typed, so routing would defeat them), getAISuggestions in the IDS modal (its provider comes from a visible dropdown the user picks, not from routing, and it falls back to generateLocalSuggestions when there is no key), and extractTasksWithAI (hardcoded to Gemini - and it turns out to be dead code, declared and never called; left alone, flagged for the Phase 4 cleanup). THE TWO STUBS: aiAssistTaskById and kanbanAiAssistByCard both used to toast "coming in a later update" and now open a real AI menu, built exactly to the shape locked in Sec 5.11b-5 decision 9 - one AI icon promoted INTO the row (before the ⋯, matching the locked row atom star/AI/⋯) opening a menu split by how long you wait. Only the "answers now" group is built: break it into steps, suggest a deadline, draft an email about this. The "runs in the background" group (research this, hand to an agent) is NAMED in the modal rather than shown as buttons that would do nothing, because it needs the agent work first. The ⋯ menu keeps an AI entry either way, so the Phase 1 "everything is reachable from the menu" floor still holds - on Kanban that is actually new, since the AI entry used to be promoted on desktop and absent from ⋯ entirely. Tasks and cards share the whole surface through one resolved SUBJECT object, the same adapter-at-the-seam trick kanbanCardToTaskView already uses, so the two id namespaces still never meet. Applying a result goes through the existing mutation paths on purpose: a suggested deadline is written via updateTaskById (so a to-do still fires its Google-sync side effects) and AI-suggested steps are added via addSubtask, which gained an optional second argument presetText that skips the prompt and suppresses its own toast so a batch add toasts once - every existing one-argument caller is untouched. Steps re-resolve the task by id between adds because addSubtask re-sorts and re-renders the list, which would otherwise stale a captured index. Deliberately NOT built: "summarise the source email", the fourth item in decision 9's answers-now list - it has to READ the linked email and Gmail read access is on hold, and a button that can only see the subject line is a worse answer than no button. New Settings: a "Task AI" provider route (defaults to Gemini) and three token budgets (Task steps 600, Task deadline 300, Task email 800), all in the existing Settings > AI Tools blocks. No `.gs` change, no backend redeploy. // v3.62.1: Two fixes from Hans live-testing v3.62.0 on his phone. (1) REAL BUG, and it predates this session - it shipped broken with the Marketing mobile view itself. .mkt-board is `display:flex` with `overflow-x:auto` (that IS the desktop board), but mktRenderMobile() sets board.innerHTML = pills + body, so the pill switcher and the single column became flex SIBLINGS laid out side by side in a horizontal scroller instead of stacking - which is why the column-name pills appeared squeezed and clipped at the left edge next to the column rather than sitting above it. Fixed with a .mkt-board-mobile class that flips the board to display:block/overflow-x:visible, toggled from mktRender() rather than a CSS media query so it can never drift from isNarrowViewport()'s own 640px threshold (the desktop board and the mobile renderer disagreeing about what "mobile" means is exactly how this class of bug comes back). Desktop board, drag-and-drop, mktCellDrop and the column manager are untouched. (2) Mobile now uses the full width of the phone. Section content used to start 42px in from the screen edge: 20px of that came from `body { padding: 20px }`, which was simply never overridden in any mobile media query, plus 10px .container and 12px .page. The white .page card now runs edge to edge (border-radius dropped - a rounded corner flush against the screen edge reads as a rendering mistake), while header/.tabs keep a small gutter so the year picker and the Save/Print/Settings buttons don't touch the bezel. Reclaims ~30px, a tenth of the screen at 375px. Verified: section content width 291px -> 321px, document.documentElement.scrollWidth still exactly 375 on all eight pages. No `.gs` change. // v3.62.0: Mobile build phase 1 - the three layout bugs measured on live v3.61.0 at 375x812 (EOS_MASTER_SUMMARY.md Sec 5.11b-5). (1) Weekly Meeting horizontal overflow, ONE root cause and it was never the sections: #ratingButtons is flex-wrap:nowrap with ten fixed 32px buttons (min-content 365px), and because .grid-2's children still carried the default min-width:auto, a grid track can never shrink below its item's min-content - so the "1fr" track resolved to 389px inside a 291px column, the document became 431px wide in a 375px viewport, and every section on the page was shoved 56px off-screen. Fix is both halves: `.grid-2 > * { min-width: 0 }` caps the track at its fair share, and .rating-buttons becomes a horizontal scroll-snap row (overflow-x:auto, scroll-snap-type:x proximity, justify-content:safe center so button 1 stays reachable past the scroll origin) so the ten buttons stay on one line and stop contributing to document scrollWidth. Touch targets go 32px -> 46px under (max-width:768px) OR (hover:none and pointer:coarse). Verified document.documentElement.scrollWidth === 375 at a 375px viewport, was 431. (2) Marketing toolbar: five buttons on flex-wrap:nowrap crushed to 71/67/66/53px with labels wrapping internally (46px vs 61px row heights), and a fifth (Manage Access) renders for admins which is where it tipped into real overflow. Now one primary action inline (+ New Blog) plus an overflow popover carrying + Social / Quote, Suggest Topics, Manage Columns and Manage Access - reusing the existing shared .task-action-wrap/.task-action-menu chrome (DOM-local open, outside-click close, viewport-aware flip) rather than inventing a second menu primitive. #mktManageAccessBtn keeps its id and its display:none/'' toggle contract, so mktCheckAccess() is untouched; each item calls closeOpenTaskMenu() first since a modal-opening action would otherwise leave the menu up behind it. This applies at every width, not just mobile - deliberate, matches the "the menu is the universal floor" rule locked for Kanban in Phase 3. (3) To-Dos control row, which was broken at 1280px too, not only on mobile: two 121x29px selects beside an "All Team Sync" button crushed to 51x53px with its label on three lines, and "+ Add To-Do" rendering as a 538px full-bleed bar. Owner filter is now a segmented control; every control shares one 38px baseline in a wrapping .todo-controls row; "+ Add" is an inline 38px button in that row instead of a full-width bar under the list. IMPORTANT: #todoOwnerFilter itself is still in the DOM (display:none) and is still the only place the filter value lives - renderTodoOwnerSegments() renders buttons FROM its options and setTodoOwnerFilter() writes back to select.value, so all six existing `getElementById('todoOwnerFilter').value` readers are completely unchanged; this is presentation only. The title keeps its own <h3> so updateSnoozedBadge()'s "N snoozed" pill still has somewhere to land. Explicit min-height on .todo-ctl/.seg-btn/.rating-btn is load-bearing - the existing `@media (hover:none) and (pointer:coarse) { button { min-height:44px } }` rule would otherwise silently break the 38px baseline on exactly the device this is meant to fix. Out of scope this session and NOT touched: the drawer, bottom nav, swipe gestures, the per-task AI button, dark mode (all phase 2, and the shared AI-call helper has to land first). No `.gs` change. // v3.61.0: Full lockout, Hans's explicit call after live-testing surfaced that the 2FA gate (v3.60.0-3) only ever covered the app's VISUAL reveal and Marketing's Supabase-backed data - it never touched (a) local data, which has always rendered from localStorage regardless of any sign-in state, by design, since before any auth system existed in this app, or (b) background Google Tasks sync, which runs on a per-device secret (webAppSecret) entirely independent of the current session's Google/Supabase/2FA status. New #appBootGate: an OPAQUE (not the usual translucent) full-viewport overlay, active BY DEFAULT in the raw HTML (zero JS dependency, so there is no flash of real content between first paint and the sign-in/2FA sequence resolving), z-index 9990 - below the actual interactive gates (9997-9999) so their real UI renders normally on top of it, but above everything else, so nothing behind them is visible while they're up. New appRevealApp() is the single point that hides it and - this is the other half of the fix - ALSO now kicks off initAutoSync()/loadTeamSettingsFromCloud()/pullKanbanFromCloud() for the first time, moved out of the DOMContentLoaded handler where they previously fired unconditionally regardless of auth state. Called from every "user should see the app now" branch: applySignedInUser()'s success path (covers the large majority of cases transitively - fresh sign-in, returning session, MFA-satisfied completion via appPendingSignIn), skipGoogleSignIn(), the already-skipped-this-session fast path, checkAppWideSupabaseSession()'s non-team-member branch, and initGoogleSignIn()'s immediate return when Google Sign-In isn't configured at all (so local-only deployments are completely unaffected). Deliberately did NOT touch the internal logic of any of the four sync functions themselves (manualSync/syncAllTeam/pullTasksFromGoogle/autoPullFromGoogleTasks) or their text-match dedup - only WHEN their bootstrap first fires. No `.gs` change. // v3.60.3: Two more real gate-dismissal bugs, both caught by Hans live-testing v3.60.2 within minutes of it going live. (1) Clicking the dimmed backdrop OUTSIDE the "Two-factor authentication required" box silently closed it - a generic app-wide handler (~line 17346) closes ANY .modal-overlay on a backdrop click, built for ordinary dismissible modals (Settings, Manage Access, etc); #appMfaGate was never excluded from it despite being the one truly mandatory, non-skippable gate in the app (unlike #googleSignInGate/#mktAuthGate, which both have an intentional "Skip for now" equivalent - required 2FA has no such escape hatch by design). Fixed: #appMfaGate is now explicitly excluded from that handler. (2) Once dismissed, Hans landed back on the "Sign in to continue" Google screen instead of a re-locked app - because handleGoogleSignInResponse()'s MFA-required branch showed #appMfaGate ON TOP of #googleSignInGate without ever actually hiding the one underneath (only applySignedInUser() does that, and it's deliberately deferred in this branch). Fixed: that branch now explicitly hides #googleSignInGate the same way checkAppWideSupabaseSession()'s already did. Verified both fixes directly: activated the gate, confirmed a backdrop click leaves it active and #googleSignInGate stays hidden, and confirmed document.elementFromPoint() over a "visible" button behind the dimmed overlay returns the overlay div itself, not the button - clicks were never passing through, only the gate's dismissibility was the actual hole. No `.gs` change. // v3.60.2: Fix a real hole in v3.60.0's app-wide 2FA gate, caught by Hans deliberately testing it (turned "Require for everyone" on, fully signed out, signed back in, could still click behind the 2FA prompt and use the whole app). Root cause: a FULL sign-out clears the Supabase session entirely, so the next sign-in is a FRESH one through handleGoogleSignInResponse() - a different code path than the "returning session" one (checkAppWideSupabaseSession, already fixed once this session in v3.60.1's build). handleGoogleSignInResponse() called applySignedInUser() (which reveals the whole app - removes the sign-in gate) IMMEDIATELY, and only re-locked behind #appMfaGate after an async Supabase round-trip completed - not a brief flash, a real window where a fresh sign-in walked straight past the requirement. Fix: applySignedInUser() is now DEFERRED in both app-wide sign-in paths until the MFA check resolves - new appPendingSignIn holds the identity while #appMfaGate is shown, and appEnforceMfaGate()'s "satisfied" branch is what actually calls applySignedInUser(), the ONLY place the app is revealed. Every failure branch (Supabase not configured, piggyback error, no profile, thrown exception) still falls back to applySignedInUser() directly, preserving v3.56.0's original guarantee that a Supabase hiccup can't block basic sign-in - new try/catch in mktGetMfaStatus() itself fails open (not-required) on any infrastructure error for the same reason. Real UX tradeoff, stated plainly: a fresh sign-in with 2FA required now takes a beat longer to reveal the app (waiting on the actual network round-trip) instead of revealing instantly - this is the correct, standard 2FA behavior Hans described from other sites, not a regression. Also this session: removed the redundant Marketing-toolbar "🔒 Security" button (confusing - implied 2FA was Marketing-scoped) now that the header 🔒 link covers everyone app-wide; fixed stale "Marketing board" copy in the owner-toggle description to say "everyone who signs into this app." No `.gs` change. // v3.60.1: Fix a real dead-end, caught by Hans live-testing v3.60.0. "Verified" is per-SESSION, not permanent - a factor stays enrolled across sign-outs, but each fresh session starts unverified (aal1) again until it completes a challenge. Hans enrolled, signed out, signed back in (correctly not prompted - 2FA still wasn't required), then tried to flip "Require for everyone" on and got stuck on "set up and verify your own two-factor authentication first" despite having already enrolled - because the ONLY step-up-challenge UI that existed was the one shown after the requirement was already on, a chicken-and-egg problem for the very first owner trying to turn it on. Fix: mktRenderSecurityPanel() now checks the current session's AAL whenever a factor exists; if the session hasn't verified yet, a new "Verify this session" inline code prompt appears right in the Security panel (new mktMfaVerifySessionPanel + mktMfaVerifySession(), same challengeAndVerify call the forced-challenge screens already use) so an owner can voluntarily step up on demand instead of only reactively. No `.gs` change. // v3.60.0 (+ .gs v3.46.0): 2FA extended app-wide (Hans's call, correctly - since the v3.45.0 security fix + v3.56.0 sign-in unification, the same Supabase session already gates ALL cloud sync, not just Marketing, so a Marketing-only 2FA gate left a real hole: someone could satisfy 2FA to get into Marketing while Rocks/Kanban/To-Dos sign-in never checked it at all). New #appMfaGate full-screen overlay (mirrors #googleSignInGate's styling/z-index) sits ON TOP of the existing sign-in success path - applySignedInUser()/GIS/domain-check are completely untouched, this only adds a re-lockable layer after a normal sign-in completes. New appEnforceMfaGate() (shares mktGetMfaStatus() with the existing Marketing gate - one source of truth) is called from both app-wide sign-in entry points: checkAppWideSupabaseSession() (returning session) and handleGoogleSignInResponse()'s Supabase piggyback callback (fresh sign-in), both of which now also populate mktSupabaseProfile so the shared status check has what it needs. New header 🔒 link (next to the signed-in badge, visible app-wide via new showHeaderSecurityLink()) opens the same Security panel Marketing's toolbar button does - one enrollment, works everywhere, since it's the same Supabase session either way. Server-side backstop: .gs requireTeamMemberFromToken_ - the single choke point getFullTeamSettings/saveTeamSettings/getSharedEOSData/saveSharedEOSData already share - now also calls new checkMfaSatisfied_(token), decoding the already-verified JWT's own `aal` claim and checking it against the firm's mfa_required (queried via Supabase's REST API, RLS-scoped). Closes the gap the client-side gate can't reach alone: a direct API call bypassing the UI. Fails OPEN on infrastructure errors (this is a policy overlay on an already-authenticated request, defaulting off firm-wide - a Supabase blip shouldn't take down sync for a firm that never turned 2FA on) but fails CLOSED whenever it has enough information to know the requirement is violated. **Requires the .gs v3.46.0 deployment** (paste + clasp deploy under the existing deployment id) for the server-side half to take effect; the client-side gate works standalone in the meantime. schema.sql re-run bug also found+fixed this session: none of the file's original 14 create policy statements were actually safe to re-run (Postgres has no CREATE POLICY IF NOT EXISTS) - a re-run failed on "policy already exists" and, since the SQL Editor runs the whole paste as one transaction, silently rolled back everything after the error point too. Every create policy is now preceded by drop policy if exists. // v3.59.0: Two-factor authentication (EOS_MASTER_SUMMARY.md Sec 5.15, decided-not-built until now). Uses Supabase Auth's built-in TOTP MFA directly via the supabase-js client already in place for Marketing/RBAC - no new backend, works with any standard authenticator app (Google Authenticator, Symantec VIP Access, etc, since they're all RFC 6238 TOTP under the hood). New "🔒 Security" toolbar button (any signed-in Supabase user, shown alongside Manage Access) opens a personal panel to enroll (QR code + manual key + 6-digit verify, sb.auth.mfa.enroll + challengeAndVerify) or remove (sb.auth.mfa.unenroll) their own authenticator - available to Hans, Amanda, and any future Marketing grantee like Trevor. Optional by default (firms.mfa_required defaults to false). New owner-only toggle in the same panel ("Require two-factor authentication for everyone") persists firms.mfa_required - guarded so an owner can't enable it before their OWN factor is verified this session (would lock the firm out). Enforcement: new mktEnforceMfaGate(), called from both success paths inside mktCheckAccess() (mirrors the existing owner/access_grants gate pattern), checks the signed-in session's Authenticator Assurance Level (sb.auth.mfa.getAuthenticatorAssuranceLevel()) against firms.mfa_required - aal2 already satisfied lets the board render as before; a verified factor that just needs this session to step up shows an inline 6-digit challenge; no factor at all shows a "set this up to continue" prompt linking to the Security panel. Both render into #mktBoard, same pattern as the existing "you don't have access yet" message. schema.sql gained firms.mfa_required, a firms owner-write policy (previously firms had no write policy at all), and a new mfa_ok() security-definer helper ANDed onto marketing_cards/marketing_columns' write policies for defense-in-depth (a direct API call can't bypass the app-level gate) - provably a no-op today since mfa_required defaults false, so mfa_ok() always returns true until an owner deliberately flips the switch. Scoped to the Marketing/Supabase auth boundary only, same as the rest of Sec 5.3 - the app-wide Google Sign-In (Rocks/Kanban/To-Dos) is completely untouched. No `.gs` change. Requires re-running schema.sql (idempotent) in the Supabase SQL Editor. // v3.58.1: Fix a real sign-out bug, caught by Hans live-testing v3.57.0 (clicking the "signed in as..." badge cleared it, then it immediately reappeared). Since v3.56.0 unified Google sign-in with a piggybacked Supabase session, signOutGoogle() only ever cleared the app's own eos_signed_in_email flag, not the Supabase session itself - on reload, checkAppWideSupabaseSession() runs FIRST (before eos_signed_in_email is even read), found the still-live Supabase session, matched the email to the team roster, and signed back in immediately. Fix: signOutGoogle() now also calls the Supabase client's own sb.auth.signOut() before reloading, wrapped in try/catch so a network hiccup can't block the local sign-out from completing. No `.gs` change. // v3.58.0: Marketing data migration (EOS_MASTER_SUMMARY.md Sec 5.3, the last outstanding piece). mktSave()/mktLoad() and their ~60 call sites are UNCHANGED - localStorage stays the instant, synchronous read/write path, zero behavior change. Instead mktSave() now also kicks off a debounced (800ms) background push (new mktPushToCloud(), via mktScheduleCloudPush()) that upserts the full local cards+columns arrays to the real marketing_cards/marketing_columns Supabase tables (schema.sql, RLS-enforced) and deletes any cloud rows for things removed locally. Pull happens once per Marketing-tab-open (all four mktCheckAccess().then(...) call sites now also call new mktPullFromCloud()), mirroring pullKanbanFromCloud's cadence rather than a new periodic timer - merges cloud into local by per-card last-write-wins (card.updated), skips re-rendering while the card modal is open so it can't disrupt active typing. New mktCardToRow/mktRowToCard/mktColumnToRow/mktRowToColumn mappers translate the existing camelCase card/column shape to/from the schema's snake_case columns; schema.sql gained three additive columns (wordpress_post_id/wordpress_edit_url/wordpress_sent_at) it was missing. Both signed-in team members and any future access_grants holder (Trevor) now see the same real board - this is what makes Marketing actually shared instead of per-device. Falls back to local-only silently (console log, no user-facing error) if not signed in or Supabase isn't configured, same graceful-degradation tradeoff as the rest of the app. No `.gs` change. // v3.57.0: SECURITY FIX (pairs with .gs v3.45.0) - closes a real unauthenticated read/write hole. getTeamSettings/saveTeamSettings/getSharedEOSData/saveSharedEOSData used to be reachable by anyone with the Web App URL (public in config.js on GitHub Pages regardless of repo visibility) with ZERO authentication - readable secrets included every team member's webAppSecret (the same value used to authenticate every OTHER action in the app) and the raw Gemini/Claude/OpenAI API keys; writable meant an anonymous POST could overwrite team settings or the shared Kanban/Rocks data outright. Fix: loadTeamSettingsFromCloud() now splits into the still-public, now-TRIMMED getTeamSettings call ({initials,name,email} only - still needed pre-sign-in for the "who am I" dropdown/Google-Sign-In matching) plus a new getFullTeamSettings call gated behind the current Supabase access token (new getCurrentSupabaseToken() helper); saveTeamSettingsToCloud()/pushKanbanToCloud()/pullKanbanFromCloud() all now attach that same token and fail gracefully (new 'partial' cloud-sync-status badge) rather than erroring when there's no session yet. REAL TRADEOFF: all cloud sync now requires having signed in with Google at least once on that device - "Skip for now" becomes genuine local-only mode instead of sync-with-zero-auth. Also re-runs loadTeamSettingsFromCloud() right after the v3.56.0 sign-in piggyback resolves, so a fresh sign-in upgrades sync from 'partial' to fully synced within that same load instead of waiting for the next scheduled cycle. Server-side verification (Apps Script calling Supabase's own /auth/v1/user endpoint, cached, fails closed) already tested directly against the live deployment before this client change - see EOS_MASTER_SUMMARY.md for the full writeup and the discovery story (found while evaluating whether paying for private-repo GitHub Pages was worth it - it wasn't the real protection either way). // v3.56.0: One sign-in covers the whole app, including Marketing - no more separate prompt. handleGoogleSignInResponse() now piggybacks a real Supabase session onto the SAME Google ID token GIS already produces (sb.auth.signInWithIdToken) right after the existing hd-domain check passes - additive, wrapped in try/catch, the tested GIS/applySignedInUser path is completely untouched. New checkAppWideSupabaseSession(), called first thing in initGoogleSignIn() (before the old rememberedEmail fast path): if a Supabase session already exists on this device (from here or from an earlier Marketing sign-in), honor it instead of re-running GIS - a team-member email gets the full app-wide identity via the existing applySignedInUser(); a signed-in profile that ISN'T a team member (e.g. Trevor) gets no app-wide identity, just a decluttered tab bar (new mktHideNonAccessibleTabs(), Marketing-only, explicitly COSMETIC not a security boundary - Settings, direct showPage() calls, and the public Sheets data are all untouched by this and still need their own real RBAC project if that's ever wanted). Also fixes a dual-modal bug: #googleSignInGate and #mktAuthGate were independent, non-exclusive .active toggles, so signing in via one could leave the other stuck showing a stale "please sign in" gate - both new sign-in paths now re-run mktCheckAccess() if Marketing is the active page. Explicitly did NOT touch isCurrentUserAdmin() (still the dropdown + teamMembers[].isAdmin, unrelated to this) or replace GIS with a redirect-based flow (considered and rejected - a full-page OAuth redirect would drop any in-progress edit, unlike today's in-page button). No `.gs` change. // v3.55.1: Fix a startup crash that broke showPage() on any load where the default-tab setting fell back to its default. The setting has always stored "weeklyMeeting" but the actual page element's id has always been "meeting" - showPage() crashed calling classList on a null element, silently aborting the rest of the startup sequence (including the new v3.55.0 post-sign-in return-to-Marketing-tab logic, which is what surfaced this - Hans landed back on the default tab instead of Marketing after signing in). Fixed at the point of failure: showPage() now translates the legacy alias and guards against a missing target instead of assuming pageId always matches a real element. Also hardened the event.target.classList.add('active') line below it - window.event isn't always a real click when showPage() is called programmatically (startup, mktHandleAuthReturn's fallback), and a non-Element event target (e.g. document) has no classList either. No `.gs` change. // v3.55.0: Marketing tab access control (EOS_MASTER_SUMMARY.md Sec 5.3), first real use of the new Supabase backend. New sign-in gate (#mktAuthGate) scoped ONLY to the Marketing tab - Google OAuth or magic-link email via Supabase Auth (mktSignInWithGoogle/mktSendMagicLink/mktCheckAccess) - checked every time the tab opens (showPage's marketing branch). The rest of the app (Rocks, Kanban, To-Dos, Weekly Meeting, the existing app-wide Google Sign-In / isCurrentUserAdmin) is completely untouched - deliberately NOT a full-app auth swap, to avoid any risk to the daily-driver sign-in Hans and Amanda already depend on. New "Manage Access" panel (owners only, gated on the real Supabase profiles.is_owner - not the client-side isAdmin flag) lets an owner grant/revoke view or edit per non-owner user, plus an email-invite flow. config.js gains supabaseUrl/supabaseAnonKey (anon key is a publishable key by design - RLS in the database is the real boundary, not key secrecy). Requires the schema.sql migration (six tables + RLS policies) to have been run in the Supabase project, and the Google OAuth provider configured there - both one-time setup, done this session. NOTE: card/column DATA still lives in localStorage as of this version - this ships the access GATE only; the data migration onto the new marketing_columns/marketing_cards tables is separate, later work, so a non-owner granted access today sees an empty board until that lands. No `.gs` change. // v3.54.0: Marketing Pipeline board now works like Kanban. Cards are draggable between columns (mktCardDragStart/mktCellDrop, mirrors kanbanCardDragStart/kanbanCellDrop). New "Manage Columns" button opens a drag-to-reorder/rename/add/delete panel (mktData.columns, seeded from the old hardcoded MKT_COLUMNS on first load via mktEnsureColumns). Ideas/My Review/With Trevor are protected from deletion (renaming is fine) because mktDraftBlog/mktSendToWordPress/mktPackageToTrevor auto-move cards to those column ids by id, not by name. Deleting a non-protected column moves its cards to Ideas rather than deleting them (deliberately different from Kanban's column-delete, since a Marketing card can be a finished blog draft). Columns are shared across both companies' boards, same as before; still localStorage-only/per-device, same limitation cards already had. index.html-only, no `.gs` change. // v3.53.0: Blog Draft no longer requires a title first (drafts from Take + Angle; title still generated in Step 6). New opts.withMeta on callAIText (additive - existing callers unaffected) reports a finish-reason truncation across Claude/Gemini/OpenAI. New per-task AI token budgets in Settings > AI Tools > AI Output Length (brainstorm/topics/angles/draft/tighten/social/titles), wired through getTaskTokens() at every marketing call site; Blog Draft and Tighten use withMeta to auto-retry once at 1.5x budget on a truncated result, keeping the longer output and toasting if it's still cut off. New debounced (800ms) autosave scoped to the open marketing card modal, separate from the global autoSave's .modal exclusion. Requires .gs v3.44.0 for the Firm Context Drive-folder recursion (subfolders to depth 5, new "Market Commentary Archives" reserved tier). // v3.52.2: Brainstorm->Angles guided funnel. Step 1 now parses the 6 topics into SELECTABLE rows (Use it now / Park / Kill / -> Backlog) instead of an inert text blob; parked topics can spin into their own Backlog card. New Step 2 "AI: Angles" button proposes ~4 angles for the CHOSEN topic as pickable chips that fill card.aiAngle (consumed by Step 4 draft). Brainstorm prompt rebalanced: RSS headlines weighted UP, newest firm-voice sample DOWN, so suggestions track current client-mind signal instead of echoing the last post. New card fields brainstormTopics[]/chosenTopic (additive; legacy blob cards lazily parsed on open). All existing field ids preserved. No .gs change. // v3.52.1: Fix Brainstorm truncation - maxTokens on the AI: Brainstorm call raised 900 -> 2000 so all six topics return in full (was cutting off partway through Topic 1 on Claude, at Topic 5 on Gemini). One-line change, no .gs change, no backend redeploy. // v3.52.0: Marketing card modal rebuilt as a guided 9-step stepper (Brainstorm, Angles, My Take, Blog Draft, Finalize/Tighten, Title, Social, Quotes, Package & Send). New AI actions: Brainstorm (RSS-fed topic ideas via Apps Script), Tighten (editorial pass), split Social/Quotes, and Package to Trevor (emails social+quote+WP link via the existing editor-email path). All existing field ids preserved. Requires .gs v3.43.0 (adds brainstormFeeds + notifyTrevorPackage - paste it in and redeploy). // prior: v3.51.0 mobile task-detail + Kanban fixes. (1) Fixed the ⋯ menu floating on top of Kanban Card Details when you tap Notes (the menu now closes when the card opens). (2) New To-Do Detail modal - tap the (i) on a To-Do to edit due date, owner (reassign), Google Task list (move), and notes in one place, like Google Tasks; on mobile the row hides those controls so it stays clean and full-width, checkbox on the far left. (3) Kanban Card Details: Owner is now a reassign dropdown and Column is labeled as the move control (both already fired the proper WIP/history move on Save; now they are obvious). (4) Weekly Meeting agenda wraps instead of overflowing on mobile. No .gs change.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -6683,10 +6732,8 @@ Example:
             if (typeof openMeetingEmailModal === 'function') openMeetingEmailModal(r.idx, r.kind);
         }
 
-        // Phase 1 reserved AI slot — behavior lands in Phase 5 (§5.11b Q4).
-        function aiAssistTaskById(id) {
-            showToast('AI actions for a task are coming in a later update.', 'info');
-        }
+        // Phase 1's reserved AI slot is now real: aiAssistTaskById lives with the rest of
+        // the AI code, next to callAI (search "PER-TASK / PER-CARD AI ACTIONS").
 
         // --- shared per-task action popover ("⋯") -------------------------
         // DOM-LOCAL by design: the same task id can be rendered on multiple surfaces
@@ -6792,7 +6839,7 @@ Example:
             const subtaskEligible = (context === 'todos') && (task.depth === 0 || task.depth === undefined) && !!task.googleTaskId;
             const subtaskSpec = { key: 'subtask', icon: '\u2795', title: 'Add subtask', label: 'Add subtask',
                 color: '#10b981', onclick: `addSubtaskById('${id}')` };
-            const aiSpec = { key: 'ai', icon: '\uD83E\uDD16', title: 'AI actions (coming soon)', label: 'AI: help with this task',
+            const aiSpec = { key: 'ai', icon: '\uD83E\uDD16', title: 'AI: help with this task', label: 'AI: help with this task',
                 color: '#8b5cf6', onclick: `aiAssistTaskById('${id}')` };
             // Focus (Pomodoro) only exists on the My Daily Plan surfaces, since that's
             // where the timer lives. Not shown on To-Dos / Weekly Meeting.
@@ -6848,6 +6895,12 @@ Example:
                 ? `<span style="padding:2px 6px;flex-shrink:0;font-size:0.9rem;">${s.icon}</span>`
                 : _taskActionBtn(s, true)).join('');
 
+            // v3.63.0 (§5.11b-5 decision 9): ONE AI icon is promoted into the row on every
+            // surface - it sits right before the ⋯, matching the locked row atom
+            // (star · AI · ⋯). It stays in the overflow list above as well, so the
+            // "everything is reachable from the menu" floor from Phase 1 still holds.
+            const aiBtn = _taskActionBtn(aiSpec, true);
+
             let menuItems = overflow.map(menuRow).join('');
             if (menuExtras.length) {
                 menuItems += '<div style="height:1px;background:#f3f4f6;margin:4px 0;"></div>';
@@ -6862,7 +6915,7 @@ Example:
                     </div>
                 </div>`;
 
-            return starBtn + promotedHtml + menuHtml;
+            return starBtn + promotedHtml + aiBtn + menuHtml;
         }
         // Matrix stores {id,type} references (Phase 1). Resolve to the live record.
         function resolveMatrixEntry(entry) {
@@ -6974,7 +7027,17 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.62.1 &mdash; 2026-07-25 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.63.0 &mdash; 2026-07-25 (Current)</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>The AI button on a to-do or a Kanban card now actually does something.</strong> It used to say &ldquo;coming in a later update.&rdquo; Tap it and you get three things it can answer right away: <strong>break it into steps</strong>, <strong>suggest a deadline</strong>, and <strong>draft an email about this</strong>. Steps can be added straight in as subtasks (on a to-do that is already synced to Google Tasks) or dropped into a card&rsquo;s description; a suggested deadline has a &ldquo;Use this date&rdquo; button.</li>'
+                + '<li><strong>The AI icon moved into the row itself</strong>, next to the &ldquo;&#8943;&rdquo;, instead of being buried in the menu. It is still in the &ldquo;&#8943;&rdquo; menu too, so nothing became harder to find.</li>'
+                + '<li><strong>The slower AI work is named but not built.</strong> The menu lists &ldquo;research this&rdquo; and &ldquo;hand it to an agent&rdquo; under <em>Runs in the background</em> with a note that they are not built yet &mdash; deliberately not shown as buttons that would do nothing. There is a fourth one, &ldquo;summarise the source email&rdquo;, that is not there at all: it needs permission to read the email itself, and that is on hold.</li>'
+                + '<li><strong>Under the hood: every AI call in the app now goes through one place.</strong> Twelve different features each had their own copy of &ldquo;work out which provider, check the key, call it&rdquo; &mdash; which is why the &ldquo;no API key saved&rdquo; message was worded five different ways. It is one message now, and it always points at Settings &gt; AI Tools. <strong>Nothing about the Marketing tab should behave differently</strong>: same prompts, same output lengths, same auto-retry on Blog Draft and Tighten. If anything there feels different, that is a bug &mdash; tell me.</li>'
+                + '<li>New in Settings &gt; AI Tools: a <strong>Task AI</strong> provider choice (Gemini by default) and three output-length boxes for the new task actions.</li>'
+                + '</ul></div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.62.1 &mdash; 2026-07-25</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Fixed the Marketing board on a phone.</strong> The row of column names (Ideas, Approved, With Trevor&hellip;) was being laid out beside the column instead of above it, so the names were squashed and cut off at the left edge. They now sit in a proper row across the top &mdash; tap one to switch columns. This was broken before this week; it was not caused by the new toolbar.</li>'
                 + '<li><strong>The app now uses the full width of your phone.</strong> There was a 42px margin down each side, most of it left over from the desktop layout. The white page now runs to both edges, which gives every list and card about 30px more room. The buttons at the top keep a small gap so they are not jammed against the bezel.</li>'
@@ -8332,8 +8395,7 @@ Example:
             const out = document.getElementById('mktResearchOut');
             const btn = document.getElementById('mktResearchBtn');
 
-            const cfg = getAIProviderConfig('marketing');
-            if (!requireApiKey('Marketing AI', cfg)) return;
+            if (!requireAI('marketing', 'Marketing AI')) return;
 
             mktLoad();
             const existing = mktData.cards.map(function(c) { return c.title; }).filter(Boolean);
@@ -8369,8 +8431,8 @@ Example:
             out.innerHTML = '<p style="font-size:0.85rem;color:var(--gray-500);">Working on it...</p>';
 
             try {
-                const raw = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt,
-                                             { temperature: 0.8, maxTokens: getTaskTokens('topics') });
+                const raw = await callAI('marketing', prompt,
+                                         { featureLabel: 'Marketing AI', temperature: 0.8, taskKey: 'topics' });
                 const clean = String(raw).replace(/```json/gi, '').replace(/```/g, '').trim();
                 const start = clean.indexOf('[');
                 const end = clean.lastIndexOf(']');
@@ -8502,8 +8564,7 @@ Example:
 
             if (existing && !confirm('This will REPLACE the existing blog draft. Continue?')) return;
 
-            const cfg = getAIProviderConfig('marketing');
-            if (!requireApiKey('Marketing AI', cfg)) return;
+            if (!requireAI('marketing', 'Marketing AI')) return;
 
             const btnEarly = document.getElementById('mktDraftBtn');
             btnEarly.disabled = true;
@@ -8560,7 +8621,8 @@ Example:
             btn.textContent = 'Drafting...';
 
             try {
-                const raw = await callAIWithBudgetRetry(cfg, prompt, { temperature: 0.7 }, 'draft', 'Blog draft');
+                const raw = await callAI('marketing', prompt, { featureLabel: 'Marketing AI',
+                                         temperature: 0.7, taskKey: 'draft', taskLabel: 'Blog draft', retry: true });
                 const clean = String(raw).replace(/^```(?:markdown)?\s*/i, '').replace(/```\s*$/, '').trim();
                 if (!clean) throw new Error('The model returned nothing.');
 
@@ -8599,8 +8661,7 @@ Example:
             const take = document.getElementById('mktTake').value.trim();
             if (!blog && !take) { showToast('Write Your Take or draft the blog first, so titles have something to work from.'); return; }
 
-            const cfg = getAIProviderConfig('marketing');
-            if (!requireApiKey('Marketing AI', cfg)) return;
+            if (!requireAI('marketing', 'Marketing AI')) return;
 
             const companyKey = card.company || 'ii';
             const ctx = await fetchFirmContext(companyKey, false);
@@ -8621,8 +8682,8 @@ Example:
             const original = btn.textContent;
             btn.disabled = true; btn.textContent = 'Thinking...';
             try {
-                const raw = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt,
-                                             { temperature: 0.8, maxTokens: getTaskTokens('titles') });
+                const raw = await callAI('marketing', prompt,
+                                         { featureLabel: 'Marketing AI', temperature: 0.8, taskKey: 'titles' });
                 const clean = String(raw).replace(/```json/gi, '').replace(/```/g, '').trim();
                 const s = clean.indexOf('['), e = clean.lastIndexOf(']');
                 if (s === -1 || e === -1) throw new Error('The model did not return the expected format.');
@@ -8693,8 +8754,7 @@ Example:
                 return;
             }
 
-            const cfg = getAIProviderConfig('marketing');
-            if (!requireApiKey('Marketing AI', cfg)) return;
+            if (!requireAI('marketing', 'Marketing AI')) return;
 
             const companyKey = card.company || 'ii';
             const ctx = await fetchFirmContext(companyKey, false);
@@ -8772,8 +8832,8 @@ Example:
                     '1. Topic title - the angle in one sentence.\n' +
                     'The title and the angle MUST be separated by " - " (space hyphen space). No preamble, no blank lines between items.';
 
-                const raw = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt,
-                                             { temperature: 0.85, maxTokens: getTaskTokens('brainstorm') });
+                const raw = await callAI('marketing', prompt,
+                                         { featureLabel: 'Marketing AI', temperature: 0.85, taskKey: 'brainstorm' });
                 const clean = String(raw).replace(/^```(?:\w+)?\s*/i, '').replace(/```\s*$/, '').trim();
                 if (!clean) throw new Error('The model returned nothing.');
 
@@ -8977,8 +9037,7 @@ Example:
                 showToast('Pick a topic in Step 1 first (Use it now), then get angles.');
                 return;
             }
-            const cfg = getAIProviderConfig('marketing');
-            if (!requireApiKey('Marketing AI', cfg)) return;
+            if (!requireAI('marketing', 'Marketing AI')) return;
 
             const companyKey = card.company || 'ii';
             const ctx = await fetchFirmContext(companyKey, false);
@@ -9001,8 +9060,8 @@ Example:
                     'Each angle is one or two sentences. Return ONLY a JSON array of strings: ' +
                     '["angle one", "angle two", "angle three", "angle four"]. No fences, no preamble.';
 
-                const raw = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt,
-                                             { temperature: 0.85, maxTokens: getTaskTokens('angles') });
+                const raw = await callAI('marketing', prompt,
+                                         { featureLabel: 'Marketing AI', temperature: 0.85, taskKey: 'angles' });
                 const cleaned = String(raw).replace(/```json/gi, '').replace(/```/g, '').trim();
                 const s = cleaned.indexOf('['), e = cleaned.lastIndexOf(']');
                 if (s === -1 || e === -1) throw new Error('The model did not return the expected format.');
@@ -9043,8 +9102,7 @@ Example:
             const blog = document.getElementById('mktBlog').value.trim();
             if (!blog) { showToast('There is no draft to tighten yet.'); return; }
 
-            const cfg = getAIProviderConfig('marketing');
-            if (!requireApiKey('Marketing AI', cfg)) return;
+            if (!requireAI('marketing', 'Marketing AI')) return;
 
             if (!confirm('Tighten will rewrite the Blog Draft in place (one editorial pass). Your current text stays until it returns, but this replaces the field. Continue?')) return;
 
@@ -9065,7 +9123,8 @@ Example:
                     'Return ONLY the tightened blog body in Markdown. No preamble, no commentary, ' +
                     'no code fences, no H1 title.';
 
-                const raw = await callAIWithBudgetRetry(cfg, prompt, { temperature: 0.4 }, 'tighten', 'Tightened blog');
+                const raw = await callAI('marketing', prompt, { featureLabel: 'Marketing AI',
+                                         temperature: 0.4, taskKey: 'tighten', taskLabel: 'Tightened blog', retry: true });
                 const clean = String(raw).replace(/^```(?:markdown)?\s*/i, '').replace(/```\s*$/, '').trim();
                 if (!clean) throw new Error('The model returned nothing.');
 
@@ -9092,8 +9151,7 @@ Example:
             const blog  = document.getElementById('mktBlog').value.trim();
             if (!blog) { showToast('Write/finalize the blog first, so the social post has something to introduce.'); return; }
 
-            const cfg = getAIProviderConfig('marketing');
-            if (!requireApiKey('Marketing AI', cfg)) return;
+            if (!requireAI('marketing', 'Marketing AI')) return;
 
             const companyKey = card.company || 'ii';
             const ctx = await fetchFirmContext(companyKey, false);
@@ -9113,8 +9171,8 @@ Example:
                     'BLOG TITLE: ' + title + '\n\nBLOG:\n"""\n' + blog + '\n"""\n\n' +
                     'Return ONLY the post text. No preamble, no quotes around it, no code fences.';
 
-                const raw = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt,
-                                             { temperature: 0.75, maxTokens: getTaskTokens('social') });
+                const raw = await callAI('marketing', prompt,
+                                         { featureLabel: 'Marketing AI', temperature: 0.75, taskKey: 'social' });
                 const clean = String(raw).replace(/^```\s*/i, '').replace(/```\s*$/, '').trim();
                 if (!clean) throw new Error('The model returned nothing.');
 
@@ -9145,8 +9203,7 @@ Example:
             const take  = document.getElementById('mktTake').value.trim();
             if (!blog && !take) { showToast('Draft the blog (or at least Your Take) first, so quotes have something to distill.'); return; }
 
-            const cfg = getAIProviderConfig('marketing');
-            if (!requireApiKey('Marketing AI', cfg)) return;
+            if (!requireAI('marketing', 'Marketing AI')) return;
 
             const companyKey = card.company || 'ii';
             const ctx = await fetchFirmContext(companyKey, false);
@@ -9177,8 +9234,8 @@ Example:
                     source + '\n\n' +
                     'Return ONLY a JSON array: [{"text":"...","author":"..."}, ...]. No fences, no preamble.';
 
-                const raw = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt,
-                                             { temperature: 0.8, maxTokens: 700 });
+                const raw = await callAI('marketing', prompt,
+                                         { featureLabel: 'Marketing AI', temperature: 0.8, maxTokens: 700 });
                 const clean = String(raw).replace(/```json/gi, '').replace(/```/g, '').trim();
                 const s = clean.indexOf('['), e = clean.lastIndexOf(']');
                 if (s === -1 || e === -1) throw new Error('The model did not return the expected format.');
@@ -10595,8 +10652,9 @@ Example:
             // Ask the AI to suggest the best-fitting category, if a provider is set.
             let suggestedId = null;
             try {
-                const cfg = getAIProviderConfig('marketing');
-                if (cfg && cfg.apiKey) {
+                // AI is OPTIONAL here - no key just means no suggested default, so this
+                // uses the silent predicate rather than callAI's alerting key check.
+                if (aiIsConfigured('marketing')) {
                     const list = cats.map(function(c) { return c.id + ': ' + c.name; }).join('\n');
                     const prompt =
                         'You are categorizing a blog post for a fee-only RIA.\n\n' +
@@ -10604,7 +10662,8 @@ Example:
                         'EXCERPT:\n' + String(body).slice(0, 1200) + '\n\n' +
                         'Available categories (id: name):\n' + list + '\n\n' +
                         'Return ONLY the single best-fitting category id as a number. No words, no punctuation.';
-                    const raw = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt, { temperature: 0, maxTokens: 10 });
+                    const raw = await callAI('marketing', prompt,
+                                             { featureLabel: 'Marketing AI', temperature: 0, maxTokens: 10, quiet: true });
                     const m = String(raw).match(/\d+/);
                     if (m) {
                         const id = parseInt(m[0], 10);
@@ -10636,8 +10695,7 @@ Example:
         // Proposes catchy blog title options via the marketing AI, based on the draft
         // body. Returns a chosen title string, or '' if the user cancels/none work.
         async function mktGenerateTitles(body, company) {
-            const cfg = getAIProviderConfig('marketing');
-            if (!cfg || !cfg.apiKey) {
+            if (!aiIsConfigured('marketing')) {
                 // No AI available - fall back to a manual prompt so the flow still works.
                 const manual = prompt('No AI provider is configured for titles. Type a title for this blog:');
                 return manual ? manual.trim() : '';
@@ -10658,7 +10716,8 @@ Example:
 
             let titles = [];
             try {
-                const raw = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt1, { temperature: 0.8, maxTokens: getTaskTokens('titles') });
+                const raw = await callAI('marketing', prompt1,
+                                         { featureLabel: 'Marketing AI', temperature: 0.8, taskKey: 'titles', quiet: true });
                 const clean = String(raw).replace(/```json/gi, '').replace(/```/g, '').trim();
                 const s = clean.indexOf('['), e = clean.lastIndexOf(']');
                 if (s !== -1 && e !== -1) titles = JSON.parse(clean.slice(s, e + 1));
@@ -12029,11 +12088,9 @@ Example:
             window.open(r.card.emailLink, '_blank');
         }
 
-        // Reserved AI slot -> future "Claude AI Agent" swimlane (§5.1). Behavior lands
-        // later; today it's the same friendly stub as aiAssistTaskById, card-addressed.
-        function kanbanAiAssistByCard(cardId) {
-            showToast('AI actions for a card are coming in a later update.', 'info');
-        }
+        // The card-addressed AI slot is now real: kanbanAiAssistByCard lives with the
+        // rest of the AI code, next to callAI (search "PER-TASK / PER-CARD AI ACTIONS").
+        // The future "Claude AI Agent" swimlane (§5.1) is the modal's second group.
 
         function kanbanDeleteByCard(cardId) {
             const r = resolveKanbanCard(cardId);
@@ -12167,7 +12224,7 @@ Example:
                 color: '#eab308', onclick: `kanbanToggleStarredByCard('${id}')` };
             const notesSpec = { icon: '\uD83D\uDCDD', title: 'Card description/notes', label: 'Notes',
                 color: (card.description ? '#3b82f6' : '#9ca3af'), onclick: `kanbanToggleNotesByCard('${id}')` };
-            const aiSpec = { icon: '\uD83E\uDD16', title: 'AI actions (coming soon)', label: 'AI: help with this card',
+            const aiSpec = { icon: '\uD83E\uDD16', title: 'AI: help with this card', label: 'AI: help with this card',
                 color: '#8b5cf6', onclick: `kanbanAiAssistByCard('${id}')` };
             const moveSpec = { icon: '\u2197\uFE0F', title: 'Move to another column/owner', label: 'Move to\u2026',
                 color: '#0ea5e9', onclick: `kanbanOpenMovePicker(this, '${id}', event)`, needsBtn: true };
@@ -12180,13 +12237,18 @@ Example:
                 : null;
 
             const mobile = isNarrowViewport();
-            // Promotion: desktop shows star/notes/AI inline; mobile shows only star.
-            const promoted = mobile ? [starSpec] : [starSpec, notesSpec, aiSpec];
-            // Everything else lives in ⋯. Order: (notes/AI on mobile) then Move, Email?, Delete.
+            // v3.63.0 (§5.11b-5 decision 9): the AI icon is promoted at EVERY width now,
+            // not just desktop - "one AI icon in the row, never buried in ⋯" is the whole
+            // point of the decision, and a card that is too narrow for two icons is too
+            // narrow for one. Notes stays desktop-only, as before.
+            const promoted = mobile ? [starSpec, aiSpec] : [starSpec, notesSpec, aiSpec];
+            // Everything else lives in ⋯. Order: (notes on mobile) then Move, Email?,
+            // Delete, and an AI entry so the menu floor still holds everything the row does.
             const overflow = [];
-            if (mobile) { overflow.push(notesSpec, aiSpec); }
+            if (mobile) { overflow.push(notesSpec); }
             overflow.push(moveSpec);
             if (emailSpec) overflow.push(emailSpec);
+            overflow.push(aiSpec);
             overflow.push(deleteSpec);
 
             // Menu-row renderer: mirrors renderTaskActions' menuRow (rawLink anchor case).
@@ -13850,8 +13912,7 @@ Example:
                              'Draft the email without links for now?')) return;
             }
 
-            const cfg = getAIProviderConfig('meetingEmail');
-            if (!requireApiKey('Meeting Email AI', cfg)) return;
+            if (!requireAI('meetingEmail', 'Meeting Email AI')) return;
 
             const linkLines = [];
             if (coffee) linkLines.push('Coffee (short): ' + coffee);
@@ -13883,8 +13944,8 @@ Example:
             const original = btn.textContent;
             btn.disabled = true; btn.textContent = 'Drafting...';
             try {
-                const raw = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt,
-                                             { temperature: 0.7, maxTokens: 700 });
+                const raw = await callAI('meetingEmail', prompt,
+                                         { featureLabel: 'Meeting Email AI', temperature: 0.7, maxTokens: 700 });
                 const clean = String(raw).replace(/```json/gi, '').replace(/```/g, '').trim();
                 const s = clean.indexOf('{'), e = clean.lastIndexOf('}');
                 if (s === -1 || e === -1) throw new Error('The model did not return the expected format.');
@@ -14182,7 +14243,10 @@ Example:
             }
         }
         
-        function addSubtask(parentIdx) {
+        // presetText (v3.63.0, additive): when supplied, skip the prompt and use it, and
+        // stay quiet about it so a caller adding several in a row can toast once itself.
+        // Every existing caller passes one argument and is completely unaffected.
+        function addSubtask(parentIdx, presetText) {
             const todos = yearData.quarters[currentQuarter].todos;
             const parentTask = todos[parentIdx];
             
@@ -14197,7 +14261,8 @@ Example:
                 return;
             }
             
-            const subtaskText = prompt('Enter subtask description:');
+            const preset = (presetText === undefined || presetText === null) ? null : String(presetText);
+            const subtaskText = (preset !== null) ? preset : prompt('Enter subtask description:');
             if (!subtaskText || !subtaskText.trim()) return;
             
             // Add subtask to the array
@@ -14224,7 +14289,9 @@ Example:
             autoSave();
             sortAndRenderTodos();
             
-            // Show toast
+            // Show toast - suppressed for a preset add, so a caller inserting several
+            // in a row can toast once for the batch instead of once per subtask.
+            if (preset !== null) return;
             showToast('✅ Subtask added! Push to Google Tasks to sync.', 'success');
         }
         
@@ -15686,7 +15753,10 @@ Make sure your suggestions directly address the specific root cause and discussi
         // budget if its output keeps getting cut off mid-sentence.
         const AI_TASK_TOKEN_DEFAULTS = {
             brainstorm: 2000, topics: 1600, angles: 1200, draft: 4000,
-            tighten: 4000, social: 500, titles: 500
+            tighten: 4000, social: 500, titles: 500,
+            // v3.63.0 - the per-task/per-card AI actions. Small on purpose: each of
+            // these returns a short list, one date, or one short email.
+            taskSteps: 600, taskDeadline: 300, taskEmail: 800
         };
 
         function getTaskTokens(key) {
@@ -15701,10 +15771,17 @@ Make sure your suggestions directly address the specific root cause and discussi
         // either way, but if the retry is STILL truncated it warns with a toast rather than
         // silently handing back a result that may be missing its ending.
         async function callAIWithBudgetRetry(cfg, prompt, baseOpts, taskKey, taskLabel) {
-            const budget = getTaskTokens(taskKey);
+            baseOpts = baseOpts || {};
+            // v3.63.0: two additive knobs so callAI() can route EVERY call through this
+            // one function without changing what any existing call site sends.
+            //   baseOpts.maxTokens - a fixed budget wins over the Settings-configured one
+            //                        (the sites that always passed a literal number).
+            //   baseOpts.noRetry   - skip the 1.5x retry (the sites that never had one).
+            const budget = baseOpts.maxTokens || getTaskTokens(taskKey);
             const first = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt,
                 Object.assign({}, baseOpts, { maxTokens: budget, withMeta: true }));
             if (!first.truncated) return first.text;
+            if (baseOpts.noRetry) return first.text;
 
             const retryBudget = Math.round(budget * 1.5);
             const second = await callAIText(cfg.provider, cfg.apiKey, cfg.model, prompt,
@@ -15715,6 +15792,442 @@ Make sure your suggestions directly address the specific root cause and discussi
                 showToast(taskLabel + ' may be cut off - raise ' + taskKey + ' tokens in Settings.');
             }
             return longer;
+        }
+
+        // ==================== THE SHARED AI ENTRY POINT (v3.63.0) ====================
+        // ONE way to make an AI call from anywhere in the app. Before this, every feature
+        // open-coded the same three steps - resolve getAIProviderConfig(), check the key,
+        // then call callAIText() with the provider/key/model spread across four
+        // arguments - which is why "no API key saved" was worded five different ways.
+        //
+        // callAI() resolves the routing itself, handles the missing-key case in exactly
+        // one place with one wording, and runs the call through callAIWithBudgetRetry so
+        // token budgets and the truncation retry behave identically everywhere. It
+        // returns the model's text and owns NO UI - buttons, spinners and toasts stay
+        // with the caller, because only the caller knows what it is doing.
+        //
+        //   opts.featureLabel - name used in the missing-key message ("Marketing AI")
+        //   opts.taskKey      - token-budget key (Settings > AI Tools > AI Output Length)
+        //   opts.maxTokens    - fixed budget; overrides the configured one
+        //   opts.temperature  - passed through to the provider
+        //   opts.retry        - true: one 1.5x retry + a toast if it comes back truncated
+        //   opts.taskLabel    - label used in that truncation toast
+        //   opts.quiet        - true: no alert on a missing key, just throw (for the
+        //                       places where AI is optional and the flow degrades)
+        //
+        // Throws an Error carrying .aiCode so a caller can tell the two failures apart
+        // rather than string-matching a message:
+        //   AI_ERR_NO_KEY - nothing was called; the user has to configure a key
+        //   AI_ERR_CALL   - the provider or the network failed; .message is theirs
+        const AI_ERR_NO_KEY = 'no-api-key';
+        const AI_ERR_CALL   = 'call-failed';
+
+        function makeAIError(code, message) {
+            const err = new Error(message);
+            err.name = 'AIError';
+            err.aiCode = code;
+            return err;
+        }
+
+        // Silent predicate for the handful of places where AI is OPTIONAL and the flow
+        // falls back to a manual path instead of nagging (WordPress category picker,
+        // title fallback). Never alerts - that is the whole point of it existing.
+        function aiIsConfigured(featureKey) {
+            const cfg = getAIProviderConfig(featureKey);
+            return !!(cfg && cfg.apiKey && String(cfg.apiKey).trim());
+        }
+
+        // Early guard, same message as callAI's own check - just earlier. Use it where a
+        // call site has real setup work (a firm-context fetch, disabling a button) that it
+        // should not do before finding out there is no key. True when a key exists.
+        function requireAI(featureKey, featureLabel) {
+            return requireApiKey(featureLabel, getAIProviderConfig(featureKey));
+        }
+
+        async function callAI(featureKey, prompt, opts) {
+            opts = opts || {};
+            const label = opts.featureLabel || 'This AI feature';
+            const cfg = getAIProviderConfig(featureKey);
+
+            if (!cfg.apiKey || !String(cfg.apiKey).trim()) {
+                if (!opts.quiet) requireApiKey(label, cfg);
+                const name = AI_PROVIDER_LABEL[cfg.provider] || cfg.provider;
+                throw makeAIError(AI_ERR_NO_KEY,
+                    label + ' is routed to ' + name + ', but no ' + name + ' API key is ' +
+                    'saved. Add one in Settings > AI Tools > ' + name + '.');
+            }
+
+            const baseOpts = {};
+            if (opts.temperature !== undefined) baseOpts.temperature = opts.temperature;
+            if (opts.maxTokens) baseOpts.maxTokens = opts.maxTokens;
+            if (opts.retry !== true) baseOpts.noRetry = true;
+
+            try {
+                return await callAIWithBudgetRetry(cfg, prompt, baseOpts,
+                    opts.taskKey || featureKey, opts.taskLabel || label);
+            } catch (err) {
+                // Re-thrown as a typed error, but the provider's own message is kept
+                // verbatim so existing "... failed: " + error.message toasts read the same.
+                throw makeAIError(AI_ERR_CALL, (err && err.message) ? err.message : String(err));
+            }
+        }
+
+        // ============ PER-TASK / PER-CARD AI ACTIONS (v3.63.0, Phase 5) ============
+        // Sec 5.11b-5 decision 9: ONE AI icon in the row opens ONE menu split by how long
+        // you wait - "answers now" (a synchronous call whose result lands in this panel)
+        // vs "runs in the background" (agent work). Only the first group is built; the
+        // second is NAMED in the modal rather than shown as buttons that do nothing.
+        // The overflow menu keeps a single AI entry so the Phase 1 menu floor holds.
+        //
+        // Tasks and Kanban cards share this entire surface through one small resolved
+        // SUBJECT - the same adapter-at-the-seam trick kanbanCardToTaskView already
+        // uses. The two id namespaces never meet; only the subject crosses.
+        //
+        // Deliberately NOT built here: "summarise the source email", the fourth item in
+        // decision 9's answers-now list. It has to READ the linked email, and Gmail read
+        // access is on hold - a button that can only see the subject line would be a
+        // worse answer than no button.
+
+        let taskAiSubject = null;      // the resolved subject the modal is acting on
+        let taskAiLastSteps = [];      // last "break it into steps" result, for Add/Copy
+        let taskAiLastEmail = null;    // last drafted { subject, body }
+
+        function _taskAiSubjectFromTask(id) {
+            const r = resolveTaskById(id);
+            if (!r) return null;
+            const t = r.record;
+            const gid = String(t.googleTaskId || '');
+            return {
+                source: 'task', id: id, kind: r.kind, noun: 'to-do',
+                title: t.text || '', notes: t.notes || '', dueDate: t.dueDate || '',
+                // Subtasks are a Google-Tasks concept - mirrors addSubtask's own guard,
+                // so the button is only offered where the add can actually succeed.
+                canSubtask: r.kind === 'todo' && !!gid
+                    && !gid.startsWith('synced_') && !gid.startsWith('pull_')
+                    && (t.depth === 0 || t.depth === undefined)
+            };
+        }
+
+        function _taskAiSubjectFromCard(cardId) {
+            const r = resolveKanbanCard(cardId);
+            if (!r) return null;
+            return {
+                source: 'card', id: cardId, kind: 'card', noun: 'card',
+                title: r.card.title || '', notes: r.card.description || '',
+                dueDate: r.card.dueDate || '', canSubtask: false
+            };
+        }
+
+        // The two reserved slots from Phase 1 / Phase 3, now real.
+        function aiAssistTaskById(id) { _openTaskAiModal(_taskAiSubjectFromTask(id)); }
+        function kanbanAiAssistByCard(cardId) { _openTaskAiModal(_taskAiSubjectFromCard(cardId)); }
+
+        const TASK_AI_ACTIONS = [
+            { key: 'steps',    icon: '✅', label: 'Break it into steps',
+              hint: 'A short, ordered list of what this actually takes.' },
+            { key: 'deadline', icon: '📅', label: 'Suggest a deadline',
+              hint: 'A realistic date, plus one line on why.' },
+            { key: 'email',    icon: '✉️', label: 'Draft an email about this',
+              hint: 'Subject and body you can copy or open in Gmail.' }
+        ];
+
+        function _openTaskAiModal(subject) {
+            if (!subject) return;
+            closeOpenTaskMenu();   // otherwise the overflow menu stays up behind the modal
+            taskAiSubject = subject;
+            taskAiLastSteps = [];
+            taskAiLastEmail = null;
+
+            document.getElementById('taskAiSubjectLine').innerHTML =
+                '<div style="font-weight:600;font-size:0.9rem;color:#111;line-height:1.35;">'
+                + escapeHtml(subject.title || '(untitled)') + '</div>'
+                + (subject.notes
+                    ? '<div style="font-size:0.78rem;color:var(--gray-500);margin-top:4px;line-height:1.4;">'
+                      + escapeHtml(subject.notes.slice(0, 180)) + (subject.notes.length > 180 ? '...' : '')
+                      + '</div>'
+                    : '')
+                + (subject.dueDate
+                    ? '<div style="font-size:0.74rem;color:var(--gray-500);margin-top:4px;">Due ' + escapeHtml(subject.dueDate) + '</div>'
+                    : '');
+
+            document.getElementById('taskAiActions').innerHTML = TASK_AI_ACTIONS.map(function(a) {
+                return '<button class="btn btn-secondary" onclick="runTaskAiAction(\'' + a.key + '\')" '
+                    + 'style="display:flex;align-items:flex-start;gap:9px;width:100%;text-align:left;padding:9px 11px;font-size:0.85rem;">'
+                    + '<span style="width:1.3em;flex-shrink:0;">' + a.icon + '</span>'
+                    + '<span><span style="font-weight:600;">' + a.label + '</span>'
+                    + '<span style="display:block;font-weight:400;font-size:0.76rem;color:var(--gray-500);margin-top:1px;">' + a.hint + '</span></span>'
+                    + '</button>';
+            }).join('');
+
+            const res = document.getElementById('taskAiResult');
+            res.style.display = 'none';
+            res.innerHTML = '';
+            openModal('taskAiModal');
+        }
+
+        function _taskAiSetBusy(busy) {
+            document.querySelectorAll('#taskAiActions button').forEach(function(b) { b.disabled = busy; });
+        }
+
+        async function runTaskAiAction(actionKey) {
+            const subject = taskAiSubject;
+            if (!subject) return;
+            const res = document.getElementById('taskAiResult');
+            res.style.display = 'block';
+            res.innerHTML = '<div style="font-size:0.85rem;color:var(--gray-500);">Working on it...</div>';
+            _taskAiSetBusy(true);
+            try {
+                if (actionKey === 'steps')    await _taskAiSteps(subject, res);
+                if (actionKey === 'deadline') await _taskAiDeadline(subject, res);
+                if (actionKey === 'email')    await _taskAiEmail(subject, res);
+            } catch (err) {
+                // A missing key already showed the one shared Settings message, so the
+                // panel just restates it quietly; a real call failure is shown in red.
+                const isNoKey = err && err.aiCode === AI_ERR_NO_KEY;
+                res.innerHTML = '<div style="font-size:0.85rem;color:' + (isNoKey ? 'var(--gray-500)' : 'var(--danger)') + ';">'
+                    + escapeHtml(err && err.message ? err.message : String(err)) + '</div>';
+                console.error('runTaskAiAction(' + actionKey + ') failed:', err);
+            } finally {
+                _taskAiSetBusy(false);
+            }
+        }
+
+        // Shared context block. All three actions get the same facts, so a change here
+        // changes them consistently.
+        function _taskAiContext(subject) {
+            return 'ITEM (' + subject.noun + '): ' + subject.title + '\n'
+                + (subject.notes ? 'NOTES:\n"""\n' + subject.notes + '\n"""\n' : '')
+                + (subject.dueDate ? 'CURRENT DUE DATE: ' + subject.dueDate + '\n' : '')
+                + 'TODAY: ' + new Date().toISOString().split('T')[0] + '\n';
+        }
+
+        function _taskAiParseArray(raw) {
+            const clean = String(raw).replace(/```json/gi, '').replace(/```/g, '').trim();
+            const s = clean.indexOf('['), e = clean.lastIndexOf(']');
+            if (s === -1 || e === -1) throw new Error('The model did not return the expected format.');
+            const arr = JSON.parse(clean.slice(s, e + 1));
+            if (!Array.isArray(arr)) throw new Error('The model did not return a list.');
+            return arr.map(function(x) { return (typeof x === 'string') ? x.trim() : ''; }).filter(Boolean);
+        }
+
+        function _taskAiParseObject(raw) {
+            const clean = String(raw).replace(/```json/gi, '').replace(/```/g, '').trim();
+            const s = clean.indexOf('{'), e = clean.lastIndexOf('}');
+            if (s === -1 || e === -1) throw new Error('The model did not return the expected format.');
+            return JSON.parse(clean.slice(s, e + 1));
+        }
+
+        function _taskAiBtn(label, handler) {
+            return '<button class="btn btn-secondary" style="font-size:0.78rem;padding:5px 11px;" onclick="'
+                + handler + '">' + label + '</button>';
+        }
+
+        // --- action 1: break it into steps ---------------------------------
+        async function _taskAiSteps(subject, res) {
+            const prompt =
+                'You are helping the owner of a small financial-advisory firm break one piece of '
+                + 'work into steps.\n\n'
+                + _taskAiContext(subject) + '\n'
+                + 'Return 3-6 concrete steps in the order they should happen. Each step is one '
+                + 'action starting with a verb, under 80 characters, specific to THIS item - no '
+                + 'generic project-management filler, no invented facts, names or deadlines. If '
+                + 'the item is genuinely a single action already, return just that one step.\n\n'
+                + 'Return ONLY a JSON array of strings. No fences, no preamble.';
+
+            const raw = await callAI('taskAssist', prompt,
+                { featureLabel: 'Task AI', temperature: 0.4, taskKey: 'taskSteps' });
+
+            const steps = _taskAiParseArray(raw);
+            if (!steps.length) throw new Error('No steps came back.');
+            taskAiLastSteps = steps;
+
+            const rows = steps.map(function(s, i) {
+                return '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid #f3f4f6;">'
+                    + '<div style="flex:1;font-size:0.85rem;line-height:1.35;">' + escapeHtml(s) + '</div>'
+                    + (subject.canSubtask ? _taskAiBtn('Add', 'taskAiAddStep(' + i + ', this)') : '')
+                    + '</div>';
+            }).join('');
+
+            let footer = '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">';
+            if (subject.canSubtask) footer += _taskAiBtn('Add all as subtasks', 'taskAiAddAllSteps()');
+            if (subject.source === 'card') footer += _taskAiBtn('Add to card description', 'taskAiAppendStepsToCard()');
+            footer += _taskAiBtn('Copy', 'taskAiCopySteps()');
+            footer += '</div>';
+
+            const why = subject.canSubtask ? '' :
+                '<div style="font-size:0.74rem;color:var(--gray-500);margin-top:8px;line-height:1.4;">'
+                + (subject.source === 'card'
+                    ? 'Cards do not have subtasks &mdash; on a board the sibling cards are the subtasks. Add these to the description, or copy them.'
+                    : 'Subtasks only exist on a to-do that is already synced to Google Tasks, so these are copy-only here.')
+                + '</div>';
+
+            res.innerHTML = '<div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--gray-500);margin-bottom:4px;">Steps</div>'
+                + rows + footer + why;
+        }
+
+        function taskAiCopySteps() {
+            const text = taskAiLastSteps.map(function(s, i) { return (i + 1) + '. ' + s; }).join('\n');
+            _taskAiCopy(text, 'Steps copied.');
+        }
+
+        function taskAiAddStep(i, btnEl) {
+            const s = taskAiSubject;
+            if (!s || s.source !== 'task') return;
+            const text = taskAiLastSteps[i];
+            if (!text) return;
+            // Re-resolve every time: addSubtask re-sorts and re-renders the To-Dos list,
+            // so a captured index would go stale after the first add.
+            const r = resolveTaskById(s.id);
+            if (!r || r.kind !== 'todo') return;
+            addSubtask(r.idx, text);
+            if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Added'; }
+        }
+
+        function taskAiAddAllSteps() {
+            const s = taskAiSubject;
+            if (!s || s.source !== 'task' || !taskAiLastSteps.length) return;
+            let added = 0;
+            taskAiLastSteps.forEach(function(text) {
+                const r = resolveTaskById(s.id);
+                if (!r || r.kind !== 'todo') return;
+                addSubtask(r.idx, text);
+                added++;
+            });
+            document.querySelectorAll('#taskAiResult button').forEach(function(b) {
+                if (b.textContent === 'Add') { b.disabled = true; b.textContent = 'Added'; }
+            });
+            showToast(added + ' subtask' + (added === 1 ? '' : 's') + ' added. Push to Google Tasks to sync.', 'success');
+        }
+
+        function taskAiAppendStepsToCard() {
+            const s = taskAiSubject;
+            if (!s || s.source !== 'card' || !taskAiLastSteps.length) return;
+            const r = resolveKanbanCard(s.id);
+            if (!r) return;
+            const block = 'Steps:\n' + taskAiLastSteps.map(function(t) { return '- ' + t; }).join('\n');
+            r.card.description = r.card.description ? (r.card.description + '\n\n' + block) : block;
+            r.card.history = r.card.history || [];
+            r.card.history.push({ action: 'edited', at: new Date().toISOString() });
+            saveKanbanData();
+            renderKanban();
+            showToast('Steps added to the card description.', 'success');
+        }
+
+        // --- action 2: suggest a deadline ----------------------------------
+        async function _taskAiDeadline(subject, res) {
+            const prompt =
+                'You are helping the owner of a small financial-advisory firm pick a realistic '
+                + 'due date for one piece of work.\n\n'
+                + _taskAiContext(subject) + '\n'
+                + 'Suggest ONE due date. Be realistic about how long this kind of work takes and '
+                + 'do not pick today unless it is genuinely a five-minute item. Prefer a weekday. '
+                + 'Do not invent facts about the work that were not given above.\n\n'
+                + 'Return ONLY a JSON object, no fences, no preamble:\n'
+                + '{"date": "YYYY-MM-DD", "why": "one short sentence"}';
+
+            const raw = await callAI('taskAssist', prompt,
+                { featureLabel: 'Task AI', temperature: 0.3, taskKey: 'taskDeadline' });
+
+            const obj = _taskAiParseObject(raw);
+            const date = String(obj.date || '').trim();
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error('No usable date came back.');
+
+            res.innerHTML = '<div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--gray-500);margin-bottom:4px;">Suggested deadline</div>'
+                + '<div style="font-size:1.05rem;font-weight:600;color:#111;">' + escapeHtml(date) + '</div>'
+                + '<div style="font-size:0.82rem;color:var(--gray-500);margin-top:3px;line-height:1.4;">' + escapeHtml(String(obj.why || '')) + '</div>'
+                + '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">'
+                + _taskAiBtn('Use this date', 'taskAiApplyDueDate(\'' + date + '\')')
+                + '</div>';
+        }
+
+        function taskAiApplyDueDate(date) {
+            const s = taskAiSubject;
+            if (!s) return;
+            if (s.source === 'task') {
+                // Goes through updateTaskById so a to-do still fires its Google-sync side
+                // effects rather than being written behind the sync's back.
+                updateTaskById(s.id, 'dueDate', date);
+            } else {
+                const r = resolveKanbanCard(s.id);
+                if (!r) return;
+                r.card.dueDate = date;
+                r.card.history = r.card.history || [];
+                r.card.history.push({ action: 'edited', at: new Date().toISOString() });
+                saveKanbanData();
+                renderKanban();
+            }
+            s.dueDate = date;
+            showToast('Due date set to ' + date + '.', 'success');
+        }
+
+        // --- action 3: draft an email about this ---------------------------
+        async function _taskAiEmail(subject, res) {
+            const settings = getSettings();
+            const hb = (settings.teamMembers || []).find(function(m) { return m.initials === 'HB'; });
+            const senderName = (hb && hb.name) ? hb.name : 'Hans';
+
+            const prompt =
+                'Draft a short, plainspoken email that moves this piece of work forward.\n\n'
+                + _taskAiContext(subject) + '\n'
+                + 'Rules:\n'
+                + '- Work out from the item itself who this email is most likely TO and what it '
+                + 'needs to ask for or tell them. If that is genuinely unclear, write it to the '
+                + 'obvious counterparty and keep it general rather than inventing details.\n'
+                + '- 4-8 sentences. Warm and direct, never corporate or salesy.\n'
+                + '- Do NOT invent facts, dates, numbers, prices or shared history that were not '
+                + 'given above. Leave a bracketed blank instead.\n'
+                + '- Sign off as ' + senderName + '.\n\n'
+                + 'Return ONLY a JSON object, no fences, no preamble:\n'
+                + '{"subject": "...", "body": "..."}';
+
+            const raw = await callAI('taskAssist', prompt,
+                { featureLabel: 'Task AI', temperature: 0.6, taskKey: 'taskEmail' });
+
+            const obj = _taskAiParseObject(raw);
+            const subj = String(obj.subject || '').trim();
+            const body = String(obj.body || '').trim();
+            if (!body) throw new Error('The model returned no email body.');
+            taskAiLastEmail = { subject: subj, body: body };
+
+            res.innerHTML = '<div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--gray-500);margin-bottom:4px;">Draft</div>'
+                + '<div style="font-size:0.85rem;font-weight:600;color:#111;margin-bottom:6px;">' + escapeHtml(subj) + '</div>'
+                + '<textarea id="taskAiEmailBody" rows="10" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:6px;font-family:inherit;font-size:0.83rem;box-sizing:border-box;resize:vertical;">'
+                + escapeHtml(body) + '</textarea>'
+                + '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">'
+                + _taskAiBtn('Copy', 'taskAiCopyEmail()')
+                + _taskAiBtn('Open in Gmail', 'taskAiOpenEmailInGmail()')
+                + '</div>'
+                + '<div style="font-size:0.74rem;color:var(--gray-500);margin-top:8px;">Nothing sends automatically &mdash; Gmail opens a compose window with no recipient filled in.</div>';
+        }
+
+        function _taskAiCurrentEmail() {
+            if (!taskAiLastEmail) return null;
+            const el = document.getElementById('taskAiEmailBody');
+            return { subject: taskAiLastEmail.subject, body: el ? el.value : taskAiLastEmail.body };
+        }
+
+        function taskAiCopyEmail() {
+            const e = _taskAiCurrentEmail();
+            if (!e) return;
+            _taskAiCopy(e.subject + '\n\n' + e.body, 'Draft copied.');
+        }
+
+        function taskAiOpenEmailInGmail() {
+            const e = _taskAiCurrentEmail();
+            if (!e) return;
+            window.open('https://mail.google.com/mail/?view=cm&fs=1&su=' + encodeURIComponent(e.subject)
+                + '&body=' + encodeURIComponent(e.body), '_blank');
+        }
+
+        function _taskAiCopy(text, okMessage) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(
+                    function() { showToast(okMessage, 'success'); },
+                    function() { showToast('Could not copy - select the text and copy manually.'); }
+                );
+                return;
+            }
+            showToast('Could not copy - select the text and copy manually.');
         }
 
         // Google periodically retires older Gemini models; when that happens the API
@@ -17741,6 +18254,7 @@ Make sure your suggestions directly address the specific root cause and discussi
             document.getElementById('aiRouteKanban').value = routing.kanbanAgent || 'gemini';
             document.getElementById('aiRouteMarketing').value = routing.marketing || 'claude';
             document.getElementById('aiRouteMeetingEmail').value = routing.meetingEmail || 'claude';
+            document.getElementById('aiRouteTaskAssist').value = routing.taskAssist || 'gemini';
 
             const aiTokens = settings.aiTokens || {};
             document.getElementById('aiTokensBrainstorm').value = aiTokens.brainstorm || AI_TASK_TOKEN_DEFAULTS.brainstorm;
@@ -17750,6 +18264,9 @@ Make sure your suggestions directly address the specific root cause and discussi
             document.getElementById('aiTokensTighten').value = aiTokens.tighten || AI_TASK_TOKEN_DEFAULTS.tighten;
             document.getElementById('aiTokensSocial').value = aiTokens.social || AI_TASK_TOKEN_DEFAULTS.social;
             document.getElementById('aiTokensTitles').value = aiTokens.titles || AI_TASK_TOKEN_DEFAULTS.titles;
+            document.getElementById('aiTokensTaskSteps').value = aiTokens.taskSteps || AI_TASK_TOKEN_DEFAULTS.taskSteps;
+            document.getElementById('aiTokensTaskDeadline').value = aiTokens.taskDeadline || AI_TASK_TOKEN_DEFAULTS.taskDeadline;
+            document.getElementById('aiTokensTaskEmail').value = aiTokens.taskEmail || AI_TASK_TOKEN_DEFAULTS.taskEmail;
 
             document.getElementById('calendlyCoffee').value = settings.calendlyCoffee || '';
             document.getElementById('calendlyLunch').value = settings.calendlyLunch || '';
@@ -18040,7 +18557,8 @@ Make sure your suggestions directly address the specific root cause and discussi
                 dailyPlanning: document.getElementById('aiRouteDailyPlanning').value,
                 kanbanAgent: document.getElementById('aiRouteKanban').value,
                 marketing: document.getElementById('aiRouteMarketing').value,
-                meetingEmail: document.getElementById('aiRouteMeetingEmail').value
+                meetingEmail: document.getElementById('aiRouteMeetingEmail').value,
+                taskAssist: document.getElementById('aiRouteTaskAssist').value
             };
             settings.aiTokens = {
                 brainstorm: parseInt(document.getElementById('aiTokensBrainstorm').value, 10) || AI_TASK_TOKEN_DEFAULTS.brainstorm,
@@ -18049,7 +18567,10 @@ Make sure your suggestions directly address the specific root cause and discussi
                 draft: parseInt(document.getElementById('aiTokensDraft').value, 10) || AI_TASK_TOKEN_DEFAULTS.draft,
                 tighten: parseInt(document.getElementById('aiTokensTighten').value, 10) || AI_TASK_TOKEN_DEFAULTS.tighten,
                 social: parseInt(document.getElementById('aiTokensSocial').value, 10) || AI_TASK_TOKEN_DEFAULTS.social,
-                titles: parseInt(document.getElementById('aiTokensTitles').value, 10) || AI_TASK_TOKEN_DEFAULTS.titles
+                titles: parseInt(document.getElementById('aiTokensTitles').value, 10) || AI_TASK_TOKEN_DEFAULTS.titles,
+                taskSteps: parseInt(document.getElementById('aiTokensTaskSteps').value, 10) || AI_TASK_TOKEN_DEFAULTS.taskSteps,
+                taskDeadline: parseInt(document.getElementById('aiTokensTaskDeadline').value, 10) || AI_TASK_TOKEN_DEFAULTS.taskDeadline,
+                taskEmail: parseInt(document.getElementById('aiTokensTaskEmail').value, 10) || AI_TASK_TOKEN_DEFAULTS.taskEmail
             };
             settings.calendlyCoffee = document.getElementById('calendlyCoffee').value.trim();
             settings.calendlyLunch = document.getElementById('calendlyLunch').value.trim();
@@ -18923,14 +19444,12 @@ Return ONLY the JSON array:`;
             }
             
             const settings = getSettings();
+            // v3.63.0: the key check is now the one shared wording (Settings > AI Tools).
+            // `config` survives only to name the provider in the status line below - the
+            // call itself goes through callAI and never sees the key or the model.
+            if (!requireAI('dailyPlanning', 'Daily Planning AI')) return;
             const config = getAIProviderConfig('dailyPlanning');
-            const apiKey = config.apiKey;
-            
-            if (!apiKey) {
-                alert(`Please configure a ${aiProviderLabel(config.provider)} API key in Settings (⚙️) under "AI Tools", or change which provider handles this feature.`);
-                return;
-            }
-            
+
             const statusEl = document.getElementById('aiParseStatus');
             const tasksEl = document.getElementById('aiParsedTasks');
             
@@ -18956,7 +19475,8 @@ ${notes}
 Return ONLY the JSON array:`;
 
             try {
-                const aiResponse = await callAIText(config.provider, apiKey, config.model, prompt, { temperature: 0.3, maxTokens: 1024 });
+                const aiResponse = await callAI('dailyPlanning', prompt,
+                                                { featureLabel: 'Daily Planning AI', temperature: 0.3, maxTokens: 1024 });
                 
                 // Parse the JSON array from the response
                 let tasks = [];
