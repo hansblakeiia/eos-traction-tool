@@ -1708,21 +1708,78 @@
                 gap: 8px;
             }
             
-            /* Scorecard table */
+            /* ---- Scorecard (v3.67.0, Hans's phone-test item 15) ----
+               The three rules that used to live here were addressed to #scorecardTable.
+               No element has ever had that id - the table is class="scorecard-table" -
+               so this entire block has been dead since it was written, which is why the
+               13-week grid always rendered at its full desktop 1089px on a phone.
+               Checked in the browser, not inferred: `document.querySelectorAll(
+               '#scorecardTable')` returns 0 and the file contains no such id. */
             .scorecard-wrapper {
                 overflow-x: auto;
                 -webkit-overflow-scrolling: touch;
             }
-            
-            #scorecardTable {
-                font-size: 0.75rem;
-                min-width: 600px;
+
+            .scorecard-table {
+                font-size: 0.8rem;
             }
-            
-            #scorecardTable th, #scorecardTable td {
+
+            .scorecard-table th, .scorecard-table td {
                 padding: 6px 4px;
             }
-            
+
+            /* The goal-direction picker and the delete-row button are quarterly SETUP
+               actions, not things you do standing in a meeting, and together they cost
+               ~100px of a 327px screen. Hidden on a phone in both week views - decision
+               15 names exactly four columns - and untouched at 769px and up. */
+            .scorecard-table.sc-narrow .sc-dir-col { display: none; }
+            .scorecard-table.sc-narrow .sc-del-col { display: none; }
+
+            /* Current-week view: Who / Measurable / Goal / this week. The class is set by
+               applyScorecardWeekView(); this stylesheet never decides on its own. */
+            .scorecard-table.sc-current-week-only [data-week] { display: none; }
+            .scorecard-table.sc-current-week-only [data-week].sc-week-now { display: table-cell; }
+            .scorecard-table.sc-current-week-only { min-width: 0; width: 100%; }
+            .scorecard-table.sc-current-week-only td:nth-child(2) { min-width: 0; }
+            .scorecard-table.sc-current-week-only [data-week].sc-week-now {
+                background: #eff6ff;
+                min-width: 66px;
+                width: 66px;
+            }
+            /* Width reclaimed for the Measurable column, which is the one you actually read.
+               Measured at 375px: Who was 68px of which 24 was padding reserved for a drag
+               handle you cannot use on a phone (reordering measurables is HTML5 drag, and
+               mobile drag was deliberately rejected in v3.50.0), and the week input had 98px
+               to hold a two-character number. Measurable 105px -> 160px.
+               The 24px padding is an INLINE style on the cell, so this needs !important -
+               same trap as the modal max-heights in 3.66.2 and .rock-content above. */
+            .scorecard-table.sc-narrow .drag-handle { display: none; }
+            .scorecard-table.sc-narrow td:nth-child(1) {
+                min-width: 0;
+                padding-left: 6px !important;
+                padding-right: 4px;
+            }
+            .scorecard-table.sc-current-week-only th[data-week].sc-week-now { background: var(--accent); }
+            .scorecard-table.sc-current-week-only .week-dates-row th[data-week].sc-week-now {
+                background: #dbeafe; color: var(--primary);
+            }
+            .scorecard-table.sc-current-week-only input { width: 100%; box-sizing: border-box; }
+
+            /* The switcher above the table. */
+            .scorecard-week-bar {
+                display: flex; align-items: center; justify-content: space-between;
+                gap: 10px; margin-bottom: 8px; flex-wrap: wrap;
+            }
+            .scorecard-week-label {
+                font-size: 0.85rem; font-weight: 600; color: var(--primary);
+            }
+            .scorecard-week-date { font-weight: 500; color: var(--gray-500); }
+            .scorecard-week-toggle {
+                padding: 8px 12px; font-size: 0.8rem; min-height: 38px;
+                border: 1px solid var(--accent); background: white; color: var(--accent);
+                border-radius: 6px; cursor: pointer; white-space: nowrap;
+            }
+
             /* Print tab */
             .print-option {
                 flex-direction: column;
@@ -1746,6 +1803,70 @@
             .kanban-dropdown-panel { position: fixed !important; left: 12px !important; right: 12px !important; top: auto !important; width: auto !important; max-width: none !important; }
         }
         
+        /* ---- Rock cards: the stacked layout (v3.67.0, Hans's phone-test item 15) ----
+           Measured at 375px BEFORE changing anything, because .grid-3/.grid-4 already got
+           min-width:0 in 3.66.2 and this had to be a different cause - it is. .rock-card is
+           its own `display:flex; flex-wrap:nowrap` row with SIX children, three of them
+           flex-shrink:0 (the 32px number, the 100px owner select, the 128px On/Off toggle).
+           Their hard floor plus the gaps is 423px inside a 297px interior, so the last
+           child's right edge landed at 481.5px and dragged the whole document to
+           scrollWidth 481 in a 375px viewport - the list running off the right edge Hans
+           photographed.
+           The second half of it is worse than the overflow and was invisible in the
+           screenshot: .rock-content is the ONLY shrinkable child and carries min-width:0,
+           so it absorbed the entire shortfall and measured 0px wide. The rock's text
+           input - the actual content of the EOS core - had no width at all. That is
+           v3.64.1's .todo-text collapse exactly, one surface over, and the same lesson as
+           .grid-3 in 3.66.2: a bug you have already diagnosed, left untreated somewhere
+           else, is a bug you have shipped.
+
+           WHY 600px AND NOT THE USUAL 768. The first version of this fix lived in the 768
+           block and made the card two lines at every width below it. Measured at 768: the
+           card is 701px and the one-line layout has ~200px of slack, so stacking there
+           turned a 68px row into a 112px row and bought nothing. The single line does not
+           actually break until the card is ~500px wide (fixed children 374px + the 120px
+           text floor), which is a ~545px viewport. 600px clears that with room to spare and
+           sits in the gap between the widest phone (~430) and the narrowest tablet (768).
+           Generalising the trap: "mobile" is not one number - a breakpoint should come from
+           where THIS component stops fitting, not from the block that was already open. */
+        @media (max-width: 600px) {
+            .rock-card {
+                flex-wrap: wrap;
+                gap: 8px;
+                padding: 10px 12px;
+            }
+            /* Line 1: number, rock text, delete. Delete sits with the text it deletes.
+               The basis is calc(100% - 90px) rather than `auto` so the break is
+               deterministic: 32px number + 30px delete + two 8px gaps = 78, so the line is
+               full at 100%-12 and the next child (the 90px owner select) cannot fit on it.
+               With `auto` the basis would be the input's max-content width and where the
+               row broke would depend on the length of the rock.
+               LONGHAND, and this cost a measure-fix-remeasure cycle: written as the
+               shorthand `flex: 1 1 calc(100% - 90px)` the whole declaration was dropped as
+               invalid, min-width survived because it is a separate declaration, and the
+               basis silently fell back to the base rule's `flex: 1` (0%) - so the text box
+               measured 120px, its own min-width. Check the COMPUTED value, not whether the
+               rule is in the sheet. (And then it STILL measured 120, because renderRocks
+               was writing style="flex: 1" inline on the same element. Specificity, then
+               source order, then inline styles - the inline one is now gone.) */
+            .rock-card .rock-content {
+                flex-grow: 1;
+                flex-shrink: 1;
+                flex-basis: calc(100% - 90px);
+                min-width: 120px;
+            }
+            .rock-card .issue-btn.remove { order: 3; flex-shrink: 0; margin-left: auto !important; }
+            /* Line 2: owner, On/Off, Kanban. `order` keeps them after the delete button
+               even though delete comes last in source order. */
+            .rock-card select { order: 4; flex: 1 1 90px; min-width: 0; width: auto; }
+            .rock-card .status-toggle { order: 5; }
+            .rock-card > button:not(.issue-btn) { order: 6; flex-shrink: 0; }
+            /* The status buttons are the widest fixed thing in the card. At the desktop
+               8px/14px padding the pair is 128px, which pushes the Kanban button onto a
+               third line on its own. */
+            .rock-card .status-btn { padding: 8px 10px; font-size: 0.8rem; }
+        }
+
         /* Extra small phones */
         @media (max-width: 380px) {
             header h1 { font-size: 1.1rem; }
@@ -3238,21 +3359,43 @@
                 <!-- Scorecard Section - Full Width Below -->
                 <div class="section">
                     <h3>📊 Scorecard (13-Week)</h3>
+                    <!-- v3.67.0: the current-week switcher. Rendered and shown by
+                         renderScorecardWeekBar() on the SAME 768px branch the CSS uses -
+                         never by a media query of its own (v3.62.1's Marketing-board
+                         lesson: a renderer that disagrees with its own stylesheet about
+                         what "mobile" means is how that class of bug returns). -->
+                    <div id="scorecardWeekBar" class="scorecard-week-bar" style="display:none;"></div>
                     <div class="scorecard-wrapper">
                         <table class="scorecard-table">
                             <thead>
+                                <!-- v3.67.0 COLUMN-COUNT FIX. This row carried 16 cells while
+                                     renderScorecard() emits 18 (Who, Measurable, Goal, the
+                                     goal-DIRECTION select, 13 weeks, delete). Measured in the
+                                     browser: header "1" sat over the direction select, week 1's
+                                     input sat under the header labelled "2", and week 13 had no
+                                     header at all - so every week column was labelled, and
+                                     dated, one week off. The two missing cells are added here
+                                     and the week cells now carry data-week (0-indexed, matching
+                                     the body's data-week) so nothing has to count columns by
+                                     hand again. -->
                                 <tr>
                                     <th>Who</th>
                                     <th>Measurable</th>
                                     <th>Goal</th>
-                                    <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th>
-                                    <th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>13</th>
+                                    <th class="sc-dir-col">Dir</th>
+                                    <th data-week="0">1</th><th data-week="1">2</th><th data-week="2">3</th><th data-week="3">4</th>
+                                    <th data-week="4">5</th><th data-week="5">6</th><th data-week="6">7</th><th data-week="7">8</th>
+                                    <th data-week="8">9</th><th data-week="9">10</th><th data-week="10">11</th><th data-week="11">12</th>
+                                    <th data-week="12">13</th>
+                                    <th class="sc-del-col"></th>
                                 </tr>
                                 <tr class="week-dates-row" id="weekDatesRow">
-                                    <th></th><th></th><th></th>
-                                    <th id="wd1"></th><th id="wd2"></th><th id="wd3"></th><th id="wd4"></th>
-                                    <th id="wd5"></th><th id="wd6"></th><th id="wd7"></th><th id="wd8"></th>
-                                    <th id="wd9"></th><th id="wd10"></th><th id="wd11"></th><th id="wd12"></th><th id="wd13"></th>
+                                    <th></th><th></th><th></th><th class="sc-dir-col"></th>
+                                    <th data-week="0" id="wd1"></th><th data-week="1" id="wd2"></th><th data-week="2" id="wd3"></th><th data-week="3" id="wd4"></th>
+                                    <th data-week="4" id="wd5"></th><th data-week="5" id="wd6"></th><th data-week="6" id="wd7"></th><th data-week="7" id="wd8"></th>
+                                    <th data-week="8" id="wd9"></th><th data-week="9" id="wd10"></th><th data-week="10" id="wd11"></th><th data-week="11" id="wd12"></th>
+                                    <th data-week="12" id="wd13"></th>
+                                    <th class="sc-del-col"></th>
                                 </tr>
                             </thead>
                             <tbody id="scorecardBody"></tbody>
@@ -5290,9 +5433,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.66.3';
-        const EOS_BUILD_DATE = '2026-07-28';
-        const EOS_BUILD_TIME = '02:35'; // v3.66.3: Second batch of Hans's phone-test list - the small/medium ones. (2) Meeting Agenda is its own page (#agenda) in the drawer's Focus group, with an "Open agenda" link left on the Meeting tab because the agenda is what you RUN the meeting from and burying it behind a menu would be a downgrade. The markup was MOVED, not copied - #agendaItems occurs exactly once in the document, so renderAgendaItems() and the edit-agenda modal keep working by id with no change; the rating panel stays on Meeting. (5) Calendar is a real, selectable nav entry marked as a PLACEHOLDER: NAV_ITEMS entries can now carry `placeholder`, which makes both the drawer and the bottom bar route to a toast instead of showPage(), so it can never navigate to a page that is not there. Worth noting this also restores an entry decision 4 actually specifies - Focus = Today, Calendar - which 3.66.1 dropped for not existing. A placeholder that says "coming soon" is more honest than a silent gap: it is the difference between "not built" and "forgotten". (6) Quick-add "+" FAB on Meeting and Today only, routed to the SAME addTodoWithList() behind the "+ Add" button so list assignment, id stamping and Google sync cannot drift. Built as #fabStack, a column-reverse flex container holding one button - because Sec 5.11b-5 decision 13's FAB is the VOICE MIC (Sec 5.11c item 5) and wants the identical corner; as a stack the mic drops in as a sibling above the "+" with neither moving, whereas a lone fixed button would have made that a rewrite. NOT DONE, and deliberately not guessed at: (1) the Gmail link opening Gmail's mobile web. The task stores only links[].link from the Tasks API and mail.google.com decides its own rendering; the only real lever is an Android intent:// URL with S.browser_fallback_url, and the fragment that identifies the MESSAGE cannot survive the intent target - so the likely outcome is the Gmail app opening at the inbox instead of the message, which is worse than clunky, not better. Needs a test on Hans's actual phone before shipping. Also still queued: 10 zoom, 11 Kanban+Marketing, 12 Settings, 15 Rocks+Scorecard. PRIOR v3.66.2: First batch of Hans's 15-item live-test list from his phone - the seven GLOBAL ones, done first on purpose because each of them was making every other screen harder to judge. (3) Weekly Pomodoro Challenge off the Meeting tab; container kept display:none since renderPomodoroLeaderboard writes into it by id from several call sites. (4) Row action buttons were 24x24 - self-inflicted, v3.66.0 squeezed them to 2px/3px padding to buy title width and traded a measured problem for an unmeasured one. The cluster now stretches to the row's full height so a 34px-wide control gets a ~34x110 hit area WITHOUT making the row taller; icons up to 18px, pills to 28px. (7) The blue header was ~400px of full-width stacked slabs because .header-controls was flex-direction:column/align-items:stretch on mobile - you scrolled past a whole viewport of buttons to reach the meeting. One wrapping row of small buttons: 171px. Deliberately NOT moved into the drawer, because Save Year and Print are not in decision 4's System group and 3.66.1 just removed them from there. (8) Hamburger at the top LEFT, where a left-sliding drawer belongs; the bottom bar's More cell still opens the same drawer. (9) THE TODAY TAB OVERFLOW WAS A KNOWN UNTREATED BUG: §5.11b-5's phase-1 note says in as many words that .grid-3 "has the identical min-width:auto trap but was not measured overflowing, so it was not changed" - My Daily Plan is a .grid-3 and with Hans's real data it scrolled sideways. Now .grid-3 and .grid-4 get min-width:0 too. Generalisable: a known untreated instance of a bug you have already diagnosed is a bug you have shipped. (13) Every modal was losing its bottom to the fixed nav bar. Fixed on the OVERLAY so all of them are covered at once - and it took three passes worth recording: the first wrote a competing .modal rule EARLIER in the sheet (same specificity, later block won, changed nothing); the second did the vh arithmetic by hand and landed 2px inside the bar; the third found three modals carrying an INLINE max-height:85/90vh, which beats any stylesheet rule without !important. Specificity, source order, then inline styles - in that order, every time. (14) Navigating now closes an open modal instead of leaving Settings floating over Compare Years. Settings SAVES on the way out because its fields only commit via a button; everything else just closes, because most already commit on change and the rest are in-progress surfaces where committing a half-finished thing on a stray tap is the worse bug. STILL QUEUED from Hans's list: 1 (Gmail link opens mobile web), 2 (Agenda as its own page), 5 (Calendar nav placeholder), 6 (+ FAB), 10 (zoom/nav-lock), 11 (Kanban + Marketing), 12 (Settings reorganisation), 15 (Rocks + Scorecard mobile). PRIOR v3.66.1: Closes the gaps between what v3.66.0 CLAIMED against Sec 5.11b-5 decisions 4/5/7 and what it actually built. Found by auditing the code against the locked decisions rather than against my own summary of them, at Hans's request - which is the real lesson here: the summary was written from intent, and intent is not a record of what shipped. Decision 7: the checkbox is ROUND now (v3.66.0 shipped the browser default square - a straight miss, not a judgement call); the source-email chip is FULL WIDTH (was align-self:flex-start, so it hugged its text and read as the "small icon" the decision rules out on the strength of Hans's screenshot); the optional SOURCE SUBTITLE exists (v3.66.0 omitted it silently) driven only by task.source, which today only the meeting-notes parser stamps - deliberately not inferred from googleTaskId, because a subtitle true of every row tells you nothing, same reasoning that took the envelope off all 30-odd to-dos in 3.65.1; and the AI icon is a real SPARKLE as the decision names, inline SVG for the same platform-font reason as the two email marks, on tasks AND Kanban cards. Decision 4: My Daily Plan moved from Focus back to WORK and stopped being labelled "Today" - that conflated a real page with an unbuilt Direction A view and hid the gap instead of showing it; Save Year and Print removed from System (never in the locked IA, already in the header - a menu that quietly grows stops being the one that was agreed); System reordered to Sync Now, Compare Years, Settings, which needed a 4-slot renderer because the old pages-then-actions one silently reordered an interleaved group. Decision 5: the default bar is now the THREE destinations the locked default actually maps to (Meeting covers To-Dos, My Daily Plan covers Today), instead of padding the fourth slot with Vision to make the count say four - an invented choice presented as a locked one; and the ceiling is 5, not 4, because the decision says "which 4-5 appear". STILL NOT DONE and named rather than buried: decision 8's Google-Tasks-mirroring menu (Add deadline / Add attachment / the list picker with a tick and "New list"), a to-do's overflow menu still has no Delete, and the new row atom is To-Dos only while decision 7 says "shared by all surfaces". PRIOR v3.66.0: UX/UI cleanup - the real task-row density system (Sec 5.11b-5 decision 7), mobile phase 2 nav + swipe gestures (decisions 1/4/5), the two email glyphs, and "Draft Meeting Email" -> "Draft Email" with the meeting-ness moved inside. THE HEADLINE, and the thing worth carrying forward: v3.64.1 fixed the vertical-text bug by letting the row WRAP, and that looked like a fix because the symptom went away. Measured before touching anything this session: at 1280px the Weekly Meeting pane is 538px and five to-dos took 621px of vertical space, with the title getting 243-253px and wrapping to 3-4 lines. The giveaway that wrapping was never the fix is the TABLET number - at 768px, in a 701px pane with room to spare, rows were still 116px tall. The row was not squeezed, it was over-full: eleven flex-shrink:0 children next to one flexible text box. Wrapping relieved the pressure on the text and did nothing about the cause. The row now has at most FOUR children (caret, checkbox, .tr-main, .tr-actions), the date input / list picker / owner badge / owner select are pills that open the todoDetailModal that already edited all four fields, and density is a device-local preference. Same pane, same five tasks: 410px at cozy, 177px at compact, and `full` reproduces the old row for anyone who wants the inline editors back. GENERALISABLE: when a fix works by removing the pressure on a symptom rather than the cause, the number that exposes it is the one from the case that was NOT under pressure. ALSO IN 3.66.0, a real off-by-one that predates the pills: new Date('2026-08-04') is UTC midnight by spec, so west of Greenwich it is Aug 3 locally - the first due pill rendered "Aug 3" for a task due Aug 4, and isOverdue() had carried the identical flaw silently since it was written (a task due TODAY could compare as overdue). Both go through parseLocalDate() now. A date-only string and a Date are different types and the conversion between them is timezone-dependent; the bug hides until something renders the day instead of just comparing two of them. AND: dark mode is NOT in this release, deliberately - decision 12 calls it "a token redefinition, not a restyle" and that is not true of this file, which has 943 hardcoded hex colours across 1,483 inline style attributes. Hans chose to defer it rather than ship dark chrome over light panels. PRIOR v3.65.2: One-line clarity fix with a real cause behind it. Hans went looking for the "Create Gmail draft" button on the AI action MENU and could not find it, because it does not live there - it appears in the result panel further down, only AFTER the model has written a draft, next to Copy. What sent him hunting was the menu hint, which was written for the unconsented case ("Subject and body you can copy or open in Gmail") and never changed once real drafts were switched on. So the menu was actively describing the OLD behaviour while the new behaviour sat one click away. New _taskAiActionHint(a) makes the email hint reflect the actual capability - "Saves a real draft in your Gmail Drafts, with your signature" when gmail.createDraft is available. Uses the sync capabilityReady rather than the checked async variant on purpose: this is cosmetic, and if the probe has not finished the conservative wording is the correct thing to show. Generalisable, and the third time this pattern has bitten in two days: a static label describing a capability-gated behaviour becomes a lie the moment the capability flips. If the behaviour is conditional, the label has to be too. ALSO IN 3.65.2, and the actual answer to the whole Gmail saga (pairs with .gs 3.50.0): THE CAPABILITY PROBE HAD BEEN TESTING THE WRONG PERMISSION SINCE v3.41.0. Hans's Google Access Check output was decisive - "Gmail: create HTML draft" OFF with "Specified permissions are not sufficient. Required permissions: (https://mail.google.com/ || https://www.go...". The .gs probe called GmailApp.getDrafts() as a cheap read to prove the Gmail scope was present, but getDrafts() IS a read and Apps Script demands https://mail.google.com/ or gmail.readonly for it - scopes this project deliberately does not request and never should. The gated feature only calls GmailApp.createDraft(), which gmail.compose fully covers. The probe therefore required strictly MORE authority than the thing it guarded, could never pass, and failed with a message indistinguishable from "the user never consented" - so Hans re-consented and redeployed several times chasing a scope he had already granted. Fixed in .gs 3.50.0 by grantedScopes_(), which reads the script's own OAuth token scopes from Google's tokeninfo endpoint: no Gmail call, no side effects, and it answers the real question rather than a proxy for it. GENERALISABLE: a capability probe must exercise no more authority than the feature it gates; where that is awkward, do not probe by side effect at all - ask what was granted. Second signal in the same screenshot: "Gmail: read my signature" showed OFF with NO backend reason at all, meaning the backend never returned that key, meaning the deployment the client calls was running pre-3.49.0 code - the deploy is not reaching it. That is a SEPARATE problem from the probe bug and is why getCapabilities now returns gsVersion, and why checkGoogleAccess now prints the deployment id it asked plus an amber warning when it differs from config.js's bootstrapWebAppUrl. The client's webAppUrl lives in team settings, NOT config.js, and this script project has ~24 orphaned deployments - so the two can drift and a deploy can land somewhere the app never calls, leaving every older feature working and only the newly added thing missing. || PRIOR: v3.65.1: Three fixes from Hans's live test, one of them a real latent bug with a wider blast radius than the report suggested. (1) A NEW TASK HAD NO ACTION BUTTONS AT ALL. renderTaskActions returns '' for a task with no `id` (the Phase 1 id contract), and FIVE of the task-creation paths never assigned one: submitNewTask (the "+ Add" modal, which is what Hans hit), addOtterItemsToTodos, importAITasks, promoteLocalToTodo and addParsedTasksToTodos. Only the inline addTodo and the rocks path were stamping ids. The reason this survived since Phase 1 is that migrateTaskIdentities() backfills any missing id - but only on page LOAD, so every one of these rows silently healed itself on the next refresh and the gap was invisible unless you looked at a task you had just created in the same session. All five now call generateTaskId(); the load-time migration still covers everything already saved. Generalisable: a self-healing migration hides the bug it is compensating for - if a contract matters at render time, assign it at creation time, not at load. (2) THE AI OFFERED TO GRAB COFFEE OVER A FINRA COMPLIANCE TASK. Not a link bug - the model genuinely wrote "happy to grab coffee this week" into a chase-up on an overdue entitlements item, and _taskAiPlainWithLinks then correctly appended the link because the word was there. The fault is v3.64.1's prompt rule, which said "if meeting up is the natural next step, offer it". To an LLM that is not a constraint: proposing a friendly meeting is always locally plausible, so it fired on everything. The rule is now DEFAULT-OFF and names the wrong cases explicitly - status chases, reminders, overdue items, internal handoffs, administrative and compliance tasks get no mention of meeting up at all - with permission narrowed to items that are actually ABOUT getting together. Naming the failure cases is what makes a negative instruction hold. (3) The "+ Add" button was a grey label in a dashed grey outline beside a solid green Sync button, and Hans could hardly see it; it now uses the primary colour with a solid border and a faint tint, still an outline so it does not compete with Sync. ALSO WORTH RECORDING: Hans's report that the signature was still missing is again the DEPLOY, not the code - the pasted output carries the "Coffee: https://..." line that only _taskAiPlainWithLinks produces, which is the plain-text compose degrade, which means capabilityReady('gmail.createDraft') was still false and steps 2-3 of the clasp round had not run yet. Second time in two days that an unfinished deploy presented as a broken feature. (4) ADDED AFTER THE DEPLOY SUCCEEDED AND THE BUTTON STILL SAID "OPEN IN GMAIL": probeCapabilities() ran exactly ONCE, 1200ms after load, and swallowed every failure silently - so a single transient fetch failure (Hans saw "Failed to fetch" in that same session) left every Google-backed capability switched off for the whole session with no retry and no signal anywhere in the UI. Three changes. It now retries three times with backoff, which also covers a cold Apps Script deployment answering slowly right after a push. New capabilityReadyChecked(key) re-probes ONCE at the point of use when the load-time probe never completed, because "unavailable" without a completed probe is an unanswered question, not an answer - the two email drafters now call it instead of the raw capabilityReady. And _capabilityProbeState records whether the probe ever finished, so Google Access Check can distinguish "this permission is off" from "I could not reach the backend to find out", which previously rendered identically as a plain OFF. That ambiguity is the whole reason a correct deploy looked like a broken feature. Generalisable: a silent one-shot probe whose failure mode is indistinguishable from a legitimate negative will eventually be read as a legitimate negative. || PRIOR: v3.65.0: THE REAL GMAIL SIGNATURE, WITH THE LOGO (pairs with .gs 3.49.0). v3.64.0 shipped a plain-text signature field as the workaround for a GmailApp draft not inheriting the Gmail web signature. Hans's answer was the right one: his actual signature is formatted, carries the firm logo and the compliance footer, and retyping it as plain text throws away everything that matters. Gmail's API can return the real thing - users.settings.sendAs.list gives each send-as address's `signature` as HTML, and Gmail stores signature images as hosted googleusercontent URLs rather than inline CID attachments, so the logo comes through as an ordinary <img src="https://..."> and survives into the draft. SCOPE BOUNDARY, stated precisely because this project had a compliance hold on Gmail until 2026-07-25: the new scope is gmail.settings.basic, which is READ of account settings ONLY - it cannot open a message, a thread, a subject line or an attachment. With gmail.compose (create drafts, cannot send) the script still has no ability to read or send mail. Settings > Email Signature now has a SOURCE picker: the real Gmail signature (recommended), the plain-text box, or none. Defaults to 'manual' on upgrade, NOT to gmail - an existing typed signature must keep working untouched, and opting in should be a choice. Fetched ONCE and cached in settings rather than pulled on every draft: it keeps drafting fast and offline-safe, and the Settings preview is the only way to actually confirm the logo survived, which is the one part of this that could not be verified without running it against a real account. The fetch persists immediately instead of waiting for Save, because it is fetched data with nothing to review. emailSignatureHtml() falls THROUGH to the typed signature when the source is gmail but the fetch has never run - pressing nothing should not silently strip a signature Hans already typed. Gmail's HTML is used as-is rather than restyled, since it is already an email-safe fragment and re-wrapping it would fight the formatting he set up on purpose; script tags and inline on* handlers are stripped as hygiene before it is rendered into the preview or posted to the backend. Backend: new getGmailSignature action, new gmail.readSignature capability probe, and new authorizeGmailAccess() which consents BOTH Gmail scopes in ONE Run and logs which were granted and which are still blocked - it supersedes authorizeGmailCompose (kept, still works) because one consent screen instead of two is one fewer manual step to skip, and the 2026-07-27 round showed precisely how a skipped consent step reads as a broken feature. The send-as picker prefers primary, then default, then the first alias that has a signature at all: an account with several aliases commonly has one on only one of them, and choosing blindly would return an empty string and look like a failure. || PRIOR: v3.64.1: Live-test round on v3.64.0, pairs with .gs 3.48.0. FIRST, THE CONTEXT: most of what Hans reported as broken was not broken - the .gs deploy never finished. clasp push succeeded, but the command given for opening the editor was a cmd.exe idiom (start "" "url") which PowerShell parses as Start-Process with an empty FilePath, so it errored, the consent step was never run and clasp deploy -i never happened. With the scope unconsented capabilityReady('gmail.createDraft') is false, so the button was still the plain-text compose URL, and a compose URL cannot carry HTML - which is why "the signature did not work" and why it "just signs it Hans" (that is the AI's own sign-off, the only thing a plain-text body can hold). Nothing in v3.64.0 was at fault. Four real fixes here anyway. (1) SUBTASKS NEVER NESTED IN GOOGLE TASKS - a genuine bug, found by inspection while checking Hans's report, and NOT caused by the AI steps feature. Google_Tasks_Sync.gs createTasks called Tasks.Tasks.insert(task, listId, taskData.parent) with a bare STRING third argument; the advanced Tasks service takes an optionalArgs OBJECT there (the same shape as the {showHidden:...} passed to Tasks.list elsewhere in that file) and `parent` is a query parameter, not a task-resource field. A wrong-typed third argument is silently DROPPED - no exception - so the surrounding try/catch fallback never fired and the response still said success + isSubtask:true while Google created a flat top-level task every time. Any subtask pushed since subtasks existed hit this; "Add all as subtasks" merely made it obvious by creating several at once. Fixed to {parent: taskData.parent}. Generalisable: with advanced services, "it returned success" proves nothing about a mistyped optionalArgs. (2) THE VERTICAL-TEXT ROW. .todo-text had min-width:0, so with eleven flex-shrink:0 controls in the row (checkbox, star, bell, notes, subtask, AI, overflow, date, list picker, owner badge, owner select) the only flexible item absorbed the entire shortfall and collapsed to about one character wide - every letter wrapping onto its own line, which is the tall thin column Hans saw on the Weekly Meeting tab, whose right pane is the narrowest place these rows are drawn. min-width:0 existed to stop a long unbroken word overflowing, but overflow-wrap:break-word already does that. Now a real 240px floor plus flex-wrap on .todo-item, so a crowded row wraps its trailing controls to a second line instead of crushing the text; the 768px block still overrides to flex:1 1 100% with min-width:0 so a phone keeps text on its own full-width line. This is a defect fix, NOT the mobile redesign - Sec 5.11b-5 phase 2 is still outstanding. (3) SCHEDULING LINKS REACH THE PER-TASK DRAFTER. Hans asked it for a coffee email and got no links: taskAiCreateGmailDraft passed '' for both, and the drafter had never been told the Settings links exist. Now a shared _schedulingLinks() feeds three places - the prompt (told to write the bare WORD coffee/lunch and never a URL, since assembleMeetingEmailHtml anchors the word and strips raw URLs), the HTML assembler, and new _taskAiPlainWithLinks which appends the raw links to the Copy and compose-URL paths, because plain text cannot hold an anchor and the model is now instructed not to write one - without that the degrade would silently lose them. Appended only when the word actually appears, so an unrelated email does not get two stray links stapled on. (4) GOOGLE ACCESS CHECK BUTTON in Settings > EOS Configuration. "Open the console and run probeCapabilities()" is not a reasonable instruction; this is one click that reports each capability in words plus the registry's own declared degrade, and exists because a scope being in appsscript.json, being consented, and being deployed are three separate states and only the backend knows which one is missing. STILL OPEN, awaiting Hans: pulling his REAL Gmail signature (with the firm logo) via gmail.settings.basic + users.settings.sendAs.list rather than a pasted plain-text field, which needs another Gmail scope and therefore his say-so; and using the already-granted contacts scope to turn the extracted name into a recipient address. || PRIOR: v3.64.0: GMAIL DRAFTS TURNED ON (Sec 5.11c, pairs with .gs 3.47.0). Almost none of this release is new code - it is a consent-plus-wiring job on a path that has been sitting finished and inert since v3.41.0/3.46.0. createEmailDraft (GmailApp.createDraft, never sends), authorizeGmailCompose, the gmail.createDraft capability probe, createHtmlEmailDraft, assembleMeetingEmailHtml and the meeting drafter's real-draft-vs-compose-URL branch all already existed. The ONE thing missing was https://www.googleapis.com/auth/gmail.compose in appsscript.json, so the probe's GmailApp.getDrafts() threw, getCapabilities reported available:false, and every path correctly degraded to a Gmail compose URL - a URL that cannot target an account and by definition never creates a draft, which is exactly why Hans's drafts opened in his PERSONAL Gmail with nothing in Drafts. Four changes here. (1) SIGNATURE FIELD in Settings > Email Signature, appended by new emailSignatureHtml() inside assembleMeetingEmailHtml. This is not a nice-to-have: a draft created server-side through GmailApp does NOT inherit the signature configured in Gmail's own settings (Gmail only appends that when a human presses Compose) and there is no API to read it, so without this field every AI-created draft would arrive unsigned. Linkification is deliberately ONE ordered-alternation pass with the email-address branch first - a two-pass version mangled hans@investedwithyou.com, because the domain half matched the URL pattern first and the mailto pass then found a tag in the middle of the address. (2) postGmailDraft() extracted out of createHtmlEmailDraft unchanged, so the per-task action posts through the same path rather than a second copy of it; the one behaviour change is that a missing webAppUrl now throws into the caller's compose-URL fallback instead of toasting and stranding the user. (3) The v3.63.0 per-task "Draft an email about this" now offers Create Gmail draft when the scope is consented, via taskAiCreateGmailDraft, and keeps Open in Gmail as the degrade for anyone unconsented - both the capability branch and a runtime try/catch fall back to it, so nobody is ever stranded. Recipient is left deliberately EMPTY on that path: a to-do carries no email address and the .gs allows an empty `to` for exactly this case. Passing '' for both scheduling links reduces assembleMeetingEmailHtml to a plain text-to-HTML-plus-signature converter (linkWord no-ops on an empty url), which is why the signature only had to be wired in one place. (4) Sec 5.11c item 4: "Draft outreach email" renamed to "Draft email" (the drafter is used for far more than outreach), and the recipient-name regex gained an AI backstop. That regex handles "Book lunch with Blake Jackson" but NONE of its three patterns match "Finalize Employee Contract with Mike Shetterly", so the whole task text landed in the recipient field. Instead of a fourth regex, _refineMeetingEmailRecipientName asks the model - but only when the guess does not already look like a name, only when a key is configured, never blocking the modal open, and it applies the answer only if the field still holds the original guess so a slow reply cannot overwrite typing. DEPLOY ORDER MATTERS on the .gs side: clasp push, then run authorizeGmailCompose from the editor and approve consent (a Web App POST cannot trigger a consent screen), THEN clasp deploy -i under the existing deployment id. || PRIOR: v3.63.1: Two real bugs from Hans live-testing v3.63.0, both with the same shape - the code was fine, the CONTEXT handed to the model was not. (1) GEMINI RETURNED NOTHING for all three per-task AI actions while Claude and OpenAI worked perfectly. Root cause is not the helper and not the prompts: Gemini 2.5 models think by default and those hidden thinking tokens are billed against the SAME maxOutputTokens budget as the visible answer, so on a short structured call (taskDeadline was 300 tokens) reasoning consumed the entire budget and the API returned finishReason MAX_TOKENS with an EMPTY text part. That empty string then failed JSON.parse downstream and surfaced as "The model did not return the expected format" - a message pointing at the model's formatting when the actual problem was the budget, which is exactly the kind of misdirection that costs an hour. Three-part fix: callGeminiOnce now sends generationConfig.thinkingConfig={thinkingBudget:0}, gated behind new geminiSupportsNoThinking() which only matches the 2.5 Flash family (2.5 Pro cannot disable thinking, pre-2.5 models reject the field); callAI passes noThinking by DEFAULT for every call in the app with opts.thinking to re-enable, since nothing here needs chain-of-thought and leaving it on silently spends budget on reasoning nobody sees; and callAI now throws a legible named error when a provider returns an empty body instead of letting the caller's parser blame formatting. Marketing's Social (500) and Titles (500) budgets carried the identical latent trap for anyone routing marketing to Gemini - they are covered by the same default. Task budgets also raised (taskSteps 600->900, taskDeadline 300->500, taskEmail 800->1200); these are a CAP not a spend, so headroom is free. (2) AI: ANGLES IGNORED WHAT THE TOPIC ACTUALLY MEANT. mktParseTopics correctly splits a brainstorm line into "Title - the angle in one sentence" and keeps both, but mktChooseTopic only ever stored .text, so mktSuggestAngles was handed a bare title. Hans picked "The Monday Morning Problem - Nobody warns owners that the hardest part of selling a business isn't the deal, it's waking up the next day with nowhere to be" and got four angles about the stock market's "Monday effect" - the model had no way to know, because the half that carried the meaning was thrown away. Fixed by looking the seed line back up from card.brainstormTopics at prompt time (no new field, no schema change - brainstormTopics already persists to Supabase as brainstorm_topics) and passing it as "WHAT HE MEANS BY IT", explicitly instructed to treat that as the definition rather than reinterpreting the title. The angles prompt now also includes My Take when it already has content, so angles stay compatible with what Hans already thinks. No `.gs` change. // v3.63.0: The shared AI-call helper (EOS_MASTER_SUMMARY.md Sec 5.11c item 3) plus the two reserved AI stubs wired to real calls. THE HELPER: new callAI(featureKey, prompt, opts) is now the single entry point for every AI call in the app - it resolves getAIProviderConfig() itself, handles "no API key saved for that provider" in ONE place with ONE wording pointing at Settings > AI Tools, and routes through callAIWithBudgetRetry so token budgets and the truncation retry behave identically everywhere. It returns text and throws an Error carrying .aiCode ('no-api-key' vs 'call-failed') so a caller can tell a missing key from a network failure without string-matching a message. Three small companions: requireAI(featureKey, label) is the early guard for sites with real setup work (a firm-context fetch, a disabled button) that must not run before discovering there is no key - it is the SAME message, just earlier; and aiIsConfigured(featureKey) is the silent predicate for the two places where AI is genuinely optional and the flow degrades to a manual prompt (WordPress category picker, mktGenerateTitles). The one call site that still holds a getAIProviderConfig() result is parseNotesWithAI, and only to name the provider in its status line - the call itself goes through callAI and never sees the key or the model. callAIWithBudgetRetry gained two additive knobs (baseOpts.maxTokens wins over the configured budget; baseOpts.noRetry skips the 1.5x retry) which is what lets EVERY call site go through one function without any of them changing what they send. THE MIGRATION: all 12 routed call sites moved onto it - mktRunResearch, mktDraftBlog, mktSuggestTitles, mktBrainstorm, mktSuggestAngles, mktTightenBlog, mktSuggestSocial, mktSuggestQuotes, mktPickWordPressCategory, mktGenerateTitles, generateMeetingEmail, parseNotesWithAI. Behaviour is deliberately identical: same prompts, same temperatures, same token budgets, same which-two-sites-retry-on-truncation (Blog Draft and Tighten, nothing else), same toasts. The ONE intentional behaviour change is parseNotesWithAI's missing-key alert, which had its own bespoke wording and now shares the standard one - that consolidation is the point of the exercise. NOT migrated, deliberately: the three Settings "Test connection" buttons (they exist to test one specific provider's key as typed, so routing would defeat them), getAISuggestions in the IDS modal (its provider comes from a visible dropdown the user picks, not from routing, and it falls back to generateLocalSuggestions when there is no key), and extractTasksWithAI (hardcoded to Gemini - and it turns out to be dead code, declared and never called; left alone, flagged for the Phase 4 cleanup). THE TWO STUBS: aiAssistTaskById and kanbanAiAssistByCard both used to toast "coming in a later update" and now open a real AI menu, built exactly to the shape locked in Sec 5.11b-5 decision 9 - one AI icon promoted INTO the row (before the ⋯, matching the locked row atom star/AI/⋯) opening a menu split by how long you wait. Only the "answers now" group is built: break it into steps, suggest a deadline, draft an email about this. The "runs in the background" group (research this, hand to an agent) is NAMED in the modal rather than shown as buttons that would do nothing, because it needs the agent work first. The ⋯ menu keeps an AI entry either way, so the Phase 1 "everything is reachable from the menu" floor still holds - on Kanban that is actually new, since the AI entry used to be promoted on desktop and absent from ⋯ entirely. Tasks and cards share the whole surface through one resolved SUBJECT object, the same adapter-at-the-seam trick kanbanCardToTaskView already uses, so the two id namespaces still never meet. Applying a result goes through the existing mutation paths on purpose: a suggested deadline is written via updateTaskById (so a to-do still fires its Google-sync side effects) and AI-suggested steps are added via addSubtask, which gained an optional second argument presetText that skips the prompt and suppresses its own toast so a batch add toasts once - every existing one-argument caller is untouched. Steps re-resolve the task by id between adds because addSubtask re-sorts and re-renders the list, which would otherwise stale a captured index. Deliberately NOT built: "summarise the source email", the fourth item in decision 9's answers-now list - it has to READ the linked email and Gmail read access is on hold, and a button that can only see the subject line is a worse answer than no button. New Settings: a "Task AI" provider route (defaults to Gemini) and three token budgets (Task steps 600, Task deadline 300, Task email 800), all in the existing Settings > AI Tools blocks. No `.gs` change, no backend redeploy. // v3.62.1: Two fixes from Hans live-testing v3.62.0 on his phone. (1) REAL BUG, and it predates this session - it shipped broken with the Marketing mobile view itself. .mkt-board is `display:flex` with `overflow-x:auto` (that IS the desktop board), but mktRenderMobile() sets board.innerHTML = pills + body, so the pill switcher and the single column became flex SIBLINGS laid out side by side in a horizontal scroller instead of stacking - which is why the column-name pills appeared squeezed and clipped at the left edge next to the column rather than sitting above it. Fixed with a .mkt-board-mobile class that flips the board to display:block/overflow-x:visible, toggled from mktRender() rather than a CSS media query so it can never drift from isNarrowViewport()'s own 640px threshold (the desktop board and the mobile renderer disagreeing about what "mobile" means is exactly how this class of bug comes back). Desktop board, drag-and-drop, mktCellDrop and the column manager are untouched. (2) Mobile now uses the full width of the phone. Section content used to start 42px in from the screen edge: 20px of that came from `body { padding: 20px }`, which was simply never overridden in any mobile media query, plus 10px .container and 12px .page. The white .page card now runs edge to edge (border-radius dropped - a rounded corner flush against the screen edge reads as a rendering mistake), while header/.tabs keep a small gutter so the year picker and the Save/Print/Settings buttons don't touch the bezel. Reclaims ~30px, a tenth of the screen at 375px. Verified: section content width 291px -> 321px, document.documentElement.scrollWidth still exactly 375 on all eight pages. No `.gs` change. // v3.62.0: Mobile build phase 1 - the three layout bugs measured on live v3.61.0 at 375x812 (EOS_MASTER_SUMMARY.md Sec 5.11b-5). (1) Weekly Meeting horizontal overflow, ONE root cause and it was never the sections: #ratingButtons is flex-wrap:nowrap with ten fixed 32px buttons (min-content 365px), and because .grid-2's children still carried the default min-width:auto, a grid track can never shrink below its item's min-content - so the "1fr" track resolved to 389px inside a 291px column, the document became 431px wide in a 375px viewport, and every section on the page was shoved 56px off-screen. Fix is both halves: `.grid-2 > * { min-width: 0 }` caps the track at its fair share, and .rating-buttons becomes a horizontal scroll-snap row (overflow-x:auto, scroll-snap-type:x proximity, justify-content:safe center so button 1 stays reachable past the scroll origin) so the ten buttons stay on one line and stop contributing to document scrollWidth. Touch targets go 32px -> 46px under (max-width:768px) OR (hover:none and pointer:coarse). Verified document.documentElement.scrollWidth === 375 at a 375px viewport, was 431. (2) Marketing toolbar: five buttons on flex-wrap:nowrap crushed to 71/67/66/53px with labels wrapping internally (46px vs 61px row heights), and a fifth (Manage Access) renders for admins which is where it tipped into real overflow. Now one primary action inline (+ New Blog) plus an overflow popover carrying + Social / Quote, Suggest Topics, Manage Columns and Manage Access - reusing the existing shared .task-action-wrap/.task-action-menu chrome (DOM-local open, outside-click close, viewport-aware flip) rather than inventing a second menu primitive. #mktManageAccessBtn keeps its id and its display:none/'' toggle contract, so mktCheckAccess() is untouched; each item calls closeOpenTaskMenu() first since a modal-opening action would otherwise leave the menu up behind it. This applies at every width, not just mobile - deliberate, matches the "the menu is the universal floor" rule locked for Kanban in Phase 3. (3) To-Dos control row, which was broken at 1280px too, not only on mobile: two 121x29px selects beside an "All Team Sync" button crushed to 51x53px with its label on three lines, and "+ Add To-Do" rendering as a 538px full-bleed bar. Owner filter is now a segmented control; every control shares one 38px baseline in a wrapping .todo-controls row; "+ Add" is an inline 38px button in that row instead of a full-width bar under the list. IMPORTANT: #todoOwnerFilter itself is still in the DOM (display:none) and is still the only place the filter value lives - renderTodoOwnerSegments() renders buttons FROM its options and setTodoOwnerFilter() writes back to select.value, so all six existing `getElementById('todoOwnerFilter').value` readers are completely unchanged; this is presentation only. The title keeps its own <h3> so updateSnoozedBadge()'s "N snoozed" pill still has somewhere to land. Explicit min-height on .todo-ctl/.seg-btn/.rating-btn is load-bearing - the existing `@media (hover:none) and (pointer:coarse) { button { min-height:44px } }` rule would otherwise silently break the 38px baseline on exactly the device this is meant to fix. Out of scope this session and NOT touched: the drawer, bottom nav, swipe gestures, the per-task AI button, dark mode (all phase 2, and the shared AI-call helper has to land first). No `.gs` change. // v3.61.0: Full lockout, Hans's explicit call after live-testing surfaced that the 2FA gate (v3.60.0-3) only ever covered the app's VISUAL reveal and Marketing's Supabase-backed data - it never touched (a) local data, which has always rendered from localStorage regardless of any sign-in state, by design, since before any auth system existed in this app, or (b) background Google Tasks sync, which runs on a per-device secret (webAppSecret) entirely independent of the current session's Google/Supabase/2FA status. New #appBootGate: an OPAQUE (not the usual translucent) full-viewport overlay, active BY DEFAULT in the raw HTML (zero JS dependency, so there is no flash of real content between first paint and the sign-in/2FA sequence resolving), z-index 9990 - below the actual interactive gates (9997-9999) so their real UI renders normally on top of it, but above everything else, so nothing behind them is visible while they're up. New appRevealApp() is the single point that hides it and - this is the other half of the fix - ALSO now kicks off initAutoSync()/loadTeamSettingsFromCloud()/pullKanbanFromCloud() for the first time, moved out of the DOMContentLoaded handler where they previously fired unconditionally regardless of auth state. Called from every "user should see the app now" branch: applySignedInUser()'s success path (covers the large majority of cases transitively - fresh sign-in, returning session, MFA-satisfied completion via appPendingSignIn), skipGoogleSignIn(), the already-skipped-this-session fast path, checkAppWideSupabaseSession()'s non-team-member branch, and initGoogleSignIn()'s immediate return when Google Sign-In isn't configured at all (so local-only deployments are completely unaffected). Deliberately did NOT touch the internal logic of any of the four sync functions themselves (manualSync/syncAllTeam/pullTasksFromGoogle/autoPullFromGoogleTasks) or their text-match dedup - only WHEN their bootstrap first fires. No `.gs` change. // v3.60.3: Two more real gate-dismissal bugs, both caught by Hans live-testing v3.60.2 within minutes of it going live. (1) Clicking the dimmed backdrop OUTSIDE the "Two-factor authentication required" box silently closed it - a generic app-wide handler (~line 17346) closes ANY .modal-overlay on a backdrop click, built for ordinary dismissible modals (Settings, Manage Access, etc); #appMfaGate was never excluded from it despite being the one truly mandatory, non-skippable gate in the app (unlike #googleSignInGate/#mktAuthGate, which both have an intentional "Skip for now" equivalent - required 2FA has no such escape hatch by design). Fixed: #appMfaGate is now explicitly excluded from that handler. (2) Once dismissed, Hans landed back on the "Sign in to continue" Google screen instead of a re-locked app - because handleGoogleSignInResponse()'s MFA-required branch showed #appMfaGate ON TOP of #googleSignInGate without ever actually hiding the one underneath (only applySignedInUser() does that, and it's deliberately deferred in this branch). Fixed: that branch now explicitly hides #googleSignInGate the same way checkAppWideSupabaseSession()'s already did. Verified both fixes directly: activated the gate, confirmed a backdrop click leaves it active and #googleSignInGate stays hidden, and confirmed document.elementFromPoint() over a "visible" button behind the dimmed overlay returns the overlay div itself, not the button - clicks were never passing through, only the gate's dismissibility was the actual hole. No `.gs` change. // v3.60.2: Fix a real hole in v3.60.0's app-wide 2FA gate, caught by Hans deliberately testing it (turned "Require for everyone" on, fully signed out, signed back in, could still click behind the 2FA prompt and use the whole app). Root cause: a FULL sign-out clears the Supabase session entirely, so the next sign-in is a FRESH one through handleGoogleSignInResponse() - a different code path than the "returning session" one (checkAppWideSupabaseSession, already fixed once this session in v3.60.1's build). handleGoogleSignInResponse() called applySignedInUser() (which reveals the whole app - removes the sign-in gate) IMMEDIATELY, and only re-locked behind #appMfaGate after an async Supabase round-trip completed - not a brief flash, a real window where a fresh sign-in walked straight past the requirement. Fix: applySignedInUser() is now DEFERRED in both app-wide sign-in paths until the MFA check resolves - new appPendingSignIn holds the identity while #appMfaGate is shown, and appEnforceMfaGate()'s "satisfied" branch is what actually calls applySignedInUser(), the ONLY place the app is revealed. Every failure branch (Supabase not configured, piggyback error, no profile, thrown exception) still falls back to applySignedInUser() directly, preserving v3.56.0's original guarantee that a Supabase hiccup can't block basic sign-in - new try/catch in mktGetMfaStatus() itself fails open (not-required) on any infrastructure error for the same reason. Real UX tradeoff, stated plainly: a fresh sign-in with 2FA required now takes a beat longer to reveal the app (waiting on the actual network round-trip) instead of revealing instantly - this is the correct, standard 2FA behavior Hans described from other sites, not a regression. Also this session: removed the redundant Marketing-toolbar "🔒 Security" button (confusing - implied 2FA was Marketing-scoped) now that the header 🔒 link covers everyone app-wide; fixed stale "Marketing board" copy in the owner-toggle description to say "everyone who signs into this app." No `.gs` change. // v3.60.1: Fix a real dead-end, caught by Hans live-testing v3.60.0. "Verified" is per-SESSION, not permanent - a factor stays enrolled across sign-outs, but each fresh session starts unverified (aal1) again until it completes a challenge. Hans enrolled, signed out, signed back in (correctly not prompted - 2FA still wasn't required), then tried to flip "Require for everyone" on and got stuck on "set up and verify your own two-factor authentication first" despite having already enrolled - because the ONLY step-up-challenge UI that existed was the one shown after the requirement was already on, a chicken-and-egg problem for the very first owner trying to turn it on. Fix: mktRenderSecurityPanel() now checks the current session's AAL whenever a factor exists; if the session hasn't verified yet, a new "Verify this session" inline code prompt appears right in the Security panel (new mktMfaVerifySessionPanel + mktMfaVerifySession(), same challengeAndVerify call the forced-challenge screens already use) so an owner can voluntarily step up on demand instead of only reactively. No `.gs` change. // v3.60.0 (+ .gs v3.46.0): 2FA extended app-wide (Hans's call, correctly - since the v3.45.0 security fix + v3.56.0 sign-in unification, the same Supabase session already gates ALL cloud sync, not just Marketing, so a Marketing-only 2FA gate left a real hole: someone could satisfy 2FA to get into Marketing while Rocks/Kanban/To-Dos sign-in never checked it at all). New #appMfaGate full-screen overlay (mirrors #googleSignInGate's styling/z-index) sits ON TOP of the existing sign-in success path - applySignedInUser()/GIS/domain-check are completely untouched, this only adds a re-lockable layer after a normal sign-in completes. New appEnforceMfaGate() (shares mktGetMfaStatus() with the existing Marketing gate - one source of truth) is called from both app-wide sign-in entry points: checkAppWideSupabaseSession() (returning session) and handleGoogleSignInResponse()'s Supabase piggyback callback (fresh sign-in), both of which now also populate mktSupabaseProfile so the shared status check has what it needs. New header 🔒 link (next to the signed-in badge, visible app-wide via new showHeaderSecurityLink()) opens the same Security panel Marketing's toolbar button does - one enrollment, works everywhere, since it's the same Supabase session either way. Server-side backstop: .gs requireTeamMemberFromToken_ - the single choke point getFullTeamSettings/saveTeamSettings/getSharedEOSData/saveSharedEOSData already share - now also calls new checkMfaSatisfied_(token), decoding the already-verified JWT's own `aal` claim and checking it against the firm's mfa_required (queried via Supabase's REST API, RLS-scoped). Closes the gap the client-side gate can't reach alone: a direct API call bypassing the UI. Fails OPEN on infrastructure errors (this is a policy overlay on an already-authenticated request, defaulting off firm-wide - a Supabase blip shouldn't take down sync for a firm that never turned 2FA on) but fails CLOSED whenever it has enough information to know the requirement is violated. **Requires the .gs v3.46.0 deployment** (paste + clasp deploy under the existing deployment id) for the server-side half to take effect; the client-side gate works standalone in the meantime. schema.sql re-run bug also found+fixed this session: none of the file's original 14 create policy statements were actually safe to re-run (Postgres has no CREATE POLICY IF NOT EXISTS) - a re-run failed on "policy already exists" and, since the SQL Editor runs the whole paste as one transaction, silently rolled back everything after the error point too. Every create policy is now preceded by drop policy if exists. // v3.59.0: Two-factor authentication (EOS_MASTER_SUMMARY.md Sec 5.15, decided-not-built until now). Uses Supabase Auth's built-in TOTP MFA directly via the supabase-js client already in place for Marketing/RBAC - no new backend, works with any standard authenticator app (Google Authenticator, Symantec VIP Access, etc, since they're all RFC 6238 TOTP under the hood). New "🔒 Security" toolbar button (any signed-in Supabase user, shown alongside Manage Access) opens a personal panel to enroll (QR code + manual key + 6-digit verify, sb.auth.mfa.enroll + challengeAndVerify) or remove (sb.auth.mfa.unenroll) their own authenticator - available to Hans, Amanda, and any future Marketing grantee like Trevor. Optional by default (firms.mfa_required defaults to false). New owner-only toggle in the same panel ("Require two-factor authentication for everyone") persists firms.mfa_required - guarded so an owner can't enable it before their OWN factor is verified this session (would lock the firm out). Enforcement: new mktEnforceMfaGate(), called from both success paths inside mktCheckAccess() (mirrors the existing owner/access_grants gate pattern), checks the signed-in session's Authenticator Assurance Level (sb.auth.mfa.getAuthenticatorAssuranceLevel()) against firms.mfa_required - aal2 already satisfied lets the board render as before; a verified factor that just needs this session to step up shows an inline 6-digit challenge; no factor at all shows a "set this up to continue" prompt linking to the Security panel. Both render into #mktBoard, same pattern as the existing "you don't have access yet" message. schema.sql gained firms.mfa_required, a firms owner-write policy (previously firms had no write policy at all), and a new mfa_ok() security-definer helper ANDed onto marketing_cards/marketing_columns' write policies for defense-in-depth (a direct API call can't bypass the app-level gate) - provably a no-op today since mfa_required defaults false, so mfa_ok() always returns true until an owner deliberately flips the switch. Scoped to the Marketing/Supabase auth boundary only, same as the rest of Sec 5.3 - the app-wide Google Sign-In (Rocks/Kanban/To-Dos) is completely untouched. No `.gs` change. Requires re-running schema.sql (idempotent) in the Supabase SQL Editor. // v3.58.1: Fix a real sign-out bug, caught by Hans live-testing v3.57.0 (clicking the "signed in as..." badge cleared it, then it immediately reappeared). Since v3.56.0 unified Google sign-in with a piggybacked Supabase session, signOutGoogle() only ever cleared the app's own eos_signed_in_email flag, not the Supabase session itself - on reload, checkAppWideSupabaseSession() runs FIRST (before eos_signed_in_email is even read), found the still-live Supabase session, matched the email to the team roster, and signed back in immediately. Fix: signOutGoogle() now also calls the Supabase client's own sb.auth.signOut() before reloading, wrapped in try/catch so a network hiccup can't block the local sign-out from completing. No `.gs` change. // v3.58.0: Marketing data migration (EOS_MASTER_SUMMARY.md Sec 5.3, the last outstanding piece). mktSave()/mktLoad() and their ~60 call sites are UNCHANGED - localStorage stays the instant, synchronous read/write path, zero behavior change. Instead mktSave() now also kicks off a debounced (800ms) background push (new mktPushToCloud(), via mktScheduleCloudPush()) that upserts the full local cards+columns arrays to the real marketing_cards/marketing_columns Supabase tables (schema.sql, RLS-enforced) and deletes any cloud rows for things removed locally. Pull happens once per Marketing-tab-open (all four mktCheckAccess().then(...) call sites now also call new mktPullFromCloud()), mirroring pullKanbanFromCloud's cadence rather than a new periodic timer - merges cloud into local by per-card last-write-wins (card.updated), skips re-rendering while the card modal is open so it can't disrupt active typing. New mktCardToRow/mktRowToCard/mktColumnToRow/mktRowToColumn mappers translate the existing camelCase card/column shape to/from the schema's snake_case columns; schema.sql gained three additive columns (wordpress_post_id/wordpress_edit_url/wordpress_sent_at) it was missing. Both signed-in team members and any future access_grants holder (Trevor) now see the same real board - this is what makes Marketing actually shared instead of per-device. Falls back to local-only silently (console log, no user-facing error) if not signed in or Supabase isn't configured, same graceful-degradation tradeoff as the rest of the app. No `.gs` change. // v3.57.0: SECURITY FIX (pairs with .gs v3.45.0) - closes a real unauthenticated read/write hole. getTeamSettings/saveTeamSettings/getSharedEOSData/saveSharedEOSData used to be reachable by anyone with the Web App URL (public in config.js on GitHub Pages regardless of repo visibility) with ZERO authentication - readable secrets included every team member's webAppSecret (the same value used to authenticate every OTHER action in the app) and the raw Gemini/Claude/OpenAI API keys; writable meant an anonymous POST could overwrite team settings or the shared Kanban/Rocks data outright. Fix: loadTeamSettingsFromCloud() now splits into the still-public, now-TRIMMED getTeamSettings call ({initials,name,email} only - still needed pre-sign-in for the "who am I" dropdown/Google-Sign-In matching) plus a new getFullTeamSettings call gated behind the current Supabase access token (new getCurrentSupabaseToken() helper); saveTeamSettingsToCloud()/pushKanbanToCloud()/pullKanbanFromCloud() all now attach that same token and fail gracefully (new 'partial' cloud-sync-status badge) rather than erroring when there's no session yet. REAL TRADEOFF: all cloud sync now requires having signed in with Google at least once on that device - "Skip for now" becomes genuine local-only mode instead of sync-with-zero-auth. Also re-runs loadTeamSettingsFromCloud() right after the v3.56.0 sign-in piggyback resolves, so a fresh sign-in upgrades sync from 'partial' to fully synced within that same load instead of waiting for the next scheduled cycle. Server-side verification (Apps Script calling Supabase's own /auth/v1/user endpoint, cached, fails closed) already tested directly against the live deployment before this client change - see EOS_MASTER_SUMMARY.md for the full writeup and the discovery story (found while evaluating whether paying for private-repo GitHub Pages was worth it - it wasn't the real protection either way). // v3.56.0: One sign-in covers the whole app, including Marketing - no more separate prompt. handleGoogleSignInResponse() now piggybacks a real Supabase session onto the SAME Google ID token GIS already produces (sb.auth.signInWithIdToken) right after the existing hd-domain check passes - additive, wrapped in try/catch, the tested GIS/applySignedInUser path is completely untouched. New checkAppWideSupabaseSession(), called first thing in initGoogleSignIn() (before the old rememberedEmail fast path): if a Supabase session already exists on this device (from here or from an earlier Marketing sign-in), honor it instead of re-running GIS - a team-member email gets the full app-wide identity via the existing applySignedInUser(); a signed-in profile that ISN'T a team member (e.g. Trevor) gets no app-wide identity, just a decluttered tab bar (new mktHideNonAccessibleTabs(), Marketing-only, explicitly COSMETIC not a security boundary - Settings, direct showPage() calls, and the public Sheets data are all untouched by this and still need their own real RBAC project if that's ever wanted). Also fixes a dual-modal bug: #googleSignInGate and #mktAuthGate were independent, non-exclusive .active toggles, so signing in via one could leave the other stuck showing a stale "please sign in" gate - both new sign-in paths now re-run mktCheckAccess() if Marketing is the active page. Explicitly did NOT touch isCurrentUserAdmin() (still the dropdown + teamMembers[].isAdmin, unrelated to this) or replace GIS with a redirect-based flow (considered and rejected - a full-page OAuth redirect would drop any in-progress edit, unlike today's in-page button). No `.gs` change. // v3.55.1: Fix a startup crash that broke showPage() on any load where the default-tab setting fell back to its default. The setting has always stored "weeklyMeeting" but the actual page element's id has always been "meeting" - showPage() crashed calling classList on a null element, silently aborting the rest of the startup sequence (including the new v3.55.0 post-sign-in return-to-Marketing-tab logic, which is what surfaced this - Hans landed back on the default tab instead of Marketing after signing in). Fixed at the point of failure: showPage() now translates the legacy alias and guards against a missing target instead of assuming pageId always matches a real element. Also hardened the event.target.classList.add('active') line below it - window.event isn't always a real click when showPage() is called programmatically (startup, mktHandleAuthReturn's fallback), and a non-Element event target (e.g. document) has no classList either. No `.gs` change. // v3.55.0: Marketing tab access control (EOS_MASTER_SUMMARY.md Sec 5.3), first real use of the new Supabase backend. New sign-in gate (#mktAuthGate) scoped ONLY to the Marketing tab - Google OAuth or magic-link email via Supabase Auth (mktSignInWithGoogle/mktSendMagicLink/mktCheckAccess) - checked every time the tab opens (showPage's marketing branch). The rest of the app (Rocks, Kanban, To-Dos, Weekly Meeting, the existing app-wide Google Sign-In / isCurrentUserAdmin) is completely untouched - deliberately NOT a full-app auth swap, to avoid any risk to the daily-driver sign-in Hans and Amanda already depend on. New "Manage Access" panel (owners only, gated on the real Supabase profiles.is_owner - not the client-side isAdmin flag) lets an owner grant/revoke view or edit per non-owner user, plus an email-invite flow. config.js gains supabaseUrl/supabaseAnonKey (anon key is a publishable key by design - RLS in the database is the real boundary, not key secrecy). Requires the schema.sql migration (six tables + RLS policies) to have been run in the Supabase project, and the Google OAuth provider configured there - both one-time setup, done this session. NOTE: card/column DATA still lives in localStorage as of this version - this ships the access GATE only; the data migration onto the new marketing_columns/marketing_cards tables is separate, later work, so a non-owner granted access today sees an empty board until that lands. No `.gs` change. // v3.54.0: Marketing Pipeline board now works like Kanban. Cards are draggable between columns (mktCardDragStart/mktCellDrop, mirrors kanbanCardDragStart/kanbanCellDrop). New "Manage Columns" button opens a drag-to-reorder/rename/add/delete panel (mktData.columns, seeded from the old hardcoded MKT_COLUMNS on first load via mktEnsureColumns). Ideas/My Review/With Trevor are protected from deletion (renaming is fine) because mktDraftBlog/mktSendToWordPress/mktPackageToTrevor auto-move cards to those column ids by id, not by name. Deleting a non-protected column moves its cards to Ideas rather than deleting them (deliberately different from Kanban's column-delete, since a Marketing card can be a finished blog draft). Columns are shared across both companies' boards, same as before; still localStorage-only/per-device, same limitation cards already had. index.html-only, no `.gs` change. // v3.53.0: Blog Draft no longer requires a title first (drafts from Take + Angle; title still generated in Step 6). New opts.withMeta on callAIText (additive - existing callers unaffected) reports a finish-reason truncation across Claude/Gemini/OpenAI. New per-task AI token budgets in Settings > AI Tools > AI Output Length (brainstorm/topics/angles/draft/tighten/social/titles), wired through getTaskTokens() at every marketing call site; Blog Draft and Tighten use withMeta to auto-retry once at 1.5x budget on a truncated result, keeping the longer output and toasting if it's still cut off. New debounced (800ms) autosave scoped to the open marketing card modal, separate from the global autoSave's .modal exclusion. Requires .gs v3.44.0 for the Firm Context Drive-folder recursion (subfolders to depth 5, new "Market Commentary Archives" reserved tier). // v3.52.2: Brainstorm->Angles guided funnel. Step 1 now parses the 6 topics into SELECTABLE rows (Use it now / Park / Kill / -> Backlog) instead of an inert text blob; parked topics can spin into their own Backlog card. New Step 2 "AI: Angles" button proposes ~4 angles for the CHOSEN topic as pickable chips that fill card.aiAngle (consumed by Step 4 draft). Brainstorm prompt rebalanced: RSS headlines weighted UP, newest firm-voice sample DOWN, so suggestions track current client-mind signal instead of echoing the last post. New card fields brainstormTopics[]/chosenTopic (additive; legacy blob cards lazily parsed on open). All existing field ids preserved. No .gs change. // v3.52.1: Fix Brainstorm truncation - maxTokens on the AI: Brainstorm call raised 900 -> 2000 so all six topics return in full (was cutting off partway through Topic 1 on Claude, at Topic 5 on Gemini). One-line change, no .gs change, no backend redeploy. // v3.52.0: Marketing card modal rebuilt as a guided 9-step stepper (Brainstorm, Angles, My Take, Blog Draft, Finalize/Tighten, Title, Social, Quotes, Package & Send). New AI actions: Brainstorm (RSS-fed topic ideas via Apps Script), Tighten (editorial pass), split Social/Quotes, and Package to Trevor (emails social+quote+WP link via the existing editor-email path). All existing field ids preserved. Requires .gs v3.43.0 (adds brainstormFeeds + notifyTrevorPackage - paste it in and redeploy). // prior: v3.51.0 mobile task-detail + Kanban fixes. (1) Fixed the ⋯ menu floating on top of Kanban Card Details when you tap Notes (the menu now closes when the card opens). (2) New To-Do Detail modal - tap the (i) on a To-Do to edit due date, owner (reassign), Google Task list (move), and notes in one place, like Google Tasks; on mobile the row hides those controls so it stays clean and full-width, checkbox on the far left. (3) Kanban Card Details: Owner is now a reassign dropdown and Column is labeled as the move control (both already fired the proper WIP/history move on Save; now they are obvious). (4) Weekly Meeting agenda wraps instead of overflowing on mobile. No .gs change.
+        const EOS_VERSION = '3.67.0';
+        const EOS_BUILD_DATE = '2026-07-29';
+        const EOS_BUILD_TIME = '13:05'; // v3.67.0: Mobile conversion session 1 of 3 - Rocks & Scorecard (Hans's phone-test item 15), the missing per-task Delete (item 2), and item 1 - the Gmail link - which turned out not to be the problem everyone thought it was. Everything below was measured on a local copy at 375/768/1280 with realistic data, or tested on Hans's actual Android phone; none of it is reasoned about. ROCKS: the list running off the right edge is NOT the .grid-3/.grid-4 min-width:auto trap fixed in 3.66.2 - .rock-card is its own display:flex; flex-wrap:nowrap row with six children, three of them flex-shrink:0 (32px number + 100px owner select + 128px On/Off toggle). Their hard floor plus gaps is 423px inside a 297px interior, so the last child's right edge landed at 481.5 and dragged the document to scrollWidth 481 in a 375 viewport. The half nobody could see in the screenshot was worse: .rock-content is the only shrinkable child and carries min-width:0, so it absorbed the whole shortfall and measured 26px with real text in it - the rock's description box, the actual content of the EOS core. That is v3.64.1's .todo-text collapse one surface over, and the same shape as .grid-3 in 3.66.2: a bug already diagnosed and left untreated somewhere else is a bug you have shipped. The card wraps below 600px - its own breakpoint, derived from where the single line actually breaks (~545px), NOT the 768 block, which would have made tablet cards 112px tall for nothing. SCORECARD, two findings. (a) The mobile CSS for it was addressed to #scorecardTable and NO ELEMENT HAS EVER HAD THAT ID - the table is class="scorecard-table" - so the whole block was dead and the 13-week grid always rendered at its desktop 1089px on a phone. (b) The header row carried 16 cells while renderScorecard emits 18, so header "1" sat over the goal-DIRECTION select, week 1's input sat under the header labelled "2" and dated a week late, and week 13 had no header at all. Every week column was mislabelled by one. Both fixed; week cells carry data-week so nothing counts columns by hand again. The phone view is decision 15's shape: Who / Measurable / Goal / current week, with "Compare all 13 weeks" opening the rest scrolled to the current week. The 768 breakpoint is written ONCE in JS and the CSS only honours the class it sets - v3.62.1's Marketing board broke because a renderer branched at 640 while its stylesheet branched at 768. DELETE (item 2): renderTodoItem now passes menuExtras like the Matrix and Rule-of-3 rows already did. The bulk delete/archive bodies were extracted into _purgeTodoRecords / _archiveTodoRecords so the new single-task path cannot forget a side effect - the applySnoozeById lesson. Two gaps in the OLD bulk path are fixed for both callers: it never cleared the active user's id-referenced Daily Plan slots (text-only removal, dangling since Phase 2), and it never took a parent's subtasks with it though Google Tasks does. GMAIL LINK (item 1) - NOT a rendering problem, and three sessions read it as one. Google Tasks stores links[].link with NO account segment; Gmail resolves that to u/0, which means "whichever account signed in first in THIS browser", not a fixed mailbox. On Hans's desktop that is his work account, so the link has always opened the right email. On his phone it is his PERSONAL account, where a work message id does not exist, so Gmail falls back to that account's Primary inbox - and THAT inbox is the "clunky Gmail mobile web" being complained about. The same URL behaved differently on two devices because it delegated the choice of mailbox to browser state instead of stating it: a link that already works may only be working by luck. gmailLinkForSignedInAccount() names the account by ADDRESS in the QUERY (.gs 3.51.0 proved /mail/u/<email>/ in the PATH serves a hard 404; a query parameter Gmail dislikes just falls back to the default, i.e. today's behaviour) using localStorage.eos_signed_in_email, applied at RENDER so the stored link keeps Google's raw value. Tested on the device: naming the account by address reached the work mailbox, account SLOTS did not - his work account is neither u/1 nor u/2, and slot order is per-device, so shipping an index would have been wrong for Amanda. THIS IS A HALF FIX AND SHIPS LABELLED AS ONE: re-tested after the above, the link reaches the work mailbox but stops on its INBOX LIST, not the message. The #all/<msgid> fragment does not survive Gmail's authuser redirect - the redirect target carries its own fragment and a target's fragment replaces the request's - so the id is dropped in transit, not rejected; the desktop proves the id resolves. The open candidate is accounts.google.com/AccountChooser?Email=<addr>&continue=<whole URL, %23-encoded>, which carries the fragment inside an encoded query value so there is no fragment to lose until the final hop. UNTESTED - it needs a tap on the phone, not an argument. The right mailbox beats the wrong mailbox, so this ships now rather than holding the Rocks/Scorecard work hostage to it. Four render sites, and the fourth was found by checking rendered hrefs rather than by grepping, because the row's email CHIP builds its link under its own name - same class of miss as v3.66.0's fourth envelope glyph. THE APP IS A CLOSED QUESTION, tested with the Gmail app installed and "Open supported links" ON: a plain navigation, a window.open, an intent:// naming com.google.android.gm explicitly, and an intent:// naming no package all fell through to the browser. Nothing on the device claims a mail.google.com address; googlegmail:// is iOS-only and compose-only. Do not re-open without new evidence from Google.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -7396,6 +7539,85 @@ Example:
             return null;
         }
 
+        // ============ GMAIL SOURCE LINK: NAME THE ACCOUNT (v3.67.0) ============
+        //
+        // Hans's phone-test item 1, open since 2026-07-28 and read as a rendering
+        // complaint for three sessions. It was not one. Tested on his own Android phone
+        // 2026-07-29, with the redirect chain captured:
+        //
+        //   stored:  https://mail.google.com/mail/#all/19f433c93941eec3
+        //   Gmail rewrites it to:  /mail/u/0/#all/...
+        //
+        // Google Tasks stores links[].link with NO account segment, and Gmail resolves
+        // that to `u/0` - which does not mean a fixed mailbox, it means "whichever
+        // account signed in first in THIS browser". On Hans's desktop that is the work
+        // account, so the link opens the email and always has. On his phone it is his
+        // PERSONAL account, where a work message id does not exist, so Gmail gives up and
+        // shows that account's Primary inbox. The "clunky Gmail mobile web" everyone kept
+        // describing was simply the inbox it fell back to.
+        //
+        // *** The generalisable part: the same URL behaved differently on two devices
+        // because it delegated a decision (which mailbox) to browser state instead of
+        // stating it. A link that works "already" may only be working by luck. ***
+        //
+        // The account goes in the QUERY, never the path. `.gs` 3.51.0 already tried
+        // /mail/u/<email>/ and Gmail served a hard "Temporary Error (404)"; it was
+        // reverted in 3.51.1. A query parameter Gmail dislikes merely falls back to the
+        // default account - which is exactly today's behaviour - so a wrong guess costs
+        // nothing and a right one fixes it. Asymmetric failure modes: put the uncertainty
+        // where being wrong is cheap.
+        //
+        // Confirmed on the device, not assumed: naming the account by ADDRESS opened the
+        // work mailbox; account SLOTS did not - his work account is neither u/1 nor u/2,
+        // and slot order is per-device anyway, so Amanda's numbering would differ from
+        // his. That is why this ships an address and not an index.
+        //
+        // Applied at RENDER, never at storage: task.emailLink keeps the raw value Google
+        // gave us, so there is no migration, nothing to undo, and the link re-targets
+        // itself if a different team member signs in on the same device.
+        //
+        // HALF FIXED - the account, not the destination. Re-tested on the device
+        // 2026-07-29 after this shipped: the link now lands in the WORK mailbox (that is
+        // the fix, and it is real - it used to land in the personal one) but it stops on
+        // that mailbox's INBOX LIST, not on the message. The `#all/<msgid>` fragment does
+        // not survive Gmail's authuser redirect: Gmail answers /mail/?authuser=<addr>
+        // with a redirect to /mail/u/N/ that carries its own fragment, and a redirect
+        // target's own fragment replaces the one on the request. So the message id is
+        // being dropped in transit, not rejected - the id itself is fine, which Hans's
+        // desktop proves every day.
+        //
+        // Do NOT read this as "the fragment can never work". It works on desktop, where
+        // there is no authuser redirect to survive. What is needed is a carrier for the
+        // id that is not a fragment at redirect time - the open candidate is
+        // accounts.google.com/AccountChooser?Email=<addr>&continue=<whole URL, %23-encoded>,
+        // where the fragment travels inside an encoded query value and is only turned
+        // back into a fragment at the final hop. UNTESTED as of this build. Do not ship
+        // it on reasoning alone; it needs a tap on Hans's actual phone, same as every
+        // other claim in this block.
+        //
+        // NOT FIXED, and now definitively closed rather than left open: this still opens
+        // Gmail's mobile WEB, not the app. Tested on Hans's phone with the Gmail app
+        // installed and "Open supported links" switched ON - a plain navigation, a
+        // window.open, an intent:// naming package com.google.android.gm explicitly, and
+        // an intent:// naming no package at all ALL fell through to the browser. Nothing
+        // on the device claims a mail.google.com address, so there is no app route to
+        // take. googlegmail:// is iOS-only and compose-only. Do not re-open this without
+        // new evidence from Google.
+        function gmailLinkForSignedInAccount(url) {
+            if (!url) return url;
+            // Not signed in - leave the link exactly as it was rather than guessing.
+            var email = '';
+            try { email = localStorage.getItem('eos_signed_in_email') || ''; } catch (e) { return url; }
+            if (!email) return url;
+            if (!/^https?:\/\/mail\.google\.com\//i.test(url)) return url;
+            if (/[?&]authuser=/i.test(url)) return url;   // already targeted; don't stack
+            var hashAt = url.indexOf('#');
+            var base = hashAt >= 0 ? url.slice(0, hashAt) : url;
+            var frag = hashAt >= 0 ? url.slice(hashAt) : '';
+            var sep = base.indexOf('?') >= 0 ? '&' : '?';
+            return base + sep + 'authuser=' + encodeURIComponent(email) + frag;
+        }
+
         // Re-render every task surface that is currently mounted. Guarded so a
         // To-Dos action doesn't blow up when the Daily Plan tab isn't in the DOM.
         function rerenderAllTaskSurfaces() {
@@ -7662,10 +7884,15 @@ Example:
             // v3.66.0: the two meanings now carry different marks - see gmailMarkSvg /
             // composeMarkSvg above. Both specs still exist on every task; which one is
             // built depends on whether there is a source email to go to.
+            // v3.67.0: the account is named here, at render. All three routes to the same
+            // email (row icon, its onclick, the menu row below) read this ONE value - they
+            // were three separate copies of task.emailLink before, which is how a fix like
+            // this ends up applied to two of them.
+            const emailHref = gmailLinkForSignedInAccount(task.emailLink);
             const emailSpec = task.emailLink
-                ? { key: 'email', icon: `<a href="${task.emailLink}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="text-decoration:none;display:inline-flex;">${gmailMarkSvg(15)}</a>`,
-                    rawLink: true, title: 'Open the source email in Gmail', label: 'Open source email', color: '#6366f1',
-                    onclick: `window.open('${task.emailLink}','_blank')` }
+                ? { key: 'email', icon: `<a href="${emailHref}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="text-decoration:none;display:inline-flex;">${gmailMarkSvg(15)}</a>`,
+                    rawLink: true, href: emailHref, title: 'Open the source email in Gmail', label: 'Open source email', color: '#6366f1',
+                    onclick: `window.open('${emailHref}','_blank')` }
                 // v3.64.0 (Sec 5.11c item 4): was "Draft outreach email", which was
                 // over-specific - the drafter is used for plenty of emails that are not
                 // outreach. Just "Draft email".
@@ -7693,7 +7920,7 @@ Example:
 
             // --- helper: render one menu row (rawLink for the email anchor case) ---
             const menuRow = (s) => s.rawLink
-                ? `<a href="${task.emailLink}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;width:100%;padding:7px 12px;color:#374151;text-decoration:none;font-size:0.85rem;"><span style="width:1.2em;display:inline-flex;justify-content:center;">${gmailMarkSvg(15)}</span><span>${s.label}</span></a>`
+                ? `<a href="${s.href || task.emailLink}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;width:100%;padding:7px 12px;color:#374151;text-decoration:none;font-size:0.85rem;"><span style="width:1.2em;display:inline-flex;justify-content:center;">${gmailMarkSvg(15)}</span><span>${s.label}</span></a>`
                 : _taskActionBtn(s, false);
 
             // --- COMPLETED MODE ---------------------------------------------------
@@ -7909,7 +8136,20 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.66.3 &mdash; 2026-07-28 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.67.0 &mdash; 2026-07-29 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Rocks &amp; Scorecard on a phone (note 15), Delete on a to-do (note 2), and the Gmail link (note 1) &mdash; which turned out to be a wrong-account bug, not a mobile-Gmail one.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>The Rocks list no longer runs off the right edge.</strong> Measured before touching it, because the obvious suspect had already been fixed in 3.66.2 and this was something else: each rock is a single row of six controls that is not allowed to wrap, and the number badge, the owner picker and the On/Off pair alone need 423 pixels inside a 297-pixel screen. Worse, and invisible in your screenshot &mdash; the rock&rsquo;s <em>description box was being squeezed to zero pixels wide</em>, because it was the only part of the row allowed to give. The row wraps now: the rock text gets a line of its own, the owner, On/Off and Kanban buttons sit underneath.</li>'
+                + '<li><strong>The Scorecard on a phone shows Who, Measurable, Goal and this week</strong> &mdash; with <strong>Compare all 13 weeks</strong> to open the rest when you want to look across the quarter, which scrolls straight to the week you are on. The 13-week grid is 1089 pixels wide, so on a phone eight of every nine pixels of it were hidden behind a sideways scroll, and the Who/Measurable columns slid away exactly when you scrolled out to find a number.</li>'
+                + '<li><strong>The Scorecard&rsquo;s week columns were labelled one week off &mdash; all of them.</strong> The header row had two fewer cells than the rows underneath it, so the column headed &ldquo;1&rdquo; was sitting over the Above/Below picker, week 1&rsquo;s numbers were under the header that said &ldquo;2&rdquo; and carried the following Monday&rsquo;s date, and week 13 had no header at all. Fixed, and the columns are now tied together by name so they cannot drift apart again.</li>'
+                + '<li><strong>A to-do&rsquo;s &ldquo;&hellip;&rdquo; menu has Delete.</strong> It always had it on Matrix and Rule-of-3 rows; the To-Dos list was the odd one out. Deleting a task with subtasks now takes the subtasks with it, the way Google Tasks does, and tells you how many before you confirm. Ticking tasks and using the selection bar still works exactly as before.</li>'
+                + '<li><strong>The Gmail icon was opening the wrong mailbox &mdash; that was the whole bug.</strong> It was never really about Gmail&rsquo;s mobile site. The link your task stores doesn&rsquo;t say which Google account it belongs to, so Gmail uses whichever account signed in first <em>in that browser</em>. On your desktop that&rsquo;s your work account, which is why it has always opened the right email there. On your phone it&rsquo;s your personal account &mdash; where a work message simply doesn&rsquo;t exist &mdash; so Gmail gave up and showed you that account&rsquo;s inbox. The link now names your work address explicitly, everywhere it appears: the icon on the row, the labelled email chip, the &ldquo;&hellip;&rdquo; menu and the Kanban card.</li>'
+                + '<li><strong>That Gmail fix is half of one, and here is the half that is missing.</strong> On your phone the icon now opens the <em>right mailbox</em> &mdash; it used to open your personal one &mdash; but it stops on that mailbox&rsquo;s inbox list instead of on the email itself. Gmail is dropping the part of the link that names the message while it switches accounts; the message id is fine, which is why your desktop still goes straight to the email. Getting the last step needs another test on your phone, so this is deliberately shipped as an improvement rather than described as done.</li>'
+                + '<li><strong>What still won&rsquo;t happen, and this one is now settled:</strong> it opens Gmail in the browser, not the Gmail app. Tested on your phone with the app installed and &ldquo;Open supported links&rdquo; switched on &mdash; four different ways of handing the address to the app, including naming Gmail explicitly, and every one of them came back to the browser. Nothing on the phone will accept a mail.google.com link. There is no trick left to try, so I&rsquo;d rather record that than keep re-testing it.</li>'
+                + '</ul></div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.66.3 &mdash; 2026-07-28</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>The Meeting Agenda is its own page now</strong>, in the slide-out menu under Focus. There is still an <strong>Open agenda</strong> link on the Meeting tab &mdash; the agenda is what you actually run the meeting from, so hiding it entirely behind the menu would have made things worse. The Rate This Meeting panel stays where it was.</li>'
                 + '<li><strong>Calendar is now a button you can put in the bottom bar</strong>, ready for when Google Calendar is connected. It is greyed out and tells you it is not built yet rather than opening an empty page. Add it in <strong>Settings &gt; Phone bottom bar</strong> &mdash; that free fourth slot is a good home for it.</li>'
@@ -13597,7 +13837,10 @@ Example:
         function kanbanEmailByCard(cardId) {
             const r = resolveKanbanCard(cardId);
             if (!r || !r.card.emailLink) return; // only rendered when emailLink present
-            window.open(r.card.emailLink, '_blank');
+            // v3.67.0: same account-targeting as the task row - see
+            // gmailLinkForSignedInAccount(). A Kanban card's source email is in the same
+            // mailbox as a to-do's, so it hit the identical wrong-account fault.
+            window.open(gmailLinkForSignedInAccount(r.card.emailLink), '_blank');
         }
 
         // The card-addressed AI slot is now real: kanbanAiAssistByCard lives with the
@@ -13742,9 +13985,14 @@ Example:
                 color: '#0ea5e9', onclick: `kanbanOpenMovePicker(this, '${id}', event)`, needsBtn: true };
             const deleteSpec = { icon: '\uD83D\uDDD1\uFE0F', title: 'Delete this card', label: 'Delete',
                 color: '#ef4444', onclick: `kanbanDeleteByCard('${id}')` };
+            // v3.67.0: account-targeted, same as the task row. (The envelope glyph here is
+            // still the pre-3.66.0 shared one - splitting Kanban's two email meanings into
+            // the Gmail mark and the compose mark is noted as outstanding for the Kanban
+            // session and is deliberately not done here.)
+            const cardEmailHref = gmailLinkForSignedInAccount(card.emailLink);
             const emailSpec = card.emailLink
-                ? { icon: `<a href="${card.emailLink}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="text-decoration:none;color:#6366f1;">\u2709\uFE0F</a>`,
-                    rawLink: true, title: 'Open source email', label: 'Open source email', color: '#6366f1',
+                ? { icon: `<a href="${cardEmailHref}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="text-decoration:none;color:#6366f1;">\u2709\uFE0F</a>`,
+                    rawLink: true, href: cardEmailHref, title: 'Open source email', label: 'Open source email', color: '#6366f1',
                     onclick: `kanbanEmailByCard('${id}')` }
                 : null;
 
@@ -13765,7 +14013,7 @@ Example:
 
             // Menu-row renderer: mirrors renderTaskActions' menuRow (rawLink anchor case).
             const menuRow = (s) => s.rawLink
-                ? `<a href="${card.emailLink}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;width:100%;padding:7px 12px;color:#374151;text-decoration:none;font-size:0.85rem;"><span style="width:1.2em;text-align:center;">\u2709\uFE0F</span><span>${s.label}</span></a>`
+                ? `<a href="${s.href || card.emailLink}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;width:100%;padding:7px 12px;color:#374151;text-decoration:none;font-size:0.85rem;"><span style="width:1.2em;text-align:center;">\u2709\uFE0F</span><span>${s.label}</span></a>`
                 : (s.needsBtn
                     ? `<button onclick="${s.onclick}" title="${s.title}" style="display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;cursor:pointer;font-size:0.85rem;padding:7px 12px;color:#374151;text-align:left;"><span style="width:1.2em;text-align:center;">${s.icon}</span><span>${s.label}</span></button>`
                     : _taskActionBtn(s, false));
@@ -14573,7 +14821,13 @@ Example:
                 return `
                 <div class="rock-card" style="${isCompleted ? 'border-left-color: #22c55e;' : ''}">
                     <div class="rock-num" style="${isCompleted ? 'background: #22c55e;' : ''}">${idx + 1}</div>
-                    <div class="rock-content" style="flex: 1;">
+                    <!-- v3.67.0: the inline style="flex: 1" that used to be here is gone.
+                         It duplicated the base .rock-card .rock-content rule exactly, and
+                         being inline it beat the mobile flex-basis override without any way
+                         to see that from the stylesheet - the text box measured 120px and
+                         it looked like a specificity or a parse problem for two rounds.
+                         Specificity, then source order, then INLINE STYLES. -->
+                    <div class="rock-content">
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <input type="text" value="${r.text || ''}" placeholder="Rock description..."
                                    onchange="updateRock(${idx}, 'text', this.value)" 
@@ -14741,7 +14995,7 @@ Example:
                     </td>
                     <td class="editable" contenteditable="true" onblur="updateMeasurable(${idx}, 'name', this.textContent)">${m.name || ''}</td>
                     <td class="editable" contenteditable="true" onblur="updateMeasurable(${idx}, 'goal', this.textContent)">${m.goal || ''}</td>
-                    <td style="text-align: center; min-width: 70px;">
+                    <td class="sc-dir-col" style="text-align: center; min-width: 70px;">
                         <select onchange="updateMeasurable(${idx}, 'goalDirection', this.value)" style="width: 100%; padding: 4px; border: 1px solid #ddd; border-radius: 3px;">
                             <option value="above" ${(m.goalDirection || 'above') === 'above' ? 'selected' : ''}>Above</option>
                             <option value="below" ${(m.goalDirection || 'above') === 'below' ? 'selected' : ''}>Below</option>
@@ -14757,18 +15011,104 @@ Example:
                             const isOnTrack = goalDir === 'above' ? num >= goal : num <= goal;
                             cls = isOnTrack ? 'on-track' : 'off-track';
                         }
-                        return `<td><input type="text" value="${val}" class="${cls}" 
+                        return `<td data-week="${w}"><input type="text" value="${val}" class="${cls}"
                             data-row="${idx}" data-week="${w}"
                             onchange="updateScorecard(${idx}, ${w}, this.value, ${goal}, '${goalDir}')"
                             onkeydown="handleScorecardKey(event, ${idx}, ${w})"></td>`;
                     }).join('')}
-                    <td style="border: none; background: transparent; padding: 2px;">
+                    <td class="sc-del-col" style="border: none; background: transparent; padding: 2px;">
                         <button onclick="deleteMeasurable(${idx})" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 14px; padding: 4px;" title="Delete row">✕</button>
                     </td>
                 </tr>
             `).join('');
+            // The narrow-screen view is a property of the rendered table, so it has to be
+            // re-applied every time the table is rebuilt - not just on resize.
+            applyScorecardWeekView();
         }
-        
+
+        // ============ SCORECARD: CURRENT-WEEK VIEW (v3.67.0) ============
+        //
+        // Hans's phone-test item 15: on a phone the scorecard should show Who,
+        // Measurable, Goal and the CURRENT WEEK only, with a button that opens the other
+        // weeks for comparison. Measured before building it: the 13-week table is 1089px
+        // wide inside a 327px wrapper, so eight of every nine pixels of it were behind a
+        // horizontal scroll on a phone, and the "Who / Measurable" columns you need to
+        // read a number scrolled away the moment you went looking for the number.
+        //
+        // The breakpoint is 768px and it is written here ONCE, in JS, with the CSS doing
+        // nothing but honouring the class this sets. That is deliberate: v3.62.1's
+        // Marketing board broke precisely because a JS renderer branched at 640 while its
+        // stylesheet branched at 768. Note this is NOT isNarrowViewport() (640px) - the
+        // scorecard's layout block is the 768px one, and borrowing a helper tuned to a
+        // different breakpoint is how the two drift apart.
+        const SCORECARD_NARROW_QUERY = '(max-width: 768px)';
+        function scorecardIsNarrow() {
+            try { return window.matchMedia(SCORECARD_NARROW_QUERY).matches; }
+            catch (e) { return (window.innerWidth || 9999) <= 768; }
+        }
+
+        // Session-scoped, deliberately not persisted: "show me the other weeks" is a
+        // thing you do for a minute during a meeting, not a setting about yourself. It
+        // resets to the current week next time the page is opened, which is the state
+        // that is right ~95% of the time.
+        let _scorecardShowAllWeeks = false;
+
+        function applyScorecardWeekView() {
+            const table = document.querySelector('#quarterly .scorecard-table');
+            if (!table) return;
+            const narrow = scorecardIsNarrow();
+            const compact = narrow && !_scorecardShowAllWeeks;
+            table.classList.toggle('sc-current-week-only', compact);
+            table.classList.toggle('sc-narrow', narrow);
+
+            const idx = currentScorecardWeekIndex(currentQuarter, currentYear);
+            table.querySelectorAll('[data-week]').forEach(cell => {
+                cell.classList.toggle('sc-week-now', String(idx) === cell.dataset.week);
+            });
+            renderScorecardWeekBar();
+        }
+
+        function renderScorecardWeekBar() {
+            const bar = document.getElementById('scorecardWeekBar');
+            if (!bar) return;
+            if (!scorecardIsNarrow()) { bar.style.display = 'none'; bar.innerHTML = ''; return; }
+
+            const idx = currentScorecardWeekIndex(currentQuarter, currentYear);
+            const labels = calculateWeekDateLabels(currentQuarter, currentYear);
+            const showingAll = _scorecardShowAllWeeks;
+            const btnLabel = showingAll ? 'Show this week only' : 'Compare all 13 weeks';
+            bar.style.display = 'flex';
+            bar.innerHTML =
+                '<span class="scorecard-week-label">Week ' + (idx + 1) +
+                (labels[idx] ? ' <span class="scorecard-week-date">' + labels[idx] + '</span>' : '') +
+                '</span>' +
+                '<button type="button" class="scorecard-week-toggle" onclick="toggleScorecardWeekView()">' +
+                btnLabel + '</button>';
+        }
+
+        function toggleScorecardWeekView() {
+            _scorecardShowAllWeeks = !_scorecardShowAllWeeks;
+            applyScorecardWeekView();
+            // Opening the comparison lands you on the current week rather than at week 1,
+            // because the reason you opened it is to compare against where you are.
+            if (_scorecardShowAllWeeks) {
+                const now = document.querySelector('#quarterly .scorecard-table td[data-week].sc-week-now');
+                const wrap = document.querySelector('#quarterly .scorecard-wrapper');
+                if (now && wrap) {
+                    wrap.scrollLeft = Math.max(0, now.offsetLeft - wrap.clientWidth / 2);
+                }
+            }
+        }
+
+        // Rotating a phone crosses the breakpoint, and the table is only rebuilt when the
+        // data changes - so without this, turning the phone sideways leaves a one-column
+        // scorecard on a 812px-wide screen.
+        let _scorecardViewResizeTimer = null;
+        window.addEventListener('resize', function () {
+            clearTimeout(_scorecardViewResizeTimer);
+            _scorecardViewResizeTimer = setTimeout(applyScorecardWeekView, 150);
+        });
+
         function handleScorecardKey(event, row, week) {
             if (event.key === 'Enter') {
                 event.preventDefault();
@@ -16032,7 +16372,13 @@ Example:
             // rather than yet another icon (decision 7). Hidden at compact density, where
             // renderTaskActions promotes the small Gmail mark into the row instead.
             const emailChip = (t.emailLink && density !== 'compact')
-                ? '<a class="tr-email-chip" href="' + t.emailLink + '" target="_blank" rel="noopener"'
+                // v3.67.0: account-targeted like the row icon and the menu entry. Found by
+                // checking the RENDERED hrefs rather than by grepping - three of the four
+                // sites came up in a search for `emailLink` and this one did not, because
+                // it builds the chip under its own name. Same class of miss as v3.66.0's
+                // fourth envelope glyph: when you change a value that carries meaning,
+                // verify the output, not your list of the places that produce it.
+                ? '<a class="tr-email-chip" href="' + gmailLinkForSignedInAccount(t.emailLink) + '" target="_blank" rel="noopener"'
                   + ' onclick="event.stopPropagation()" title="Open the source email in Gmail">'
                   + gmailMarkSvg(14) + '<span class="tr-chip-text">Open source email</span></a>'
                 : '';
@@ -16054,6 +16400,17 @@ Example:
                         </select>
                     </div>` : '';
 
+            // v3.67.0 (Hans's item 2, and the §5.11b-5 decision 8 gap named in the 3.66.1
+            // notes): a to-do's `...` had no Delete. It was not a dead end - the checkbox
+            // selection bar deletes in bulk - but it was an inconsistency: the Matrix and
+            // Rule-of-3 rows pass _matrixMenuExtras / _ruleMenuExtras and get one, and
+            // decision 8 puts Delete in the top group of the sheet. Same shape as those
+            // two, so the three surfaces stay readable side by side.
+            // Emoji built from escapes rather than written literally - editing rule 1.
+            const _todoMenuExtras = [
+                { icon: '\uD83D\uDDD1', label: 'Delete permanently', title: 'Delete permanently', color: '#dc2626', onclick: `deleteTaskById('${t.id}')` }
+            ];
+
             return `
                 <div class="todo-item den-${density} ${t.done ? 'completed' : ''} ${t.starred ? 'starred' : ''}" data-task-id="${t.id || ''}" style="margin-left: ${indentPx}px; ${depth > 0 ? 'border-left: 3px solid #c4b5fd; background: #faf5ff; border-radius: 0 6px 6px 0;' : ''}">
                     ${expandButton}
@@ -16067,7 +16424,10 @@ Example:
                         ${pills.length ? '<div class="tr-meta">' + pills.join('') + '</div>' : ''}
                         ${inlineEditors}
                     </div>
-                    <div class="tr-actions">${renderTaskActions({ ...t, depth: depth }, 'todos', { completedCluster: [ { icon: '↩', label: 'Uncheck', title: 'Undo (uncheck)', color: '#6b7280', onclick: `toggleTaskDoneById('${t.id}')` } ] })}</div>
+                    <div class="tr-actions">${renderTaskActions({ ...t, depth: depth }, 'todos', { completedCluster: [ { icon: '↩', label: 'Uncheck', title: 'Undo (uncheck)', color: '#6b7280', onclick: `toggleTaskDoneById('${t.id}')` },
+                        { icon: '\uD83D\uDCE6', label: 'Archive', title: 'Archive (move to completed)', color: '#6b7280', onclick: `archiveTaskById('${t.id}')` },
+                        { icon: '\uD83D\uDDD1', label: 'Delete', title: 'Delete permanently', color: '#dc2626', onclick: `deleteTaskById('${t.id}')` }
+                    ], menuExtras: _todoMenuExtras })}</div>
                 </div>
                 <div id="todoNotes_${idx}" class="todo-notes" style="display: none; padding: 8px 40px 8px ${40 + indentPx}px; background: #f9fafb; border-left: 3px solid #3b82f6; margin: -4px 0 4px 0;">
                     <textarea onblur="updateTodo(${idx}, 'notes', this.value)" 
@@ -17038,10 +17398,164 @@ Example:
             updateSnoozedBadge();
         }
         
+        // ============ SHARED TODO ARCHIVE / DELETE CORE (v3.67.0) ============
+        //
+        // Until now the ONLY delete path was deleteCheckedTodos(), so the list of things
+        // that have to happen when a to-do goes away lived inside its loop: push the
+        // deletion to Google Tasks, remember the Google id so the next pull doesn't
+        // resurrect it (including every entry in bothTaskIds), strip it out of every team
+        // member's Daily Plan, and drop it from the quarter. Adding a per-task Delete to
+        // the `...` menu meant either calling that list again by hand or extracting it.
+        //
+        // Extracted, for the reason v3.66.0 gave when it lifted confirmSnooze's body into
+        // applySnoozeById: "that is exactly the list of side effects a hand-written second
+        // code path forgets." One body, both callers.
+        //
+        // Two things were MISSING from the bulk path and are fixed here for both:
+        //  - the active user's Matrix / Rule-of-3 are id-referenced, not text-referenced
+        //    (Phase 2), so a text-only removal left those references dangling. The snooze
+        //    seam already removed by id; delete never did.
+        //  - subtasks. A child links to its parent by parentTaskId === parent.googleTaskId,
+        //    and Google Tasks deletes a parent's children with it, so leaving local
+        //    orphans pointed at a parent that no longer exists disagrees with the backend.
+        //    Callers pass the children in; _purgeTodoRecords does not go looking, so
+        //    nothing is ever deleted that the confirm dialog did not name.
+        function _rememberIgnoredGoogleIds(records) {
+            const settings = getSettings();
+            settings.ignoredGoogleTaskIds = settings.ignoredGoogleTaskIds || [];
+            records.forEach(todo => {
+                if (todo.googleTaskId && !settings.ignoredGoogleTaskIds.includes(todo.googleTaskId)) {
+                    settings.ignoredGoogleTaskIds.push(todo.googleTaskId);
+                }
+                if (todo.bothTaskIds) {
+                    for (const [member, taskInfo] of Object.entries(todo.bothTaskIds)) {
+                        if (taskInfo.googleTaskId && !settings.ignoredGoogleTaskIds.includes(taskInfo.googleTaskId)) {
+                            settings.ignoredGoogleTaskIds.push(taskInfo.googleTaskId);
+                        }
+                    }
+                }
+            });
+            // CRITICAL: save settings straight to localStorage (unchanged from the
+            // original bulk path - autoSave() alone does not persist _settings here).
+            seededData._settings = settings;
+            localStorage.setItem('eos_traction_data', JSON.stringify(seededData));
+        }
+
+        function _dereferenceTasksFromActivePlan(records) {
+            if (!dailyPlanData) return;
+            const ids = new Set(records.map(t => t && t.id).filter(Boolean));
+            if (!ids.size) return;
+            ['q1', 'q2', 'q3', 'q4'].forEach(q => {
+                if (Array.isArray(dailyPlanData.matrix?.[q])) {
+                    dailyPlanData.matrix[q] = dailyPlanData.matrix[q].filter(e => !(e && ids.has(e.id)));
+                }
+            });
+            if (Array.isArray(dailyPlanData.ruleOf3)) {
+                dailyPlanData.ruleOf3 = dailyPlanData.ruleOf3.map(e => (e && ids.has(e.id)) ? null : e);
+            }
+            try { saveDailyPlan(); } catch (e) {}
+        }
+
+        // Permanently remove `records` from the quarter. Does NOT confirm, render or
+        // toast - the caller owns the conversation with the user.
+        function _purgeTodoRecords(records) {
+            records = (records || []).filter(Boolean);
+            if (!records.length) return 0;
+            records.forEach(todo => deleteTaskFromGoogle(todo));
+            _rememberIgnoredGoogleIds(records);
+            // Other team members' plans are keyed only by text - see §5.11b-4, this is
+            // the last text bridge and is deliberately left standing.
+            removeTodoFromAllDailyPlans(new Set(records.map(t => t.text).filter(Boolean)));
+            _dereferenceTasksFromActivePlan(records);
+            const q = yearData.quarters[currentQuarter];
+            const gone = new Set(records);
+            q.todos = (q.todos || []).filter(t => !gone.has(t));
+            return records.length;
+        }
+
+        // Move `records` into the quarter's completedTodos archive.
+        function _archiveTodoRecords(records) {
+            records = (records || []).filter(Boolean);
+            if (!records.length) return 0;
+            // Push completions to Google Tasks BEFORE archiving, while the ids still mean
+            // something to the sync functions.
+            const tasksToSync = records.filter(t => t.googleTaskId && !t.googleTaskId.startsWith('synced_'));
+            if (tasksToSync.length > 0) syncCompletedTasksToGoogle(tasksToSync);
+            _rememberIgnoredGoogleIds(records);
+            const q = yearData.quarters[currentQuarter];
+            q.completedTodos = q.completedTodos || [];
+            records.forEach(todo => {
+                todo.completedDate = new Date().toLocaleDateString();
+                q.completedTodos.unshift(todo);
+            });
+            _dereferenceTasksFromActivePlan(records);
+            const gone = new Set(records);
+            q.todos = (q.todos || []).filter(t => !gone.has(t));
+            return records.length;
+        }
+
+        // The subtasks of `rec` that live in the same quarter. A child points at its
+        // parent's GOOGLE id, so a parent that was never pushed has none by definition.
+        function _subtasksOf(rec) {
+            if (!rec || !rec.googleTaskId) return [];
+            const todos = yearData.quarters[currentQuarter].todos || [];
+            return todos.filter(t => t && t !== rec && t.parentTaskId === rec.googleTaskId);
+        }
+
+        // v3.67.0 (Hans's item 2): Delete from a single to-do's `...` menu.
+        function deleteTaskById(id) {
+            const r = resolveTaskById(id);
+            if (!r || !r.record) { showToast('That task could not be found.', 'error'); return; }
+            const rec = r.record;
+            const label = String(rec.text || 'this task').substring(0, 60);
+
+            // A task already moved to the archive isn't in q.todos, so it needs its own
+            // (much shorter) path - there is nothing left to unsync.
+            if (r.kind === 'completedTodo') {
+                if (!confirm('Delete "' + label + '" permanently from the archive?')) return;
+                const comp = yearData.quarters[currentQuarter].completedTodos || [];
+                const i = comp.indexOf(rec);
+                if (i >= 0) comp.splice(i, 1);
+                autoSave();
+                rerenderAllTaskSurfaces();
+                showToast('Deleted 1 task', 'success');
+                return;
+            }
+            if (r.kind !== 'todo') { showToast('Only to-dos can be deleted here.', 'info'); return; }
+
+            const kids = _subtasksOf(rec);
+            const msg = 'Delete "' + label + '" permanently?'
+                + (kids.length ? '\n\nIts ' + kids.length + ' subtask(s) will be deleted with it.' : '')
+                + '\n\n(It will also be deleted from Google Tasks)';
+            if (!confirm(msg)) return;
+
+            const n = _purgeTodoRecords([rec].concat(kids));
+            sortAndRenderTodos();
+            rerenderAllTaskSurfaces();
+            autoSave();
+            addLogEntry('Deleted task: "' + label + '"');
+            showToast('Deleted ' + n + ' task(s)', 'success');
+        }
+
+        // Archive one completed to-do from its `...` cluster. Mirrors the Matrix and
+        // Rule-of-3 rows, which have had Archive since Phase 2.
+        function archiveTaskById(id) {
+            const r = resolveTaskById(id);
+            if (!r || !r.record) { showToast('That task could not be found.', 'error'); return; }
+            if (r.kind !== 'todo') { showToast('That task is already archived.', 'info'); return; }
+            const rec = r.record;
+            const kids = _subtasksOf(rec);
+            const n = _archiveTodoRecords([rec].concat(kids));
+            sortAndRenderTodos();
+            rerenderAllTaskSurfaces();
+            autoSave();
+            showToast('Archived ' + n + ' task(s)', 'success');
+        }
+
         function archiveCheckedTodos() {
             const ownerFilter = document.getElementById('todoOwnerFilter')?.value || 'all';
             const todos = yearData.quarters[currentQuarter].todos;
-            
+
             // Helper function to check if task matches current filter
             const matchesFilter = (t) => {
                 if (ownerFilter === 'all') return true;
@@ -17058,34 +17572,14 @@ Example:
                 return;
             }
             
-            // Sync completed tasks to Google Tasks BEFORE archiving
-            const tasksToSync = toArchive.filter(t => t.googleTaskId && !t.googleTaskId.startsWith('synced_'));
-            if (tasksToSync.length > 0) {
-                syncCompletedTasksToGoogle(tasksToSync);
-            }
-            
-            // Track Google Task IDs so they don't get re-pulled
-            const settings = getSettings();
-            settings.ignoredGoogleTaskIds = settings.ignoredGoogleTaskIds || [];
-            toArchive.forEach(todo => {
-                if (todo.googleTaskId && !settings.ignoredGoogleTaskIds.includes(todo.googleTaskId)) {
-                    settings.ignoredGoogleTaskIds.push(todo.googleTaskId);
-                }
-            });
-            // CRITICAL: Save settings directly to localStorage
-            seededData._settings = settings;
-            localStorage.setItem('eos_traction_data', JSON.stringify(seededData));
-            
-            yearData.quarters[currentQuarter].completedTodos = yearData.quarters[currentQuarter].completedTodos || [];
-            toArchive.forEach(todo => {
-                todo.completedDate = new Date().toLocaleDateString();
-                yearData.quarters[currentQuarter].completedTodos.unshift(todo);
-            });
-            
-            yearData.quarters[currentQuarter].todos = todos.filter(t => !(t.done && matchesFilter(t)));
+            // v3.67.0: body extracted to _archiveTodoRecords() so the per-task Archive in
+            // the `...` cluster runs the identical steps. Behaviour is unchanged except
+            // that the active user's id-referenced Daily Plan slots are now cleared too -
+            // the old inline version only ever removed by text.
+            const n = _archiveTodoRecords(toArchive);
             sortAndRenderTodos();
             autoSave();
-            showToast('Archived ' + toArchive.length + ' task(s)', 'success');
+            showToast('Archived ' + n + ' task(s)', 'success');
         }
         
         function deleteCheckedTodos() {
@@ -17112,39 +17606,15 @@ Example:
             const filterName = ownerFilter === 'all' ? 'all team members' : ownerFilter;
             if (!confirm('Delete ' + toDelete.length + ' selected item(s) for ' + filterName + ' permanently?\n\n(They will also be deleted from Google Tasks)')) return;
             
-            // Sync deletion to Google Tasks for each task
-            toDelete.forEach(todo => {
-                deleteTaskFromGoogle(todo);
-            });
-            
-            // Track Google Task IDs so they don't get re-pulled
-            const settings = getSettings();
-            settings.ignoredGoogleTaskIds = settings.ignoredGoogleTaskIds || [];
-            toDelete.forEach(todo => {
-                if (todo.googleTaskId && !settings.ignoredGoogleTaskIds.includes(todo.googleTaskId)) {
-                    settings.ignoredGoogleTaskIds.push(todo.googleTaskId);
-                }
-                // Also add Both task IDs to ignored list
-                if (todo.bothTaskIds) {
-                    for (const [member, taskInfo] of Object.entries(todo.bothTaskIds)) {
-                        if (taskInfo.googleTaskId && !settings.ignoredGoogleTaskIds.includes(taskInfo.googleTaskId)) {
-                            settings.ignoredGoogleTaskIds.push(taskInfo.googleTaskId);
-                        }
-                    }
-                }
-            });
-            // CRITICAL: Save settings directly to localStorage
-            seededData._settings = settings;
-            localStorage.setItem('eos_traction_data', JSON.stringify(seededData));
-            
-            // Also remove from every team member's Daily Plan Matrix + Rule of 3
-            const textToDelete = new Set(toDelete.map(t => t.text));
-            removeTodoFromAllDailyPlans(textToDelete);
-            
-            yearData.quarters[currentQuarter].todos = todos.filter(t => !(t.done && matchesFilter(t)));
+            // v3.67.0: body extracted to _purgeTodoRecords() so the per-task Delete in the
+            // `...` menu runs the identical steps. Behaviour is unchanged except that the
+            // active user's id-referenced Daily Plan slots are now cleared too - the old
+            // inline version only ever removed by text, which left the Phase 2
+            // id-references dangling until something repainted them away.
+            const n = _purgeTodoRecords(toDelete);
             sortAndRenderTodos();
             autoSave();
-            showToast('Deleted ' + toDelete.length + ' task(s)', 'success');
+            showToast('Deleted ' + n + ' task(s)', 'success');
         }
         
         function uncheckAllTodos() {
@@ -20228,7 +20698,9 @@ Make sure your suggestions directly address the specific root cause and discussi
             const settings = getSettings();
             const measurables = yearData.quarters[currentQuarter].measurables || [];
             const scorecard = yearData.quarters[currentQuarter].scorecard || {};
-            const dates = calculateWeekDates(currentQuarter, currentYear);
+            // v3.67.0: calculateWeekDates() now returns Date objects; the "M/D" strings
+            // this print view wants come from calculateWeekDateLabels().
+            const dates = calculateWeekDateLabels(currentQuarter, currentYear);
             
             // Build scorecard HTML
             let scorecardRows = measurables.map((m, idx) => {
@@ -22030,19 +22502,48 @@ Return ONLY the JSON array:`;
             for (let i = 0; i < 13; i++) {
                 const weekDate = new Date(firstMeetingDay);
                 weekDate.setDate(firstMeetingDay.getDate() + (i * 7));
-                dates.push(`${weekDate.getMonth() + 1}/${weekDate.getDate()}`);
+                dates.push(weekDate);
             }
-            
+
             return dates;
         }
-        
+
+        // The 13 meeting dates as "M/D" strings. Kept as a thin formatter over
+        // calculateWeekDates() rather than a second copy of the quarter-start +
+        // meeting-day arithmetic, so the labels and the current-week calculation can
+        // never disagree about which Monday week 1 is.
+        function calculateWeekDateLabels(quarter, year) {
+            return calculateWeekDates(quarter, year)
+                .map(d => `${d.getMonth() + 1}/${d.getDate()}`);
+        }
+
+        // Which of the 13 weeks are we in? A week runs from its meeting date up to (not
+        // including) the next one. Before the quarter starts this is week 1; after it
+        // ends, week 13 - a scorecard should always have a column to land on rather
+        // than showing nothing on Jan 2nd or Sep 29th.
+        // Returns a 0-based index, matching data-week.
+        function currentScorecardWeekIndex(quarter, year) {
+            const dates = calculateWeekDates(quarter, year);
+            if (!dates.length) return 0;
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            if (today < dates[0]) return 0;
+            for (let i = dates.length - 1; i >= 0; i--) {
+                if (today >= dates[i]) return i;
+            }
+            return 0;
+        }
+
         function updateWeekDates() {
-            const dates = calculateWeekDates(currentQuarter, currentYear);
+            const dates = calculateWeekDateLabels(currentQuarter, currentYear);
             for (let i = 0; i < 13; i++) {
                 const el = document.getElementById(`wd${i + 1}`);
                 if (el) el.textContent = dates[i];
             }
-            
+            // The week bar names the week it is showing, so it has to be rebuilt
+            // whenever the dates behind it change (quarter switch, year switch).
+            if (typeof renderScorecardWeekBar === 'function') renderScorecardWeekBar();
+
             // Update quarter date range display
             const settings = getSettings();
             const startStr = settings.quarterStarts?.[currentQuarter] || '';
