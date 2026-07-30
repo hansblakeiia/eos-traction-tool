@@ -163,6 +163,14 @@
            fixing the pattern costs one line and waiting for it to be reported costs a
            release. Applied to all three grids so the next one cannot bite either. */
         .grid-3 > *, .grid-4 > * { min-width: 0; }
+        /* v3.70.0: THE REMAINING TWO GRID CONTAINERS IN THE SHEET, closed as a pattern
+           rather than as the instance that happened to be reported. `.grid-2` (3.62.0),
+           `.grid-3` (3.66.2), `.daily-plan-grid` (3.68.1) were each fixed only where they
+           had been seen; `.matrix-grid` and `.input-row` are the last two, and `.input-row`
+           had a guard that existed ONLY inside `#setPanes`. Neither was measured
+           overflowing today - that is the point. A grid item defaults to `min-width:auto`,
+           so `1fr` never guarantees the track fits. */
+        .matrix-grid > *, .input-row > * { min-width: 0; }
 
         @media (max-width: 900px) {
             .grid-2, .grid-3 { grid-template-columns: 1fr; }
@@ -1072,10 +1080,28 @@
            number with no break opportunity. `anywhere` (not `break-word`) also lets the
            token shrink the element's MIN-CONTENT, which is what stops it inflating a grid
            track - `break-word` alone would still report the wide minimum. */
+        /* v3.70.0 - TWO OF THE FOUR SELECTORS BELOW WERE DEAD, AND THAT IS WHY THE PAGE
+           STILL OVERFLOWED. `.matrix-item` and `.rule-slot .item-text` match nothing:
+           renderMatrix() emits `.matrix-task > .task-text-editable` and renderRuleOf3()
+           emits `.rule-slot > .task-text`. So 3.68.1 protected the repository column and
+           nothing else, and the same 80-character URL sitting in the Rule of 3 made the
+           document 601px wide inside a 375px viewport - AND 1460px inside 1280, i.e. this
+           was breaking the desktop too. Measured, not reasoned: `.daily-plan-grid` had
+           width 336 and scrollWidth 589, so the TRACK was correctly capped by 3.68.1's
+           `min-width:0` and the TEXT was spilling out of it.
+           Found only because the harness seeded the Rule of 3 and asserted it rendered -
+           3.68.1 seeded the repository alone. Same shape as the dead `#scorecardTable`
+           selector: a rule that looks like protection and matches nothing.
+           The dead selectors are kept so a future rename of either class still lands
+           somewhere obvious, and both real ones are now listed. */
         .repo-item .item-text,
         .repo-item,
         .matrix-item .item-text,
-        .rule-slot .item-text {
+        .rule-slot .item-text,
+        .matrix-task,
+        .matrix-task .task-text-editable,
+        .rule-slot,
+        .rule-slot .task-text {
             overflow-wrap: anywhere;
             word-break: break-word;
             min-width: 0;
@@ -1198,6 +1224,38 @@
             font-weight: 700;
             font-size: 0.8rem;
             margin-bottom: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        /* v3.70.0: a count on every quadrant. On a phone the matrix is a STACK (3.69.0),
+           so the four quadrants are read one after another by scrolling - and an empty
+           quadrant and a full one look identical until you have scrolled past the whole
+           thing. The badge is the cheapest way to answer "is there anything in Q3?"
+           without arriving there. Shows `open/total` only when some are already done,
+           because "2" and "2 of 5 left" are different facts and the second one is the
+           one that changes what you do next.
+           Deliberately styled OFF the quadrant's own colour and onto a neutral chip: the
+           four quadrant colours already carry meaning (red = do first), and colouring the
+           count too would have made an empty urgent quadrant shout. */
+        .matrix-count {
+            flex: 0 0 auto;
+            font-size: 0.68rem;
+            font-weight: 700;
+            line-height: 1;
+            padding: 3px 7px;
+            border-radius: 9px;
+            background: rgba(255, 255, 255, 0.75);
+            color: var(--gray-600);
+            border: 1px solid rgba(0, 0, 0, 0.07);
+        }
+        .matrix-count.empty {
+            background: transparent;
+            border-color: transparent;
+            color: var(--gray-400);
+            font-weight: 500;
         }
         
         .q1 .matrix-label { color: #dc2626; }
@@ -3178,6 +3236,95 @@
             .page { padding-bottom: 84px; }
         }
 
+        /* ---- v3.70.0 (a) DAILY PLAN SEGMENTATION ----------------------------------
+           Repository / Matrix / Today, one at a time on a phone. 2,297px was the tallest
+           page in the app; the three columns are three separate jobs and you are only ever
+           doing one of them.
+           `screen and` is deliberate and load-bearing: the print stylesheet later in this
+           sheet hides #repositoryDropZone and lays the matrix out 2x2 for paper, and a
+           print page box is not always wider than 768px. Without `screen and`, printing
+           while parked on the Matrix segment would have silently dropped two thirds of the
+           printout. The rest of the mobile rules in this file are plain `max-width:768` -
+           this one is not, on purpose. */
+        #dailyPlanSegWrap { display: none; }
+        @media screen and (max-width: 768px) {
+            #dailyPlanSegWrap { display: block; margin-bottom: 12px; }
+            #dailyPlanSegments { display: flex; width: 100%; }
+            #dailyPlanSegments .seg-btn { flex: 1 1 0; padding: 0 6px; }
+            /* display:none, never unmounted - see the markup comment. */
+            .daily-plan-grid.dp-seg-repo   > :not(.dp-col-repo),
+            .daily-plan-grid.dp-seg-matrix > :not(.dp-col-matrix),
+            .daily-plan-grid.dp-seg-today  > :not(.dp-col-today) { display: none; }
+            /* With one column showing, the 100vh-250px floor just adds dead space under
+               a short segment. */
+            .daily-plan-grid { min-height: 0; }
+        }
+
+        /* ---- v3.70.0 (b) KANBAN MOBILE COLUMN STRIP (Hans's item 11) ---------------
+           MEASURED: `.kanban-columns-header` was 549px inside a 375 viewport. The mobile
+           pill switcher HAS its own `overflow-x:auto`, but it never engaged, because its
+           parent `.kanban-columns-header` carries `min-width: max-content` for the DESKTOP
+           column heads - an unbounded parent means the child scroller has nothing to scroll
+           against. So the pills rode the board's own `.kanban-scroll` instead: scrolling to
+           reach "Shipped" dragged the whole board sideways with it.
+           KEYED OFF A CLASS SET BY THE RENDERER, NOT A MEDIA QUERY, and that is the whole
+           trick: `isNarrowViewport()` is 640px while every CSS mobile rule here is 768px,
+           so between 641 and 768 the DESKTOP column heads render while a `max-width:768`
+           rule would already be collapsing them. Same reasoning as `.mkt-board-mobile`. */
+        .kanban-columns-header.kanban-columns-header-mobile {
+            display: block;
+            min-width: 0;
+            max-width: 100%;
+        }
+        /* The gradient affordance Marketing got in 3.69.0, now shared by both boards
+           instead of being written twice. Pinned to the right edge of the ROW rather than
+           the scroller, so it does not scroll away with the content; pointer-events:none
+           so it can never eat a tap on the last visible pill. */
+        .mkt-board-mobile .kanban-mobile-switcher,
+        .kanban-columns-header-mobile .kanban-mobile-switcher { position: relative; }
+        .mkt-board-mobile .kanban-mobile-switcher::after,
+        .kanban-columns-header-mobile .kanban-mobile-switcher::after {
+            content: ''; position: sticky; right: 0; flex: 0 0 24px; align-self: stretch;
+            margin-left: -24px; pointer-events: none;
+            background: linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,0.95));
+        }
+
+        /* ---- v3.70.0 (c) PULL TO REFRESH -------------------------------------------
+           Replaces the sync bar 3.69.0 removed. Mobile only; the indicator is display:none
+           above 768px and the gesture code no-ops on a fine pointer, so a desktop trackpad
+           can never trip it.
+           The page content deliberately does NOT move. Translating `.page` would make it a
+           containing block for any position:fixed descendant, which is how a modal or the
+           FAB ends up anchored to a scrolled div - the spinner descending on its own is
+           Material's own pattern and costs nothing. */
+        #ptrIndicator { display: none; }
+        @media (max-width: 768px) {
+            #ptrIndicator {
+                display: flex; align-items: center; gap: 8px;
+                position: fixed; top: 0; left: 50%; z-index: 9400;
+                transform: translate(-50%, -60px);
+                padding: 8px 16px; border-radius: 999px;
+                background: #1f2937; color: #fff;
+                font-size: 0.78rem; font-weight: 600; white-space: nowrap;
+                box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
+                pointer-events: none; opacity: 0;
+            }
+            /* No transition while the thumb is down - the finger IS the animation. The
+               class is added only for the snap-back and the settle. */
+            #ptrIndicator.ptr-eased {
+                transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.18s ease;
+            }
+            #ptrIndicator .ptr-mark { display: inline-block; font-size: 0.95rem; line-height: 1; }
+            #ptrIndicator.ptr-busy .ptr-mark { animation: ptrSpin 0.9s linear infinite; }
+            @keyframes ptrSpin { to { transform: rotate(360deg); } }
+            /* Chrome on Android has its OWN pull-to-refresh on overscroll at the top of the
+               document. Without this, a pull would arm both and the browser would reload
+               the whole app out from under a half-finished sync. `contain` keeps the
+               vertical overscroll inside the page and leaves horizontal alone, so the
+               Kanban/Marketing strips and the swipe engine are untouched. */
+            html, body { overscroll-behavior-y: contain; }
+        }
+
         /* ---- Toasts: bottom-centre on a phone (Hans: "I wish on mobile the toast messages
            truly act like regular toast messages"). #toastContainer is positioned by INLINE
            style (top:20px; right:20px), which is why this needs !important - the same inline
@@ -3479,6 +3626,13 @@
              a sibling later and lands ABOVE the "+" without either moving. -->
         <div id="fabStack">
             <button class="fab" id="fabQuickAdd" onclick="fabQuickAdd()" aria-label="Add a to-do" title="Add a to-do">+</button>
+        </div>
+
+        <!-- Pull-to-refresh indicator (v3.70.0). One shared element, outside every page,
+             so the gesture behaves identically wherever you are. -->
+        <div id="ptrIndicator" role="status" aria-live="polite">
+            <span class="ptr-mark" id="ptrMark">&#8595;</span>
+            <span id="ptrText">Pull to sync</span>
         </div>
 
         <!-- Undo for a committed swipe. One shared element; the pending action is held in
@@ -3933,9 +4087,22 @@
                 <div id="dailyHabitsList" style="display: flex; flex-wrap: wrap; gap: 10px;"></div>
             </div>
             
-            <div class="daily-plan-grid">
+            <!-- v3.70.0: Repository / Matrix / Today as a segmented switch on phones.
+                 Measured at 2,297px this was the tallest page in the app by a wide margin,
+                 and the three columns are three different jobs - pick what you are doing.
+                 Same shape as §5.11b-5 decision 2's Simple vs Detailed: a VISIBLE segmented
+                 control, not an icon, and never an extra door to pass through.
+                 The columns are hidden with display:none and are NEVER unmounted - same
+                 contract as the six Settings hubs (3.68.0). Every render function
+                 (renderRepository/renderMatrix/renderRuleOf3) keeps finding its nodes by
+                 id whichever segment is showing, so none of them needed a change. -->
+            <div id="dailyPlanSegWrap">
+                <div class="seg-control" id="dailyPlanSegments"></div>
+            </div>
+
+            <div class="daily-plan-grid" id="dailyPlanGrid">
                 <!-- Column 1: Repository -->
-                <div class="daily-plan-column" id="repositoryDropZone" 
+                <div class="daily-plan-column dp-col-repo" id="repositoryDropZone"
                      ondrop="dropToRepository(event)" 
                      ondragover="allowDrop(event)" 
                      ondragleave="dragLeave(event)">
@@ -3972,26 +4139,26 @@
                 </div>
                 
                 <!-- Column 2: Eisenhower Matrix -->
-                <div class="daily-plan-column">
+                <div class="daily-plan-column dp-col-matrix">
                     <h3>🎯 Eisenhower Matrix</h3>
                     <div class="matrix-grid">
                         <div class="matrix-quadrant q1" ondrop="dropToMatrix(event, 'q1')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)">
-                            <div class="matrix-label">Q1: DO FIRST</div>
+                            <div class="matrix-label">Q1: DO FIRST<span class="matrix-count empty" id="matrixCountq1">0</span></div>
                             <div class="matrix-subtitle">Urgent & Important</div>
                             <div id="matrixQ1" class="matrix-items"></div>
                         </div>
                         <div class="matrix-quadrant q2" ondrop="dropToMatrix(event, 'q2')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)">
-                            <div class="matrix-label">Q2: SCHEDULE</div>
+                            <div class="matrix-label">Q2: SCHEDULE<span class="matrix-count empty" id="matrixCountq2">0</span></div>
                             <div class="matrix-subtitle">Not Urgent, Important</div>
                             <div id="matrixQ2" class="matrix-items"></div>
                         </div>
                         <div class="matrix-quadrant q3" ondrop="dropToMatrix(event, 'q3')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)">
-                            <div class="matrix-label">Q3: DELEGATE</div>
+                            <div class="matrix-label">Q3: DELEGATE<span class="matrix-count empty" id="matrixCountq3">0</span></div>
                             <div class="matrix-subtitle">Urgent, Not Important</div>
                             <div id="matrixQ3" class="matrix-items"></div>
                         </div>
                         <div class="matrix-quadrant q4" ondrop="dropToMatrix(event, 'q4')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)">
-                            <div class="matrix-label">Q4: ELIMINATE</div>
+                            <div class="matrix-label">Q4: ELIMINATE<span class="matrix-count empty" id="matrixCountq4">0</span></div>
                             <div class="matrix-subtitle">Not Urgent, Not Important</div>
                             <div id="matrixQ4" class="matrix-items"></div>
                         </div>
@@ -3999,7 +4166,7 @@
                 </div>
                 
                 <!-- Column 3: Execution Zone -->
-                <div class="daily-plan-column">
+                <div class="daily-plan-column dp-col-today">
                     <h3>🚀 Today's Execution</h3>
                     <div class="today-date" id="todayDateDisplay"></div>
                     
@@ -5784,9 +5951,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.69.0';
+        const EOS_VERSION = '3.70.0';
         const EOS_BUILD_DATE = '2026-07-30';
-        const EOS_BUILD_TIME = '02:05'; // v3.69.0: the mobile chrome pass. Hans's own list, from an annotated phone screenshot, built while he was out of pocket with standing instruction to proceed without approvals. HIS PRIORITY WAS THE MARKETING DEMO, and the fix for it turned out not to be in Marketing: measured at 412x870, the board started 416px down an 870px screen (header 175 + sync bar 61 + Marketing's own toolbar 180). The chrome WAS the Marketing problem. BEFORE, measured at 412 with realistic data: header 175px, sync bar 61px, bottom nav 59px = 295px of chrome, 34% of the screen, and content starting at 264px on ALL NINE pages. AFTER: header 57px, sync bar gone, content at 89px on all nine - 175px reclaimed on every screen, chrome down to 116px (13%). Marketing's board moved 416 -> 275. WHAT MOVED, all his calls: the year picker, Save Year, Print and Settings out of the mobile header into the drawer; the top-left hamburger deleted outright (his answer to question 5, 'only keep the menu in bottom right'). NOTE THE TWO DELIBERATE REVERSALS so nobody 'restores' them: (a) the top-left opener was HIS OWN 3.66.2 request, now withdrawn - the bottom bar's More cell opens the same drawer, and removing it is what freed the row for a centred company name; (b) v3.66.1 deliberately REMOVED Save Year and Print FROM the drawer for growing it past decision 4's locked IA. That reasoning is superseded, not forgotten: with the header controls gone the drawer is the only place they can live. Both are recorded as considered reversals. THE YEAR PICKER keeps `#yearSelect` in the DOM (hidden by CSS on mobile) as the only place the value lives; the drawer renders buttons FROM its options and writes back through drawerSelectYear(), so loadYear() is untouched. That is the same presentation-only contract as #todoOwnerFilter in 3.62.0 - do not duplicate the value. TOASTS moved to bottom-centre on phones, as asked ('I wish on mobile the toast messages truly act like regular toast messages'). Needed !important because #toastContainer is positioned by INLINE style (top:20px; right:20px) - the same inline trap as the modal max-heights in 3.66.2. Measured after: centred to within 0px of the viewport centre, 74px up, clear of the 59px nav. Desktop keeps top-right. A MEASUREMENT TRAP WORTH KEEPING: showToast applies `animation: slideIn`, so measuring immediately reports the toast mid-flight - the first reading said left:392 in a 412 viewport, i.e. off-screen, which would have been reported as a bug. Kill the animation before measuring a position, or you will measure the animation. EISENHOWER MATRIX stacked on phones. The single-column rule already existed but was gated at <=380px - narrower than essentially every phone in use (Android 384-430, iPhone 390-430) - so at his 412 he got 178px cells with card titles wrapping four lines while my 375 test got the good layout. THAT IS WHY 375-ONLY TESTING MISSED IT: a breakpoint set below the device population is invisible to a test at the low end. Now stacked at <=768; the <=380 block is redundant but left alone. Revert is one line. ALSO: the FAB is fixed 74px up and 56px across and was sitting on top of the last row of every page - content cleared the nav bar (3.66.2) but nobody had cleared the FAB. `.page` gains 84px bottom padding on mobile; measured clearance now +16px. MARKETING, measured with eight realistic cards seeded (the board renders EMPTY without them, and an empty board is how the last two 'clean' measurements lied): the structure was sound - cards 366x62, every tap target >=44px, no overflow. The real defect was that the column pill row needs 587px and has 388px, so 'With Trevor' and 'Done' sat off-screen with NO affordance. Added a right-edge gradient on the row and scrollLeft-based centring of the active pill in mktRenderMobile, plus a one-line hint under the board. scrollLeft rather than scrollIntoView() on purpose: scrollIntoView on an element inside a page-level scroller also scrolls the PAGE vertically, which on a phone throws you off the board you just tapped. DESKTOP VERIFIED UNCHANGED at 1280: header 146px with its controls, sync bar 43px, tabs 40px, matrix 2x2 (195.6px cells), toast top-right, no bottom nav or FAB, page padding-bottom still 25px, all nine pages scrollWidth 1280. Every mobile rule is inside a max-width:768 block. AFTER at 412: all nine pages document scrollWidth 412 with zero document overflow. Remaining over-edge counts (meeting 3, kanban 6, marketing 4) are all inside intentional horizontal scrollers - the rating row by design since 3.62.0, Kanban which is still open item 11, and Marketing's pill row which now advertises itself. DELIBERATELY NOT SHIPPED while he is away: pull-to-refresh. He asked for it, and it is the right answer for the sync bar, but it is a gesture change that could break scrolling on the exact phone he is demoing tomorrow, and the swipe engine's axis lock decides on the first 10px - that interaction needs his hands, not an argument. Also not done: quadrant counts on the stacked matrix, and splitting Daily Plan into segments (Release B).
+        const EOS_BUILD_TIME = '18:45'; // v3.70.0: the four items Hans queued for an unattended session - pull-to-refresh, Daily Plan segmentation, Eisenhower quadrant counts, Kanban's mobile column strip (his item 11) - plus one bug the harness found that shipped in 3.68.1 and 3.69.0 and was never seen. THE BUG FIRST, because it is the reusable lesson: 3.68.1's wrap rule listed FOUR selectors and TWO OF THEM MATCHED NOTHING. `.matrix-item` and `.rule-slot .item-text` do not exist - renderMatrix emits `.matrix-task > .task-text-editable` and renderRuleOf3 emits `.rule-slot > .task-text`. So only the repository column was ever protected, and the same 80-character URL sitting in the Rule of 3 made My Daily Plan 601px wide inside a 375 viewport, 601 inside 412 AND 1460 INSIDE 1280 - this was breaking the desktop too, for two releases, while both release notes said it was fixed. Measured, not reasoned: .daily-plan-grid had width 336 and scrollWidth 589, so 3.68.1's min-width:0 was correctly capping the TRACK and the TEXT was spilling out of it. It hid because the harness seeded the REPOSITORY and nothing else; it appeared the moment the Rule of 3 and the matrix were seeded and asserted. A fixture that covers one component of a page is not a fixture for the page. Same shape as the dead #scorecardTable selector: a rule that looks like protection and matches nothing - CHECK THAT A SELECTOR MATCHES BEFORE BELIEVING IT PROTECTS ANYTHING. Also closed `.matrix-grid` and `.input-row` (which had a guard only inside #setPanes) as the last two unguarded grid containers in the sheet - that is the fourth round of min-width:auto, so this time the pattern was fixed rather than the reported instance. PULL-TO-REFRESH, held from 3.69.0 because it needed his hands: arms only at scrollTop 0, only on a downward pull, coarse pointers only, and stands down entirely when the swipe engine's axis lock has taken the gesture. Bound AFTER initSwipeActions on purpose - document-level touch listeners fire in binding order, so _sw.axis is already settled by the time _onPtrMove sees the same event - but it runs its own axis test too, so ordering is a belt not the braces. VERIFIED BY SYNTHESISING REAL TOUCH EVENTS with matchMedia stubbed coarse, not by reasoning: vertical pull on a to-do row -> swipe releases (_sw null), pull arms, row transform stays 'none', release calls manualSync; horizontal swipe on the same row -> _sw.axis 'x', _ptr stands down, indicator stays parked, and a 75% swipe still commits and shows the Completed snackbar; scrolled to 400 -> never arms; upward drag -> never arms; over an open modal -> never arms; fine pointer -> NEITHER engine arms. `overscroll-behavior-y: contain` on html/body inside the 768 block is load-bearing: without it Chrome Android's own pull-to-refresh would reload the app mid-sync. The action is page-aware (Kanban/Marketing refresh their own board, everything else manualSync) because pulling on Kanban and getting a Google Tasks sync is a lie about what just happened. The page content deliberately does NOT translate - a transform on .page would make it a containing block for any position:fixed descendant. DAILY PLAN SEGMENTATION: Repository / Matrix / Today, the same visible segmented control as decision 2's Simple vs Detailed. Columns hide with display:none and are NEVER unmounted - same contract as the six Settings hubs, and proven the same way: typed into #tomorrowNotes, switched to another segment, saveDailyPlan() still persisted it and it survived navigating away and back. Defaults to Today (assumption stated to Hans: it is the part he actually uses and was the furthest to scroll to); the choice is remembered in eos_ui_prefs.dailyPlanSeg, device-local, so tapping another segment once changes it permanently. The CSS is `@media screen and (max-width:768px)` - the ONLY mobile block in this file that is not a bare max-width, and deliberately so: the print stylesheet hides #repositoryDropZone and lays the matrix out 2x2, and a print page box is not always wider than 768px, so without `screen and` printing while parked on Matrix would have silently dropped two thirds of the printout. QUADRANT COUNTS read the DOM the quadrant just rendered rather than the data array, because renderMatrix's own prune path rewrites innerHTML a second time and counting the array would have disagreed with the screen for exactly the entries hardest to notice. Shows open/total only when something is done. KANBAN ITEM 11: .kanban-columns-header measured 549px inside 375. The mobile pill strip already had overflow-x:auto, but its parent carries `min-width: max-content` for the DESKTOP column heads, and a child scroller inside an unbounded parent never scrolls - so the pills rode the board's own .kanban-scroll and reaching 'Shipped' dragged the whole board sideways. Fixed with a class SET BY THE RENDERER, not a media query, and that distinction is the durable part: isNarrowViewport() is 640px while every CSS mobile rule here is 768px, so between 641 and 768 a max-width:768 rule would collapse the desktop heads. Same reasoning as .mkt-board-mobile. Header now 336px, strip scrolls itself (555 in 336), tapping the last column moves the strip to 219 and the board to 0. The gradient affordance is now shared by both boards instead of written twice. BEFORE -> AFTER, seeded and asserted (6 todos, 2 rocks, 6 matrix entries, 2 Rule-of-3 slots, 8 marketing cards, 9 kanban cards), in a fixed-width iframe with the coarse-pointer rules force-injected: My Daily Plan doc 601 -> 375 at 375 and 601 -> 397 at 412, 10 elements over -> 0, page height 3121 -> 1520 (Today segment) at 375; 1460 -> 1265 at 1280 with 10 over -> 0. All nine pages doc scrollWidth = viewport at 375 / 412 / 1280. DESKTOP VERIFIED UNCHANGED at 1280: segment strip display:none, all three Daily Plan columns block, grid still 3 columns, matrix still 2x2, PTR indicator display:none, overscroll-behavior auto, header-controls flex, sync bar flex, no bottom nav or FAB, .page padding-bottom 25px, kanban heads 288px with no mobile class. HELD BACK DELIBERATELY: the in-tool Gmail viewer (item 1 / Sec 5.18) - it needs a gmail.readonly scope grant, a new backend action gated by requireTeamMemberFromToken_, a clasp deploy Hans has to run himself, and HTML sanitisation; shipping half of that is worse than not starting it.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -5943,6 +6110,10 @@ Example:
             renderBottomNav();
             renderMobileDrawer();
             initSwipeActions();
+            // v3.70.0: strictly AFTER initSwipeActions. Both are document-level touch
+            // listeners and they fire in binding order, so the swipe engine's axis lock has
+            // already resolved for a given move event by the time the pull handler sees it.
+            initPullToRefresh();
 
             // Show default tab based on user preference
             const settings = getSettings();
@@ -8493,7 +8664,22 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.69.0 &mdash; 2026-07-30 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.70.0 &mdash; 2026-07-30 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Pull down to sync, My Daily Plan split in three, matrix counts, Kanban&rsquo;s column strip &mdash; and a sideways scroll that was still there.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Pull down from the top of any page to sync.</strong> This is the replacement for the sync bar I removed last version, and it is the thing I held back because it needed your hands. It only arms when you are already at the very top of a page and only when you pull <em>downwards</em> &mdash; so it can never interrupt normal scrolling. What it syncs depends on where you are: on Kanban and Marketing it refreshes that board, everywhere else it runs the same full sync as <strong>Sync Now</strong>.</li>'
+                + '<li><strong>Swiping a task sideways still works exactly as before &mdash; I tested the two against each other rather than assuming.</strong> A sideways swipe on a task hands the gesture to the swipe actions and the pull indicator never appears; a downward pull on that same task hands it to the refresh and the task never moves. Also tested: pulling when you are scrolled down does nothing, pulling upward does nothing, and pulling over an open window does nothing.</li>'
+                + '<li><strong>Android&rsquo;s own pull-to-refresh is now switched off inside the app.</strong> Without that you would have had two of them fighting, and Chrome&rsquo;s would have reloaded the whole app in the middle of a sync.</li>'
+                + '<li><strong>My Daily Plan is now three tabs instead of one very long page: Repository, Matrix, Today.</strong> It was the tallest page in the app by a distance &mdash; with your data in it, <strong>3,121 pixels</strong> at phone width, roughly four screens. Today&rsquo;s Execution was the part you had to scroll furthest to reach and is the part you actually use, so it is what opens by default. <em>If you would rather it opened on Repository or Matrix, say so &mdash; it remembers whichever you last picked, per device, so just tapping one is enough to change it for good.</em> Desktop is untouched: all three columns still sit side by side.</li>'
+                + '<li><strong>Each Eisenhower box now shows how many tasks are in it.</strong> Since the four boxes are stacked on a phone you read them one after another, and an empty box and a full one looked identical until you had scrolled past both. If some are already ticked off it shows the open ones over the total, so &ldquo;2/5&rdquo; means five in there and three done.</li>'
+                + '<li><strong>The Kanban column strip now scrolls on its own instead of dragging the whole board with it.</strong> This is note 11, and the number I gave you last time was 549 pixels of column names in a 375-pixel screen. The strip is now exactly as wide as your screen and scrolls inside itself, it fades at the right edge to show there is more, and tapping a column brings it into view without moving the board underneath. Marketing got this treatment last version; both boards now behave the same way.</li>'
+                + '<li><strong>My Daily Plan was still scrolling sideways, on every device including your desktop, and I found it by accident.</strong> The page was <strong>601 pixels wide inside a 375-pixel screen</strong> and <strong>1,460 inside 1,280</strong>. Last version I told you this was fixed. It was fixed in one column only: the rule that makes long web addresses wrap named two things that do not exist in the page, so the Rule of 3 and the matrix never got it. A task with a long URL in it spilled straight out of the box. Now genuinely 375, 412 and 1,280 with nothing over the edge. <em>The reason it hid for two versions is that my test never put a task in the Rule of 3 &mdash; it only filled the Repository.</em></li>'
+                + '<li><strong>While I was there I closed the same trap in the two remaining places it could still happen</strong> (the matrix grid and the paired date boxes), rather than waiting for each to be reported. That is now four rounds of the identical bug, so this time I fixed the pattern.</li>'
+                + '<li><strong>Not touched, so you can rely on it:</strong> the in-app Gmail viewer is still not built &mdash; it needs a new Google permission and a backend change, which is a session of its own rather than the tail of this one.</li>'
+                + '</ul></div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.69.0 &mdash; 2026-07-30</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">The mobile clean-up from your marked-up screenshot &mdash; 175 pixels back on every page.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>A third of your phone screen was chrome. It is now an eighth.</strong> The blue block at the top was <strong>175 pixels</strong> and the sync bar another <strong>61</strong>, so on every single page your content started 264 pixels down. The header is now <strong>57 pixels</strong> and content starts at <strong>89</strong> &mdash; the same 175 pixels back on all nine pages.</li>'
@@ -9717,6 +9903,18 @@ Example:
             // through to its fallback. Fixed at the point of failure rather than
             // touching the stored setting/dropdown value, since both still exist.
             if (pageId === 'weeklyMeeting') pageId = 'meeting';
+            // v3.70.0: THE SAME DEFECT, TWICE MORE, IN THE SAME DROPDOWN. Settings >
+            // Default Landing Tab offers five choices and THREE of them named page ids
+            // that do not exist - `quarterlyRocks` and `scorecard` both live on the
+            // `quarterly` page. And the failure is not graceful: the loop above has
+            // already removed `active` from every page by the time the `!target` check
+            // returns, so the app opens completely blank. Found in the console while
+            // measuring something else ("showPage: no page with id scorecard"), which is
+            // exactly what a silent console.error is for and exactly why it sat there.
+            // Generalises: when a fix aliases ONE stored value to a real id, check every
+            // other value that select can produce - the 'weeklyMeeting' patch below was
+            // written for one option of five and the other two were never looked at.
+            if (pageId === 'quarterlyRocks' || pageId === 'scorecard') pageId = 'quarterly';
             // v3.66.2 (Hans feedback 14): navigating used to leave an open modal sitting on
             // top of the page you just moved to - Settings stayed up over Compare Years.
             // Closing it here rather than in every caller means the drawer, the bottom bar
@@ -10289,6 +10487,182 @@ Example:
             document.addEventListener('touchmove', _onSwipeMove, { passive: false });
             document.addEventListener('touchend', _onSwipeEnd);
             document.addEventListener('touchcancel', _onSwipeCancel);
+        }
+
+        // ==================== PULL TO REFRESH (v3.70.0) ====================
+        //
+        // Replaces the sync bar v3.69.0 removed from phones. Held back from that release
+        // deliberately, because it changes scrolling itself on the device Hans was about
+        // to demo from.
+        //
+        // HOW IT COEXISTS WITH THE SWIPE ENGINE, which is the whole risk here:
+        //   * Both are document-level touch listeners. This one is bound AFTER the swipe
+        //     engine (initSwipeActions runs first at startup), so by the time _onPtrMove
+        //     sees a move event, _onSwipeMove has already run its axis lock for that same
+        //     event and _sw.axis is settled.
+        //   * The swipe engine's axis lock resolves at 10px and never revisits: a
+        //     vertical-first drag sets `_sw = null` and hands the gesture to the page,
+        //     which is exactly the hand-off this needs. A horizontal-first drag sets
+        //     `_sw.axis = 'x'`, and the first line of _onPtrMove stands down for it.
+        //   * This engine runs its OWN axis test as well rather than trusting that
+        //     ordering, so it is still correct if the two ever bind in the other order.
+        //   * It arms only at scrollTop 0 and only on a downward pull, so it can never
+        //     compete with a normal scroll: you have to already be at the top.
+        //   * Coarse pointers only, same gate as the swipe engine.
+        const PTR_SLOP = 12;        // px of downward travel before we claim the gesture
+        const PTR_TRIGGER = 68;     // px of pull that commits on release
+        const PTR_MAX = 104;        // rubber-band ceiling
+        let _ptr = null;
+        let _ptrBusy = false;
+
+        function _ptrEl() { return document.getElementById('ptrIndicator'); }
+
+        function _ptrPaint(pull, armed) {
+            const el = _ptrEl();
+            if (!el) return;
+            el.classList.remove('ptr-eased');
+            // -60px (parked off-screen) to +14px at full pull.
+            const y = -60 + Math.min(pull, PTR_MAX) * (74 / PTR_MAX);
+            el.style.transform = 'translate(-50%, ' + y + 'px)';
+            el.style.opacity = String(Math.min(1, pull / (PTR_TRIGGER * 0.6)));
+            const mark = document.getElementById('ptrMark');
+            const text = document.getElementById('ptrText');
+            if (mark) mark.textContent = armed ? '↻' : '↓';
+            if (text) text.textContent = armed ? 'Release to sync' : 'Pull to sync';
+        }
+
+        function _ptrPark() {
+            const el = _ptrEl();
+            if (!el) return;
+            el.classList.add('ptr-eased');
+            el.classList.remove('ptr-busy');
+            el.style.transform = 'translate(-50%, -60px)';
+            el.style.opacity = '0';
+        }
+
+        function _ptrShowBusy(label) {
+            const el = _ptrEl();
+            if (!el) return;
+            el.classList.add('ptr-eased', 'ptr-busy');
+            el.style.transform = 'translate(-50%, 14px)';
+            el.style.opacity = '1';
+            const mark = document.getElementById('ptrMark');
+            const text = document.getElementById('ptrText');
+            if (mark) mark.textContent = '↻';
+            if (text) text.textContent = label || 'Syncing…';
+        }
+
+        function _ptrIsEnabled() {
+            try { return window.matchMedia('(hover: none) and (pointer: coarse)').matches; }
+            catch (e) { return false; }
+        }
+
+        function _ptrAtTop() {
+            const y = window.pageYOffset || document.documentElement.scrollTop || 0;
+            return y <= 0;
+        }
+
+        function _onPtrStart(e) {
+            if (!_ptrIsEnabled() || _ptrBusy || _ptr) return;
+            if (e.touches && e.touches.length > 1) return;
+            if (!_ptrAtTop()) return;
+            // Never over an open modal, the drawer, or a menu - those have their own
+            // scrollers and "refresh the page underneath" is not what the pull means there.
+            const t = e.target;
+            if (t && t.closest && t.closest('.modal-overlay.active, #mobileDrawer, .task-action-menu, .kanban-move-picker, .kanban-dropdown-panel')) return;
+            const p = e.touches ? e.touches[0] : e;
+            _ptr = { x0: p.clientX, y0: p.clientY, active: false };
+        }
+
+        function _onPtrMove(e) {
+            if (!_ptr) return;
+            // The swipe engine won this gesture - stand down completely.
+            if (typeof _sw !== 'undefined' && _sw && _sw.axis === 'x') { _ptr = null; return; }
+            const p = e.touches ? e.touches[0] : e;
+            const dy = p.clientY - _ptr.y0;
+            const dx = p.clientX - _ptr.x0;
+
+            if (!_ptr.active) {
+                // Horizontal-first, or upward: not ours. Give it up and never re-arm for
+                // this touch, so a diagonal thumb cannot end up driving both.
+                if (Math.abs(dx) >= Math.abs(dy)) { _ptr = null; return; }
+                if (dy < PTR_SLOP) return;
+                // The page may have scrolled between touchstart and here.
+                if (!_ptrAtTop()) { _ptr = null; return; }
+                _ptr.active = true;
+            }
+            if (dy <= 0) { _ptrPark(); _ptr = null; return; }
+            // Once we own it, the page must not scroll underneath the indicator.
+            if (e.cancelable) e.preventDefault();
+            // Rubber band: the further you pull the less each pixel gives.
+            const raw = dy - PTR_SLOP;
+            const pull = Math.min(PTR_MAX, raw * (raw < PTR_TRIGGER ? 1 : 0.4) + (raw < PTR_TRIGGER ? 0 : PTR_TRIGGER * 0.6));
+            _ptr.pull = pull;
+            _ptrPaint(pull, pull >= PTR_TRIGGER);
+        }
+
+        function _onPtrEnd() {
+            if (!_ptr) return;
+            const armed = _ptr.active && (_ptr.pull || 0) >= PTR_TRIGGER;
+            _ptr = null;
+            if (!armed) { _ptrPark(); return; }
+            ptrRunRefresh();
+        }
+
+        function _onPtrCancel() { if (_ptr) { _ptr = null; _ptrPark(); } }
+
+        // What "refresh" means depends on where you are, because the boards have their own
+        // backends: Kanban and Marketing both sync through their own cloud pull, and
+        // everything else goes through the same manualSync() the drawer's Sync Now runs.
+        // Pulling on Kanban and getting a Google Tasks sync would be a lie about what just
+        // happened.
+        function ptrRefreshAction() {
+            const active = document.querySelector('.page.active');
+            const id = active ? active.id : '';
+            if (id === 'kanban' && typeof pullKanbanFromCloud === 'function') {
+                return { label: 'Refreshing board…', run: function () { return pullKanbanFromCloud(true); } };
+            }
+            if (id === 'marketing' && typeof mktPullFromCloud === 'function') {
+                return { label: 'Refreshing board…', run: function () { return mktPullFromCloud(); } };
+            }
+            return { label: 'Syncing…', run: function () { return manualSync(); } };
+        }
+
+        function ptrRunRefresh() {
+            if (_ptrBusy) return;
+            _ptrBusy = true;
+            const action = ptrRefreshAction();
+            _ptrShowBusy(action.label);
+            let done = false;
+            const finish = function () {
+                if (done) return;
+                done = true;
+                _ptrBusy = false;
+                _ptrPark();
+            };
+            // A 15s floor on the spinner regardless of what the action does with its
+            // promise. manualSync() reports its own outcome through toasts and the sync
+            // status; this indicator's only job is to say the pull was received, and an
+            // indicator that can stick on screen forever is worse than no indicator.
+            setTimeout(finish, 15000);
+            try {
+                const r = action.run();
+                if (r && typeof r.then === 'function') r.then(finish, finish);
+                else setTimeout(finish, 900);
+            } catch (e) {
+                console.warn('Pull-to-refresh action failed:', e);
+                finish();
+            }
+        }
+
+        function initPullToRefresh() {
+            if (window._ptrBound) return;
+            window._ptrBound = true;
+            // Bound AFTER initSwipeActions on purpose - see the note above.
+            document.addEventListener('touchstart', _onPtrStart, { passive: true });
+            document.addEventListener('touchmove', _onPtrMove, { passive: false });
+            document.addEventListener('touchend', _onPtrEnd);
+            document.addEventListener('touchcancel', _onPtrCancel);
         }
 
         function toggleBottomNavItem(key) {
@@ -14075,6 +14449,11 @@ Example:
             if (isNarrowViewport()) { renderKanbanColumnsMobile(); return; }
             const board = getActiveKanbanBoard();
             const headerWrap = document.getElementById('kanbanColumnsHeader');
+            // v3.70.0: the mobile strip's class is owned by the renderer, not by a media
+            // query, so it can never be on while the DESKTOP column heads are rendered.
+            // isNarrowViewport() is 640px and every CSS mobile rule in this file is 768px -
+            // between the two, this element holds 288px-wide heads that need max-content.
+            headerWrap.classList.remove('kanban-columns-header-mobile');
             headerWrap.innerHTML = board.columns.map(col => {
                 const count = board.cards.filter(c => c.columnId === col.id && !c.archived).length;
                 const atLimit = !!(col.wipLimit && count >= col.wipLimit);
@@ -14127,6 +14506,12 @@ Example:
             const board = getActiveKanbanBoard();
             const headerWrap = document.getElementById('kanbanColumnsHeader');
             const groupsWrap = document.getElementById('kanbanGroups');
+            // v3.70.0 (Hans's item 11). Measured at 549px inside a 375 viewport: the pill
+            // strip has its own overflow-x:auto, but .kanban-columns-header carries
+            // `min-width: max-content` for the desktop heads, and a child scroller inside
+            // an unbounded parent never scrolls - the pills rode the whole board's
+            // .kanban-scroll instead, so reaching "Shipped" dragged the board sideways.
+            headerWrap.classList.add('kanban-columns-header-mobile');
             if (!board.columns.length) {
                 headerWrap.innerHTML = '';
                 groupsWrap.innerHTML = '<div style="padding:20px; text-align:center; color:var(--gray-400); font-size:0.9rem;">No columns yet. <button class="kanban-add-col-btn" onclick="addKanbanColumn()">+ Add one</button></div>';
@@ -14146,6 +14531,17 @@ Example:
                         ${escapeHtml(col.name)} <span class="kanban-mobile-pill-count${atLimit ? ' limit' : ''}">${countLabel}</span>
                     </button>`;
             }).join('') + '<button class="kanban-mobile-pill kanban-mobile-pill-add" onclick="addKanbanColumn()" title="Add column">+</button></div>';
+
+            // v3.70.0: bring the selected column's pill into view, the same way
+            // mktRenderMobile does. scrollLeft rather than scrollIntoView() - the latter
+            // also scrolls the PAGE vertically, which throws you off the board you just
+            // tapped.
+            const _strip = headerWrap.querySelector('.kanban-mobile-switcher');
+            const _activePill = _strip && _strip.querySelector('.kanban-mobile-pill.active');
+            if (_strip && _activePill) {
+                const _want = _activePill.offsetLeft - (_strip.clientWidth - _activePill.offsetWidth) / 2;
+                _strip.scrollLeft = Math.max(0, _want);
+            }
 
             const col = board.columns.find(c => c.id === kanbanMobileColId);
             const filterActive = kanbanFilterActive(board);
@@ -24489,6 +24885,47 @@ Return ONLY the JSON array:`;
             }
         }
         
+        // ---- Daily Plan segmentation (v3.70.0) -------------------------------------
+        // Repository / Matrix / Today, one at a time on a phone. Presentation only: the
+        // switch adds a class to the grid and CSS hides the other two columns. Nothing is
+        // unmounted and no render function knows this exists - the same contract the six
+        // Settings hubs run on, and for the same reason (3.68.0: a lazily-built panel
+        // makes saveSettings() write undefined over real settings).
+        // Device-local, like row density and the bottom-nav slots - which column you were
+        // last looking at is personal and must never reach the shared sheet.
+        const DAILY_PLAN_SEGMENTS = [
+            { key: 'repo',   label: 'Repository' },
+            { key: 'matrix', label: 'Matrix' },
+            { key: 'today',  label: 'Today' }
+        ];
+        function dailyPlanSeg() {
+            const v = getUiPrefs().dailyPlanSeg;
+            return DAILY_PLAN_SEGMENTS.some(function (s) { return s.key === v; }) ? v : 'today';
+        }
+        function renderDailyPlanSegments() {
+            const wrap = document.getElementById('dailyPlanSegments');
+            const grid = document.getElementById('dailyPlanGrid');
+            const cur = dailyPlanSeg();
+            if (wrap) {
+                wrap.innerHTML = DAILY_PLAN_SEGMENTS.map(function (s) {
+                    return '<button type="button" class="seg-btn' + (s.key === cur ? ' active' : '') + '"'
+                        + ' onclick="setDailyPlanSeg(\'' + s.key + '\')">' + s.label + '</button>';
+                }).join('');
+            }
+            if (grid) {
+                DAILY_PLAN_SEGMENTS.forEach(function (s) { grid.classList.remove('dp-seg-' + s.key); });
+                grid.classList.add('dp-seg-' + cur);
+            }
+        }
+        function setDailyPlanSeg(key) {
+            if (!DAILY_PLAN_SEGMENTS.some(function (s) { return s.key === key; })) return;
+            saveUiPrefs({ dailyPlanSeg: key });
+            renderDailyPlanSegments();
+            // Jump back to the top: the segment you just chose starts at the top of the
+            // page, and landing mid-way down a column you have never seen reads as broken.
+            try { window.scrollTo(0, 0); } catch (e) {}
+        }
+
         function loadDailyPlan() {
             const user = document.getElementById('dailyPlanUser')?.value;
             if (!user) return;
@@ -24541,6 +24978,7 @@ Return ONLY the JSON array:`;
                 // Note: Matrix is NOT reset - tasks stay in their quadrants
             }
             
+            renderDailyPlanSegments();
             renderRepository();
             renderMatrix();
             renderRuleOf3();
@@ -25535,8 +25973,31 @@ Return ONLY the JSON array:`;
                     }).join('');
                 }
             });
+            updateMatrixCounts();
         }
-        
+
+        // v3.70.0. Reads the DOM the quadrant just rendered rather than the data, so a
+        // pruned orphan (resolveMatrixEntry returning null) can never be counted as a task
+        // that is not on screen - renderMatrix's own prune path rewrites innerHTML a second
+        // time, and counting the array would have disagreed with it for exactly the entries
+        // hardest to notice.
+        function updateMatrixCounts() {
+            ['q1', 'q2', 'q3', 'q4'].forEach(function (q) {
+                const badge = document.getElementById('matrixCount' + q);
+                const list = document.getElementById('matrix' + q.toUpperCase());
+                if (!badge || !list) return;
+                const rows = list.querySelectorAll('.matrix-task');
+                const total = rows.length;
+                const done = list.querySelectorAll('.matrix-task.completed').length;
+                const open = total - done;
+                badge.textContent = (done > 0) ? (open + '/' + total) : String(total);
+                badge.classList.toggle('empty', total === 0);
+                badge.title = total === 0
+                    ? 'Nothing in this quadrant'
+                    : (done > 0 ? (open + ' open, ' + done + ' done') : (total + ' task' + (total === 1 ? '' : 's')));
+            });
+        }
+
         // Matrix item drag-over for reordering within quadrant
         function matrixItemDragOver(event, quadrant, idx) {
             event.preventDefault();
