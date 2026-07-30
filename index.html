@@ -1822,9 +1822,14 @@
                 padding: 12px;
             }
             
-            /* Eisenhower Matrix - 2x2 on mobile */
+            /* Eisenhower Matrix - STACKED on phones as of v3.69.0, not 2x2.
+               Measured at 412px: 2x2 gave 178px cells and wrapped card titles to four
+               lines. The old single-column rule was gated at <=380px, narrower than
+               essentially every phone in use, so the readable layout was unreachable.
+               Revert = put `1fr 1fr` back here; the <=380 block below is now redundant
+               but harmless and is left alone deliberately. */
             .matrix-grid {
-                grid-template-columns: 1fr 1fr !important;
+                grid-template-columns: 1fr !important;
                 gap: 8px;
             }
             
@@ -3014,8 +3019,32 @@
         /* v3.62.1: the mobile marketing board stacks (pill switcher above one column)
            instead of running as a horizontal flex row. Toggled from mktRender() so it
            tracks isNarrowViewport() exactly - see the comment there. */
-        .mkt-board.mkt-board-mobile { display: block; overflow-x: visible; }
+        .mkt-board.mkt-board-mobile { display: block; overflow-x: visible; position: relative; }
+        /* The pill row scrolls (587px of pills in 388px) but gave no hint of it, so two of
+           six columns were invisible. A gradient pinned to the right edge of the ROW - not
+           the scroller, which would scroll away with the content - says "more this way".
+           pointer-events:none so it never eats a tap on the last visible pill. */
+        .mkt-board-mobile .kanban-mobile-switcher { position: relative; }
+        .mkt-board-mobile .kanban-mobile-switcher::after {
+            content: ''; position: sticky; right: 0; flex: 0 0 24px; align-self: stretch;
+            margin-left: -24px; pointer-events: none;
+            background: linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,0.95));
+        }
         .mkt-board.mkt-board-mobile .kanban-mobile-switcher { margin-bottom: 4px; }
+        .mkt-scroll-hint { display: none; }
+        @media (max-width: 768px) {
+            .mkt-scroll-hint {
+                display: block; font-size: 0.72rem; color: var(--gray-500);
+                margin: 6px 2px 0; line-height: 1.4;
+            }
+            /* Toolbar trim, measured: title block 72px (h2 32 + explainer 36) and controls
+               98px. The company toggle keeps its own line - that is v3.62.1's deliberate fix
+               so "+ New Blog" and the ⋯ stay paired - and at 412px the three cannot share a
+               row anyway (they need 474px of 388px). The firm name is worth its line when
+               someone is being shown the board, so only the type is tightened. */
+            #marketing h2 { font-size: 1.05rem; margin-bottom: 2px; }
+            #marketing > div:first-child > div:first-child > p { font-size: 0.75rem; margin: 0 0 6px; }
+        }
         @media (max-width: 768px) {
             /* Company toggle takes its own line so "+ New Blog" and the overflow button
                stay together underneath, instead of the toolbar wrapping mid-pair and
@@ -3120,6 +3149,53 @@
             header { padding: 14px 12px 0; }
             .tabs { padding-left: 10px; padding-right: 10px; }
             .page { padding: 12px; border-radius: 0; }
+        }
+
+        /* ---- v3.69.0 MOBILE CHROME PASS (Hans's annotated screenshot) ----
+           Measured at 412x870 before: header 175px, sync bar 61px, bottom nav 59px = 295px
+           of chrome (34% of the screen) and content starting at 264px on every page.
+           The year picker, Save Year, Print and Settings all move into the drawer; the
+           top-left hamburger goes entirely (his answer to question 5, reversing his own
+           3.66.2 request - the More cell opens the same drawer).
+           NOTE FOR FUTURE READERS: v3.66.1 deliberately REMOVED Save Year and Print from
+           the drawer, on the grounds that they were not in decision 4's locked IA and were
+           already in the desktop header. That reasoning no longer applies - Hans has asked
+           for them out of the mobile header, so the drawer is the only place left for them.
+           This is a considered reversal, not drift. */
+        @media (max-width: 768px) {
+            header { padding: 10px 12px 0; text-align: center; }
+            #mobileNavBtn { display: none !important; }
+            header h1 { font-size: 1.05rem; margin: 0; }
+            .header-subtitle { justify-content: center; margin-top: 2px; }
+            /* Year / Save Year / Print / Settings - all four now live in the drawer. */
+            .header-controls { display: none !important; }
+            /* Inline `display:flex` on the element beats a stylesheet rule, so this needs
+               !important. Auto-sync already runs on a timer and "last synced" is now shown
+               in the drawer, so 61px of permanent reassurance was the wrong trade. */
+            #syncStatusBar { display: none !important; }
+            /* The FAB is fixed 74px up and 56px across, so it sat on top of the last row of
+               every page. Content already clears the nav bar (3.66.2); this clears the FAB. */
+            .page { padding-bottom: 84px; }
+        }
+
+        /* ---- Toasts: bottom-centre on a phone (Hans: "I wish on mobile the toast messages
+           truly act like regular toast messages"). #toastContainer is positioned by INLINE
+           style (top:20px; right:20px), which is why this needs !important - the same inline
+           trap as the modal max-heights in 3.66.2. Desktop keeps top-right.
+           Sits above the bottom nav (59px) plus the safe-area inset, so it never lands under
+           the nav or the home-gesture bar. */
+        @media (max-width: 768px) {
+            #toastContainer {
+                top: auto !important;
+                right: auto !important;
+                left: 50% !important;
+                bottom: calc(74px + env(safe-area-inset-bottom, 0px)) !important;
+                transform: translateX(-50%) !important;
+                align-items: center !important;
+                width: max-content !important;
+                max-width: calc(100vw - 32px) !important;
+            }
+            #toastContainer > div { max-width: calc(100vw - 32px) !important; }
         }
 
         /* ============ MOBILE PHASE 2: drawer + bottom nav (v3.66.0) ============
@@ -3392,6 +3468,7 @@
             <div class="drawer-head">
                 <div class="dh-title" id="drawerCompanyName">Intelligent Investing LLC</div>
                 <div class="dh-sub">EOS Traction Tool <span id="drawerVersion"></span></div>
+                <div class="dh-sub" id="drawerSyncLine" style="margin-top:3px;"></div>
             </div>
             <div class="drawer-scroll" id="drawerGroups"></div>
             <div class="drawer-foot" id="drawerFoot"></div>
@@ -4383,6 +4460,9 @@
                 </div>
             </div>
             <div id="mktBoard" class="mkt-board"></div>
+            <!-- v3.69.0: mobile-only hint, because the pill row above scrolls and two of
+                 the six columns start off-screen on a 412px phone. -->
+            <div class="mkt-scroll-hint">Swipe the column names to reach <strong>With Trevor</strong> and <strong>Done</strong>.</div>
         </div>
 
         <!-- Marketing Research Modal -->
@@ -5704,9 +5784,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.68.1';
+        const EOS_VERSION = '3.69.0';
         const EOS_BUILD_DATE = '2026-07-30';
-        const EOS_BUILD_TIME = '00:20'; // v3.68.1: Hans's phone-test item 10 (zoom), the Daily Plan overflow behind it, and his Settings follow-ups. HE SENT A PHONE SCREENSHOT AND IT CONTAINED THE DIAGNOSIS, which is worth recording because the complaint and the cause were different things. His words were about zoom - "I don't like the fact we can zoom in and out" and "when zoomed out the menus are not full page so fonts are too small". But in the screenshot the dark header stopped at ~83% of the screen width while the Repository card and the bottom bar ran the full width. Two different right edges in one document means one group of elements is sized to a narrower box than another: the header is 100% of the LAYOUT viewport, so the document must be wider than it. 765/923 = 0.829, i.e. a document about 1.21x the viewport, which is exactly what a page with ~20% horizontal overflow looks like once you pinch out far enough to see all of it. So zoom was not the bug; zoom was the only way to SEE the bug. Locking zoom first would have hidden it - the page would still have been 439px wide, just no longer zoomable out far enough to notice. MY OWN VERIFICATION HAD MISSED IT, TWICE, AND THE REASON MATTERS: v3.68.0 reported "all nine pages clean at 375" and that was measured on an EMPTY Daily Plan repository. Seeding six realistic to-dos did not fix the test either, because renderRepository() reads yearData.quarters[currentQuarter].todos - QUARTER-scoped - and the first seed wrote them at the year level, so the list rendered empty a second time and reported clean a second time. Only after asserting repoItemCount === 6 did the overflow appear. A layout measurement over an empty collection is not a measurement; assert the fixture rendered before trusting the number. Also: the browser resize tool silently stopped taking effect mid-session (innerWidth stayed 439 while the tool reported 375), so every reading after that point was against the wrong viewport. Switched to measuring inside a fixed-width IFRAME, which gives the page a genuine 375px viewport that media queries honour and which no window state can drift. Readiness there must be probed with `typeof w.showPage === 'function'`, not `w.EOS_VERSION` - top-level `const` is a script-scope binding, never a window property, so the version check reported 'not ready' on a fully booted app. Read consts across frames with `w.eval('NAME')`. THE ACTUAL BUG: #repositoryDropZone.daily-plan-column measured 427px inside a 375 viewport, document 439px, 68 elements past the edge. `.daily-plan-grid` is `grid-template-columns: 1fr` on mobile, but grid items default to `min-width: auto`, so the widest child's MIN-CONTENT inflates the track - here an 80-character URL in a task title. THIS IS THE THIRD APPEARANCE OF ONE TRAP: .grid-2 in 3.62.0, .grid-3 in 3.66.2, .daily-plan-grid now. Each was fixed only where it had been seen. Grep for every grid container the next time this shows up rather than treating the reported one. A/B in a real 375 iframe, each half separately, because 3.62.0's lesson was that both halves can be load-bearing: baseline doc 439 / column 427 / 68 over; `min-width:0` alone doc 375 / column 351 / 1 over (track fixed, the URL still spills); `overflow-wrap:anywhere` alone doc 375 / 0 over; both doc 375 / 0 over. Wrapping alone is sufficient TODAY only because the URL was the sole min-content offender, so both ship - min-width:0 is the guard for the next wide child. `anywhere` not `break-word`, because only `anywhere` reduces the element's reported min-content, which is the half that stops a grid track inflating. ZOOM, as asked for: viewport meta gains maximum-scale=1.0, user-scalable=no, plus `touch-action: manipulation` on tappable things, which is the half that stops ACCIDENTAL double-tap zoom and works even where the meta does not. KNOWN LIMITS, recorded so they are not re-tested hopefully: Android Chrome honours it unless Accessibility > Force enable zoom is on; iOS Safari 10+ IGNORES both user-scalable=no and maximum-scale by design, so on an iPhone pinch still works and no meta tag changes that. It is a WCAG 1.4.4 trade-off, taken deliberately for a two-person internal tool. AND A DEAD GUARD FOUND WHILE THERE: `input[type="text"], textarea, select { font-size:16px; /* Prevents zoom on iOS */ }` was doing nothing in Settings. Measured at 375, every Settings field computed to 13.1-13.6px, because nearly every one carries an inline `font-size: 0.85rem` (inline beats a stylesheet rule) and because the selector never listed number, password, email or search. iOS zooms on focus below 16px EVEN WITH user-scalable=no, so the zoom lock does not cover it. Fixed with an id-scoped `!important` inside #settingsModal only. Same shape as the dead #scorecardTable selector (3.67.0) and the inline modal max-heights (3.66.2): a rule that looks like protection and is silently overridden. Cost measured: hub depth moved 4.4-4.6 to 4.7-4.9 screens. SETTINGS FOLLOW-UPS from Hans: Otter.ai moved out of Google into the AI hub, which is renamed **AI & APIs** - his reasoning, that it is the home for third-party service credentials while Google keeps its own hub for its many integrations. Otter's band moved by div-depth-matched slice, not retyped, and its Web App URL pointer now names Firm > Team Members as a different section since it is no longer next door. Calendly deliberately NOT moved: the two Calendly fields are personal URLs you paste, not a firm API credential, and Amanda has her own - so the links stay in **Me > Meeting Scheduling Links**. If a real Calendly API integration ever lands, its KEY belongs in AI & APIs while the links stay personal. The distinction to keep is credential vs personal URL, not vendor. AFTER: Daily Plan 439 -> 375, repository column 427 -> 351, 68 overflowing elements -> 0. All nine pages document scrollWidth 375 at a true 375 viewport WITH SIX REAL TO-DOS RENDERED AND ASSERTED. Remaining over-edge counts are inside their own horizontal scrollers and do not widen the document: the rating row by design since 3.62.0, and Kanban, which is still Hans's open item 11.
+        const EOS_BUILD_TIME = '02:05'; // v3.69.0: the mobile chrome pass. Hans's own list, from an annotated phone screenshot, built while he was out of pocket with standing instruction to proceed without approvals. HIS PRIORITY WAS THE MARKETING DEMO, and the fix for it turned out not to be in Marketing: measured at 412x870, the board started 416px down an 870px screen (header 175 + sync bar 61 + Marketing's own toolbar 180). The chrome WAS the Marketing problem. BEFORE, measured at 412 with realistic data: header 175px, sync bar 61px, bottom nav 59px = 295px of chrome, 34% of the screen, and content starting at 264px on ALL NINE pages. AFTER: header 57px, sync bar gone, content at 89px on all nine - 175px reclaimed on every screen, chrome down to 116px (13%). Marketing's board moved 416 -> 275. WHAT MOVED, all his calls: the year picker, Save Year, Print and Settings out of the mobile header into the drawer; the top-left hamburger deleted outright (his answer to question 5, 'only keep the menu in bottom right'). NOTE THE TWO DELIBERATE REVERSALS so nobody 'restores' them: (a) the top-left opener was HIS OWN 3.66.2 request, now withdrawn - the bottom bar's More cell opens the same drawer, and removing it is what freed the row for a centred company name; (b) v3.66.1 deliberately REMOVED Save Year and Print FROM the drawer for growing it past decision 4's locked IA. That reasoning is superseded, not forgotten: with the header controls gone the drawer is the only place they can live. Both are recorded as considered reversals. THE YEAR PICKER keeps `#yearSelect` in the DOM (hidden by CSS on mobile) as the only place the value lives; the drawer renders buttons FROM its options and writes back through drawerSelectYear(), so loadYear() is untouched. That is the same presentation-only contract as #todoOwnerFilter in 3.62.0 - do not duplicate the value. TOASTS moved to bottom-centre on phones, as asked ('I wish on mobile the toast messages truly act like regular toast messages'). Needed !important because #toastContainer is positioned by INLINE style (top:20px; right:20px) - the same inline trap as the modal max-heights in 3.66.2. Measured after: centred to within 0px of the viewport centre, 74px up, clear of the 59px nav. Desktop keeps top-right. A MEASUREMENT TRAP WORTH KEEPING: showToast applies `animation: slideIn`, so measuring immediately reports the toast mid-flight - the first reading said left:392 in a 412 viewport, i.e. off-screen, which would have been reported as a bug. Kill the animation before measuring a position, or you will measure the animation. EISENHOWER MATRIX stacked on phones. The single-column rule already existed but was gated at <=380px - narrower than essentially every phone in use (Android 384-430, iPhone 390-430) - so at his 412 he got 178px cells with card titles wrapping four lines while my 375 test got the good layout. THAT IS WHY 375-ONLY TESTING MISSED IT: a breakpoint set below the device population is invisible to a test at the low end. Now stacked at <=768; the <=380 block is redundant but left alone. Revert is one line. ALSO: the FAB is fixed 74px up and 56px across and was sitting on top of the last row of every page - content cleared the nav bar (3.66.2) but nobody had cleared the FAB. `.page` gains 84px bottom padding on mobile; measured clearance now +16px. MARKETING, measured with eight realistic cards seeded (the board renders EMPTY without them, and an empty board is how the last two 'clean' measurements lied): the structure was sound - cards 366x62, every tap target >=44px, no overflow. The real defect was that the column pill row needs 587px and has 388px, so 'With Trevor' and 'Done' sat off-screen with NO affordance. Added a right-edge gradient on the row and scrollLeft-based centring of the active pill in mktRenderMobile, plus a one-line hint under the board. scrollLeft rather than scrollIntoView() on purpose: scrollIntoView on an element inside a page-level scroller also scrolls the PAGE vertically, which on a phone throws you off the board you just tapped. DESKTOP VERIFIED UNCHANGED at 1280: header 146px with its controls, sync bar 43px, tabs 40px, matrix 2x2 (195.6px cells), toast top-right, no bottom nav or FAB, page padding-bottom still 25px, all nine pages scrollWidth 1280. Every mobile rule is inside a max-width:768 block. AFTER at 412: all nine pages document scrollWidth 412 with zero document overflow. Remaining over-edge counts (meeting 3, kanban 6, marketing 4) are all inside intentional horizontal scrollers - the rating row by design since 3.62.0, Kanban which is still open item 11, and Marketing's pill row which now advertises itself. DELIBERATELY NOT SHIPPED while he is away: pull-to-refresh. He asked for it, and it is the right answer for the sync bar, but it is a gesture change that could break scrolling on the exact phone he is demoing tomorrow, and the swipe engine's axis lock decides on the first 10px - that interaction needs his hands, not an argument. Also not done: quadrant counts on the stacked matrix, and splitting Daily Plan into segments (Release B).
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -8413,7 +8493,25 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.68.1 &mdash; 2026-07-30 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.69.0 &mdash; 2026-07-30 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">The mobile clean-up from your marked-up screenshot &mdash; 175 pixels back on every page.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>A third of your phone screen was chrome. It is now an eighth.</strong> The blue block at the top was <strong>175 pixels</strong> and the sync bar another <strong>61</strong>, so on every single page your content started 264 pixels down. The header is now <strong>57 pixels</strong> and content starts at <strong>89</strong> &mdash; the same 175 pixels back on all nine pages.</li>'
+                + '<li><strong>Your Marketing board was the thing this fixed most, and not by touching Marketing.</strong> The board used to begin 416 pixels down an 870-pixel screen, because the header, the sync bar and Marketing&rsquo;s own heading stacked up ahead of it. It now begins at <strong>275</strong>. You should see cards without scrolling.</li>'
+                + '<li><strong>The header is just your company name, centred.</strong> Year, Save Year, Print and Settings have moved into the <strong>More</strong> menu, where the year now appears as a list you tap rather than a dropdown. Nothing was removed &mdash; it all still works, it just is not taking up your screen.</li>'
+                + '<li><strong>The hamburger at the top left is gone,</strong> as you asked &mdash; the <strong>More</strong> button at the bottom right opened the identical menu, so one of them was always redundant. Worth saying out loud: you asked me to <em>add</em> that top-left button back in 3.66.2, so this reverses your own earlier call. Easy to put back if you miss it.</li>'
+                + '<li><strong>The sync bar is gone from phones.</strong> Auto-sync already runs on its own timer, so it was 61 pixels of permanent reassurance. &ldquo;Last sync&rdquo; now shows at the top of the <strong>More</strong> menu, and <strong>Sync Now</strong> is in there too.</li>'
+                + '<li><strong>Toast messages now behave like phone toasts</strong> &mdash; centred, near the bottom, above the nav bar. They were pinned to the top right, which is a desktop habit, and on your phone they landed on top of the header.</li>'
+                + '<li><strong>The Eisenhower matrix is stacked on phones now.</strong> Q1 to Q4 down the page instead of a 2&times;2, because at your screen width each box was 178 pixels wide and a task like &ldquo;Send Shetterly check for $2k&rdquo; wrapped onto four lines. You lose the square shape; you gain being able to read it. <em>There was already a rule to stack them &mdash; it only applied below 380 pixels, which is narrower than basically every phone made, so nobody ever saw it.</em></li>'
+                + '<li><strong>The blue &ldquo;+&rdquo; button was covering the bottom of every page.</strong> It sits 74 pixels up and is 56 across, and nothing had been done to keep content out from under it. Fixed.</li>'
+                + '<li><strong>On Marketing, two of your six columns were off-screen with nothing to say so.</strong> The column names need 587 pixels and have 388, so <strong>With Trevor</strong> and <strong>Done</strong> were simply invisible. The row now fades at the right edge to show it continues, the selected column scrolls itself into view, and there is a line under the board telling you to swipe.</li>'
+                + '<li><strong>Not done on purpose, and I want to flag it rather than have you find it missing:</strong> pull-to-refresh. It is the right answer for the sync bar and I will build it &mdash; but it changes how scrolling itself behaves, and I am not shipping that untested onto the phone you are presenting from tomorrow.</li>'
+                + '<li><strong>Also still to come:</strong> counts on each stacked matrix box, and splitting My Daily Plan into sections so Today&rsquo;s Execution is not three screens down.</li>'
+                + '<li><strong>Your computer is completely unchanged</strong> &mdash; same header, same sync bar, same tab row, matrix still 2&times;2, toasts still top-right. Every change here is inside a phone-only rule, and I checked all nine pages at desktop size to be sure.</li>'
+                + '</ul></div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.68.1 &mdash; 2026-07-30</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Note 10 &mdash; zoom locked on phones, and the sideways scroll your screenshot actually showed.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>The page no longer scrolls sideways, and that was the real cause of what you photographed.</strong> Your screenshot looked like a zoom problem, but the dark blue header stopped about 83% of the way across while the task panel and the bottom bar ran the full width &mdash; two different widths in one page. That only happens when the page is wider than the screen. On My Daily Plan it was: <strong>439 pixels of page in a 375-pixel screen</strong>, with 68 things hanging off the right edge. Zooming out was the only way to see the whole thing, and that is why everything looked small. It is 375 now, with nothing off the edge.</li>'
@@ -9800,6 +9898,12 @@ Example:
             { name: 'System', actions: [
                 { label: 'Sync Now', icon: '↻', tint: '#e0f2fe', ink: '#0369a1', run: 'manualSync()' }
             ], pagesAfterActions: ['history'], actionsLast: [
+                // v3.69.0: these three arrive from the mobile header, which Hans asked to
+                // strip. Save Year and Print were removed from this menu in v3.66.1 for
+                // growing it beyond decision 4 - that reasoning is superseded, because with
+                // the header controls gone the drawer is the only place they can live.
+                { label: 'Save Year', icon: '💾', tint: '#dcfce7', ink: '#047857', run: 'openSaveModal()' },
+                { label: 'Print…', icon: '🖨️', tint: '#e0e7ff', ink: '#4338ca', run: 'openMasterPrintModal()' },
                 { label: 'Settings', icon: '⚙️', tint: '#f3f4f6', ink: '#4b5563', run: 'openSettings()' }
             ] }
         ];
@@ -9844,7 +9948,26 @@ Example:
                         + _navTile(it) + '<span>' + it.label + '</span></button>';
                 }).join('');
             };
-            let html = '';
+            // v3.69.0: the year picker moved out of the mobile header, so the drawer
+            // renders buttons FROM the real <select> and writes back to it. `#yearSelect`
+            // stays in the DOM (hidden on mobile by CSS) and remains the only place the
+            // value lives - the same presentation-only contract as #todoOwnerFilter in
+            // 3.62.0. Nothing here duplicates state, so loadYear() is untouched.
+            const yearSel = document.getElementById('yearSelect');
+            let yearHtml = '';
+            if (yearSel && yearSel.options.length) {
+                yearHtml = '<div class="drawer-group-name">Year</div>'
+                    + Array.prototype.map.call(yearSel.options, function(o) {
+                        const cur = o.value === yearSel.value;
+                        return '<button type="button" class="drawer-item"'
+                            + (cur ? ' style="font-weight:800;"' : '')
+                            + ' onclick="drawerSelectYear(\'' + o.value + '\')">'
+                            + _navTile({ icon: cur ? '✓' : '📅', tint: cur ? '#dcfce7' : '#f3f4f6', ink: cur ? '#047857' : '#4b5563' })
+                            + '<span>' + escapeHtml(o.textContent) + '</span></button>';
+                      }).join('');
+            }
+
+            let html = yearHtml;
             DRAWER_GROUPS.forEach(function(g) {
                 html += '<div class="drawer-group-name">' + g.name + '</div>'
                     + emit(g, 'pages', false)
@@ -9856,6 +9979,11 @@ Example:
 
             const ver = document.getElementById('drawerVersion');
             if (ver) ver.textContent = 'v' + EOS_VERSION;
+            // The sync bar is hidden on phones now, so its status comes along here. Mirrored
+            // from #syncStatusText rather than re-derived, so there is one source of truth.
+            const syncLine = document.getElementById('drawerSyncLine');
+            const syncTxt = document.getElementById('syncStatusText');
+            if (syncLine) syncLine.textContent = syncTxt ? (syncTxt.textContent || '') : '';
             const name = document.getElementById('drawerCompanyName');
             const shown = document.getElementById('companyNameDisplay');
             if (name && shown) name.textContent = shown.textContent;
@@ -9872,6 +10000,20 @@ Example:
                       + '<button class="sb-undo" style="color:var(--danger);" onclick="closeMobileDrawer(); signOutGoogle();">Sign out</button>'
                     : '<span>Not signed in</span>';
             }
+        }
+
+        // v3.69.0. The drawer's year buttons are rendered FROM #yearSelect and write back
+        // to it, so the <select> remains the only place the value lives and loadYear() is
+        // reached through its normal path. Presentation only - exactly the contract
+        // renderTodoOwnerSegments/setTodoOwnerFilter established in v3.62.0.
+        function drawerSelectYear(value) {
+            const sel = document.getElementById('yearSelect');
+            if (!sel) return;
+            if (sel.value !== value) {
+                sel.value = value;
+                if (typeof loadYear === 'function') loadYear();
+            }
+            closeMobileDrawer();
         }
 
         function renderBottomNav() {
@@ -11764,6 +11906,16 @@ Example:
                    (mktCardsHtml(cards) || '<div class="mkt-empty">Nothing here</div>') +
                    '</div>';
             board.innerHTML = pills + body;
+
+            // v3.69.0: bring the selected column's pill into view. Set scrollLeft directly
+            // instead of scrollIntoView() - the latter also scrolls the PAGE vertically,
+            // which on a phone throws you off the board you just tapped.
+            const strip = board.querySelector('.kanban-mobile-switcher');
+            const activePill = strip && strip.querySelector('.kanban-mobile-pill.active');
+            if (strip && activePill) {
+                const want = activePill.offsetLeft - (strip.clientWidth - activePill.offsetWidth) / 2;
+                strip.scrollLeft = Math.max(0, want);
+            }
         }
 
         function mktMobileSelectColumn(colId) {
