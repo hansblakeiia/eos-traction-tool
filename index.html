@@ -822,7 +822,184 @@
         
         .modal h2 { color: var(--primary); margin-bottom: 15px; font-size: 1.2rem; }
         .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
-        
+
+        /* ==================== SETTINGS SHELL (v3.68.0) ====================
+           Hans's phone-test item 12. Settings was ONE scroll of 9,330px at 375px - 13
+           screens, with Save/Cancel at offset 9,035 - so this splits it into six hubs
+           with at most one level of nesting. Two rules the shape has to obey, both from
+           him: never make someone pass through several doors, and never let them lose
+           track of where they are. Hence: no index screen at all on a phone (the hub
+           strip is always on screen and the current hub is always highlighted), the
+           last hub is remembered device-locally, and one search box spans all six hubs.
+
+           MECHANISM NOTE, load-bearing: hubs hide with `display:none` and are NEVER
+           unmounted. All 83 inputs stay in the DOM at all times, so openSettings() and
+           saveSettings() are untouched and Settings' save-on-navigate contract
+           (MODALS_SAVED_ON_NAVIGATE) keeps working exactly as before.
+
+           The modal's own `max-height: 85/90vh` inline style is GONE from the markup as
+           of this version - it was one of the three inline heights called out in
+           3.66.2. Height now comes from .modal.settings-modal below, which the ≤768
+           block can override without needing !important to beat an inline value. */
+        .modal.settings-modal {
+            max-width: 940px;
+            width: 94%;
+            height: 86vh;
+            max-height: 86vh;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .set-head {
+            display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+            padding: 10px 18px; border-bottom: 1px solid var(--gray-200); flex-shrink: 0;
+        }
+        .set-head h2 { margin: 0; flex-shrink: 0; }
+        .set-search-wrap { position: relative; margin-left: auto; flex: 1 1 180px; max-width: 320px; }
+        /* width/margin are explicit because of the global
+           `input[type=text], textarea, select { width:100%; margin-bottom:10px }` near the
+           top of this sheet - the trap that cost a measure-fix-remeasure cycle in 3.62.0.
+           `type=search` does not match that selector today, but stating it costs nothing
+           and survives someone changing the type. */
+        .set-search {
+            width: 100%; margin: 0; padding: 9px 30px 9px 12px; font-size: 0.85rem;
+            border: 1px solid var(--gray-200); border-radius: 999px; background: var(--gray-50);
+            min-height: 40px; box-sizing: border-box;
+        }
+        .set-search:focus { outline: none; border-color: var(--accent); background: white; }
+        .set-search-clear {
+            display: none; position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+            border: 0; background: none; font-size: 1.1rem; line-height: 1; color: var(--gray-500);
+            cursor: pointer; padding: 4px 8px; min-height: 0;
+        }
+        .set-searching .set-search-clear { display: block; }
+
+        /* Hub strip: the phone's whole navigation. Horizontally scroll-snapped, the same
+           pattern the rating row landed on in 3.62.0. `justify-content: safe center` is
+           deliberately NOT used here - these start left-aligned and stay that way. */
+        .set-hubstrip {
+            display: none; gap: 6px; padding: 6px 12px; overflow-x: auto;
+            scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch;
+            border-bottom: 1px solid var(--gray-200); flex-shrink: 0;
+        }
+        .set-hubstrip::-webkit-scrollbar { height: 0; }
+        .set-hubchip {
+            flex: 0 0 auto; scroll-snap-align: start; display: inline-flex; align-items: center; gap: 6px;
+            padding: 8px 12px; border: 1px solid var(--gray-200); background: white;
+            border-radius: 999px; font-size: 0.85rem; font-weight: 600; color: var(--gray-600);
+            cursor: pointer; white-space: nowrap;
+        }
+        .set-hubchip[aria-selected="true"] { background: var(--primary); border-color: var(--primary); color: white; }
+        .set-hubchip .set-chip-ico { font-size: 0.95rem; }
+
+        .set-body { flex: 1 1 auto; display: flex; min-height: 0; overflow: hidden; }
+
+        /* Desktop rail: every hub AND the open hub's blocks, so nothing is more than one
+           click away and the current position is always visible. */
+        .set-rail {
+            width: 216px; flex-shrink: 0; overflow-y: auto; padding: 10px 8px;
+            border-right: 1px solid var(--gray-200); background: var(--gray-50);
+        }
+        .set-railitem {
+            display: flex; align-items: center; gap: 9px; width: 100%; text-align: left;
+            padding: 8px 9px; border: 0; background: none; border-radius: 8px; cursor: pointer;
+            font-size: 0.86rem; font-weight: 600; color: var(--gray-700); margin-bottom: 2px;
+        }
+        .set-railitem:hover { background: var(--gray-100); }
+        .set-railitem.active { background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.08); color: var(--primary); }
+        .set-railtile {
+            width: 26px; height: 26px; border-radius: 7px; flex-shrink: 0;
+            display: inline-flex; align-items: center; justify-content: center; font-size: 0.9rem;
+        }
+        .set-railbands { margin: 0 0 8px 42px; }
+        .set-railband {
+            display: block; width: 100%; text-align: left; border: 0; background: none;
+            padding: 5px 6px; font-size: 0.79rem; color: var(--gray-500); cursor: pointer;
+            border-radius: 6px; min-height: 0;
+        }
+        .set-railband:hover { background: var(--gray-100); color: var(--primary); }
+        .set-railband.current { color: var(--primary); font-weight: 600; }
+
+        .set-panes { flex: 1 1 auto; min-width: 0; overflow-y: auto; padding: 0 18px 18px; position: relative; }
+
+        /* Jump row - the phone's second level. Sticky, one line, scrollable. On desktop
+           the rail already lists the same blocks, so it is hidden there. */
+        .set-jump {
+            display: none; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+            position: sticky; top: 0; z-index: 3; background: white;
+            padding: 6px 0; border-bottom: 1px solid var(--gray-100); margin-bottom: 8px;
+        }
+        .set-jump::-webkit-scrollbar { height: 0; }
+        .set-jumpchip {
+            flex: 0 0 auto; padding: 5px 11px; border: 1px solid var(--gray-200); background: var(--gray-50);
+            border-radius: 999px; font-size: 0.78rem; color: var(--gray-600); cursor: pointer; white-space: nowrap;
+        }
+        .set-jumpchip.current { background: #ebf8ff; border-color: var(--accent); color: var(--primary); font-weight: 600; }
+
+        .set-hub { display: none; }
+        .set-hub.active { display: block; }
+
+        /* 10px, not 18: nearly every block moved here already carries its own
+           `margin-bottom:16px; padding-top:16px` from the old stacked layout, so a
+           generous band padding was double-spacing every one of them. Measured cost of
+           the first attempt: ~20px per band, 24 bands. */
+        .set-band { padding: 10px 0; border-bottom: 1px solid var(--gray-200); scroll-margin-top: 56px; }
+        .set-band:last-child { border-bottom: 0; }
+        .set-band-title { color: var(--primary); font-size: 0.95rem; margin-bottom: 8px; }
+        @keyframes setFlash { 0% { background: #fef9c3; } 100% { background: transparent; } }
+        .set-band.set-flash { animation: setFlash 1.4s ease-out; }
+
+        /* Scope badges. These are the honest answer to "does changing this change it for
+           Amanda?", which the old single scroll never told you. Only the team roster, the
+           three API keys/models and aiRouting are actually pushed to the shared sheet -
+           traced through saveTeamSettingsToCloud() and pullCloudSettings(). */
+        .set-scope {
+            font-size: 0.74rem; line-height: 1.45; padding: 6px 9px; border-radius: 6px;
+            margin: 0 0 10px; border: 1px solid transparent;
+        }
+        .set-scope-shared { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
+        .set-scope-local  { background: var(--gray-50); border-color: var(--gray-200); color: var(--gray-600); }
+        .set-scope-warn   { background: #fffbeb; border-color: #fcd34d; color: #92400e; }
+        .set-scope-hub    { margin-top: 16px; font-size: 0.78rem; }
+
+        .set-reserved {
+            font-size: 0.76rem; color: var(--gray-500); line-height: 1.5;
+            border: 1px dashed var(--gray-200); border-radius: 8px; padding: 10px 12px; margin: 4px 0 8px;
+        }
+        .set-reserved span { font-weight: 700; color: var(--gray-600); }
+
+        .set-notconnected { background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 8px; padding: 10px 12px; }
+        .set-nc-title { font-weight: 600; font-size: 0.85rem; color: var(--gray-700); }
+        .set-nc-tag {
+            font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700;
+            color: var(--gray-500); background: white; border: 1px solid var(--gray-200);
+            border-radius: 999px; padding: 2px 7px; margin-left: 7px;
+        }
+        .set-notconnected p { font-size: 0.78rem; color: var(--gray-500); margin: 6px 0 0; line-height: 1.5; }
+
+        .set-details summary { font-size: 0.8rem; color: var(--primary); cursor: pointer; font-weight: 600; }
+
+        /* Search results: links to blocks, never the blocks themselves. Moving an input
+           out of its hub to show it in a result list would be the fastest way to break
+           the "every field stays in the DOM" contract this whole shell rests on. */
+        .set-results { display: none; padding: 16px 0 0; }
+        .set-searching .set-results { display: block; }
+        .set-searching .set-hub, .set-searching .set-jump { display: none !important; }
+        .set-result {
+            display: block; width: 100%; text-align: left; border: 1px solid var(--gray-200);
+            background: white; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; cursor: pointer;
+        }
+        .set-result:hover { border-color: var(--accent); background: #f8fafc; }
+        .set-result-hub { font-size: 0.72rem; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.04em; }
+        .set-result-band { font-size: 0.9rem; font-weight: 600; color: var(--primary); }
+        .set-noresults { font-size: 0.85rem; color: var(--gray-500); padding: 10px 0; }
+
+        .modal-actions.set-foot {
+            flex-shrink: 0; margin-top: 0; padding: 9px 18px;
+            border-top: 1px solid var(--gray-200); background: white;
+        }
+
         .version-item {
             display: flex;
             justify-content: space-between;
@@ -1697,10 +1874,47 @@
                 width: 100%;
             }
             
-            /* Settings modal sections */
+            /* ---- Settings shell on a phone (v3.68.0, Hans's item 12) ----
+               These rules live INSIDE this ≤768 block on purpose. `.modal` above sets
+               `width: 95vw !important` and `max-height: 100% !important`; an equal-
+               specificity rule written earlier in the sheet loses to it, which is the
+               exact mistake 3.66.2 documented. Written here, they are later in source
+               order and win without a second !important.
+               Full-bleed is deliberate and follows v3.62.1: a rounded corner flush to
+               the screen edge reads as a rendering bug, and Settings is a screen you
+               work in, not a dialog you glance at. */
             #settingsModal .modal {
                 padding: 15px;
             }
+            .modal.settings-modal {
+                width: 100vw !important;
+                max-width: 100vw !important;
+                height: 100% !important;
+                max-height: 100% !important;
+                border-radius: 0;
+                padding: 0;
+            }
+            #setPanes .input-row {
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) !important;
+            }
+            #setPanes .input-row > * { min-width: 0; }
+            .set-head { padding: 10px 14px; gap: 8px; }
+            .set-head h2 { font-size: 1.05rem; }
+            .set-search-wrap { flex: 1 1 120px; max-width: none; }
+            /* The rail is a desktop affordance; the phone navigates by the hub strip,
+               which is why there is no index screen and therefore no door to pass
+               through. Both nav rows are sticky, so where-am-I is always answered. */
+            .set-rail { display: none; }
+            .set-hubstrip { display: flex; }
+            .set-jump { display: flex; }
+            .set-panes { padding: 0 14px 14px; }
+            .modal-actions.set-foot { padding: 10px 14px; }
+            /* .modal-actions above goes column + full-width buttons on mobile. Correct
+               for a two-button dialog, wrong for a footer that has to stay small: it
+               would cost 96px of a 718px screen. Save sits on the right where the thumb
+               is, Cancel beside it. */
+            .modal-actions.set-foot { flex-direction: row; }
+            .modal-actions.set-foot .btn { width: auto; flex: 1 1 0; }
             
             /* Year reference panel */
             #yearGoalsRef {
@@ -4363,16 +4577,23 @@
     
     <!-- Settings Modal -->
     <div class="modal-overlay" id="settingsModal">
-        <div class="modal" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
-            <h2>⚙️ Settings</h2>
-            
-            <!-- SECTION 1: TEAM & INTEGRATIONS -->
-            <div style="margin-bottom: 24px;">
-                <div style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; padding: 12px 16px; border-radius: 8px 8px 0 0; font-weight: 600; font-size: 1.1rem;">
-                    👥 Team & Integrations
+        <div class="modal settings-modal">
+            <div class="set-head">
+                <h2>⚙️ Settings</h2>
+                <div class="set-search-wrap">
+                    <input type="search" id="setSearch" class="set-search" placeholder="Search settings" autocomplete="off" oninput="settingsFilter(this.value)">
+                    <button type="button" class="set-search-clear" id="setSearchClear" onclick="settingsClearFilter()" aria-label="Clear search">&times;</button>
                 </div>
-                <div style="border: 1px solid #bfdbfe; border-top: none; border-radius: 0 0 8px 8px; padding: 16px; background: #f8fafc;">
-                    
+            </div>
+            <div class="set-hubstrip" id="setHubStrip" role="tablist" aria-label="Settings sections"></div>
+            <div class="set-body">
+                <nav class="set-rail" id="setRail" aria-label="Settings sections"></nav>
+                <div class="set-panes" id="setPanes">
+                    <div class="set-jump" id="setJump" role="group" aria-label="Jump to a block"></div>
+                    <div class="set-results" id="setResults"></div>
+                <section class="set-hub" id="setHub-firm" data-hub="firm">
+                    <div class="set-band" id="setBand-teamMembers">
+                        <p class="set-scope set-scope-shared">Shared with the team &mdash; changing this changes it for everyone.</p>
                     <!-- Team Members -->
                     <div style="margin-bottom: 16px;">
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
@@ -4395,31 +4616,207 @@
                             </label>
                         </div>
                     </div>
-                    
-                    <!-- Otter.ai -->
-                    <div style="margin-bottom: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
-                        <h4 style="color: #1e40af; margin-bottom: 8px; font-size: 0.95rem;">🎙️ Otter.ai Integration</h4>
-                        <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 8px;">
-                            Otter integration uses your team member's <strong>Web App URL</strong> (configured above). 
-                            No additional setup needed here! Just ensure:<br>
-                            1. Zapier sends Otter meetings to the shared Google Sheet<br>
-                            2. Include "Traction" in meeting titles to auto-filter
-                        </p>
-                        <div style="font-size: 0.75rem; color: var(--gray-400); margin-top: 8px; padding: 8px; background: #f9fafb; border-radius: 4px;">
-                            <strong>Legacy field (optional):</strong> Only needed if using a separate Otter script
+                    </div>
+                    <div class="set-band" id="setBand-weeklyMeeting">
+                        <p class="set-scope set-scope-warn"><strong>Firm-wide setting &mdash; owner-only once roles land.</strong> Today it still saves on this device only, so each person keeps their own copy.</p>
+                    <!-- Weekly Meeting -->
+                    <div style="margin-bottom: 16px;">
+                        <h4 style="color: #047857; margin-bottom: 8px; font-size: 0.95rem;">📋 Weekly Meeting Schedule</h4>
+                        <div class="input-row">
+                            <div>
+                                <label style="font-size: 0.8rem;">Day</label>
+                                <select id="meetingDay" style="font-size: 0.85rem;">
+                                    <option value="Mondays">Mondays</option>
+                                    <option value="Tuesdays">Tuesdays</option>
+                                    <option value="Wednesdays">Wednesdays</option>
+                                    <option value="Thursdays">Thursdays</option>
+                                    <option value="Fridays">Fridays</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-size: 0.8rem;">Time</label>
+                                <input type="text" id="meetingTime" placeholder="9am" value="9am" style="font-size: 0.85rem;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.8rem;">Duration</label>
+                                <select id="meetingDuration" style="font-size: 0.85rem;">
+                                    <option value="30">30 min</option>
+                                    <option value="45" selected>45 min</option>
+                                    <option value="60">60 min</option>
+                                    <option value="90">90 min</option>
+                                </select>
+                            </div>
                         </div>
-                        <input type="text" id="otterSheetUrl" placeholder="Leave blank - uses Web App URL above" style="font-size: 0.85rem; margin-top: 6px;">
-                        <div id="otterTestStatus" style="margin-top: 6px; padding: 6px; border-radius: 4px; display: none; font-size: 0.8rem;"></div>
-                        <button class="btn btn-secondary" onclick="testOtterSheetConnection()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">Test Connection</button>
+                    </div>
+                    </div>
+                    <div class="set-band" id="setBand-quarters">
+                        <p class="set-scope set-scope-warn"><strong>Firm-wide setting &mdash; owner-only once roles land.</strong> Today it still saves on this device only, so each person keeps their own copy.</p>
+                    <!-- Quarter Start Dates -->
+                    <div style="padding-top: 16px; border-top: 1px solid #a7f3d0;">
+                        <h4 style="color: #047857; margin-bottom: 8px; font-size: 0.95rem;">📠 Quarter Start Dates</h4>
+                        <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 10px;">Adjust if your fiscal quarters don't follow calendar year</p>
+                        <div class="input-row">
+                            <div>
+                                <label style="font-size: 0.8rem;">Q1 Start</label>
+                                <input type="text" id="q1Start" placeholder="01/01" value="01/01" style="font-size: 0.85rem;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.8rem;">Q2 Start</label>
+                                <input type="text" id="q2Start" placeholder="04/01" value="04/01" style="font-size: 0.85rem;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.8rem;">Q3 Start</label>
+                                <input type="text" id="q3Start" placeholder="07/01" value="07/01" style="font-size: 0.85rem;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.8rem;">Q4 Start</label>
+                                <input type="text" id="q4Start" placeholder="10/01" value="10/01" style="font-size: 0.85rem;">
+                            </div>
+                        </div>
+                    </div>
+                    </div>
+                    <div class="set-reserved"><span>Coming to this section:</span> firm brand colours, logo and icon, font choices, roles and access rules, and the two-factor policy. Reserved here so nothing has to move again when they land.</div>
+                </section>
+                <section class="set-hub" id="setHub-me" data-hub="me">
+                    <p class="set-scope set-scope-local set-scope-hub">Everything in this section is saved on <strong>this device only</strong>. It never reaches the shared sheet and never changes what anyone else sees.</p>
+                    <div class="set-band" id="setBand-signature">
+                    <!-- Email Signature (v3.64.0) -->
+                    <!-- Why this exists: a draft created by the script through GmailApp does NOT
+                         inherit the signature you set up in Gmail's own settings - Gmail only
+                         appends that when YOU click Compose in the web UI. So without this field
+                         every AI-created draft would arrive signature-less and you would retype
+                         it every time. Appended by assembleMeetingEmailHtml, so it lands on both
+                         the meeting drafter and the per-task "Draft email" action. -->
+                    <div style="margin-bottom: 16px; padding-top: 16px; border-top: 1px solid #a7f3d0;">
+                        <h4 style="color: #047857; margin-bottom: 8px; font-size: 0.95rem;">Email Signature</h4>
+                        <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 10px;">Added to the bottom of any Gmail draft this tool creates. A draft made by the tool does <strong>not</strong> pick up your Gmail signature on its own &mdash; Gmail only adds that when you press Compose yourself. So pick where it should come from:</p>
+
+                        <label style="font-size: 0.8rem;">Signature source</label>
+                        <select id="emailSignatureSource" onchange="updateSignatureSourceUI()" style="font-size: 0.85rem; width: 100%; margin-bottom: 10px;">
+                            <option value="gmail">My real Gmail signature &mdash; with logo (recommended)</option>
+                            <option value="manual">The plain-text box below</option>
+                            <option value="none">No signature</option>
+                        </select>
+
+                        <!-- v3.65.0: fetched once and cached, not pulled on every draft. Two
+                             reasons: it keeps drafting fast and offline-safe, and the preview
+                             is the only way to actually confirm the logo survived the trip -
+                             which is the genuinely uncertain part of this feature. -->
+                        <div id="signatureGmailBlock" style="display:none; margin-bottom:10px; padding:10px; background:#f9fafb; border:1px solid var(--gray-200); border-radius:6px;">
+                            <button type="button" id="fetchSignatureBtn" onclick="fetchGmailSignature()" style="padding:7px 12px; border:1px solid var(--gray-200); background:white; border-radius:6px; cursor:pointer; font-size:0.82rem; color:var(--primary); font-weight:600;">Fetch my Gmail signature</button>
+                            <span id="signatureFetchStatus" style="font-size:0.76rem; color:var(--gray-500); margin-left:8px;"></span>
+                            <div style="font-size:0.75rem;color:var(--gray-500);margin-top:8px;line-height:1.45;">Reads your signature from Gmail&rsquo;s own settings, logo and all. It is stored here so drafting stays fast &mdash; press this again after you change your signature in Gmail. This permission reads <strong>settings only</strong>; it cannot open any email.</div>
+                            <div id="signaturePreviewWrap" style="display:none; margin-top:10px;">
+                                <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--gray-500);margin-bottom:4px;">Preview &mdash; this is what goes on your drafts</div>
+                                <div id="signaturePreview" style="padding:10px;background:white;border:1px solid var(--gray-200);border-radius:6px;max-height:260px;overflow:auto;"></div>
+                            </div>
+                        </div>
+
+                        <div id="signatureManualBlock">
+                            <label style="font-size: 0.8rem;">Plain-text signature</label>
+                            <textarea id="emailSignature" rows="5" placeholder="Hans Blake, CFA, CPA&#10;Intelligent Investing&#10;(864) 555-0134&#10;investedwithyou.com" style="font-size: 0.85rem; width: 100%; font-family: inherit; box-sizing: border-box; resize: vertical;"></textarea>
+                            <p style="font-size: 0.75rem; color: var(--gray-500); margin-top: 6px;">Line breaks are kept. A web address or email address on its own line becomes a clickable link. This is also the fallback if the Gmail fetch above has not run yet.</p>
+                        </div>
+                    </div>
+                    </div>
+                    <div class="set-band" id="setBand-schedLinks">
+                    <!-- Meeting Scheduling Links -->
+                    <div style="margin-bottom: 16px; padding-top: 16px; border-top: 1px solid #a7f3d0;">
+                        <h4 style="color: #047857; margin-bottom: 8px; font-size: 0.95rem;">Meeting Scheduling Links</h4>
+                        <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 10px;">Used when drafting coffee/lunch emails from a task. Paste your Calendly (or other scheduler) links.</p>
+                        <label style="font-size: 0.8rem;">Coffee / short meeting link</label>
+                        <input type="text" id="calendlyCoffee" placeholder="https://calendly.com/you/coffee" style="font-size: 0.85rem; width: 100%; margin-bottom: 8px;">
+                        <label style="font-size: 0.8rem;">Lunch / longer meeting link</label>
+                        <input type="text" id="calendlyLunch" placeholder="https://calendly.com/you/lunch" style="font-size: 0.85rem; width: 100%;">
+                    </div>
+                    </div>
+                    <div class="set-band" id="setBand-taskRows">
+                    <!-- Task rows (v3.66.0). DEVICE-LOCAL: these three write to
+                         localStorage eos_ui_prefs and are never sent to the shared sheet, so
+                         they are not read or written by saveSettings(). Same call already
+                         made for the Kanban view prefs - how tall Hans likes his rows is not
+                         a firm-wide decision. -->
+                    <div style="margin-bottom: 16px; padding-top: 16px; border-top: 1px solid #a7f3d0;">
+                        <h4 style="color: #047857; margin-bottom: 8px; font-size: 0.95rem;">Task rows</h4>
+                        <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 10px;">How much each to-do shows. Saved on <strong>this device only</strong> &mdash; it does not change what anyone else sees. Takes effect immediately.</p>
+
+                        <label style="font-size: 0.8rem;">Row density</label>
+                        <div class="seg-control" id="rowDensitySegments" role="group" aria-label="Row density" style="margin: 4px 0 4px;"></div>
+                        <div id="rowDensityHint" style="font-size: 0.75rem; color: var(--gray-500); margin-bottom: 12px;"></div>
+
+                        <label style="font-size: 0.8rem;">Buttons in the row</label>
+                        <p style="font-size: 0.75rem; color: var(--gray-500); margin: 2px 0 6px;">The star, the AI sparkle and <strong>&#8943;</strong> are always there. Pick up to three more to pull out of the <strong>&#8943;</strong> menu. Everything stays reachable from the menu either way, and a phone only ever shows the first one.</p>
+                        <div id="promotedActionChecks" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:4px;"></div>
+                    </div>
+                    </div>
+                    <div class="set-band" id="setBand-bottomBar">
+                    <!-- Phone bottom bar (v3.66.0, §5.11b-5 decision 5). Also device-local. -->
+                    <div style="margin-bottom: 16px; padding-top: 16px; border-top: 1px solid #a7f3d0;">
+                        <h4 style="color: #047857; margin-bottom: 8px; font-size: 0.95rem;">Phone bottom bar</h4>
+                        <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 10px;">On a phone the row of tabs is replaced by a bar along the bottom of the screen. Pick up to <strong>five</strong> sections for it &mdash; a <strong>More</strong> button is always there as well and opens the full menu, so nothing is ever out of reach. This device only.</p>
+                        <div id="bottomNavPicker" style="display:flex; flex-wrap:wrap; gap:10px 16px;"></div>
+                    </div>
+                    </div>
+                    <div class="set-band" id="setBand-defaultTab">
+                    <!-- Default Tab -->
+                    <div style="margin-bottom: 16px; padding-top: 16px; border-top: 1px solid #a7f3d0;">
+                        <h4 style="color: #047857; margin-bottom: 8px; font-size: 0.95rem;">🏠 Default Landing Tab</h4>
+                        <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 10px;">Choose which tab appears when you open the EOS Tool</p>
+                        <select id="defaultTab" style="font-size: 0.85rem; width: 100%;">
+                            <option value="vision">Vision/Traction Organizer</option>
+                            <option value="quarterlyRocks">Quarterly Rocks</option>
+                            <option value="scorecard">Scorecard</option>
+                            <option value="weeklyMeeting" selected>Weekly Meeting (Default)</option>
+                            <option value="dailyPlan">My Daily Plan</option>
+                        </select>
+                    </div>
+                    </div>
+                    <div class="set-band" id="setBand-pomodoro">
+                    <h4 style="color: #b45309; margin-bottom: 10px; font-size: 0.95rem;">Pomodoro Timer Durations</h4>
+                    <div class="input-row">
+                        <div>
+                            <label style="font-size: 0.8rem;">Focus (min)</label>
+                            <input type="number" id="pomoFocusMin" min="1" max="120" value="25" style="font-size: 0.85rem;">
+                        </div>
+                        <div>
+                            <label style="font-size: 0.8rem;">Short Break (min)</label>
+                            <input type="number" id="pomoShortMin" min="1" max="30" value="5" style="font-size: 0.85rem;">
+                        </div>
+                        <div>
+                            <label style="font-size: 0.8rem;">Long Break (min)</label>
+                            <input type="number" id="pomoLongMin" min="1" max="60" value="15" style="font-size: 0.85rem;">
+                        </div>
                     </div>
                     
-                    <!-- AI Tools -->
-                    <div style="padding-top: 16px; border-top: 1px solid #e5e7eb;">
+                    <div style="margin-top: 14px; padding: 12px; background: white; border-radius: 6px; border: 1px solid #fcd34d;">
+                        <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                            <input type="checkbox" id="pomoBrowserNotify" style="width: 16px; height: 16px;">
+                            <span style="font-size: 0.85rem;">Enable browser notifications when timer completes</span>
+                        </label>
+                        
+                        <div style="padding-top: 10px; border-top: 1px solid #fef3c7;">
+                            <p style="font-size: 0.85rem; font-weight: 600; color: #b45309; margin-bottom: 6px;">📱 Mobile Push Notifications (FREE)</p>
+                            <p style="font-size: 0.8rem; color: var(--gray-500); margin: 0;">
+                                Each team member's ntfy topic is set in the <strong>Team Members</strong> section above.<br>
+                                <em>Fallback topic (used if no member topic set):</em>
+                            </p>
+                            <input type="text" id="ntfyTopic" placeholder="fallback-topic (optional)" style="font-size: 0.85rem; margin-top: 6px;">
+                            <button class="btn btn-secondary" onclick="testNtfyNotification()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">🔜 Test Fallback</button>
+                        </div>
+                    </div>
+                    </div>
+                    <div class="set-reserved"><span>Coming to this section:</span> your own accent colour and font, dark mode, and your social logins.</div>
+                </section>
+                <section class="set-hub" id="setHub-ai" data-hub="ai">
+                    <div class="set-band" id="setBand-aiKeys">
                         <h4 style="color: #1e40af; margin-bottom: 4px; font-size: 0.95rem;">🤖 AI Tools</h4>
-                        <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 12px;">
-                            Add API keys once below, then choose which AI provider handles each AI-powered feature in the tool. Keys are shared with your team via the cloud settings sync, same as everything else here.
+                        <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 10px;">
+                            Add each API key once here, then choose which provider handles which feature under
+                            <strong>Which AI handles what?</strong>
                         </p>
-
+                        <p class="set-scope set-scope-shared">Keys, models and <strong>Which AI handles what?</strong> are
+                            shared with the team through the settings sync. <strong>AI Output Length</strong> is not &mdash;
+                            that one is saved on this device only.</p>
                         <!-- Gemini -->
                         <div style="margin-bottom: 14px; padding: 10px; background: white; border: 1px solid #e5e7eb; border-radius: 6px;">
                             <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 6px;">Gemini (Google)
@@ -4431,7 +4828,6 @@
                             <div id="geminiTestStatus" style="margin-top: 6px; padding: 6px; border-radius: 4px; display: none; font-size: 0.8rem;"></div>
                             <button class="btn btn-secondary" onclick="testGeminiConnection()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">🔔 Test Connection</button>
                         </div>
-
                         <!-- Claude -->
                         <div style="margin-bottom: 14px; padding: 10px; background: white; border: 1px solid #e5e7eb; border-radius: 6px;">
                             <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 6px;">Claude (Anthropic)
@@ -4443,7 +4839,6 @@
                             <div id="claudeTestStatus" style="margin-top: 6px; padding: 6px; border-radius: 4px; display: none; font-size: 0.8rem;"></div>
                             <button class="btn btn-secondary" onclick="testClaudeConnection()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">🔔 Test Connection</button>
                         </div>
-
                         <!-- OpenAI -->
                         <div style="margin-bottom: 14px; padding: 10px; background: white; border: 1px solid #e5e7eb; border-radius: 6px;">
                             <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 6px;">OpenAI
@@ -4455,98 +4850,43 @@
                             <div id="openaiTestStatus" style="margin-top: 6px; padding: 6px; border-radius: 4px; display: none; font-size: 0.8rem;"></div>
                             <button class="btn btn-secondary" onclick="testOpenAIConnection()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">🔔 Test Connection</button>
                         </div>
-
-                        <!-- WordPress Health Check (v3.37.0) -->
-                        <div style="margin-bottom: 14px; padding: 10px; background: white; border: 1px solid #e5e7eb; border-radius: 6px;">
-                            <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 6px;">WordPress Publishing
-                                <span style="color: var(--gray-400); font-weight: 400; font-size: 0.72rem; margin-left: 6px;">draft handoff</span>
-                            </div>
-                            <div style="font-size: 0.75rem; color: var(--gray-500); margin-bottom: 6px;">Checks whether the site accepts your Application Password and whether that account can create drafts. Credentials live in Apps Script Script Properties, not here.</div>
-                            <div id="wpHealthStatus" style="margin-top: 6px; padding: 6px; border-radius: 4px; display: none; font-size: 0.8rem;"></div>
-                            <button class="btn btn-secondary" onclick="testWordPressConnection()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">Test WordPress Connection</button>
-                        </div>
-
                         <div style="font-size: 0.72rem; color: var(--gray-400); margin-bottom: 14px;">
                             More providers can be added here later &mdash; the routing below will automatically offer them.
                         </div>
-
-                        <!-- Feature routing -->
-                        <div style="padding: 10px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px;">
+                    </div>
+                    <div class="set-band" id="setBand-aiRouting">
+                        <p class="set-scope set-scope-shared">Shared with the team &mdash; changing this changes it for everyone.</p>
                             <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 8px;">Which AI handles what?</div>
-
                             <label style="font-size: 0.8rem; margin-top: 0;">IDS Suggestions</label>
                             <select id="aiRouteIds">
                                 <option value="gemini">Gemini</option>
                                 <option value="claude">Claude</option>
                                 <option value="openai">OpenAI</option>
                             </select>
-
                             <label style="font-size: 0.8rem;">Meeting Notes / Daily Planning AI</label>
                             <select id="aiRouteDailyPlanning">
                                 <option value="gemini">Gemini</option>
                                 <option value="claude">Claude</option>
                                 <option value="openai">OpenAI</option>
                             </select>
-
-                            <div style="margin: 14px 0; padding: 10px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px;">
-                                <label style="font-size: 0.8rem; font-weight: 600;">Firm Context Folder (Google Drive)</label>
-                                <p style="font-size: 0.75rem; color: var(--gray-500); margin: 4px 0 8px;">
-                                    Paste the folder ID from the Drive URL (the part after <code>/folders/</code>). Two kinds of file:
-                                </p>
-                                <ul style="font-size: 0.75rem; color: var(--gray-500); margin: 0 0 8px 16px; padding: 0; line-height: 1.5;">
-                                    <li><strong>Filenames starting with <code>_</code></strong> are <strong>firm facts</strong> &mdash; taglines, ideal clients, service names.
-                                        Small, evergreen, <strong>always loaded</strong>. Start with one file: <code>_Firm Summary.md</code>.</li>
-                                    <li><strong>Everything else</strong> is a <strong>writing sample</strong>. Only the <strong>5 most recently modified</strong> are loaded,
-                                        so token cost stays flat as the folder grows and the AI tracks your <em>current</em> voice.</li>
-                                </ul>
-                                <label style="font-size: 0.78rem; font-weight: 600; margin-top: 4px; display:block;">Intelligent Investing &mdash; folder ID</label>
-                                <input type="text" id="firmContextFolderId_ii" placeholder="1AbC...folder ID" style="font-size: 0.85rem;">
-                                <button class="btn btn-secondary" onclick="testFirmContext('ii')" style="margin-top: 6px; font-size: 0.78rem; padding: 4px 10px;">Test Folder</button>
-                                <div id="firmContextStatus_ii" style="display:none; margin-top:6px; padding:6px 8px; border-radius:4px; font-size:0.78rem;"></div>
-
-                                <label style="font-size: 0.78rem; font-weight: 600; margin-top: 12px; display:block;">Intelligrations &mdash; folder ID</label>
-                                <input type="text" id="firmContextFolderId_ig" placeholder="Leave blank if not used" style="font-size: 0.85rem;">
-                                <button class="btn btn-secondary" onclick="testFirmContext('ig')" style="margin-top: 6px; font-size: 0.78rem; padding: 4px 10px;">Test Folder</button>
-                                <div id="firmContextStatus_ig" style="display:none; margin-top:6px; padding:6px 8px; border-radius:4px; font-size:0.78rem;"></div>
-
-                                <p style="font-size: 0.72rem; color: var(--gray-500); margin: 10px 0 0;">
-                                    Each company gets its own folder, its own <code>_Firm Summary</code>, and its own writing samples.
-                                    Switch companies on the Marketing tab; each card remembers which company it belongs to.
-                                </p>
-                            </div>
-
-                            <div style="margin-bottom: 14px; padding: 10px; background: white; border: 1px solid #e5e7eb; border-radius: 6px;">
-                                <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 6px;">Published Blog Archive <span style="font-weight:400; color: var(--gray-500);">(optional)</span></div>
-                                <p style="font-size: 0.75rem; color: var(--gray-500); margin: 0 0 8px;">
-                                    A separate Drive folder for a record of blogs sent to WordPress. Kept apart from the Firm Context folder on purpose, so your writing samples stay clean and curated.
-                                </p>
-                                <label style="font-size: 0.78rem; font-weight: 600; display:block;">Intelligent Investing &mdash; archive folder ID</label>
-                                <input type="text" id="publishedArchiveFolderId_ii" placeholder="Leave blank to skip archiving" style="font-size: 0.85rem;">
-                                <label style="font-size: 0.78rem; font-weight: 600; margin-top: 12px; display:block;">Intelligrations &mdash; archive folder ID</label>
-                                <input type="text" id="publishedArchiveFolderId_ig" placeholder="Leave blank to skip archiving" style="font-size: 0.85rem;">
-                            </div>
-
                             <label style="font-size: 0.8rem;">Marketing AI <span style="font-weight:400; color: var(--gray-500);">(topics, blog drafts, social)</span></label>
                             <select id="aiRouteMarketing">
                                 <option value="gemini">Gemini</option>
                                 <option value="claude" selected>Claude</option>
                                 <option value="openai">OpenAI</option>
                             </select>
-
                             <label style="font-size: 0.8rem;">Meeting Email AI <span style="font-weight:400; color: var(--gray-500);">(coffee/lunch drafts from a task)</span></label>
                             <select id="aiRouteMeetingEmail">
                                 <option value="gemini">Gemini</option>
                                 <option value="claude" selected>Claude</option>
                                 <option value="openai">OpenAI</option>
                             </select>
-
                             <label style="font-size: 0.8rem;">Task AI <span style="font-weight:400; color: var(--gray-500);">(the AI button on a to-do, rock or Kanban card)</span></label>
                             <select id="aiRouteTaskAssist">
                                 <option value="gemini">Gemini</option>
                                 <option value="claude">Claude</option>
                                 <option value="openai">OpenAI</option>
                             </select>
-
                             <label style="font-size: 0.8rem;">Kanban AI Agent <span style="font-weight:400; color: var(--gray-500);">(coming soon)</span></label>
                             <select id="aiRouteKanban">
                                 <option value="gemini">Gemini</option>
@@ -4556,8 +4896,9 @@
                             <div style="font-size: 0.72rem; color: var(--gray-500); margin-top: 4px;">
                                 Sets your preferred provider now so it's ready when card-assignment execution ships.
                             </div>
-                        </div>
-
+                    </div>
+                    <div class="set-band" id="setBand-aiTokens">
+                        <p class="set-scope set-scope-local">This device only.</p>
                         <!-- AI Output Length (v3.53.0) -->
                         <div style="padding: 10px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; margin-top: 14px;">
                             <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 8px;">AI Output Length (max tokens per task)</div>
@@ -4565,7 +4906,7 @@
                                 Raise a task's budget if its output keeps getting cut off mid-sentence. A higher number costs more per call.
                                 Draft and Tighten auto-retry once at 1.5&times; if a result comes back truncated.
                             </p>
-                            <div style="display:flex; flex-wrap:wrap; gap:10px;">
+                            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(110px, 1fr)); gap:10px;">
                                 <div style="min-width:100px;">
                                     <label style="font-size:0.72rem;font-weight:600;color:var(--gray-500);display:block;">Brainstorm</label>
                                     <input type="number" id="aiTokensBrainstorm" min="200" step="100" style="width:100%; padding:6px; font-size:0.82rem;">
@@ -4609,133 +4950,71 @@
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
+                </section>
+                <section class="set-hub" id="setHub-publishing" data-hub="publishing">
+                    <div class="set-band" id="setBand-firmContext">
+                        <p class="set-scope set-scope-warn"><strong>Firm-wide setting &mdash; owner-only once roles land.</strong> Today it still saves on this device only, so each person keeps their own copy.</p>
+                            <div style="margin: 14px 0; padding: 10px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px;">
+                                <label style="font-size: 0.8rem; font-weight: 600;">Firm Context Folder (Google Drive)</label>
+                                <p style="font-size: 0.75rem; color: var(--gray-500); margin: 4px 0 8px;">
+                                    Paste the folder ID from the Drive URL (the part after <code>/folders/</code>). Two kinds of file:
+                                </p>
+                                <ul style="font-size: 0.75rem; color: var(--gray-500); margin: 0 0 8px 16px; padding: 0; line-height: 1.5;">
+                                    <li><strong>Filenames starting with <code>_</code></strong> are <strong>firm facts</strong> &mdash; taglines, ideal clients, service names.
+                                        Small, evergreen, <strong>always loaded</strong>. Start with one file: <code>_Firm Summary.md</code>.</li>
+                                    <li><strong>Everything else</strong> is a <strong>writing sample</strong>. Only the <strong>5 most recently modified</strong> are loaded,
+                                        so token cost stays flat as the folder grows and the AI tracks your <em>current</em> voice.</li>
+                                </ul>
+                                <label style="font-size: 0.78rem; font-weight: 600; margin-top: 4px; display:block;">Intelligent Investing &mdash; folder ID</label>
+                                <input type="text" id="firmContextFolderId_ii" placeholder="1AbC...folder ID" style="font-size: 0.85rem;">
+                                <button class="btn btn-secondary" onclick="testFirmContext('ii')" style="margin-top: 6px; font-size: 0.78rem; padding: 4px 10px;">Test Folder</button>
+                                <div id="firmContextStatus_ii" style="display:none; margin-top:6px; padding:6px 8px; border-radius:4px; font-size:0.78rem;"></div>
 
-            <!-- SECTION 2: EOS CONFIGURATION -->
-            <div style="margin-bottom: 24px;">
-                <div style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 12px 16px; border-radius: 8px 8px 0 0; font-weight: 600; font-size: 1.1rem;">
-                    📊 EOS Configuration
-                </div>
-                <div style="border: 1px solid #a7f3d0; border-top: none; border-radius: 0 0 8px 8px; padding: 16px; background: #f0fdf4;">
-                    
-                    <!-- Weekly Meeting -->
-                    <div style="margin-bottom: 16px;">
-                        <h4 style="color: #047857; margin-bottom: 8px; font-size: 0.95rem;">📋 Weekly Meeting Schedule</h4>
-                        <div class="input-row">
-                            <div>
-                                <label style="font-size: 0.8rem;">Day</label>
-                                <select id="meetingDay" style="font-size: 0.85rem;">
-                                    <option value="Mondays">Mondays</option>
-                                    <option value="Tuesdays">Tuesdays</option>
-                                    <option value="Wednesdays">Wednesdays</option>
-                                    <option value="Thursdays">Thursdays</option>
-                                    <option value="Fridays">Fridays</option>
-                                </select>
+                                <label style="font-size: 0.78rem; font-weight: 600; margin-top: 12px; display:block;">Intelligrations &mdash; folder ID</label>
+                                <input type="text" id="firmContextFolderId_ig" placeholder="Leave blank if not used" style="font-size: 0.85rem;">
+                                <button class="btn btn-secondary" onclick="testFirmContext('ig')" style="margin-top: 6px; font-size: 0.78rem; padding: 4px 10px;">Test Folder</button>
+                                <div id="firmContextStatus_ig" style="display:none; margin-top:6px; padding:6px 8px; border-radius:4px; font-size:0.78rem;"></div>
+
+                                <p style="font-size: 0.72rem; color: var(--gray-500); margin: 10px 0 0;">
+                                    Each company gets its own folder, its own <code>_Firm Summary</code>, and its own writing samples.
+                                    Switch companies on the Marketing tab; each card remembers which company it belongs to.
+                                </p>
                             </div>
-                            <div>
-                                <label style="font-size: 0.8rem;">Time</label>
-                                <input type="text" id="meetingTime" placeholder="9am" value="9am" style="font-size: 0.85rem;">
+                    </div>
+                    <div class="set-band" id="setBand-blogArchive">
+                        <p class="set-scope set-scope-warn"><strong>Firm-wide setting &mdash; owner-only once roles land.</strong> Today it still saves on this device only, so each person keeps their own copy.</p>
+                            <div style="margin-bottom: 14px; padding: 10px; background: white; border: 1px solid #e5e7eb; border-radius: 6px;">
+                                <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 6px;">Published Blog Archive <span style="font-weight:400; color: var(--gray-500);">(optional)</span></div>
+                                <p style="font-size: 0.75rem; color: var(--gray-500); margin: 0 0 8px;">
+                                    A separate Drive folder for a record of blogs sent to WordPress. Kept apart from the Firm Context folder on purpose, so your writing samples stay clean and curated.
+                                </p>
+                                <label style="font-size: 0.78rem; font-weight: 600; display:block;">Intelligent Investing &mdash; archive folder ID</label>
+                                <input type="text" id="publishedArchiveFolderId_ii" placeholder="Leave blank to skip archiving" style="font-size: 0.85rem;">
+                                <label style="font-size: 0.78rem; font-weight: 600; margin-top: 12px; display:block;">Intelligrations &mdash; archive folder ID</label>
+                                <input type="text" id="publishedArchiveFolderId_ig" placeholder="Leave blank to skip archiving" style="font-size: 0.85rem;">
                             </div>
-                            <div>
-                                <label style="font-size: 0.8rem;">Duration</label>
-                                <select id="meetingDuration" style="font-size: 0.85rem;">
-                                    <option value="30">30 min</option>
-                                    <option value="45" selected>45 min</option>
-                                    <option value="60">60 min</option>
-                                    <option value="90">90 min</option>
-                                </select>
+                    </div>
+                    <div class="set-band" id="setBand-wordpress">
+                        <!-- WordPress Health Check (v3.37.0) -->
+                        <div style="margin-bottom: 14px; padding: 10px; background: white; border: 1px solid #e5e7eb; border-radius: 6px;">
+                            <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 6px;">WordPress Publishing
+                                <span style="color: var(--gray-400); font-weight: 400; font-size: 0.72rem; margin-left: 6px;">draft handoff</span>
                             </div>
+                            <div style="font-size: 0.75rem; color: var(--gray-500); margin-bottom: 6px;">Checks whether the site accepts your Application Password and whether that account can create drafts. Credentials live in Apps Script Script Properties, not here.</div>
+                            <div id="wpHealthStatus" style="margin-top: 6px; padding: 6px; border-radius: 4px; display: none; font-size: 0.8rem;"></div>
+                            <button class="btn btn-secondary" onclick="testWordPressConnection()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">Test WordPress Connection</button>
                         </div>
                     </div>
-                    
-                    <!-- Default Tab -->
-                    <div style="margin-bottom: 16px; padding-top: 16px; border-top: 1px solid #a7f3d0;">
-                        <h4 style="color: #047857; margin-bottom: 8px; font-size: 0.95rem;">🏠 Default Landing Tab</h4>
-                        <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 10px;">Choose which tab appears when you open the EOS Tool</p>
-                        <select id="defaultTab" style="font-size: 0.85rem; width: 100%;">
-                            <option value="vision">Vision/Traction Organizer</option>
-                            <option value="quarterlyRocks">Quarterly Rocks</option>
-                            <option value="scorecard">Scorecard</option>
-                            <option value="weeklyMeeting" selected>Weekly Meeting (Default)</option>
-                            <option value="dailyPlan">My Daily Plan</option>
-                        </select>
-                    </div>
-
-                    <!-- Task rows (v3.66.0). DEVICE-LOCAL: these three write to
-                         localStorage eos_ui_prefs and are never sent to the shared sheet, so
-                         they are not read or written by saveSettings(). Same call already
-                         made for the Kanban view prefs - how tall Hans likes his rows is not
-                         a firm-wide decision. -->
-                    <div style="margin-bottom: 16px; padding-top: 16px; border-top: 1px solid #a7f3d0;">
-                        <h4 style="color: #047857; margin-bottom: 8px; font-size: 0.95rem;">Task rows</h4>
-                        <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 10px;">How much each to-do shows. Saved on <strong>this device only</strong> &mdash; it does not change what anyone else sees. Takes effect immediately.</p>
-
-                        <label style="font-size: 0.8rem;">Row density</label>
-                        <div class="seg-control" id="rowDensitySegments" role="group" aria-label="Row density" style="margin: 4px 0 4px;"></div>
-                        <div id="rowDensityHint" style="font-size: 0.75rem; color: var(--gray-500); margin-bottom: 12px;"></div>
-
-                        <label style="font-size: 0.8rem;">Buttons in the row</label>
-                        <p style="font-size: 0.75rem; color: var(--gray-500); margin: 2px 0 6px;">The star, the AI sparkle and <strong>&#8943;</strong> are always there. Pick up to three more to pull out of the <strong>&#8943;</strong> menu. Everything stays reachable from the menu either way, and a phone only ever shows the first one.</p>
-                        <div id="promotedActionChecks" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:4px;"></div>
-                    </div>
-
-                    <!-- Phone bottom bar (v3.66.0, §5.11b-5 decision 5). Also device-local. -->
-                    <div style="margin-bottom: 16px; padding-top: 16px; border-top: 1px solid #a7f3d0;">
-                        <h4 style="color: #047857; margin-bottom: 8px; font-size: 0.95rem;">Phone bottom bar</h4>
-                        <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 10px;">On a phone the row of tabs is replaced by a bar along the bottom of the screen. Pick up to <strong>five</strong> sections for it &mdash; a <strong>More</strong> button is always there as well and opens the full menu, so nothing is ever out of reach. This device only.</p>
-                        <div id="bottomNavPicker" style="display:flex; flex-wrap:wrap; gap:10px 16px;"></div>
-                    </div>
-
-                    <!-- Meeting Scheduling Links -->
-                    <div style="margin-bottom: 16px; padding-top: 16px; border-top: 1px solid #a7f3d0;">
-                        <h4 style="color: #047857; margin-bottom: 8px; font-size: 0.95rem;">Meeting Scheduling Links</h4>
-                        <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 10px;">Used when drafting coffee/lunch emails from a task. Paste your Calendly (or other scheduler) links.</p>
-                        <label style="font-size: 0.8rem;">Coffee / short meeting link</label>
-                        <input type="text" id="calendlyCoffee" placeholder="https://calendly.com/you/coffee" style="font-size: 0.85rem; width: 100%; margin-bottom: 8px;">
-                        <label style="font-size: 0.8rem;">Lunch / longer meeting link</label>
-                        <input type="text" id="calendlyLunch" placeholder="https://calendly.com/you/lunch" style="font-size: 0.85rem; width: 100%;">
-                    </div>
-
-                    <!-- Email Signature (v3.64.0) -->
-                    <!-- Why this exists: a draft created by the script through GmailApp does NOT
-                         inherit the signature you set up in Gmail's own settings - Gmail only
-                         appends that when YOU click Compose in the web UI. So without this field
-                         every AI-created draft would arrive signature-less and you would retype
-                         it every time. Appended by assembleMeetingEmailHtml, so it lands on both
-                         the meeting drafter and the per-task "Draft email" action. -->
-                    <div style="margin-bottom: 16px; padding-top: 16px; border-top: 1px solid #a7f3d0;">
-                        <h4 style="color: #047857; margin-bottom: 8px; font-size: 0.95rem;">Email Signature</h4>
-                        <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 10px;">Added to the bottom of any Gmail draft this tool creates. A draft made by the tool does <strong>not</strong> pick up your Gmail signature on its own &mdash; Gmail only adds that when you press Compose yourself. So pick where it should come from:</p>
-
-                        <label style="font-size: 0.8rem;">Signature source</label>
-                        <select id="emailSignatureSource" onchange="updateSignatureSourceUI()" style="font-size: 0.85rem; width: 100%; margin-bottom: 10px;">
-                            <option value="gmail">My real Gmail signature &mdash; with logo (recommended)</option>
-                            <option value="manual">The plain-text box below</option>
-                            <option value="none">No signature</option>
-                        </select>
-
-                        <!-- v3.65.0: fetched once and cached, not pulled on every draft. Two
-                             reasons: it keeps drafting fast and offline-safe, and the preview
-                             is the only way to actually confirm the logo survived the trip -
-                             which is the genuinely uncertain part of this feature. -->
-                        <div id="signatureGmailBlock" style="display:none; margin-bottom:10px; padding:10px; background:#f9fafb; border:1px solid var(--gray-200); border-radius:6px;">
-                            <button type="button" id="fetchSignatureBtn" onclick="fetchGmailSignature()" style="padding:7px 12px; border:1px solid var(--gray-200); background:white; border-radius:6px; cursor:pointer; font-size:0.82rem; color:var(--primary); font-weight:600;">Fetch my Gmail signature</button>
-                            <span id="signatureFetchStatus" style="font-size:0.76rem; color:var(--gray-500); margin-left:8px;"></span>
-                            <div style="font-size:0.75rem;color:var(--gray-500);margin-top:8px;line-height:1.45;">Reads your signature from Gmail&rsquo;s own settings, logo and all. It is stored here so drafting stays fast &mdash; press this again after you change your signature in Gmail. This permission reads <strong>settings only</strong>; it cannot open any email.</div>
-                            <div id="signaturePreviewWrap" style="display:none; margin-top:10px;">
-                                <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--gray-500);margin-bottom:4px;">Preview &mdash; this is what goes on your drafts</div>
-                                <div id="signaturePreview" style="padding:10px;background:white;border:1px solid var(--gray-200);border-radius:6px;max-height:260px;overflow:auto;"></div>
-                            </div>
-                        </div>
-
-                        <div id="signatureManualBlock">
-                            <label style="font-size: 0.8rem;">Plain-text signature</label>
-                            <textarea id="emailSignature" rows="5" placeholder="Hans Blake, CFA, CPA&#10;Intelligent Investing&#10;(864) 555-0134&#10;investedwithyou.com" style="font-size: 0.85rem; width: 100%; font-family: inherit; box-sizing: border-box; resize: vertical;"></textarea>
-                            <p style="font-size: 0.75rem; color: var(--gray-500); margin-top: 6px;">Line breaks are kept. A web address or email address on its own line becomes a clickable link. This is also the fallback if the Gmail fetch above has not run yet.</p>
+                    <div class="set-band" id="setBand-socialPosting">
+                        <h4 class="set-band-title">Social posting</h4>
+                        <div class="set-notconnected">
+                            <span class="set-nc-title">LinkedIn, X and the rest</span><span class="set-nc-tag">not connected yet</span>
+                            <p>Posting from the tool needs each platform&rsquo;s own API and app review, one platform at a time. Until then the Marketing tab hands you finished copy to paste.</p>
                         </div>
                     </div>
-
+                </section>
+                <section class="set-hub" id="setHub-google" data-hub="google">
+                    <div class="set-band" id="setBand-googleAccess">
                     <!-- Google Access Check (v3.64.1) -->
                     <!-- Replaces "open the browser console and run probeCapabilities()", which
                          is not a reasonable thing to ask of anyone. Same call, one click, and
@@ -4746,8 +5025,9 @@
                         <button type="button" id="googleAccessBtn" onclick="checkGoogleAccess()" style="padding:8px 12px; border:1px solid var(--gray-200); background:#f9fafb; border-radius:6px; cursor:pointer; font-size:0.85rem; color:var(--primary); font-weight:600;">Check Google access</button>
                         <div id="googleAccessStatus" style="display:none; margin-top:10px; font-size:0.8rem;"></div>
                     </div>
-
-
+                    </div>
+                    <div class="set-band" id="setBand-autoSync">
+                        <p class="set-scope set-scope-local">This device only.</p>
                     <!-- Auto-Sync Interval -->
                     <div style="margin-bottom: 16px; padding-top: 16px; border-top: 1px solid #a7f3d0;">
                         <h4 style="color: #047857; margin-bottom: 8px; font-size: 0.95rem;">⏱ Auto-Sync Interval</h4>
@@ -4762,83 +5042,34 @@
                         </select>
                         <p id="syncIntervalStatus" style="font-size: 0.75rem; color: #6b7280; margin-top: 6px;"></p>
                     </div>
-
-                    <!-- Quarter Start Dates -->
-                    <div style="padding-top: 16px; border-top: 1px solid #a7f3d0;">
-                        <h4 style="color: #047857; margin-bottom: 8px; font-size: 0.95rem;">📠 Quarter Start Dates</h4>
-                        <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 10px;">Adjust if your fiscal quarters don't follow calendar year</p>
-                        <div class="input-row">
-                            <div>
-                                <label style="font-size: 0.8rem;">Q1 Start</label>
-                                <input type="text" id="q1Start" placeholder="01/01" value="01/01" style="font-size: 0.85rem;">
+                    </div>
+                    <div class="set-band" id="setBand-otter">
+                        <h4 style="color: #1e40af; margin-bottom: 8px; font-size: 0.95rem;">🎙️ Otter.ai Integration</h4>
+                        <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 8px;">
+                            Nothing to set up here. Otter uses the <strong>Web App URL</strong> from
+                            <strong>Firm &rsaquo; Team Members</strong>. Zapier sends Otter meetings to the shared Google Sheet, and
+                            any meeting with &ldquo;Traction&rdquo; in the title is picked up automatically.
+                        </p>
+                        <details class="set-details">
+                            <summary>Legacy field &mdash; separate Otter script</summary>
+                            <div style="padding-top: 8px;">
+                                <div style="font-size: 0.75rem; color: var(--gray-500); margin-bottom: 6px;">Only needed if you run a separate Otter script. Leave blank to use the Web App URL above.</div>
+                        <input type="text" id="otterSheetUrl" placeholder="Leave blank - uses Web App URL above" style="font-size: 0.85rem; margin-top: 6px;">
+                        <div id="otterTestStatus" style="margin-top: 6px; padding: 6px; border-radius: 4px; display: none; font-size: 0.8rem;"></div>
+                        <button class="btn btn-secondary" onclick="testOtterSheetConnection()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">Test Connection</button>
                             </div>
-                            <div>
-                                <label style="font-size: 0.8rem;">Q2 Start</label>
-                                <input type="text" id="q2Start" placeholder="04/01" value="04/01" style="font-size: 0.85rem;">
-                            </div>
-                            <div>
-                                <label style="font-size: 0.8rem;">Q3 Start</label>
-                                <input type="text" id="q3Start" placeholder="07/01" value="07/01" style="font-size: 0.85rem;">
-                            </div>
-                            <div>
-                                <label style="font-size: 0.8rem;">Q4 Start</label>
-                                <input type="text" id="q4Start" placeholder="10/01" value="10/01" style="font-size: 0.85rem;">
-                            </div>
+                        </details>
+                    </div>
+                    <div class="set-band" id="setBand-googleCalendar">
+                        <h4 class="set-band-title">Google Calendar</h4>
+                        <div class="set-notconnected">
+                            <span class="set-nc-title">Google Calendar</span><span class="set-nc-tag">not connected yet</span>
+                            <p>A day view over tasks that mostly have no due date renders empty and reads as broken, so this waits on the Google Calendar API rather than shipping a blank page.</p>
                         </div>
                     </div>
-                </div>
-            </div>
-            
-            <!-- SECTION 3: PRODUCTIVITY TOOLS -->
-            <div style="margin-bottom: 24px;">
-                <div style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 12px 16px; border-radius: 8px 8px 0 0; font-weight: 600; font-size: 1.1rem;">
-                    🍅 Productivity Tools
-                </div>
-                <div style="border: 1px solid #fcd34d; border-top: none; border-radius: 0 0 8px 8px; padding: 16px; background: #fffbeb;">
-                    
-                    <!-- Pomodoro Timer -->
-                    <h4 style="color: #b45309; margin-bottom: 10px; font-size: 0.95rem;">Pomodoro Timer Durations</h4>
-                    <div class="input-row">
-                        <div>
-                            <label style="font-size: 0.8rem;">Focus (min)</label>
-                            <input type="number" id="pomoFocusMin" min="1" max="120" value="25" style="font-size: 0.85rem;">
-                        </div>
-                        <div>
-                            <label style="font-size: 0.8rem;">Short Break (min)</label>
-                            <input type="number" id="pomoShortMin" min="1" max="30" value="5" style="font-size: 0.85rem;">
-                        </div>
-                        <div>
-                            <label style="font-size: 0.8rem;">Long Break (min)</label>
-                            <input type="number" id="pomoLongMin" min="1" max="60" value="15" style="font-size: 0.85rem;">
-                        </div>
-                    </div>
-                    
-                    <div style="margin-top: 14px; padding: 12px; background: white; border-radius: 6px; border: 1px solid #fcd34d;">
-                        <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-                            <input type="checkbox" id="pomoBrowserNotify" style="width: 16px; height: 16px;">
-                            <span style="font-size: 0.85rem;">Enable browser notifications when timer completes</span>
-                        </label>
-                        
-                        <div style="padding-top: 10px; border-top: 1px solid #fef3c7;">
-                            <p style="font-size: 0.85rem; font-weight: 600; color: #b45309; margin-bottom: 6px;">📱 Mobile Push Notifications (FREE)</p>
-                            <p style="font-size: 0.8rem; color: var(--gray-500); margin: 0;">
-                                Each team member's ntfy topic is set in the <strong>Team Members</strong> section above.<br>
-                                <em>Fallback topic (used if no member topic set):</em>
-                            </p>
-                            <input type="text" id="ntfyTopic" placeholder="fallback-topic (optional)" style="font-size: 0.85rem; margin-top: 6px;">
-                            <button class="btn btn-secondary" onclick="testNtfyNotification()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">🔜 Test Fallback</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- SECTION 4: DATA & SUPPORT -->
-            <div style="margin-bottom: 16px;">
-                <div style="background: linear-gradient(135deg, #6b7280, #4b5563); color: white; padding: 12px 16px; border-radius: 8px 8px 0 0; font-weight: 600; font-size: 1.1rem;">
-                    💾 Data & Support
-                </div>
-                <div style="border: 1px solid #d1d5db; border-top: none; border-radius: 0 0 8px 8px; padding: 16px; background: #f9fafb;">
-                    
+                </section>
+                <section class="set-hub" id="setHub-system" data-hub="system">
+                    <div class="set-band" id="setBand-dataMgmt">
                     <!-- Data Management -->
                     <div style="margin-bottom: 16px;">
                         <h4 style="color: #374151; margin-bottom: 8px; font-size: 0.95rem;">📁 Data Management</h4>
@@ -4864,7 +5095,20 @@
                             Export/Import saves your data as JSON. New Year creates fresh quarters from your vision.
                         </p>
                     </div>
-                    
+                    </div>
+                    <div class="set-band" id="setBand-settingsBackup">
+            <div style="margin-bottom: 20px; padding: 12px; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 6px;">
+                <h4 style="color: #92400e; margin: 0 0 10px 0; font-size: 0.95rem;">💾 Backup & Restore Settings</h4>
+                <p style="font-size: 0.8rem; color: #78350f; margin: 0 0 10px 0;">
+                    Export your settings to a file, then import them later or share with team members. Settings persist across version updates!
+                </p>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="btn btn-secondary" onclick="exportSettings()" style="padding: 8px 14px; font-size: 0.85rem; flex: 1; min-width: 140px;">📥 Export Settings</button>
+                    <button class="btn btn-secondary" onclick="showImportSettingsModal()" style="padding: 8px 14px; font-size: 0.85rem; flex: 1; min-width: 140px;">📤 Import Settings</button>
+                </div>
+            </div>
+                    </div>
+                    <div class="set-band" id="setBand-issues">
                     <!-- Tool Issues -->
                     <div style="margin-bottom: 16px; padding-top: 14px; border-top: 1px solid #e5e7eb;">
                         <h4 style="color: #374151; margin-bottom: 8px; font-size: 0.95rem;">🐻 Issues & Feature Requests</h4>
@@ -4877,7 +5121,8 @@
                             <button class="btn btn-secondary" onclick="clearToolIssues()" style="padding: 6px 10px; font-size: 0.85rem;">🗑️</button>
                         </div>
                     </div>
-                    
+                    </div>
+                    <div class="set-band" id="setBand-troubleshooting">
                     <!-- Troubleshooting & Mobile Access -->
                     <div style="padding-top: 14px; border-top: 1px solid #e5e7eb;">
                         <div style="display: flex; gap: 16px; flex-wrap: wrap;">
@@ -4893,7 +5138,8 @@
                             </div>
                         </div>
                     </div>
-                    
+                    </div>
+                    <div class="set-band" id="setBand-about">
                     <!-- Version Info -->
                     <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--gray-200);">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -4908,22 +5154,11 @@
                             <a href="https://github.com" target="_blank" style="color: var(--primary);">Report Issue</a>
                         </p>
                     </div>
+                    </div>
+                </section>
                 </div>
             </div>
-            
-            <!-- SETTINGS BACKUP/RESTORE SECTION -->
-            <div style="margin-bottom: 20px; padding: 12px; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 6px;">
-                <h4 style="color: #92400e; margin: 0 0 10px 0; font-size: 0.95rem;">💾 Backup & Restore Settings</h4>
-                <p style="font-size: 0.8rem; color: #78350f; margin: 0 0 10px 0;">
-                    Export your settings to a file, then import them later or share with team members. Settings persist across version updates!
-                </p>
-                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button class="btn btn-secondary" onclick="exportSettings()" style="padding: 8px 14px; font-size: 0.85rem; flex: 1; min-width: 140px;">📥 Export Settings</button>
-                    <button class="btn btn-secondary" onclick="showImportSettingsModal()" style="padding: 8px 14px; font-size: 0.85rem; flex: 1; min-width: 140px;">📤 Import Settings</button>
-                </div>
-            </div>
-            
-            <div class="modal-actions">
+            <div class="modal-actions set-foot">
                 <button class="btn btn-secondary" onclick="closeModal('settingsModal')">Cancel</button>
                 <button class="btn btn-success" onclick="saveSettings()">Save Settings</button>
             </div>
@@ -5433,9 +5668,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.67.0';
+        const EOS_VERSION = '3.68.0';
         const EOS_BUILD_DATE = '2026-07-29';
-        const EOS_BUILD_TIME = '13:05'; // v3.67.0: Mobile conversion session 1 of 3 - Rocks & Scorecard (Hans's phone-test item 15), the missing per-task Delete (item 2), and item 1 - the Gmail link - which turned out not to be the problem everyone thought it was. Everything below was measured on a local copy at 375/768/1280 with realistic data, or tested on Hans's actual Android phone; none of it is reasoned about. ROCKS: the list running off the right edge is NOT the .grid-3/.grid-4 min-width:auto trap fixed in 3.66.2 - .rock-card is its own display:flex; flex-wrap:nowrap row with six children, three of them flex-shrink:0 (32px number + 100px owner select + 128px On/Off toggle). Their hard floor plus gaps is 423px inside a 297px interior, so the last child's right edge landed at 481.5 and dragged the document to scrollWidth 481 in a 375 viewport. The half nobody could see in the screenshot was worse: .rock-content is the only shrinkable child and carries min-width:0, so it absorbed the whole shortfall and measured 26px with real text in it - the rock's description box, the actual content of the EOS core. That is v3.64.1's .todo-text collapse one surface over, and the same shape as .grid-3 in 3.66.2: a bug already diagnosed and left untreated somewhere else is a bug you have shipped. The card wraps below 600px - its own breakpoint, derived from where the single line actually breaks (~545px), NOT the 768 block, which would have made tablet cards 112px tall for nothing. SCORECARD, two findings. (a) The mobile CSS for it was addressed to #scorecardTable and NO ELEMENT HAS EVER HAD THAT ID - the table is class="scorecard-table" - so the whole block was dead and the 13-week grid always rendered at its desktop 1089px on a phone. (b) The header row carried 16 cells while renderScorecard emits 18, so header "1" sat over the goal-DIRECTION select, week 1's input sat under the header labelled "2" and dated a week late, and week 13 had no header at all. Every week column was mislabelled by one. Both fixed; week cells carry data-week so nothing counts columns by hand again. The phone view is decision 15's shape: Who / Measurable / Goal / current week, with "Compare all 13 weeks" opening the rest scrolled to the current week. The 768 breakpoint is written ONCE in JS and the CSS only honours the class it sets - v3.62.1's Marketing board broke because a renderer branched at 640 while its stylesheet branched at 768. DELETE (item 2): renderTodoItem now passes menuExtras like the Matrix and Rule-of-3 rows already did. The bulk delete/archive bodies were extracted into _purgeTodoRecords / _archiveTodoRecords so the new single-task path cannot forget a side effect - the applySnoozeById lesson. Two gaps in the OLD bulk path are fixed for both callers: it never cleared the active user's id-referenced Daily Plan slots (text-only removal, dangling since Phase 2), and it never took a parent's subtasks with it though Google Tasks does. GMAIL LINK (item 1) - NOT a rendering problem, and three sessions read it as one. Google Tasks stores links[].link with NO account segment; Gmail resolves that to u/0, which means "whichever account signed in first in THIS browser", not a fixed mailbox. On Hans's desktop that is his work account, so the link has always opened the right email. On his phone it is his PERSONAL account, where a work message id does not exist, so Gmail falls back to that account's Primary inbox - and THAT inbox is the "clunky Gmail mobile web" being complained about. The same URL behaved differently on two devices because it delegated the choice of mailbox to browser state instead of stating it: a link that already works may only be working by luck. gmailLinkForSignedInAccount() names the account by ADDRESS in the QUERY (.gs 3.51.0 proved /mail/u/<email>/ in the PATH serves a hard 404; a query parameter Gmail dislikes just falls back to the default, i.e. today's behaviour) using localStorage.eos_signed_in_email, applied at RENDER so the stored link keeps Google's raw value. Tested on the device: naming the account by address reached the work mailbox, account SLOTS did not - his work account is neither u/1 nor u/2, and slot order is per-device, so shipping an index would have been wrong for Amanda. THIS IS A HALF FIX AND SHIPS LABELLED AS ONE: re-tested after the above, the link reaches the work mailbox but stops on its INBOX LIST, not the message. The #all/<msgid> fragment does not survive Gmail's authuser redirect - the redirect target carries its own fragment and a target's fragment replaces the request's - so the id is dropped in transit, not rejected; the desktop proves the id resolves. The open candidate is accounts.google.com/AccountChooser?Email=<addr>&continue=<whole URL, %23-encoded>, which carries the fragment inside an encoded query value so there is no fragment to lose until the final hop. UNTESTED - it needs a tap on the phone, not an argument. The right mailbox beats the wrong mailbox, so this ships now rather than holding the Rocks/Scorecard work hostage to it. Four render sites, and the fourth was found by checking rendered hrefs rather than by grepping, because the row's email CHIP builds its link under its own name - same class of miss as v3.66.0's fourth envelope glyph. THE APP IS A CLOSED QUESTION, tested with the Gmail app installed and "Open supported links" ON: a plain navigation, a window.open, an intent:// naming com.google.android.gm explicitly, and an intent:// naming no package all fell through to the browser. Nothing on the device claims a mail.google.com address; googlegmail:// is iOS-only and compose-only. Do not re-open without new evidence from Google.
+        const EOS_BUILD_TIME = '23:40'; // v3.68.0: Hans's phone-test item 12 - Settings reorganised and made to work on a phone. UNLIKE item 15 there was NO locked design for this in 5.11b-5, so the information architecture was AGREED WITH HANS FIRST, over four rounds, and it is his rather than mine: a Firm/Me OWNERSHIP axis crossed with subject, which is also the axis 5.11b-5's open Firm-page item already implies (decision 11 puts brand colours/logo/icon on the Firm page, and NAV_ITEMS already reserves Firm as a System destination). Six hubs: Firm, Me, AI, Marketing & Publishing, Google & Sync, System & Support. MEASURED BEFORE ANY EDIT, on a local copy at 375 with two team members and realistic keys/links/folder ids, with the `(hover:none) and (pointer:coarse)` rules FORCE-INJECTED - this browser reports a fine pointer, so every button measured 14px short of what the phone renders and the file under-reported the scroll by 273px. The modal was ONE scroll of 9330px inside a 718px window - 13.0 screens - with Save/Cancel at scroll offset 9035, 83 inputs, 35 buttons and 18 subsections. AND THERE WAS NO HORIZONTAL OVERFLOW ANYWHERE, at 375 or 768 or 1280: item 12 was never an overflow bug like Rocks was, it was a findability bug. Measuring first is what established that, and it changed the whole shape of the fix. FIVE GROUPING DEFECTS, each measured rather than asserted: (1) section 1 alone was 4696px, 52% of the modal, of which AI Tools was 3209px. (2) 845px of Google Drive folder configuration sat INSIDE the "Which AI handles what?" box, between routing dropdown 2 and dropdown 3 - Firm Context 567px + Published Blog Archive 278px against 640px of actual routing. (3) Two different Export/Import pairs, both labelled Export/Import, one for app data inside section 4 and one for settings JSON in a box that sat OUTSIDE all four sections. (4) The two prefs a phone user most likely came for - Task rows and Phone bottom bar - were filed under EOS Configuration beside Quarter Start Dates. (5) The ntfy fallback topic sat under Pomodoro while its own help text pointed at Team Members. THE CONTRACT THAT MAKES THE RESTRUCTURE SAFE, and any future change here must preserve it: hubs hide with display:none and are NEVER unmounted, so all 83 inputs stay in the DOM at all times and openSettings()/saveSettings() are untouched - MODALS_SAVED_ON_NAVIGATE and Settings' save-on-navigate are unchanged. The moment a panel is built lazily or removed from the DOM, saveSettings() starts writing undefined over real settings and it will read as a sync bug, not a UI one. PROVEN, NOT ASSUMED: 17 fields typed across five hubs with only ONE hub visible all round-tripped through saveSettings(); editing a field in a HIDDEN hub and then calling closeModalsBeforeNavigate() saved it; and eos_ui_prefs gained only `settingsHub`, with no _settings field leaking into it. The 567-line block was rebuilt by LINE SLICE, never retyped, in a script that refuses to run if any line carrying an input/select/textarea/button/label/h4/option/id would be dropped, asserts div balance per block, asserts no id and no control count falls, and diffs the non-ASCII inventory - the only four emoji lost are the four coloured section banners the hub strip replaces. Every h4 keeps its exact wording, because ~10 toasts and errors point at those strings ("fix it in Settings > AI Tools"); nine of those messages gained the hub name so the path they quote is the path you walk. HANS'S TWO RULES FOR THE SHELL, in his words: never make someone pass through several doors, and never let them lose where they were. So there is NO index screen on a phone at all - a sticky hub strip is permanently on screen with the current hub highlighted, a sticky jump row lists that hub's blocks with the one in view highlighted by scroll position, the last hub is remembered in eos_ui_prefs (device-local by definition: where you were looking is personal and must never reach the shared sheet), and one search box spans all six hubs. Search results are LINKS to blocks, never the blocks themselves - moving an input out of its hub to show it in a result list would break the every-field-stays-in-the-DOM contract the whole shell rests on. openSettings() now accepts a hub key OR a band id, so a message can send someone to the exact field. TWO REAL LAYOUT BUGS INSIDE SETTINGS that the measuring surfaced, both pre-existing and both invisible in a 13-screen scroll: (a) AI Output Length rendered ONE control per row - ten rows, each 184px of content in a 295px box - because its flex items carried min-width:100px with no flex-basis while the number input inside carried the global `input{width:100%}`. Now a grid with a 110px track floor, NOT 88, because the children keep their inline min-width:100px and a narrower track would have overflowed them: introducing the exact bug this session exists to remove. (b) `.input-row` is forced to a single column by a global `grid-template-columns:1fr !important` mobile rule, so four "01/01" date boxes each took a full 317px row (330px for the block). Overridden by id + !important - the only thing that beats an !important of lower specificity - and scoped to #setPanes so no other page moves, with min-width:0 on the children per the .grid-2 lesson. The settings mobile rules live INSIDE the existing max-width:768 block on purpose: `.modal` there sets width:95vw !important and max-height:100% !important, and an equal-specificity rule written earlier in the sheet loses to it - the exact mistake 3.66.2 documented. The modal's own inline max-height:90vh is GONE from the markup, so it is no longer one of the three inline heights that trap. AFTER, same conditions: zero horizontal overflow at 375/768/1280 (document scrollWidth 375/753/1265) and zero elements past the panel's right edge in any of the six hubs. Per-hub depth at 375 is 1.7 to 4.8 screens of a 448px panel, against 13.0 screens for the whole thing, and Save/Cancel is pinned in a footer that never moves. Chrome was trimmed after measuring it, not before: header 61 + hub strip 57 + jump row 57 + footer 65 leaves 448px of content, and band padding went 18px to 10px because nearly every block moved here already carries its own margin-bottom:16px/padding-top:16px from the old stacked layout - a generous band padding was double-spacing all 24 of them. TOTAL CONTENT WENT UP by roughly 70px, not down - the scope badges, the not-connected notes and the reserved-for-later boxes cost height. That is the honest framing: this makes Settings navigable, it does not make it smaller. ALSO FOUND AND DELIBERATELY NOT FIXED: only teamMembers, the three API keys/models and aiRouting ever reach the shared sheet - traced through saveTeamSettingsToCloud() and pullCloudSettings(), and _settings is explicitly excluded from shared EOS data (`if (key === '_settings') return;`), while saveSharedEOSData sends only {kanban}. So Weekly Meeting, Quarter Start Dates and both Firm Context folders are DEVICE-LOCAL today even though Hans wants them firm-wide and owner-only; each carries a badge saying exactly that. Making them one firm value needs the settings payload extended in Google_Tasks_Sync.gs plus a role gate, and gating them owner-only BEFORE they are shared would leave an employee stuck with their own local default and no way for an owner to set it - a regression dressed as a feature. The AI Tools intro also claimed everything in that section syncs to the team, which was false for aiTokens and both folder-id pairs; corrected.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -7413,7 +7648,13 @@ Example:
             // v3.66.0 padded the fourth slot with Vision to make the count say four. That
             // was an invented choice presented as a locked one - the honest thing is to
             // leave the slot open and let the picker fill it.
-            bottomNav: ['meeting', 'dailyPlan', 'kanban']
+            bottomNav: ['meeting', 'dailyPlan', 'kanban'],
+            // v3.68.0: which Settings hub you had open last. Device-local for the same
+            // reason as everything else in this key - where you were looking is personal,
+            // and saveSettings() must never carry it to the shared sheet. Validated in
+            // settingsShowHub() rather than here, because SETTINGS_HUBS is a const declared
+            // further down the script and getUiPrefs() must stay safe to call at any time.
+            settingsHub: 'firm'
         };
         // Everything a user is allowed to pull up into the row. `email` is absent on
         // purpose: since v3.65.1 the envelope is a signal, promoted only when the task
@@ -8136,7 +8377,24 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.67.0 &mdash; 2026-07-29 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.68.0 &mdash; 2026-07-29 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Note 12 &mdash; Settings reorganised, and made to work on a phone. The grouping is yours.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Settings is six sections now instead of one very long page.</strong> <strong>Firm</strong> (who we are and how we run), <strong>Me</strong> (your own preferences), <strong>AI</strong>, <strong>Marketing</strong>, <strong>Google</strong> and <strong>System</strong>. On a phone they are the row of buttons across the top &mdash; always on screen, with the one you are in highlighted &mdash; so there is no menu to step into and back out of, and nothing to lose your place in. On a computer they are the list down the left, with the blocks of the section you are in listed underneath, so everything is one click.</li>'
+                + '<li><strong>Why it needed doing, in numbers.</strong> On your phone Settings was a single scroll <strong>thirteen screens long</strong>, and <strong>Save and Cancel sat at the very bottom of it</strong>. Over half that height was one section, and 18 unrelated blocks were strung between the two ends. Save and Cancel are now pinned to the bottom of the window, where they never move.</li>'
+                + '<li><strong>A search box that covers all six sections at once.</strong> Type &ldquo;signature&rdquo;, &ldquo;calendly&rdquo;, &ldquo;ntfy&rdquo; or &ldquo;quarter&rdquo; and it lists every block that mentions it, in any section, and takes you straight there. This is the answer to &ldquo;I know it is in here somewhere&rdquo; &mdash; you never have to remember which section a thing lives in.</li>'
+                + '<li><strong>Settings reopens where you left it,</strong> and while you scroll a section the block you are looking at stays highlighted in the row above. Saved on your device only, like your row density and your bottom bar.</li>'
+                + '<li><strong>Every block now says who it belongs to.</strong> A blue note means <em>shared with the team &mdash; changing it changes it for everyone</em>. A grey note means <em>this device only</em>. You could not tell before, and one note in Settings was actively wrong: the AI section claimed everything in it was shared with the team, when the output-length budgets and the Drive folder ids are not. Only the team list and the AI keys and routing actually travel to the shared sheet.</li>'
+                + '<li><strong>Three things you want firm-wide are not yet, and they now say so.</strong> Weekly Meeting, Quarter Start Dates and the Firm Context folders each carry an amber note: they are meant to be one firm value that only an owner can change, but today each person still keeps their own copy. That needs a change to the Apps Script, so it is a job of its own. Locking them to owners <em>before</em> they are shared would leave Amanda stuck with whatever her own copy says and no way for you to set it for her, so I did not do half of it.</li>'
+                + '<li><strong>Two things in Settings were laid out badly on a phone, and both are fixed.</strong> The ten AI output-length boxes were stacking one per row &mdash; ten rows to show ten small numbers &mdash; and the four quarter start dates were doing the same, a full-width row each to hold &ldquo;01/01&rdquo;. Both sit several to a row now.</li>'
+                + '<li><strong>Otter&rsquo;s section is three lines instead of a screenful,</strong> because nearly all of it was explaining that there is nothing to set up there. Nothing was removed &mdash; the old legacy field is behind a &ldquo;Legacy field&rdquo; link.</li>'
+                + '<li><strong>Two things that are not built have a place to sit, and admit it:</strong> social posting under Marketing, and Google Calendar under Google. Same principle as the Calendar button in the bottom bar &mdash; a line that tells you it is not connected beats a gap you wonder about.</li>'
+                + '<li><strong>Room left on purpose.</strong> Firm and Me each list what is coming to them &mdash; firm colours, logo, fonts, roles and the two-factor policy for Firm; your own colour, dark mode and your logins for Me &mdash; so none of this has to be rearranged again when those arrive.</li>'
+                + '<li><strong>Nothing about how Settings saves has changed.</strong> Every field is still exactly where the app expects it, Save still works the same way, and moving to another page still saves Settings first. I tested that one specifically, by typing into a section that was hidden at the time and then navigating away.</li>'
+                + '</ul></div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.67.0 &mdash; 2026-07-29</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Rocks &amp; Scorecard on a phone (note 15), Delete on a to-do (note 2), and the Gmail link (note 1) &mdash; which turned out to be a wrong-account bug, not a mobile-Gmail one.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>The Rocks list no longer runs off the right edge.</strong> Measured before touching it, because the obvious suspect had already been fixed in 3.66.2 and this was something else: each rock is a single row of six controls that is not allowed to wrap, and the number badge, the owner picker and the On/Off pair alone need 423 pixels inside a 297-pixel screen. Worse, and invisible in your screenshot &mdash; the rock&rsquo;s <em>description box was being squeezed to zero pixels wide</em>, because it was the only part of the row allowed to give. The row wraps now: the rock text gets a line of its own, the owner, On/Off and Kanban buttons sit underneath.</li>'
@@ -10020,7 +10278,7 @@ Example:
                 status.style.color = '#721c24';
                 status.textContent = 'FAILED: ' + (firmContextError || 'Unknown error.') +
                     '\n\nCommon causes:' +
-                    '\n- "Invalid secret key": the Web App Secret in Settings > Team Members does not match SECRET_KEY in the Apps Script.' +
+                    '\n- "Invalid secret key": the Web App Secret in Settings > Firm > Team Members does not match SECRET_KEY in the Apps Script.' +
                     '\n- Drive permission errors: run getFirmContext once from the Apps Script editor to trigger the authorization prompt.' +
                     '\n- "action not recognized": the deployment is serving older code. Save, then Deploy > New deployment.';
                 return;
@@ -10062,7 +10320,7 @@ Example:
             const driveCompany = card.company || 'ii';
             const folderId = getCompanyFolderId(driveCompany);
             if (!folderId) {
-                showToast('No context folder set for ' + MKT_COMPANIES[driveCompany].name + '. Add one in Settings > AI Tools.');
+                showToast('No context folder set for ' + MKT_COMPANIES[driveCompany].name + '. Add one in Settings > Marketing > Firm Context Folder.');
                 return;
             }
 
@@ -10262,7 +10520,7 @@ Example:
             const name = AI_PROVIDER_LABEL[cfg.provider] || cfg.provider;
             alert(
                 featureLabel + ' is routed to ' + name + ', but no ' + name + ' API key is saved.\n\n' +
-                'Fix it in Settings > AI Tools > ' + name + '.\n\n' +
+                'Fix it in Settings > AI > AI Tools > ' + name + '.\n\n' +
                 'Note: an API key is NOT the same as a Claude or ChatGPT subscription. ' +
                 'It comes from the provider\'s developer console and is billed per use.'
             );
@@ -15693,8 +15951,8 @@ Example:
             }
             if (hint) {
                 hint.innerHTML = types.length
-                    ? 'From <strong>Settings &gt; Meeting Scheduling Links</strong>. The link is attached to the word itself, so the email reads normally instead of quoting a web address.'
-                    : 'No links saved yet &mdash; add them under <strong>Settings &gt; Meeting Scheduling Links</strong>. The email will ask them to suggest times instead.';
+                    ? 'From <strong>Settings &gt; Me &gt; Meeting Scheduling Links</strong>. The link is attached to the word itself, so the email reads normally instead of quoting a web address.'
+                    : 'No links saved yet &mdash; add them under <strong>Settings &gt; Me &gt; Meeting Scheduling Links</strong>. The email will ask them to suggest times instead.';
             }
         }
         function setMeetingEmailPurpose(key) {
@@ -15916,7 +16174,7 @@ Example:
             const coffee = (chosenTypes.find(function(t) { return t.key === 'coffee'; }) || {}).url || '';
             const lunch  = (chosenTypes.find(function(t) { return t.key === 'lunch'; }) || {}).url || '';
             if (wantsMeeting && !chosenTypes.length) {
-                if (!confirm('No scheduling links are saved yet (Settings > Meeting Scheduling Links). ' +
+                if (!confirm('No scheduling links are saved yet (Settings > Me > Meeting Scheduling Links). ' +
                              'Draft the invitation without links for now?')) return;
             }
 
@@ -18328,7 +18586,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                     + '</div>'
                     + (mismatch
                         ? '<div style="margin-top:6px;color:#92400e;line-height:1.45;"><strong>This is not the deployment config.js expects.</strong> '
-                          + 'Your saved Web App URL (Settings &gt; Team Members) points somewhere else, so an Apps Script deploy '
+                          + 'Your saved Web App URL (Settings &gt; Firm &gt; Team Members) points somewhere else, so an Apps Script deploy '
                           + 'updates a copy this app never calls &mdash; older features keep working and a newly added permission never arrives. '
                           + 'Expected: <span style="font-family:monospace;font-size:0.72rem;">' + escapeHtml(bootId) + '</span></div>'
                         : '')
@@ -18509,7 +18767,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                 const name = AI_PROVIDER_LABEL[cfg.provider] || cfg.provider;
                 throw makeAIError(AI_ERR_NO_KEY,
                     label + ' is routed to ' + name + ', but no ' + name + ' API key is ' +
-                    'saved. Add one in Settings > AI Tools > ' + name + '.');
+                    'saved. Add one in Settings > AI > AI Tools > ' + name + '.');
             }
 
             const baseOpts = {};
@@ -18537,7 +18795,7 @@ Make sure your suggestions directly address the specific root cause and discussi
             if (!String(text || '').trim()) {
                 throw makeAIError(AI_ERR_CALL,
                     'The model returned an empty response. This usually means the output ' +
-                    'budget was too small - raise it in Settings > AI Tools > AI Output ' +
+                    'budget was too small - raise it in Settings > AI > AI Output ' +
                     'Length, or route this feature to a different provider.');
             }
             return text;
@@ -21031,7 +21289,225 @@ Make sure your suggestions directly address the specific root cause and discussi
             return currentUser?.isAdmin === true;
         }
         
-        function openSettings() {
+        // ==================== SETTINGS SHELL (v3.68.0) ====================
+        //
+        // Hans's phone-test item 12. Measured before touching anything: the old single
+        // scroll was 9,330px inside a 718px window at 375px - thirteen screens - with
+        // Save/Cancel at scroll offset 9,035 and 18 unrelated subsections in between.
+        //
+        // The grouping is HANS'S, arrived at over four rounds in the build session, and
+        // it is a Firm/Me ownership axis crossed with subject, not a subject-only split:
+        //   Firm - who we are and how we run        Me     - my own preferences
+        //   AI   - providers and their budgets      Marketing - what feeds the content
+        //   Google - the plumbing                   System - data, backup, support
+        // His two hard rules for the shell: never make someone pass through several
+        // doors, and never let them lose where they were. So on a phone there is NO
+        // index screen - the hub strip is permanently on screen with the current hub
+        // highlighted - the last hub is remembered, and one search box spans all six.
+        //
+        // THE CONTRACT THAT MAKES THIS SAFE: hubs are hidden with `display:none` and are
+        // never unmounted, so all 83 inputs are in the DOM at all times. openSettings()
+        // and saveSettings() are therefore untouched by the reorganisation, and
+        // MODALS_SAVED_ON_NAVIGATE / save-on-navigate keeps working unchanged. Any future
+        // change here MUST preserve that: the moment a panel is built lazily or removed
+        // from the DOM, saveSettings() starts silently writing undefined over real
+        // settings, and it will look like a sync bug rather than a UI one.
+        //
+        // Band ids match the markup (`id="setBand-<key>"`), and the labels below are what
+        // the jump chips and the rail show. They are NOT renames: every block keeps its
+        // own <h4> verbatim, because ~10 toasts and errors point at those exact strings
+        // ("fix it in Settings > AI Tools"). Renaming a block would stale all of them.
+        const SETTINGS_HUBS = [
+            { key: 'firm', short: 'Firm', label: 'Firm', icon: '&#127970;', tint: '#fef3c7', ink: '#b45309',
+              bands: [['teamMembers', 'Team members'], ['weeklyMeeting', 'Weekly meeting'], ['quarters', 'Quarter dates']] },
+            { key: 'me', short: 'Me', label: 'Me', icon: '&#128100;', tint: '#e0f2fe', ink: '#0369a1',
+              bands: [['signature', 'Email signature'], ['schedLinks', 'Booking links'], ['taskRows', 'Task rows'],
+                      ['bottomBar', 'Phone bottom bar'], ['defaultTab', 'Landing tab'], ['pomodoro', 'Timers & alerts']] },
+            { key: 'ai', short: 'AI', label: 'AI', icon: '&#129504;', tint: '#ede9fe', ink: '#6d28d9',
+              bands: [['aiKeys', 'Keys & models'], ['aiRouting', 'Which AI does what'], ['aiTokens', 'Output length']] },
+            { key: 'publishing', short: 'Marketing', label: 'Marketing &amp; Publishing', icon: '&#128227;', tint: '#fce7f3', ink: '#be185d',
+              bands: [['firmContext', 'Firm context'], ['blogArchive', 'Blog archive'], ['wordpress', 'WordPress'],
+                      ['socialPosting', 'Social posting']] },
+            { key: 'google', short: 'Google', label: 'Google &amp; Sync', icon: '&#9729;&#65039;', tint: '#dcfce7', ink: '#047857',
+              bands: [['googleAccess', 'Access check'], ['autoSync', 'Auto-sync'], ['otter', 'Otter.ai'],
+                      ['googleCalendar', 'Calendar']] },
+            { key: 'system', short: 'System', label: 'System &amp; Support', icon: '&#128736;&#65039;', tint: '#f3f4f6', ink: '#4b5563',
+              bands: [['dataMgmt', 'Data'], ['settingsBackup', 'Backup settings'], ['issues', 'Issues'],
+                      ['troubleshooting', 'Troubleshooting'], ['about', 'About']] }
+        ];
+        const SETTINGS_DEFAULT_HUB = 'firm';
+        let _setHubKey = null;
+
+        function _setHubByKey(key) {
+            for (let i = 0; i < SETTINGS_HUBS.length; i++) if (SETTINGS_HUBS[i].key === key) return SETTINGS_HUBS[i];
+            return null;
+        }
+        // Accepts a hub key OR a band id, so openSettings('signature') works as a deep
+        // link from a toast without the caller needing to know which hub owns it.
+        function _setResolveTarget(target) {
+            if (!target) return null;
+            if (_setHubByKey(target)) return { hub: target, band: null };
+            for (let i = 0; i < SETTINGS_HUBS.length; i++) {
+                const bands = SETTINGS_HUBS[i].bands;
+                for (let j = 0; j < bands.length; j++) {
+                    if (bands[j][0] === target) return { hub: SETTINGS_HUBS[i].key, band: target };
+                }
+            }
+            return null;
+        }
+
+        function renderSettingsShell() {
+            const strip = document.getElementById('setHubStrip');
+            const rail = document.getElementById('setRail');
+            if (strip) {
+                strip.innerHTML = SETTINGS_HUBS.map(function(h) {
+                    return '<button type="button" class="set-hubchip" role="tab" data-hub="' + h.key + '"' +
+                           ' aria-selected="false" onclick="settingsShowHub(\'' + h.key + '\')">' +
+                           '<span class="set-chip-ico">' + h.icon + '</span>' + h.short + '</button>';
+                }).join('');
+            }
+            if (rail) {
+                rail.innerHTML = SETTINGS_HUBS.map(function(h) {
+                    return '<button type="button" class="set-railitem" data-hub="' + h.key + '"' +
+                           ' onclick="settingsShowHub(\'' + h.key + '\')">' +
+                           '<span class="set-railtile" style="background:' + h.tint + ';color:' + h.ink + ';">' + h.icon + '</span>' +
+                           '<span>' + h.label + '</span></button>' +
+                           '<div class="set-railbands" data-bands-for="' + h.key + '" style="display:none;">' +
+                           h.bands.map(function(b) {
+                               return '<button type="button" class="set-railband" data-band="' + b[0] + '"' +
+                                      ' onclick="settingsJump(\'' + b[0] + '\')">' + b[1] + '</button>';
+                           }).join('') + '</div>';
+                }).join('');
+            }
+        }
+
+        function settingsShowHub(key, opts) {
+            const hub = _setHubByKey(key) || _setHubByKey(SETTINGS_DEFAULT_HUB);
+            if (!hub) return;
+            _setHubKey = hub.key;
+            document.querySelectorAll('#setPanes .set-hub').forEach(function(s) {
+                s.classList.toggle('active', s.getAttribute('data-hub') === hub.key);
+            });
+            document.querySelectorAll('#setHubStrip .set-hubchip').forEach(function(b) {
+                const on = b.getAttribute('data-hub') === hub.key;
+                b.setAttribute('aria-selected', on ? 'true' : 'false');
+                if (on && b.scrollIntoView) { try { b.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) {} }
+            });
+            document.querySelectorAll('#setRail .set-railitem').forEach(function(b) {
+                b.classList.toggle('active', b.getAttribute('data-hub') === hub.key);
+            });
+            document.querySelectorAll('#setRail [data-bands-for]').forEach(function(d) {
+                d.style.display = d.getAttribute('data-bands-for') === hub.key ? '' : 'none';
+            });
+            const jump = document.getElementById('setJump');
+            if (jump) {
+                // Only worth a jump row when there is enough in the hub to get lost in.
+                jump.innerHTML = hub.bands.length > 2 ? hub.bands.map(function(b) {
+                    return '<button type="button" class="set-jumpchip" data-band="' + b[0] + '"' +
+                           ' onclick="settingsJump(\'' + b[0] + '\')">' + b[1] + '</button>';
+                }).join('') : '';
+                jump.style.display = hub.bands.length > 2 ? '' : 'none';
+            }
+            const panes = document.getElementById('setPanes');
+            if (panes && !(opts && opts.keepScroll)) panes.scrollTop = 0;
+            // Device-local by design: which settings hub you had open is the definition of
+            // a personal view setting, so it goes to eos_ui_prefs and never to _settings.
+            try { saveUiPrefs({ settingsHub: hub.key }); } catch (e) {}
+            _setSyncCurrentBand();
+        }
+
+        function settingsJump(bandId) {
+            const t = _setResolveTarget(bandId);
+            if (!t) return;
+            settingsClearFilter(true);
+            if (t.hub !== _setHubKey) settingsShowHub(t.hub);
+            const el = document.getElementById('setBand-' + bandId);
+            if (!el) return;
+            try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+            catch (e) { el.scrollIntoView(); }
+            el.classList.remove('set-flash');
+            void el.offsetWidth;                       // restart the animation
+            el.classList.add('set-flash');
+            setTimeout(function() { el.classList.remove('set-flash'); }, 1600);
+            _setSyncCurrentBand(bandId);
+        }
+
+        // Highlights the chip for whatever block you are actually looking at. This is the
+        // "never lose where you were" half - a highlighted hub tells you the room, this
+        // tells you the corner.
+        function _setSyncCurrentBand(forceId) {
+            const hub = _setHubByKey(_setHubKey);
+            const panes = document.getElementById('setPanes');
+            if (!hub || !panes) return;
+            let currentId = forceId || null;
+            if (!currentId) {
+                const top = panes.getBoundingClientRect().top + 70;
+                hub.bands.forEach(function(b) {
+                    const el = document.getElementById('setBand-' + b[0]);
+                    if (el && el.getBoundingClientRect().top <= top) currentId = b[0];
+                });
+                if (!currentId && hub.bands.length) currentId = hub.bands[0][0];
+            }
+            document.querySelectorAll('#setJump .set-jumpchip, #setRail .set-railband').forEach(function(c) {
+                c.classList.toggle('current', c.getAttribute('data-band') === currentId);
+            });
+        }
+
+        // One index over every block in every hub, so "where did the signature go" is
+        // answered by typing rather than by remembering. Built fresh on open: the team
+        // roster and the density segments are rendered at open time, so an index built
+        // once at load would miss their text.
+        let _setSearchIndex = null;
+        function _buildSettingsSearchIndex() {
+            _setSearchIndex = [];
+            SETTINGS_HUBS.forEach(function(h) {
+                h.bands.forEach(function(b) {
+                    const el = document.getElementById('setBand-' + b[0]);
+                    if (!el) return;
+                    let hay = h.label + ' ' + h.short + ' ' + b[1] + ' ' + (el.textContent || '');
+                    el.querySelectorAll('[placeholder], [aria-label], [title]').forEach(function(n) {
+                        hay += ' ' + (n.getAttribute('placeholder') || '') + ' ' +
+                               (n.getAttribute('aria-label') || '') + ' ' + (n.getAttribute('title') || '');
+                    });
+                    _setSearchIndex.push({ hub: h, band: b[0], label: b[1], hay: hay.toLowerCase().replace(/\s+/g, ' ') });
+                });
+            });
+        }
+
+        function settingsFilter(q) {
+            const modal = document.querySelector('#settingsModal .settings-modal');
+            const out = document.getElementById('setResults');
+            if (!modal || !out) return;
+            const term = (q || '').trim().toLowerCase();
+            if (!term) { settingsClearFilter(); return; }
+            if (!_setSearchIndex) _buildSettingsSearchIndex();
+            modal.classList.add('set-searching');
+            const words = term.split(/\s+/);
+            const hits = _setSearchIndex.filter(function(r) {
+                return words.every(function(w) { return r.hay.indexOf(w) !== -1; });
+            });
+            out.innerHTML = hits.length
+                ? hits.map(function(r) {
+                      return '<button type="button" class="set-result" onclick="settingsJump(\'' + r.band + '\')">' +
+                             '<span class="set-result-hub">' + r.hub.label + '</span><br>' +
+                             '<span class="set-result-band">' + r.label + '</span></button>';
+                  }).join('')
+                : '<p class="set-noresults">Nothing in Settings matches &ldquo;' + escapeHtml(term) + '&rdquo;.</p>';
+        }
+
+        function settingsClearFilter(keepText) {
+            const modal = document.querySelector('#settingsModal .settings-modal');
+            if (modal) modal.classList.remove('set-searching');
+            const box = document.getElementById('setSearch');
+            if (box && !keepText) box.value = '';
+            const out = document.getElementById('setResults');
+            if (out) out.innerHTML = '';
+        }
+
+        // `target` accepts a hub key or a band id, so a toast can send someone straight to
+        // the field it is talking about. Without one, you land where you last were - which
+        // is the point of remembering it.
+        function openSettings(target) {
             const settings = getSettings();
             renderTeamMembersList(settings.teamMembers);
             
@@ -21149,8 +21625,33 @@ Make sure your suggestions directly address the specific root cause and discussi
             
             // Load tool issues
             loadToolIssues();
-            
+
             document.getElementById('settingsModal').classList.add('active');
+
+            // Shell last: every field above is populated first, so the search index is
+            // built over real values rather than empty inputs.
+            renderSettingsShell();
+            settingsClearFilter();
+            _setSearchIndex = null;
+            const resolved = _setResolveTarget(target);
+            let landOn = SETTINGS_DEFAULT_HUB;
+            if (resolved) landOn = resolved.hub;
+            else {
+                try {
+                    const remembered = getUiPrefs().settingsHub;
+                    if (_setHubByKey(remembered)) landOn = remembered;
+                } catch (e) {}
+            }
+            settingsShowHub(landOn);
+            if (resolved && resolved.band) settingsJump(resolved.band);
+            const panes = document.getElementById('setPanes');
+            if (panes && !panes._setSpyBound) {
+                panes.addEventListener('scroll', function() {
+                    if (panes._setSpyTimer) return;
+                    panes._setSpyTimer = setTimeout(function() { panes._setSpyTimer = null; _setSyncCurrentBand(); }, 120);
+                }, { passive: true });
+                panes._setSpyBound = true;
+            }
         }
         
         function renderTeamMembersList(members) {
