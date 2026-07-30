@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>EOS Traction Tool - Intelligent Investing LLC</title>
     <!-- Deployment config: per-company settings (Sheet ID, Google Client ID, etc).
          Lives as its own file so it's never overwritten by future index.html updates.
@@ -809,6 +809,15 @@
         }
         
         .modal-overlay.active { display: flex; }
+
+        /* Kills the double-tap-to-zoom delay and the accidental zoom that comes with it,
+           without touching deliberate pinch. Applied to things you tap rather than
+           globally, so text selection and any future scroll-zoom surface are unaffected. */
+        button, .btn, .header-btn, .tab-btn, .meeting-tab-btn, a, label,
+        input[type="checkbox"], input[type="radio"], .repo-item, .todo-item,
+        .set-hubchip, .set-jumpchip, .set-railitem, .set-railband {
+            touch-action: manipulation;
+        }
         
         .modal {
             background: white;
@@ -1046,11 +1055,30 @@
             }
         }
         
+        /* min-width:0 is load-bearing and applies at EVERY width, not just mobile: the
+           desktop `1fr 1.2fr 1fr` has the same auto-minimum, so one long URL in a task
+           title would inflate a desktop track too. See the A/B in the 3.68.1 build note. */
+        .daily-plan-grid > * { min-width: 0; }
+
         .daily-plan-column {
             background: white;
             border-radius: 12px;
             padding: 15px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            min-width: 0;
+        }
+
+        /* Task text is user-supplied and routinely contains a URL or a long reference
+           number with no break opportunity. `anywhere` (not `break-word`) also lets the
+           token shrink the element's MIN-CONTENT, which is what stops it inflating a grid
+           track - `break-word` alone would still report the wide minimum. */
+        .repo-item .item-text,
+        .repo-item,
+        .matrix-item .item-text,
+        .rule-slot .item-text {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            min-width: 0;
         }
         
         .daily-plan-column h3 {
@@ -1893,6 +1921,14 @@
                 max-height: 100% !important;
                 border-radius: 0;
                 padding: 0;
+            }
+            /* See the note in the 3.68.1 build comment: the global 16px guard is
+               defeated by inline font-size on nearly every Settings field, and never
+               covered number/password/email/search at all. */
+            #settingsModal input:not([type="checkbox"]):not([type="radio"]),
+            #settingsModal select,
+            #settingsModal textarea {
+                font-size: 16px !important;
             }
             #setPanes .input-row {
                 grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) !important;
@@ -4950,6 +4986,23 @@
                             </div>
                         </div>
                     </div>
+                    <div class="set-band" id="setBand-otter">
+                        <h4 style="color: #1e40af; margin-bottom: 8px; font-size: 0.95rem;">🎙️ Otter.ai Integration</h4>
+                        <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 8px;">
+                            Nothing to set up here. Otter uses the <strong>Web App URL</strong> from
+                            <strong>Firm &rsaquo; Team Members</strong> (a different section). Zapier sends Otter meetings to the shared Google Sheet, and
+                            any meeting with &ldquo;Traction&rdquo; in the title is picked up automatically.
+                        </p>
+                        <details class="set-details">
+                            <summary>Legacy field &mdash; separate Otter script</summary>
+                            <div style="padding-top: 8px;">
+                                <div style="font-size: 0.75rem; color: var(--gray-500); margin-bottom: 6px;">Only needed if you run a separate Otter script. Leave blank to use the Web App URL above.</div>
+                        <input type="text" id="otterSheetUrl" placeholder="Leave blank - uses Web App URL above" style="font-size: 0.85rem; margin-top: 6px;">
+                        <div id="otterTestStatus" style="margin-top: 6px; padding: 6px; border-radius: 4px; display: none; font-size: 0.8rem;"></div>
+                        <button class="btn btn-secondary" onclick="testOtterSheetConnection()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">Test Connection</button>
+                            </div>
+                        </details>
+                    </div>
                 </section>
                 <section class="set-hub" id="setHub-publishing" data-hub="publishing">
                     <div class="set-band" id="setBand-firmContext">
@@ -5042,23 +5095,6 @@
                         </select>
                         <p id="syncIntervalStatus" style="font-size: 0.75rem; color: #6b7280; margin-top: 6px;"></p>
                     </div>
-                    </div>
-                    <div class="set-band" id="setBand-otter">
-                        <h4 style="color: #1e40af; margin-bottom: 8px; font-size: 0.95rem;">🎙️ Otter.ai Integration</h4>
-                        <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 8px;">
-                            Nothing to set up here. Otter uses the <strong>Web App URL</strong> from
-                            <strong>Firm &rsaquo; Team Members</strong>. Zapier sends Otter meetings to the shared Google Sheet, and
-                            any meeting with &ldquo;Traction&rdquo; in the title is picked up automatically.
-                        </p>
-                        <details class="set-details">
-                            <summary>Legacy field &mdash; separate Otter script</summary>
-                            <div style="padding-top: 8px;">
-                                <div style="font-size: 0.75rem; color: var(--gray-500); margin-bottom: 6px;">Only needed if you run a separate Otter script. Leave blank to use the Web App URL above.</div>
-                        <input type="text" id="otterSheetUrl" placeholder="Leave blank - uses Web App URL above" style="font-size: 0.85rem; margin-top: 6px;">
-                        <div id="otterTestStatus" style="margin-top: 6px; padding: 6px; border-radius: 4px; display: none; font-size: 0.8rem;"></div>
-                        <button class="btn btn-secondary" onclick="testOtterSheetConnection()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">Test Connection</button>
-                            </div>
-                        </details>
                     </div>
                     <div class="set-band" id="setBand-googleCalendar">
                         <h4 class="set-band-title">Google Calendar</h4>
@@ -5668,9 +5704,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.68.0';
-        const EOS_BUILD_DATE = '2026-07-29';
-        const EOS_BUILD_TIME = '23:40'; // v3.68.0: Hans's phone-test item 12 - Settings reorganised and made to work on a phone. UNLIKE item 15 there was NO locked design for this in 5.11b-5, so the information architecture was AGREED WITH HANS FIRST, over four rounds, and it is his rather than mine: a Firm/Me OWNERSHIP axis crossed with subject, which is also the axis 5.11b-5's open Firm-page item already implies (decision 11 puts brand colours/logo/icon on the Firm page, and NAV_ITEMS already reserves Firm as a System destination). Six hubs: Firm, Me, AI, Marketing & Publishing, Google & Sync, System & Support. MEASURED BEFORE ANY EDIT, on a local copy at 375 with two team members and realistic keys/links/folder ids, with the `(hover:none) and (pointer:coarse)` rules FORCE-INJECTED - this browser reports a fine pointer, so every button measured 14px short of what the phone renders and the file under-reported the scroll by 273px. The modal was ONE scroll of 9330px inside a 718px window - 13.0 screens - with Save/Cancel at scroll offset 9035, 83 inputs, 35 buttons and 18 subsections. AND THERE WAS NO HORIZONTAL OVERFLOW ANYWHERE, at 375 or 768 or 1280: item 12 was never an overflow bug like Rocks was, it was a findability bug. Measuring first is what established that, and it changed the whole shape of the fix. FIVE GROUPING DEFECTS, each measured rather than asserted: (1) section 1 alone was 4696px, 52% of the modal, of which AI Tools was 3209px. (2) 845px of Google Drive folder configuration sat INSIDE the "Which AI handles what?" box, between routing dropdown 2 and dropdown 3 - Firm Context 567px + Published Blog Archive 278px against 640px of actual routing. (3) Two different Export/Import pairs, both labelled Export/Import, one for app data inside section 4 and one for settings JSON in a box that sat OUTSIDE all four sections. (4) The two prefs a phone user most likely came for - Task rows and Phone bottom bar - were filed under EOS Configuration beside Quarter Start Dates. (5) The ntfy fallback topic sat under Pomodoro while its own help text pointed at Team Members. THE CONTRACT THAT MAKES THE RESTRUCTURE SAFE, and any future change here must preserve it: hubs hide with display:none and are NEVER unmounted, so all 83 inputs stay in the DOM at all times and openSettings()/saveSettings() are untouched - MODALS_SAVED_ON_NAVIGATE and Settings' save-on-navigate are unchanged. The moment a panel is built lazily or removed from the DOM, saveSettings() starts writing undefined over real settings and it will read as a sync bug, not a UI one. PROVEN, NOT ASSUMED: 17 fields typed across five hubs with only ONE hub visible all round-tripped through saveSettings(); editing a field in a HIDDEN hub and then calling closeModalsBeforeNavigate() saved it; and eos_ui_prefs gained only `settingsHub`, with no _settings field leaking into it. The 567-line block was rebuilt by LINE SLICE, never retyped, in a script that refuses to run if any line carrying an input/select/textarea/button/label/h4/option/id would be dropped, asserts div balance per block, asserts no id and no control count falls, and diffs the non-ASCII inventory - the only four emoji lost are the four coloured section banners the hub strip replaces. Every h4 keeps its exact wording, because ~10 toasts and errors point at those strings ("fix it in Settings > AI Tools"); nine of those messages gained the hub name so the path they quote is the path you walk. HANS'S TWO RULES FOR THE SHELL, in his words: never make someone pass through several doors, and never let them lose where they were. So there is NO index screen on a phone at all - a sticky hub strip is permanently on screen with the current hub highlighted, a sticky jump row lists that hub's blocks with the one in view highlighted by scroll position, the last hub is remembered in eos_ui_prefs (device-local by definition: where you were looking is personal and must never reach the shared sheet), and one search box spans all six hubs. Search results are LINKS to blocks, never the blocks themselves - moving an input out of its hub to show it in a result list would break the every-field-stays-in-the-DOM contract the whole shell rests on. openSettings() now accepts a hub key OR a band id, so a message can send someone to the exact field. TWO REAL LAYOUT BUGS INSIDE SETTINGS that the measuring surfaced, both pre-existing and both invisible in a 13-screen scroll: (a) AI Output Length rendered ONE control per row - ten rows, each 184px of content in a 295px box - because its flex items carried min-width:100px with no flex-basis while the number input inside carried the global `input{width:100%}`. Now a grid with a 110px track floor, NOT 88, because the children keep their inline min-width:100px and a narrower track would have overflowed them: introducing the exact bug this session exists to remove. (b) `.input-row` is forced to a single column by a global `grid-template-columns:1fr !important` mobile rule, so four "01/01" date boxes each took a full 317px row (330px for the block). Overridden by id + !important - the only thing that beats an !important of lower specificity - and scoped to #setPanes so no other page moves, with min-width:0 on the children per the .grid-2 lesson. The settings mobile rules live INSIDE the existing max-width:768 block on purpose: `.modal` there sets width:95vw !important and max-height:100% !important, and an equal-specificity rule written earlier in the sheet loses to it - the exact mistake 3.66.2 documented. The modal's own inline max-height:90vh is GONE from the markup, so it is no longer one of the three inline heights that trap. AFTER, same conditions: zero horizontal overflow at 375/768/1280 (document scrollWidth 375/753/1265) and zero elements past the panel's right edge in any of the six hubs. Per-hub depth at 375 is 1.7 to 4.8 screens of a 448px panel, against 13.0 screens for the whole thing, and Save/Cancel is pinned in a footer that never moves. Chrome was trimmed after measuring it, not before: header 61 + hub strip 57 + jump row 57 + footer 65 leaves 448px of content, and band padding went 18px to 10px because nearly every block moved here already carries its own margin-bottom:16px/padding-top:16px from the old stacked layout - a generous band padding was double-spacing all 24 of them. TOTAL CONTENT WENT UP by roughly 70px, not down - the scope badges, the not-connected notes and the reserved-for-later boxes cost height. That is the honest framing: this makes Settings navigable, it does not make it smaller. ALSO FOUND AND DELIBERATELY NOT FIXED: only teamMembers, the three API keys/models and aiRouting ever reach the shared sheet - traced through saveTeamSettingsToCloud() and pullCloudSettings(), and _settings is explicitly excluded from shared EOS data (`if (key === '_settings') return;`), while saveSharedEOSData sends only {kanban}. So Weekly Meeting, Quarter Start Dates and both Firm Context folders are DEVICE-LOCAL today even though Hans wants them firm-wide and owner-only; each carries a badge saying exactly that. Making them one firm value needs the settings payload extended in Google_Tasks_Sync.gs plus a role gate, and gating them owner-only BEFORE they are shared would leave an employee stuck with their own local default and no way for an owner to set it - a regression dressed as a feature. The AI Tools intro also claimed everything in that section syncs to the team, which was false for aiTokens and both folder-id pairs; corrected.
+        const EOS_VERSION = '3.68.1';
+        const EOS_BUILD_DATE = '2026-07-30';
+        const EOS_BUILD_TIME = '00:20'; // v3.68.1: Hans's phone-test item 10 (zoom), the Daily Plan overflow behind it, and his Settings follow-ups. HE SENT A PHONE SCREENSHOT AND IT CONTAINED THE DIAGNOSIS, which is worth recording because the complaint and the cause were different things. His words were about zoom - "I don't like the fact we can zoom in and out" and "when zoomed out the menus are not full page so fonts are too small". But in the screenshot the dark header stopped at ~83% of the screen width while the Repository card and the bottom bar ran the full width. Two different right edges in one document means one group of elements is sized to a narrower box than another: the header is 100% of the LAYOUT viewport, so the document must be wider than it. 765/923 = 0.829, i.e. a document about 1.21x the viewport, which is exactly what a page with ~20% horizontal overflow looks like once you pinch out far enough to see all of it. So zoom was not the bug; zoom was the only way to SEE the bug. Locking zoom first would have hidden it - the page would still have been 439px wide, just no longer zoomable out far enough to notice. MY OWN VERIFICATION HAD MISSED IT, TWICE, AND THE REASON MATTERS: v3.68.0 reported "all nine pages clean at 375" and that was measured on an EMPTY Daily Plan repository. Seeding six realistic to-dos did not fix the test either, because renderRepository() reads yearData.quarters[currentQuarter].todos - QUARTER-scoped - and the first seed wrote them at the year level, so the list rendered empty a second time and reported clean a second time. Only after asserting repoItemCount === 6 did the overflow appear. A layout measurement over an empty collection is not a measurement; assert the fixture rendered before trusting the number. Also: the browser resize tool silently stopped taking effect mid-session (innerWidth stayed 439 while the tool reported 375), so every reading after that point was against the wrong viewport. Switched to measuring inside a fixed-width IFRAME, which gives the page a genuine 375px viewport that media queries honour and which no window state can drift. Readiness there must be probed with `typeof w.showPage === 'function'`, not `w.EOS_VERSION` - top-level `const` is a script-scope binding, never a window property, so the version check reported 'not ready' on a fully booted app. Read consts across frames with `w.eval('NAME')`. THE ACTUAL BUG: #repositoryDropZone.daily-plan-column measured 427px inside a 375 viewport, document 439px, 68 elements past the edge. `.daily-plan-grid` is `grid-template-columns: 1fr` on mobile, but grid items default to `min-width: auto`, so the widest child's MIN-CONTENT inflates the track - here an 80-character URL in a task title. THIS IS THE THIRD APPEARANCE OF ONE TRAP: .grid-2 in 3.62.0, .grid-3 in 3.66.2, .daily-plan-grid now. Each was fixed only where it had been seen. Grep for every grid container the next time this shows up rather than treating the reported one. A/B in a real 375 iframe, each half separately, because 3.62.0's lesson was that both halves can be load-bearing: baseline doc 439 / column 427 / 68 over; `min-width:0` alone doc 375 / column 351 / 1 over (track fixed, the URL still spills); `overflow-wrap:anywhere` alone doc 375 / 0 over; both doc 375 / 0 over. Wrapping alone is sufficient TODAY only because the URL was the sole min-content offender, so both ship - min-width:0 is the guard for the next wide child. `anywhere` not `break-word`, because only `anywhere` reduces the element's reported min-content, which is the half that stops a grid track inflating. ZOOM, as asked for: viewport meta gains maximum-scale=1.0, user-scalable=no, plus `touch-action: manipulation` on tappable things, which is the half that stops ACCIDENTAL double-tap zoom and works even where the meta does not. KNOWN LIMITS, recorded so they are not re-tested hopefully: Android Chrome honours it unless Accessibility > Force enable zoom is on; iOS Safari 10+ IGNORES both user-scalable=no and maximum-scale by design, so on an iPhone pinch still works and no meta tag changes that. It is a WCAG 1.4.4 trade-off, taken deliberately for a two-person internal tool. AND A DEAD GUARD FOUND WHILE THERE: `input[type="text"], textarea, select { font-size:16px; /* Prevents zoom on iOS */ }` was doing nothing in Settings. Measured at 375, every Settings field computed to 13.1-13.6px, because nearly every one carries an inline `font-size: 0.85rem` (inline beats a stylesheet rule) and because the selector never listed number, password, email or search. iOS zooms on focus below 16px EVEN WITH user-scalable=no, so the zoom lock does not cover it. Fixed with an id-scoped `!important` inside #settingsModal only. Same shape as the dead #scorecardTable selector (3.67.0) and the inline modal max-heights (3.66.2): a rule that looks like protection and is silently overridden. Cost measured: hub depth moved 4.4-4.6 to 4.7-4.9 screens. SETTINGS FOLLOW-UPS from Hans: Otter.ai moved out of Google into the AI hub, which is renamed **AI & APIs** - his reasoning, that it is the home for third-party service credentials while Google keeps its own hub for its many integrations. Otter's band moved by div-depth-matched slice, not retyped, and its Web App URL pointer now names Firm > Team Members as a different section since it is no longer next door. Calendly deliberately NOT moved: the two Calendly fields are personal URLs you paste, not a firm API credential, and Amanda has her own - so the links stay in **Me > Meeting Scheduling Links**. If a real Calendly API integration ever lands, its KEY belongs in AI & APIs while the links stay personal. The distinction to keep is credential vs personal URL, not vendor. AFTER: Daily Plan 439 -> 375, repository column 427 -> 351, 68 overflowing elements -> 0. All nine pages document scrollWidth 375 at a true 375 viewport WITH SIX REAL TO-DOS RENDERED AND ASSERTED. Remaining over-edge counts are inside their own horizontal scrollers and do not widen the document: the rating row by design since 3.62.0, and Kanban, which is still Hans's open item 11.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -8377,7 +8413,21 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.68.0 &mdash; 2026-07-29 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.68.1 &mdash; 2026-07-30 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Note 10 &mdash; zoom locked on phones, and the sideways scroll your screenshot actually showed.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>The page no longer scrolls sideways, and that was the real cause of what you photographed.</strong> Your screenshot looked like a zoom problem, but the dark blue header stopped about 83% of the way across while the task panel and the bottom bar ran the full width &mdash; two different widths in one page. That only happens when the page is wider than the screen. On My Daily Plan it was: <strong>439 pixels of page in a 375-pixel screen</strong>, with 68 things hanging off the right edge. Zooming out was the only way to see the whole thing, and that is why everything looked small. It is 375 now, with nothing off the edge.</li>'
+                + '<li><strong>What made it wide: one long web address in a task title.</strong> The task panel is a single column that is told to take the full width, but a column will quietly stretch itself to fit the longest unbreakable thing inside it &mdash; and a URL has nowhere to break. Long titles now wrap, and the column is no longer allowed to stretch. <em>This is the third time this same trick has caught a different part of the app, so this time I fixed the column as well as the text.</em></li>'
+                + '<li><strong>Pinch-zoom is switched off on phones, and double-tap no longer zooms either.</strong> Two honest limits: on an iPhone, Safari ignores this on purpose and pinch will still work &mdash; Apple does not allow it to be turned off. And if you have ever switched on Android&rsquo;s <em>Force enable zoom</em> accessibility setting, that wins over this. The double-tap part works everywhere.</li>'
+                + '<li><strong>Worth saying plainly: I fixed the sideways scroll first and the zoom second, on purpose.</strong> Locking zoom on its own would have <em>hidden</em> this &mdash; the page would still have been too wide, you just would not have been able to zoom out far enough to notice.</li>'
+                + '<li><strong>Otter.ai has moved into the AI section, which is now called AI &amp; APIs.</strong> Your call, and the right one &mdash; it is a service with an account, not a Google feature. Google keeps its own section for its own integrations.</li>'
+                + '<li><strong>Calendly stayed in Me, deliberately.</strong> Those two boxes are your own booking links, not a firm API key, and Amanda has her own pair. If we ever connect Calendly properly, the <em>key</em> would go in AI &amp; APIs and the links would stay personal. The line I am drawing is credential versus personal link, not which company it is.</li>'
+                + '<li><strong>Settings boxes are full-size text on a phone now.</strong> There was a rule meant to stop iPhones zooming in when you tap a field, and it had never actually worked in Settings &mdash; every box was overriding it. Only affects iPhones, but it was worth fixing while I was in there.</li>'
+                + '<li><strong>Still on your list, and I have measured it so you know it is real:</strong> the Kanban board is 549 pixels wide on a 375-pixel screen. It does not drag the page sideways &mdash; it scrolls inside its own strip &mdash; but it is the next mobile job along with Marketing.</li>'
+                + '</ul></div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.68.0 &mdash; 2026-07-29</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Note 12 &mdash; Settings reorganised, and made to work on a phone. The grouping is yours.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Settings is six sections now instead of one very long page.</strong> <strong>Firm</strong> (who we are and how we run), <strong>Me</strong> (your own preferences), <strong>AI</strong>, <strong>Marketing</strong>, <strong>Google</strong> and <strong>System</strong>. On a phone they are the row of buttons across the top &mdash; always on screen, with the one you are in highlighted &mdash; so there is no menu to step into and back out of, and nothing to lose your place in. On a computer they are the list down the left, with the blocks of the section you are in listed underneath, so everything is one click.</li>'
@@ -21323,14 +21373,14 @@ Make sure your suggestions directly address the specific root cause and discussi
             { key: 'me', short: 'Me', label: 'Me', icon: '&#128100;', tint: '#e0f2fe', ink: '#0369a1',
               bands: [['signature', 'Email signature'], ['schedLinks', 'Booking links'], ['taskRows', 'Task rows'],
                       ['bottomBar', 'Phone bottom bar'], ['defaultTab', 'Landing tab'], ['pomodoro', 'Timers & alerts']] },
-            { key: 'ai', short: 'AI', label: 'AI', icon: '&#129504;', tint: '#ede9fe', ink: '#6d28d9',
-              bands: [['aiKeys', 'Keys & models'], ['aiRouting', 'Which AI does what'], ['aiTokens', 'Output length']] },
+            { key: 'ai', short: 'AI &amp; APIs', label: 'AI &amp; APIs', icon: '&#129504;', tint: '#ede9fe', ink: '#6d28d9',
+              bands: [['aiKeys', 'Keys & models'], ['aiRouting', 'Which AI does what'], ['aiTokens', 'Output length'],
+                      ['otter', 'Otter.ai']] },
             { key: 'publishing', short: 'Marketing', label: 'Marketing &amp; Publishing', icon: '&#128227;', tint: '#fce7f3', ink: '#be185d',
               bands: [['firmContext', 'Firm context'], ['blogArchive', 'Blog archive'], ['wordpress', 'WordPress'],
                       ['socialPosting', 'Social posting']] },
             { key: 'google', short: 'Google', label: 'Google &amp; Sync', icon: '&#9729;&#65039;', tint: '#dcfce7', ink: '#047857',
-              bands: [['googleAccess', 'Access check'], ['autoSync', 'Auto-sync'], ['otter', 'Otter.ai'],
-                      ['googleCalendar', 'Calendar']] },
+              bands: [['googleAccess', 'Access check'], ['autoSync', 'Auto-sync'], ['googleCalendar', 'Calendar']] },
             { key: 'system', short: 'System', label: 'System &amp; Support', icon: '&#128736;&#65039;', tint: '#f3f4f6', ink: '#4b5563',
               bands: [['dataMgmt', 'Data'], ['settingsBackup', 'Backup settings'], ['issues', 'Issues'],
                       ['troubleshooting', 'Troubleshooting'], ['about', 'About']] }
