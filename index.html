@@ -3310,6 +3310,74 @@
             #quarterlyPrintBtns { display: none !important; }
         }
 
+        /* ==== v3.72.0 RELEASE B (Hans's items 16 + 13 + 9b) ==========================
+           Decision 7's row atom, finally shared by the Today repository as well. */
+
+        /* item 16 - the `⋯` cluster on a repository row. `.item-text` takes the slack so the
+           menu button pins to the right edge; the cluster never shrinks. min-width:0 on the
+           text because that is the fifth flex/grid child in this file to need it and the rule
+           now goes in at the point the child is created, not after it overflows. */
+        .repo-item .item-text { flex: 1 1 auto; min-width: 0; }
+        .repo-item .repo-actions { flex: 0 0 auto; display: inline-flex; align-items: center; }
+        /* The `⋯` is the only tappable thing in this row apart from the checkbox and the
+           title, so it gets a real target. 3.62.0's lesson pointing the same way as in
+           3.71.0's drawer Sync button: an explicit height on a new control is mandatory,
+           because the id/class specificity that lets you style it also lets you defeat the
+           global `(hover:none) and (pointer:coarse) button { min-height:44px }`. */
+        @media (hover: none) and (pointer: coarse) {
+            .repo-item .repo-actions button { min-height: 40px; min-width: 40px; }
+        }
+
+        /* item 9b - the sort row under the repository search box. */
+        .repo-sort-row {
+            display: flex; align-items: center; gap: 8px; margin-bottom: 10px; min-width: 0;
+        }
+        .repo-sort-row label {
+            flex: 0 0 auto; font-size: 0.78rem; font-weight: 600; color: var(--gray-500);
+        }
+        /* The global `input[type=text], textarea, select { width:100%; margin-bottom:10px }`
+           near the top of the sheet eats any <select> dropped into a flex row - the exact
+           trap recorded from 3.62.0 phase 1. Hence width:auto and margin:0, stated rather
+           than discovered again. */
+        .repo-sort-row select {
+            flex: 1 1 auto; min-width: 0; width: auto; margin: 0;
+            padding: 5px 8px; font-size: 0.8rem;
+        }
+
+        /* item 13 - the Move picker. */
+        .move-task-title {
+            font-weight: 600; font-size: 0.9rem; color: var(--gray-800);
+            background: var(--gray-50); border-radius: 8px; padding: 10px 12px;
+            margin-bottom: 12px; overflow-wrap: anywhere;
+        }
+        .move-group-name {
+            font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em;
+            text-transform: uppercase; color: var(--gray-500);
+            margin: 14px 0 6px;
+        }
+        .move-opt {
+            display: flex; align-items: center; gap: 10px;
+            width: 100%; min-height: 46px; padding: 8px 10px; margin-bottom: 6px;
+            background: #fff; border: 1px solid var(--gray-200); border-radius: 8px;
+            font-family: inherit; text-align: left; cursor: pointer; color: var(--gray-800);
+        }
+        .move-opt:active { background: var(--gray-100); }
+        .move-opt[disabled] { opacity: 0.55; cursor: default; }
+        .move-opt-current { border-color: var(--accent); background: #eff6ff; }
+        .move-opt-tick {
+            flex: 0 0 1.1em; text-align: center; color: var(--accent); font-weight: 700;
+        }
+        .move-opt-body { flex: 1 1 auto; min-width: 0; }
+        .move-opt-label { display: block; font-size: 0.88rem; font-weight: 600; }
+        .move-opt-hint {
+            display: block; font-size: 0.74rem; color: var(--gray-500);
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .move-list-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+        .move-list-row select { flex: 1 1 auto; min-width: 0; width: auto; margin: 0; }
+        .move-list-row .btn { flex: 0 0 auto; }
+        .move-note { font-size: 0.76rem; color: var(--gray-500); margin: 6px 0 0; }
+
         /* ---- v3.70.0 (b) KANBAN MOBILE COLUMN STRIP (Hans's item 11) ---------------
            MEASURED: `.kanban-columns-header` was 549px inside a 375 viewport. The mobile
            pill switcher HAS its own `overflow-x:auto`, but it never engaged, because its
@@ -3703,6 +3771,25 @@
             <div class="drawer-foot" id="drawerFoot"></div>
         </nav>
         <nav id="bottomNav" aria-label="Main navigation"></nav>
+
+        <!-- MOVE A TASK (v3.72.0, Hans's item 13). One picker for all three destination
+             families. A real .modal-overlay, so it is closed by closeModalsBeforeNavigate(),
+             it stands the FAB down through the 3.71.0 gate, and it inherits the mobile
+             `width:95vw` rule - no new modal primitive.
+             NOTE: no inline max-height here, deliberately. Three modals in this file carry
+             one and it beats every stylesheet rule without !important (3.66.2). -->
+        <div class="modal-overlay" id="moveTaskModal">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3 style="margin:0;">⇲ Move task</h3>
+                    <button onclick="closeMoveTaskModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#9ca3af;line-height:1;">&times;</button>
+                </div>
+                <div id="moveTaskBody" style="overflow-y:auto;"></div>
+                <div style="display:flex;justify-content:flex-end;margin-top:14px;">
+                    <button class="btn btn-secondary" onclick="closeMoveTaskModal()">Close</button>
+                </div>
+            </div>
+        </div>
 
         <!-- Quick-add FAB stack (v3.66.3). column-reverse, so the voice mic can be added as
              a sibling later and lands ABOVE the "+" without either moving. -->
@@ -4208,6 +4295,11 @@
                      ondragleave="dragLeave(event)">
                     <h3>📦 Repository <span style="font-size: 0.75rem; font-weight: normal; color: var(--gray-500);">(drop here to return)</span></h3>
                     <input type="text" id="repoSearch" placeholder="🔍 Search tasks..." oninput="filterRepository()" style="width: 100%; margin-bottom: 10px;">
+                    <!-- v3.72.0 (Hans's item 9b): the sort half. Rendered from JS
+                         (renderRepoSortControl) so the five options can never drift from
+                         REPO_SORTS, the same way the drawer's year buttons render from
+                         #yearSelect's options. -->
+                    <div class="repo-sort-row" id="repoSortWrap"></div>
                     
                     <div class="repo-section">
                         <div class="repo-header" onclick="toggleRepoSection('rocks')">
@@ -6055,9 +6147,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.71.0';
+        const EOS_VERSION = '3.72.0';
         const EOS_BUILD_DATE = '2026-07-30';
-        const EOS_BUILD_TIME = '19:40'; // v3.71.0: RELEASE A of Hans's SECOND phone-test list (Sec 5.11b-6) - his items 3, 7, 8, 9a and 15, the five he himself flagged as small, independent and measurable. index.html only; no .gs change, so NO clasp deploy. ITEM 3, THE FAB OVER SETTINGS: syncFabVisibility() asked "which PAGE am I on?" and Settings is a MODAL over a page, so the answer was still dailyPlan and the "+" stayed up. Reproduced before fixing (fabWithSettingsOpen: "visible" at both 375 and 412) and it was not only Settings - the same "+" floated over the master print modal, the snooze picker, the AI drafter and every sign-in gate. Now gated on `.modal-overlay.active` - the SAME selector closeModalsBeforeNavigate() already trusts to enumerate open modals, so there is one definition of "a modal is open" rather than two - plus #changelogModal by id, because that one is built at runtime and is deliberately not a .modal-overlay (which is exactly why that function has to remove it separately). Watched with a MutationObserver on the modal elements THEMSELVES, not a subtree observer on <body>: modals are opened from ~30 sites, most of them a bare classList.add('active') rather than openModal(), so patching the two helpers would have missed most of them and been invisibly wrong - and a body-subtree class observer would fire on every render pass in the app for a gate that changes a few times a session. ITEM 7: My Daily Plan's header row was 104px with three buttons and a dropdown; it is 44px with one, and content starts at 149px instead of 209px. Print is deleted (the drawer's Print... master modal already has a "My Daily Plan" checkbox, and the desktop header still has its own); End Day moved to the BOTTOM of the Today column, under "Notes for Tomorrow" - it is the last thing you do on the page and it now sits beneath the notes it asks you to write. ITEM 9A - AND THERE WAS A REAL BUG UNDER IT, not just a redundant control: initDailyPlan() rebuilds #dailyPlanUser's innerHTML on EVERY navigation to the page, and rebuilding a <select>'s options resets its value to option 0. applySignedInUser() set the right person once at sign-in and the next visit threw it away. Invisible for Hans, who IS teamMembers[0] - Amanda would have been reading HIS day and writing into HIS storage key, every single time. Proven by stubbing eos_signed_in_email to amanda@ and visiting the page twice: 3.70.0 gives HB, HB; 3.71.0 gives AB, AB with storage key eos_dailyPlan_AB. The <select> is still in the DOM, CSS-hidden by #dailyPlanUserWrap, and is still the ONLY place the value lives - the #todoOwnerFilter (3.62.0) / #yearSelect (3.69.0) contract, so all ~45 readers including loadDailyPlan()'s eos_dailyPlan_<initials> key are untouched and nothing is duplicated. ITEM 8: all 117 scorecard week cells get inputmode="decimal" (and so does the Goal cell). `decimal` NOT `numeric`, and NOT type="number" - CHECKED AGAINST HIS REAL DATA FIRST, where "Blogs written" has a goal of "0.5", so a weekly 0.5 or 1.5 is legitimate; `numeric` gives no decimal point on iOS and type="number" would reject or blank values these cells are allowed to hold. THE SECOND HALF OF ITEM 8 DID NOT WORK THE WAY HE EXPECTED AND THE MEASUREMENT IS WHY: the two Print buttons live in the PAGE-TITLE row, not in the table, so dropping them on mobile buys 30px of vertical chrome (header 74 -> 44) and exactly 0px of column width. What actually squeezed the measurable name is that the this-week-only table needed Who 63 + Measurable 148 + Goal 55 + week 75 = 341px inside a 312px wrapper, so it was quietly scrolling 29px sideways INSIDE its own overflow-x:auto wrapper - which is why no document-overflow check ever flagged it. Trimmed Goal to 42 and the week cell's 66px floor (set in 3.67.0) to 54: measurable name 151 -> 176 at 412 and the internal scroll is 0 at both widths. At 375 the name column is at its own min-content floor so it stays 148 - reported rather than papered over. ITEM 15: Sync moved out of the drawer's System group into the drawer's blue header beside the "last synced" line. The drawer deliberately does NOT close on tap - that is the whole reason he wanted it there, and updateSyncStatus() now mirrors into #drawerSyncLine LIVE (it was only copied when the drawer was rebuilt, so with the button beside it the line would have read the old status for the entire sync). Verified by clicking it: line goes to "Pulling from Google Tasks...", drawer stays open, System group is 14 items instead of 15 with no Sync entry. A 45s WATCHDOG on that button because it was measured, not imagined: manualSync() awaits a bare fetch() with no timeout of its own, so on a phone with no signal the promise never settles and a plain try/finally left the button reading "Syncing..." and disabled forever. THIS IS A DEPARTURE FROM DECISION 4's LOCKED IA, recorded as a decision: it lists Sync Now first under System. An action belongs next to the status it changes. VERIFIED, seeded and asserted (39 to-dos incl. the 80-char-URL offender, 4 rocks, 9 measurables with 45 real weekly values, 6 matrix entries, 2 Rule-of-3 slots, 9 kanban cards, 8 marketing cards) in a fixed-width iframe with the coarse-pointer rules force-injected: all nine pages document scrollWidth == viewport at 375, 412 AND 1280, zero elements over the edge, ZERO console errors. DESKTOP UNCHANGED at 1280: 18 scorecard columns, measurable 197px, both Print buttons visible, matrix 2x2, all three Daily Plan columns block, no bottom nav / FAB / PTR indicator, tabs flex, sync bar flex. SETTINGS CONTRACT RE-PROVEN because the new observer watches #settingsModal: 5 of 6 hubs display:none, 98 inputs still in the DOM, and a field typed into a HIDDEN hub round-tripped through save-on-navigate and read back after reopen. NO new touch gesture, so the swipe/pull-to-refresh suite is unchanged and was not re-run. v3.70.0: the four items Hans queued for an unattended session - pull-to-refresh, Daily Plan segmentation, Eisenhower quadrant counts, Kanban's mobile column strip (his item 11) - plus one bug the harness found that shipped in 3.68.1 and 3.69.0 and was never seen. THE BUG FIRST, because it is the reusable lesson: 3.68.1's wrap rule listed FOUR selectors and TWO OF THEM MATCHED NOTHING. `.matrix-item` and `.rule-slot .item-text` do not exist - renderMatrix emits `.matrix-task > .task-text-editable` and renderRuleOf3 emits `.rule-slot > .task-text`. So only the repository column was ever protected, and the same 80-character URL sitting in the Rule of 3 made My Daily Plan 601px wide inside a 375 viewport, 601 inside 412 AND 1460 INSIDE 1280 - this was breaking the desktop too, for two releases, while both release notes said it was fixed. Measured, not reasoned: .daily-plan-grid had width 336 and scrollWidth 589, so 3.68.1's min-width:0 was correctly capping the TRACK and the TEXT was spilling out of it. It hid because the harness seeded the REPOSITORY and nothing else; it appeared the moment the Rule of 3 and the matrix were seeded and asserted. A fixture that covers one component of a page is not a fixture for the page. Same shape as the dead #scorecardTable selector: a rule that looks like protection and matches nothing - CHECK THAT A SELECTOR MATCHES BEFORE BELIEVING IT PROTECTS ANYTHING. Also closed `.matrix-grid` and `.input-row` (which had a guard only inside #setPanes) as the last two unguarded grid containers in the sheet - that is the fourth round of min-width:auto, so this time the pattern was fixed rather than the reported instance. PULL-TO-REFRESH, held from 3.69.0 because it needed his hands: arms only at scrollTop 0, only on a downward pull, coarse pointers only, and stands down entirely when the swipe engine's axis lock has taken the gesture. Bound AFTER initSwipeActions on purpose - document-level touch listeners fire in binding order, so _sw.axis is already settled by the time _onPtrMove sees the same event - but it runs its own axis test too, so ordering is a belt not the braces. VERIFIED BY SYNTHESISING REAL TOUCH EVENTS with matchMedia stubbed coarse, not by reasoning: vertical pull on a to-do row -> swipe releases (_sw null), pull arms, row transform stays 'none', release calls manualSync; horizontal swipe on the same row -> _sw.axis 'x', _ptr stands down, indicator stays parked, and a 75% swipe still commits and shows the Completed snackbar; scrolled to 400 -> never arms; upward drag -> never arms; over an open modal -> never arms; fine pointer -> NEITHER engine arms. `overscroll-behavior-y: contain` on html/body inside the 768 block is load-bearing: without it Chrome Android's own pull-to-refresh would reload the app mid-sync. The action is page-aware (Kanban/Marketing refresh their own board, everything else manualSync) because pulling on Kanban and getting a Google Tasks sync is a lie about what just happened. The page content deliberately does NOT translate - a transform on .page would make it a containing block for any position:fixed descendant. DAILY PLAN SEGMENTATION: Repository / Matrix / Today, the same visible segmented control as decision 2's Simple vs Detailed. Columns hide with display:none and are NEVER unmounted - same contract as the six Settings hubs, and proven the same way: typed into #tomorrowNotes, switched to another segment, saveDailyPlan() still persisted it and it survived navigating away and back. Defaults to Today (assumption stated to Hans: it is the part he actually uses and was the furthest to scroll to); the choice is remembered in eos_ui_prefs.dailyPlanSeg, device-local, so tapping another segment once changes it permanently. The CSS is `@media screen and (max-width:768px)` - the ONLY mobile block in this file that is not a bare max-width, and deliberately so: the print stylesheet hides #repositoryDropZone and lays the matrix out 2x2, and a print page box is not always wider than 768px, so without `screen and` printing while parked on Matrix would have silently dropped two thirds of the printout. QUADRANT COUNTS read the DOM the quadrant just rendered rather than the data array, because renderMatrix's own prune path rewrites innerHTML a second time and counting the array would have disagreed with the screen for exactly the entries hardest to notice. Shows open/total only when something is done. KANBAN ITEM 11: .kanban-columns-header measured 549px inside 375. The mobile pill strip already had overflow-x:auto, but its parent carries `min-width: max-content` for the DESKTOP column heads, and a child scroller inside an unbounded parent never scrolls - so the pills rode the board's own .kanban-scroll and reaching 'Shipped' dragged the whole board sideways. Fixed with a class SET BY THE RENDERER, not a media query, and that distinction is the durable part: isNarrowViewport() is 640px while every CSS mobile rule here is 768px, so between 641 and 768 a max-width:768 rule would collapse the desktop heads. Same reasoning as .mkt-board-mobile. Header now 336px, strip scrolls itself (555 in 336), tapping the last column moves the strip to 219 and the board to 0. The gradient affordance is now shared by both boards instead of written twice. BEFORE -> AFTER, seeded and asserted (6 todos, 2 rocks, 6 matrix entries, 2 Rule-of-3 slots, 8 marketing cards, 9 kanban cards), in a fixed-width iframe with the coarse-pointer rules force-injected: My Daily Plan doc 601 -> 375 at 375 and 601 -> 397 at 412, 10 elements over -> 0, page height 3121 -> 1520 (Today segment) at 375; 1460 -> 1265 at 1280 with 10 over -> 0. All nine pages doc scrollWidth = viewport at 375 / 412 / 1280. DESKTOP VERIFIED UNCHANGED at 1280: segment strip display:none, all three Daily Plan columns block, grid still 3 columns, matrix still 2x2, PTR indicator display:none, overscroll-behavior auto, header-controls flex, sync bar flex, no bottom nav or FAB, .page padding-bottom 25px, kanban heads 288px with no mobile class. HELD BACK DELIBERATELY: the in-tool Gmail viewer (item 1 / Sec 5.18) - it needs a gmail.readonly scope grant, a new backend action gated by requireTeamMemberFromToken_, a clasp deploy Hans has to run himself, and HTML sanitisation; shipping half of that is worse than not starting it.
+        const EOS_BUILD_TIME = '20:55'; // v3.72.0: RELEASE B of Hans's second phone-test list (Sec 5.11b-6) - items 16, 13 and the delete/archive/sort half of 9b, built as ONE job because they are one missing call, exactly as Sec 5.11b-6 said. index.html only; no .gs change, so NO clasp deploy. THE ROOT CAUSE, restated because it is the whole release: Sec 5.11b-5 decision 7 says the task row is "shared by all surfaces" and it was not - the Matrix and the Rule of 3 call renderTaskActions(), and the Today repository rendered its own `.repo-item` markup and called nothing. That single missing call is why Matrix rows have had a ... since Phase 1 and Today's list had none. Hans filed it as three notes; it was one gap. TWO LIVE BUGS FOUND WHILE BUILDING IT, both measured before being fixed, and both worse than the feature. (1) THE FOURTH DEAD SELECTOR IN THIS FILE: rerenderAllTaskSurfaces() guarded its repository repaint on getElementById('taskRepository') and NO element has ever had that id - the repository is #repositoryDropZone - so renderRepository() has never once been called from there. Measured: completing a task by id while standing on My Daily Plan left the repository at 32 rows when a manual renderRepository() gave 31. It mattered little while dragging was the only way to act on a Today row; it would have made every new ... action paint a stale row. AND THE OBVIOUS FIX IS UNSAFE, which is very likely why an element id was reached for: the element is ALWAYS in the DOM, so guarding on it alone calls renderRepository() from the To-Dos tab on a cold app, which measurably throws "Cannot read properties of undefined (reading 'q1')" because dailyPlanData is still {}. The real condition is "is a plan loaded", so it now tests `dailyPlanData && dailyPlanData.matrix`. (2) DRAGGING A REPOSITORY ROW WHILE THE SEARCH BOX HAD TEXT IN IT MOVED THE WRONG TASK. dragStart passed an INDEX into the list renderRepository drew, and getTaskData() re-derived its own filter to look it back up - and the two filters have never matched (the renderer also excludes done rocks, textless records, snoozed to-dos and anything the search hides). Proven: with "schwab" typed in the box the first visible row is "Invest remaining $10k 401k at Schwab", its index is 0, and getTaskData('todo',0) returns "Reconcile the Otter sheet https://..." - a different task entirely. The drag is id-addressed now (decision 7's own instruction); the index survives only as the fallback for LOCAL tasks, which resolveTaskById cannot find because it does not search dailyPlanData.localTasks. Item 9b's sort would have broken this for every row rather than some. ITEM 16: every Today repository row - 32 to-dos and 4 rocks in the fixture - now renders through renderTaskActions(rec,'repository',{menuOnly:true}). menuOnly drops the two SURFACE buttons (star, AI sparkle) and keeps the ... and everything in it, which is exactly the trade Hans offered: "I'll live without the star and the AI sparkle there." Both are still inside the menu, so Phase 1's "every action reachable from ..." floor is untouched. ITEM 13, and the one non-negotiable: the Move picker commits through the SAME code the drag commits through. The two commit tails were EXTRACTED out of dropToMatrix() and dropToRuleSlot() into commitMatrixEntry() / commitRuleEntry() and both callers now use them - one place writes a quadrant, one place writes a Rule-of-3 slot, so dedup, persistence and the re-render fan-out cannot drift between "I dragged it" and "I picked it". Same rule Phase 3 locked for kanbanMoveCardToCell. Destinations: three Rule-of-3 slots (an occupied slot NAMES its occupant and replaces on tap - the drag path just alert()s "remove it first", which a picker that can see the occupant has no excuse for), the four quadrants, and the Google Tasks list via the EXISTING moveTaskToList(), offered only where it can work (a rock is not a Google task; a to-do with no googleTaskId has never been pushed). New invariant enforced in both cores: a task cannot be in the Rule of 3 and a quadrant at once. WHY MOVING A MEETING TASK SHOWS UP ON TODAY - proven, not assumed: the Matrix and Rule of 3 hold {id,type} REFERENCES into the same quarter todos array the Weekly Meeting renders, so adding a reference IS the move. Moved a task from the Meeting page to Q1, navigated to My Daily Plan, found it in Q1. Move is on every surface's ... except COMPLETED mode, deliberately - that menu is a recovery menu. ITEM 9B: delete and archive come free with item 16 because the menu extras call archiveTaskById() / deleteTaskById(), the same id-addressed handlers the Meeting rows use - "works like the Meeting tab's" is literally true rather than re-implemented. Uncheck needs no entry: the repository filters !t.done so a ticked task leaves the list, and the Matrix and Rule of 3 have carried Uncheck since Phase 2. Sort is a new #repoSortOrder with the Meeting tab's five orders in its wording, its own value in eos_ui_prefs.repoSort (device-local), sorting a COPY - never the underlying arrays, which would silently rewrite the Meeting tab's manual order - and stamping the original filtered index on first so the drag fallback stays honest. HELD BACK FROM 9B AND SAID PLAINLY: "moving lists around" (reordering the repository's list GROUPS). The Meeting tab's list reordering is a separate drag system (dragListStart/dragListOver) over settings.todoListOrder, and wiring a second surface into it is its own job, not the tail of this one. A SHARED-CHROME FIX THE FEATURE FORCED: the ... menu is position:absolute inside .task-action-wrap and z-index:4000 does NOT let an absolutely-positioned box escape a clipping ancestor - `.repo-items` is `max-height:350px; overflow-y:auto`, so every Today menu opened INSIDE a scroller and was cut off. Fixed generally rather than for the repository: if any ancestor between the wrap and body clips, the menu switches to position:fixed at the button's screen coordinates, with a viewport clamp and a capture-phase scroll listener that closes it. Verified all 32 rows: 32/32 fixed, 32/32 escaped the scroller's bounds, 0 degenerate. Menus with no clipping ancestor (To-Dos, Weekly Meeting, Matrix) keep the absolute path they have had since Phase 1 - measured, still "absolute". VERIFIED, seeded and asserted, in a fixed-width iframe with the coarse-pointer rules force-injected: all nine pages document scrollWidth == viewport at 375, 412 AND 1280 with zero elements over the edge, AND the Daily Plan measured again with the REPOSITORY segment showing (the default 'today' segment hides that column entirely, so measuring it there measures a zero-size box - that mistake was made once in this session and caught). ZERO console errors. Drag parity proven by driving the real handlers: repository->Q2 2 to 3 and persisted, Q2->Q4 leaves 0 behind and arrives as 1 (the skipDedup path), an occupied Rule-of-3 slot still refuses, an empty one accepts. DESKTOP VERIFIED UNCHANGED at 1280: 18 scorecard columns, both Print buttons, matrix 2x2, three Daily Plan columns block, segment strip none, no bottom nav / FAB / PTR, tabs flex, sync bar flex. SETTINGS CONTRACT RE-PROVEN because this adds a new .modal-overlay: 5 of 6 hubs display:none, 98 inputs in the DOM, a field typed into a hidden hub round-tripped through save-on-navigate. NO new touch gesture, so the swipe / pull-to-refresh suite is unchanged and was not re-run. v3.71.0: RELEASE A of Hans's SECOND phone-test list (Sec 5.11b-6) - his items 3, 7, 8, 9a and 15, the five he himself flagged as small, independent and measurable. index.html only; no .gs change, so NO clasp deploy. ITEM 3, THE FAB OVER SETTINGS: syncFabVisibility() asked "which PAGE am I on?" and Settings is a MODAL over a page, so the answer was still dailyPlan and the "+" stayed up. Reproduced before fixing (fabWithSettingsOpen: "visible" at both 375 and 412) and it was not only Settings - the same "+" floated over the master print modal, the snooze picker, the AI drafter and every sign-in gate. Now gated on `.modal-overlay.active` - the SAME selector closeModalsBeforeNavigate() already trusts to enumerate open modals, so there is one definition of "a modal is open" rather than two - plus #changelogModal by id, because that one is built at runtime and is deliberately not a .modal-overlay (which is exactly why that function has to remove it separately). Watched with a MutationObserver on the modal elements THEMSELVES, not a subtree observer on <body>: modals are opened from ~30 sites, most of them a bare classList.add('active') rather than openModal(), so patching the two helpers would have missed most of them and been invisibly wrong - and a body-subtree class observer would fire on every render pass in the app for a gate that changes a few times a session. ITEM 7: My Daily Plan's header row was 104px with three buttons and a dropdown; it is 44px with one, and content starts at 149px instead of 209px. Print is deleted (the drawer's Print... master modal already has a "My Daily Plan" checkbox, and the desktop header still has its own); End Day moved to the BOTTOM of the Today column, under "Notes for Tomorrow" - it is the last thing you do on the page and it now sits beneath the notes it asks you to write. ITEM 9A - AND THERE WAS A REAL BUG UNDER IT, not just a redundant control: initDailyPlan() rebuilds #dailyPlanUser's innerHTML on EVERY navigation to the page, and rebuilding a <select>'s options resets its value to option 0. applySignedInUser() set the right person once at sign-in and the next visit threw it away. Invisible for Hans, who IS teamMembers[0] - Amanda would have been reading HIS day and writing into HIS storage key, every single time. Proven by stubbing eos_signed_in_email to amanda@ and visiting the page twice: 3.70.0 gives HB, HB; 3.71.0 gives AB, AB with storage key eos_dailyPlan_AB. The <select> is still in the DOM, CSS-hidden by #dailyPlanUserWrap, and is still the ONLY place the value lives - the #todoOwnerFilter (3.62.0) / #yearSelect (3.69.0) contract, so all ~45 readers including loadDailyPlan()'s eos_dailyPlan_<initials> key are untouched and nothing is duplicated. ITEM 8: all 117 scorecard week cells get inputmode="decimal" (and so does the Goal cell). `decimal` NOT `numeric`, and NOT type="number" - CHECKED AGAINST HIS REAL DATA FIRST, where "Blogs written" has a goal of "0.5", so a weekly 0.5 or 1.5 is legitimate; `numeric` gives no decimal point on iOS and type="number" would reject or blank values these cells are allowed to hold. THE SECOND HALF OF ITEM 8 DID NOT WORK THE WAY HE EXPECTED AND THE MEASUREMENT IS WHY: the two Print buttons live in the PAGE-TITLE row, not in the table, so dropping them on mobile buys 30px of vertical chrome (header 74 -> 44) and exactly 0px of column width. What actually squeezed the measurable name is that the this-week-only table needed Who 63 + Measurable 148 + Goal 55 + week 75 = 341px inside a 312px wrapper, so it was quietly scrolling 29px sideways INSIDE its own overflow-x:auto wrapper - which is why no document-overflow check ever flagged it. Trimmed Goal to 42 and the week cell's 66px floor (set in 3.67.0) to 54: measurable name 151 -> 176 at 412 and the internal scroll is 0 at both widths. At 375 the name column is at its own min-content floor so it stays 148 - reported rather than papered over. ITEM 15: Sync moved out of the drawer's System group into the drawer's blue header beside the "last synced" line. The drawer deliberately does NOT close on tap - that is the whole reason he wanted it there, and updateSyncStatus() now mirrors into #drawerSyncLine LIVE (it was only copied when the drawer was rebuilt, so with the button beside it the line would have read the old status for the entire sync). Verified by clicking it: line goes to "Pulling from Google Tasks...", drawer stays open, System group is 14 items instead of 15 with no Sync entry. A 45s WATCHDOG on that button because it was measured, not imagined: manualSync() awaits a bare fetch() with no timeout of its own, so on a phone with no signal the promise never settles and a plain try/finally left the button reading "Syncing..." and disabled forever. THIS IS A DEPARTURE FROM DECISION 4's LOCKED IA, recorded as a decision: it lists Sync Now first under System. An action belongs next to the status it changes. VERIFIED, seeded and asserted (39 to-dos incl. the 80-char-URL offender, 4 rocks, 9 measurables with 45 real weekly values, 6 matrix entries, 2 Rule-of-3 slots, 9 kanban cards, 8 marketing cards) in a fixed-width iframe with the coarse-pointer rules force-injected: all nine pages document scrollWidth == viewport at 375, 412 AND 1280, zero elements over the edge, ZERO console errors. DESKTOP UNCHANGED at 1280: 18 scorecard columns, measurable 197px, both Print buttons visible, matrix 2x2, all three Daily Plan columns block, no bottom nav / FAB / PTR indicator, tabs flex, sync bar flex. SETTINGS CONTRACT RE-PROVEN because the new observer watches #settingsModal: 5 of 6 hubs display:none, 98 inputs still in the DOM, and a field typed into a HIDDEN hub round-tripped through save-on-navigate and read back after reopen. NO new touch gesture, so the swipe/pull-to-refresh suite is unchanged and was not re-run. v3.70.0: the four items Hans queued for an unattended session - pull-to-refresh, Daily Plan segmentation, Eisenhower quadrant counts, Kanban's mobile column strip (his item 11) - plus one bug the harness found that shipped in 3.68.1 and 3.69.0 and was never seen. THE BUG FIRST, because it is the reusable lesson: 3.68.1's wrap rule listed FOUR selectors and TWO OF THEM MATCHED NOTHING. `.matrix-item` and `.rule-slot .item-text` do not exist - renderMatrix emits `.matrix-task > .task-text-editable` and renderRuleOf3 emits `.rule-slot > .task-text`. So only the repository column was ever protected, and the same 80-character URL sitting in the Rule of 3 made My Daily Plan 601px wide inside a 375 viewport, 601 inside 412 AND 1460 INSIDE 1280 - this was breaking the desktop too, for two releases, while both release notes said it was fixed. Measured, not reasoned: .daily-plan-grid had width 336 and scrollWidth 589, so 3.68.1's min-width:0 was correctly capping the TRACK and the TEXT was spilling out of it. It hid because the harness seeded the REPOSITORY and nothing else; it appeared the moment the Rule of 3 and the matrix were seeded and asserted. A fixture that covers one component of a page is not a fixture for the page. Same shape as the dead #scorecardTable selector: a rule that looks like protection and matches nothing - CHECK THAT A SELECTOR MATCHES BEFORE BELIEVING IT PROTECTS ANYTHING. Also closed `.matrix-grid` and `.input-row` (which had a guard only inside #setPanes) as the last two unguarded grid containers in the sheet - that is the fourth round of min-width:auto, so this time the pattern was fixed rather than the reported instance. PULL-TO-REFRESH, held from 3.69.0 because it needed his hands: arms only at scrollTop 0, only on a downward pull, coarse pointers only, and stands down entirely when the swipe engine's axis lock has taken the gesture. Bound AFTER initSwipeActions on purpose - document-level touch listeners fire in binding order, so _sw.axis is already settled by the time _onPtrMove sees the same event - but it runs its own axis test too, so ordering is a belt not the braces. VERIFIED BY SYNTHESISING REAL TOUCH EVENTS with matchMedia stubbed coarse, not by reasoning: vertical pull on a to-do row -> swipe releases (_sw null), pull arms, row transform stays 'none', release calls manualSync; horizontal swipe on the same row -> _sw.axis 'x', _ptr stands down, indicator stays parked, and a 75% swipe still commits and shows the Completed snackbar; scrolled to 400 -> never arms; upward drag -> never arms; over an open modal -> never arms; fine pointer -> NEITHER engine arms. `overscroll-behavior-y: contain` on html/body inside the 768 block is load-bearing: without it Chrome Android's own pull-to-refresh would reload the app mid-sync. The action is page-aware (Kanban/Marketing refresh their own board, everything else manualSync) because pulling on Kanban and getting a Google Tasks sync is a lie about what just happened. The page content deliberately does NOT translate - a transform on .page would make it a containing block for any position:fixed descendant. DAILY PLAN SEGMENTATION: Repository / Matrix / Today, the same visible segmented control as decision 2's Simple vs Detailed. Columns hide with display:none and are NEVER unmounted - same contract as the six Settings hubs, and proven the same way: typed into #tomorrowNotes, switched to another segment, saveDailyPlan() still persisted it and it survived navigating away and back. Defaults to Today (assumption stated to Hans: it is the part he actually uses and was the furthest to scroll to); the choice is remembered in eos_ui_prefs.dailyPlanSeg, device-local, so tapping another segment once changes it permanently. The CSS is `@media screen and (max-width:768px)` - the ONLY mobile block in this file that is not a bare max-width, and deliberately so: the print stylesheet hides #repositoryDropZone and lays the matrix out 2x2, and a print page box is not always wider than 768px, so without `screen and` printing while parked on Matrix would have silently dropped two thirds of the printout. QUADRANT COUNTS read the DOM the quadrant just rendered rather than the data array, because renderMatrix's own prune path rewrites innerHTML a second time and counting the array would have disagreed with the screen for exactly the entries hardest to notice. Shows open/total only when something is done. KANBAN ITEM 11: .kanban-columns-header measured 549px inside 375. The mobile pill strip already had overflow-x:auto, but its parent carries `min-width: max-content` for the DESKTOP column heads, and a child scroller inside an unbounded parent never scrolls - so the pills rode the board's own .kanban-scroll and reaching 'Shipped' dragged the whole board sideways. Fixed with a class SET BY THE RENDERER, not a media query, and that distinction is the durable part: isNarrowViewport() is 640px while every CSS mobile rule here is 768px, so between 641 and 768 a max-width:768 rule would collapse the desktop heads. Same reasoning as .mkt-board-mobile. Header now 336px, strip scrolls itself (555 in 336), tapping the last column moves the strip to 219 and the board to 0. The gradient affordance is now shared by both boards instead of written twice. BEFORE -> AFTER, seeded and asserted (6 todos, 2 rocks, 6 matrix entries, 2 Rule-of-3 slots, 8 marketing cards, 9 kanban cards), in a fixed-width iframe with the coarse-pointer rules force-injected: My Daily Plan doc 601 -> 375 at 375 and 601 -> 397 at 412, 10 elements over -> 0, page height 3121 -> 1520 (Today segment) at 375; 1460 -> 1265 at 1280 with 10 over -> 0. All nine pages doc scrollWidth = viewport at 375 / 412 / 1280. DESKTOP VERIFIED UNCHANGED at 1280: segment strip display:none, all three Daily Plan columns block, grid still 3 columns, matrix still 2x2, PTR indicator display:none, overscroll-behavior auto, header-controls flex, sync bar flex, no bottom nav or FAB, .page padding-bottom 25px, kanban heads 288px with no mobile class. HELD BACK DELIBERATELY: the in-tool Gmail viewer (item 1 / Sec 5.18) - it needs a gmail.readonly scope grant, a new backend action gated by requireTeamMemberFromToken_, a clasp deploy Hans has to run himself, and HTML sanitisation; shipping half of that is worse than not starting it.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -8268,7 +8360,22 @@ Example:
             try { if (typeof sortAndRenderTodos === 'function' && document.getElementById('todoList')) sortAndRenderTodos(); } catch (e) {}
             try { if (typeof renderMatrix === 'function' && document.getElementById('matrixQ1')) renderMatrix(); } catch (e) {}
             try { if (typeof renderRuleOf3 === 'function' && document.getElementById('ruleOf3Slots')) renderRuleOf3(); } catch (e) {}
-            try { if (typeof renderRepository === 'function' && document.getElementById('taskRepository')) renderRepository(); } catch (e) {}
+            // v3.72.0 — THE FOURTH DEAD SELECTOR IN THIS FILE. This guard read
+            // `getElementById('taskRepository')` and NO element has ever had that id (the
+            // repository is `#repositoryDropZone`), so renderRepository() was never once
+            // called from here. Measured before fixing: completing a task by id while
+            // standing ON My Daily Plan left the repository showing 32 rows when a manual
+            // renderRepository() gave 31 — the task you just ticked stayed in the list.
+            // That mattered little while the only way to act on a Today row was to drag it;
+            // it matters completely now that every Today row has a `⋯`.
+            //
+            // AND THE OBVIOUS FIX IS UNSAFE, which is very likely why an element id was
+            // reached for in the first place: the element is ALWAYS in the DOM, so guarding
+            // on it alone calls renderRepository() from the To-Dos tab on a cold app that
+            // has never loaded a plan — measured, that throws
+            // "Cannot read properties of undefined (reading 'q1')" because dailyPlanData is
+            // still `{}`. The real condition is "is a plan loaded", so that is what it tests.
+            try { if (typeof renderRepository === 'function' && dailyPlanData && dailyPlanData.matrix) renderRepository(); } catch (e) {}
             try { if (typeof renderSnoozedSection === 'function' && document.getElementById('snoozedSection')) renderSnoozedSection(); } catch (e) {}
         }
 
@@ -8406,10 +8513,72 @@ Example:
             // extend RIGHT instead; if the bottom would clip, open upward.
             if (willOpen) _placeTaskActionMenu(menu);
         }
+        // v3.72.0 — WHY THIS EXISTS, because the reason is not obvious from the code.
+        // The menu is position:absolute inside .task-action-wrap, and z-index:4000 does
+        // NOT let an absolutely-positioned box escape an ancestor that clips. Item 16 put
+        // a `⋯` on every Today repository row, and `.repo-items` is
+        // `max-height:350px; overflow-y:auto` — so the menu opened INSIDE a scroller and was
+        // cut off at the section edge. (Per spec, `overflow-y:auto` with `overflow-x:visible`
+        // computes the x axis to auto as well, so it clips both ways.)
+        // The fix is general rather than repository-specific: if ANY ancestor between the
+        // wrap and <body> clips, the menu switches to position:fixed at the button's screen
+        // coordinates. Nothing changes for a menu with no clipping ancestor - To-Dos, Weekly
+        // Meeting and the Matrix keep the absolute path they have had since Phase 1.
+        function _taskMenuClippingAncestor(el) {
+            let p = el ? el.parentElement : null;
+            while (p && p !== document.body && p !== document.documentElement) {
+                const cs = window.getComputedStyle(p);
+                if (cs.overflowY !== 'visible' || cs.overflowX !== 'visible') return p;
+                p = p.parentElement;
+            }
+            return null;
+        }
+        function _placeTaskActionMenuFixed(menu, wrap) {
+            const btn = wrap.querySelector('button');
+            const anchor = (btn || wrap).getBoundingClientRect();
+            const vw = window.innerWidth || document.documentElement.clientWidth;
+            const vh = window.innerHeight || document.documentElement.clientHeight;
+            menu.style.position = 'fixed';
+            menu.style.top = '0px'; menu.style.left = '0px'; menu.style.right = ''; menu.style.bottom = '';
+            const r = menu.getBoundingClientRect();
+            const w = r.width, h = r.height;
+            // Default: right-aligned to the button and hanging below it, same visual
+            // relationship as the absolute version.
+            let left = anchor.right - w;
+            let top = anchor.bottom;
+            if (left < 4) left = 4;
+            if (left + w > vw - 4) left = Math.max(4, vw - 4 - w);
+            if (top + h > vh - 4) top = anchor.top - h;   // flip upward
+            // Final clamp to the viewport. A flip is relative to the ANCHOR, and an anchor
+            // can itself be outside the viewport - measured, opening every repository row's
+            // menu in turn put 31 of 32 off-screen, because rows further down the page have
+            // off-screen bounding rects. A real tap can never do that (you cannot tap what
+            // you cannot see), but a fixed box whose position is derived from an unclamped
+            // anchor is one scroll away from being wrong, so it is clamped rather than argued
+            // about.
+            top = Math.min(Math.max(4, top), Math.max(4, vh - 4 - h));
+            left = Math.min(Math.max(4, left), Math.max(4, vw - 4 - w));
+            menu.style.left = Math.round(left) + 'px';
+            menu.style.top = Math.round(top) + 'px';
+        }
+        // A fixed menu does not travel with the scroller it escaped, so close it on any
+        // scroll rather than leave it hovering over unrelated rows. Capture phase, because
+        // a scroll event on an inner element does not bubble.
+        if (!window._taskMenuScrollBound) {
+            window._taskMenuScrollBound = true;
+            window.addEventListener('scroll', function () {
+                if (_openTaskMenuEl && _openTaskMenuEl.style.position === 'fixed') closeOpenTaskMenu();
+            }, true);
+        }
+
         // Flip an absolutely-positioned .task-action-menu so it stays fully on-screen.
         function _placeTaskActionMenu(menu) {
-            // Reset to defaults before measuring.
+            // Reset to defaults before measuring. `position` is reset too: the same menu
+            // element can have been placed fixed on a previous open.
+            menu.style.position = 'absolute';
             menu.style.left = ''; menu.style.right = '0'; menu.style.top = '100%'; menu.style.bottom = '';
+            const wrap = menu.closest ? menu.closest('.task-action-wrap') : null;
+            if (wrap && _taskMenuClippingAncestor(wrap)) { _placeTaskActionMenuFixed(menu, wrap); return; }
             let rect = menu.getBoundingClientRect();
             const vw = window.innerWidth || document.documentElement.clientWidth;
             const vh = window.innerHeight || document.documentElement.clientHeight;
@@ -8558,6 +8727,12 @@ Example:
             const onDailyPlan = (context === 'matrix' || context === 'ruleOf3');
             const focusSpec = { key: 'focus', icon: '\uD83C\uDFAF', title: 'Focus this task in the Pomodoro timer',
                 label: 'Focus (Pomodoro)', color: '#16a34a', onclick: `focusTaskById('${id}')` };
+            // v3.72.0 (Hans's item 13). One entry, every surface, because it is one action:
+            // "put this task somewhere else". The picker decides what the destinations are -
+            // this spec knows nothing about them. It is in the OVERFLOW list on purpose (his
+            // own words: "just add a move icon and wording just like the rest of the menu").
+            const moveSpec = { key: 'move', icon: '\u21F2', title: 'Move this task to the Rule of 3, a matrix quadrant or another list',
+                label: 'Move\u2026', color: '#0ea5e9', onclick: `openMoveTaskModal('${id}')` };
 
             const menuExtras = Array.isArray(opts.menuExtras) ? opts.menuExtras : [];
             const completedCluster = Array.isArray(opts.completedCluster) ? opts.completedCluster : [];
@@ -8617,7 +8792,10 @@ Example:
             };
             // Matrix + Rule-of-3 promote nothing but star/AI/... - they are minimal cards on
             // a narrow quadrant, and that was a deliberate Phase 2 decision, not a default.
-            const minimalCard = (context === 'matrix' || context === 'ruleOf3');
+            // v3.72.0: 'repository' joins them. The Today repository rows are the narrowest
+            // task rows in the app and Hans said explicitly he will forgo the star and the AI
+            // sparkle there in exchange for the `⋯` - see opts.menuOnly below.
+            const minimalCard = (context === 'matrix' || context === 'ruleOf3' || context === 'repository');
             const chosen = minimalCard ? [] : promotedActionKeys(!!task.emailLink).filter(eligible);
 
             const promoted = [];
@@ -8635,6 +8813,12 @@ Example:
             // drafter when it does not.
             overflow.push(emailSpec);
             overflow.push(aiSpec);
+            // v3.72.0 (item 13): Move on every surface, including the Weekly Meeting's
+            // To-Dos - that is the half of his request that makes it useful. "Applies to
+            // Meeting tasks too: moving one there should show up on Today" works because the
+            // Matrix and the Rule of 3 hold {id,type} REFERENCES into the same quarter
+            // todos array the Meeting tab renders, so adding a reference IS the move.
+            overflow.push(moveSpec);
             // Date / list / owner / notes all in one place. On the To-Dos surface these used
             // to be inline editors in the row; at cozy and compact density they are pills,
             // and at compact the list pill is hidden entirely - so the menu has to hold the
@@ -8668,6 +8852,12 @@ Example:
                     </div>
                 </div>`;
 
+            // v3.72.0 (Hans's item 16): menuOnly drops the two SURFACE buttons - the star and
+            // the AI sparkle - and keeps the `⋯` and everything inside it. His words: "I'll
+            // live without the star and the AI sparkle there." Both are still in the menu, so
+            // the Phase 1 floor ("every action reachable from ⋯") is untouched; this only
+            // changes what is painted in the row.
+            if (opts.menuOnly) return promotedHtml + menuHtml;
             return starBtn + promotedHtml + aiBtn + menuHtml;
         }
         // Matrix stores {id,type} references (Phase 1). Resolve to the live record.
@@ -8780,7 +8970,22 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.71.0 &mdash; 2026-07-30 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.72.0 &mdash; 2026-07-30 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Your notes 16, 13 and most of 9 &mdash; which all turned out to be one missing line. Plus two bugs I found on the way in, one of which was moving the wrong task.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Note 16 &mdash; every task on the Today tab now has a &ldquo;&hellip;&rdquo; menu.</strong> All 32 to-dos and all 4 rocks. You said you would live without the star and the AI sparkle there and that is exactly the trade I took: the row stays as narrow as it was, and both of those are still inside the menu along with Snooze, Notes, the source email, Archive and Delete. <em>The reason the Matrix had a menu and this list did not was one missing function call &mdash; the Matrix asks for the shared row, this list drew its own. That is also why your notes 16, 13 and 9 were really one job.</em></li>'
+                + '<li><strong>Note 13 &mdash; &ldquo;Move&hellip;&rdquo; is in that menu now, everywhere.</strong> It opens a picker with the three Rule of 3 slots, the four Eisenhower quadrants, and your Google Tasks lists. An occupied Rule of 3 slot tells you <em>whose</em> it is before you replace it. The one you are already in is ticked and cannot be picked again.</li>'
+                + '<li><strong>And it works from the Weekly Meeting tab, which was the half of note 13 that mattered.</strong> Move a Meeting to-do into a quadrant and it is on Today when you get there &mdash; I moved one and went and looked. Nothing is copied: the Matrix and the Rule of 3 point at the same task the Meeting tab shows, so there is only ever one of it.</li>'
+                + '<li><strong>Note 9, second half &mdash; Delete, Archive and Sort on the Today tab.</strong> Delete and Archive are the <em>same</em> actions the Meeting tab uses, not new ones, so they behave identically including the Google Tasks side. There is a Sort box under the search box with the Meeting tab&rsquo;s five orders. Uncheck did not need adding: a ticked task drops out of that list, and where a ticked task <em>does</em> still show on Today &mdash; the Matrix and the Rule of 3 &mdash; Uncheck has been there since last year.</li>'
+                + '<li><strong>🐞 A bug I found on the way in, and it was moving the wrong task.</strong> If you typed anything in the Today search box and then dragged one of the results into the matrix, you could get a <em>different</em> task. Proven, not guessed: with &ldquo;schwab&rdquo; typed in, the first row on screen was &ldquo;Invest remaining $10k 401k at Schwab&rdquo; and the drag was actually picking up &ldquo;Reconcile the Otter sheet&hellip;&rdquo;. The drag was counting positions in a list that had already been filtered, and the two counts never agreed. It now identifies the task itself rather than counting. <em>Adding the Sort box would have made this happen on every row instead of some.</em></li>'
+                + '<li><strong>🐞 And a second one: acting on a task from the Today tab used to leave the old row on screen.</strong> The code that refreshes every task list after you do something was looking for a part of the page that does not exist &mdash; and never has &mdash; so the Today list was simply never refreshed. Harmless while dragging was the only thing you could do there; not harmless the moment every row has a menu. <em>This is the fourth time in this app that a rule or a check has been pointed at a name that matches nothing.</em></li>'
+                + '<li><strong>The menu no longer gets cut off.</strong> The Today lists scroll inside their own box, and a menu opening inside a scrolling box gets clipped by it. It now floats free of the box and stays on screen &mdash; checked on all 32 rows.</li>'
+                + '<li><strong>Held back on purpose, from note 9: dragging the list <em>groups</em> around on Today.</strong> The Meeting tab&rsquo;s list reordering is a separate drag system with its own saved order, and hooking a second page into it is its own piece of work rather than the tail of this one. Say the word and it is next.</li>'
+                + '<li><strong>Checked at 375, 412 and 1,280:</strong> all nine pages fit exactly, nothing over the edge, no console errors, desktop untouched. Dragging still works exactly as before &mdash; the picker and the drag now go through the same code, so they cannot drift apart.</li>'
+                + '</ul></div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.71.0 &mdash; 2026-07-30</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Your notes 3, 7, 8, 9 and 15 &mdash; the five small ones. Plus a bug hiding under note 9 that only ever hurt Amanda.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Note 3 &mdash; the &ldquo;+&rdquo; button no longer floats over Settings.</strong> It was checking which <em>page</em> you were on, and Settings is a window <em>over</em> a page, so as far as the button was concerned you were still on My Daily Plan. It now stands down whenever any window is open &mdash; and it was not only Settings: the same &ldquo;+&rdquo; was sitting on top of the print window, the snooze picker, the AI drafter and the sign-in screen.</li>'
@@ -25554,7 +25759,97 @@ Return ONLY the JSON array:`;
             return totalCompleted;
         }
         
+        // ---- Today's row atom (v3.72.0, Hans's items 16 + 9b) -----------------------
+        //
+        // §5.11b-5 decision 7 says the task row is "shared by all surfaces". It was not:
+        // the Matrix and the Rule of 3 call renderTaskActions(), and the Today repository
+        // rendered its own `.repo-item` markup and called nothing — which is the entire
+        // reason Matrix rows have had a `⋯` since Phase 1 and Today's list had none. Hans
+        // filed that as three separate notes (16, 13, 9b); it is one missing call.
+        //
+        // `menuOnly` because he said so explicitly: "I'll live without the star and the AI
+        // sparkle there, but I want at minimum the ⋯". Both are still inside the menu.
+        //
+        // The menu extras are the surface-addressed half — the same shape the Matrix has
+        // used since Phase 2 — and they are what delivers 9b's delete / archive / uncheck:
+        // archiveTaskById() and deleteTaskById() are the EXISTING id-addressed handlers the
+        // Weekly Meeting's rows use, so "works like the Meeting tab's" is literally true
+        // rather than a re-implementation. Uncheck needs no entry here: the repository
+        // filters `!t.done`, so a ticked task leaves this list entirely, and the two
+        // surfaces where a done task still shows on Today — the Matrix and the Rule of 3 —
+        // have carried Uncheck since Phase 2.
+        function repoTaskActions(rec, kind) {
+            if (!rec || !rec.id || typeof renderTaskActions !== 'function') return '';
+            // NOTE: no Move entry here. renderTaskActions() adds it to the overflow list for
+            // every surface, so adding it again as a surface extra printed "Move…" twice -
+            // caught in the harness by reading the menu's rows rather than by trusting that
+            // two lists could not overlap.
+            const extras = [];
+            if (kind === 'todo') {
+                extras.push({ icon: '📦', label: 'Archive', title: 'Archive (remove from everywhere)',
+                              color: '#6b7280', onclick: `archiveTaskById('${rec.id}')` });
+                extras.push({ icon: '🗑', label: 'Delete permanently', title: 'Delete permanently',
+                              color: '#dc2626', onclick: `deleteTaskById('${rec.id}')` });
+            }
+            return renderTaskActions(rec, 'repository', { menuOnly: true, menuExtras: extras });
+        }
+
+        // 9b's sort half. Same five orders as the Weekly Meeting's #todoSortOrder and in the
+        // same wording, but its OWN value in eos_ui_prefs.repoSort rather than borrowing that
+        // select: the two lists are read for different reasons (the Meeting list is a
+        // discussion order, the repository is a picking order) and Hans has never asked for
+        // them to move together. Device-local, like every other view preference here.
+        const REPO_SORTS = ['manual', 'starred', 'dueDate', 'title', 'owner'];
+        function repoSortOrder() {
+            const v = getUiPrefs().repoSort;
+            return REPO_SORTS.indexOf(v) !== -1 ? v : 'manual';
+        }
+        function setRepoSortOrder(v) {
+            saveUiPrefs({ repoSort: v });
+            renderRepository();
+        }
+        // Sorts a COPY. The repository is a view over yearData/dailyPlanData and must never
+        // reorder the underlying arrays — the matrix and Rule-of-3 references are by id so
+        // they would survive it, but `dragStart(event, type, idx)` passes an index into the
+        // FILTERED list and getTaskData() re-derives that same filter, so the two must agree.
+        // Sorting in place would also silently rewrite the Meeting tab's own manual order.
+        function repoSortTasks(list) {
+            const mode = repoSortOrder();
+            if (mode === 'manual') return list;
+            const out = list.slice();
+            if (mode === 'starred') {
+                out.sort(function (a, b) { return (b.starred ? 1 : 0) - (a.starred ? 1 : 0); });
+            } else if (mode === 'dueDate') {
+                // No due date sorts last, not first - an empty string would otherwise win
+                // every comparison and bury everything that actually has a deadline.
+                out.sort(function (a, b) {
+                    const x = a.dueDate || '9999-12-31', y = b.dueDate || '9999-12-31';
+                    return x < y ? -1 : (x > y ? 1 : 0);
+                });
+            } else if (mode === 'title') {
+                out.sort(function (a, b) {
+                    return String(a.text || '').toLowerCase().localeCompare(String(b.text || '').toLowerCase());
+                });
+            } else if (mode === 'owner') {
+                out.sort(function (a, b) { return String(a.owner || '').localeCompare(String(b.owner || '')); });
+            }
+            return out;
+        }
+        function renderRepoSortControl() {
+            const wrap = document.getElementById('repoSortWrap');
+            if (!wrap) return;
+            const labels = { manual: 'My Order', starred: 'Starred First', dueDate: 'Due Date', title: 'Title (A-Z)', owner: 'Owner' };
+            const cur = repoSortOrder();
+            wrap.innerHTML = '<label for="repoSortOrder">Sort</label>'
+                + '<select id="repoSortOrder" onchange="setRepoSortOrder(this.value)">'
+                + REPO_SORTS.map(function (k) {
+                    return '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' + labels[k] + '</option>';
+                  }).join('')
+                + '</select>';
+        }
+
         function renderRepository() {
+            renderRepoSortControl();
             const user = document.getElementById('dailyPlanUser')?.value;
             const search = document.getElementById('repoSearch')?.value?.toLowerCase() || '';
             
@@ -25596,15 +25891,22 @@ Return ONLY the JSON array:`;
             // Render rocks
             const rocksEl = document.getElementById('repoRocks');
             if (rocksEl) {
-                rocksEl.innerHTML = rocks.length ? rocks.map((r, idx) => {
+                // v3.72.0 (item 9b): the ORIGINAL filtered index is stamped on before the
+                // sort, so `dragStart`'s index fallback still points at the right record even
+                // when the display order no longer matches the array order. The id is what
+                // actually addresses the task now - this just keeps the fallback honest.
+                const rocksView = repoSortTasks(rocks.map((r, i) => Object.assign({}, r, { repoIdx: i })));
+                rocksEl.innerHTML = rocksView.length ? rocksView.map((r) => {
+                    const idx = r.repoIdx;
                     const inUse = tasksInUse.has(`rock:${r.text}`);
                     return `
-                    <div class="repo-item rock ${inUse ? 'in-use' : ''}" draggable="${!inUse}" 
-                         ondragstart="dragStart(event, 'rock', ${idx})"
+                    <div class="repo-item rock ${inUse ? 'in-use' : ''}" draggable="${!inUse}"
+                         ondragstart="dragStart(event, 'rock', ${idx}, '${r.id || ''}')"
                          ondragend="dragEnd(event)"
                          data-type="rock" data-idx="${idx}">
                         <span class="item-text">${r.text}</span>
                         ${inUse ? '<span class="in-use-badge">📍 In Use</span>' : ''}
+                        <div class="shared-task-actions repo-actions">${repoTaskActions(r, 'rock')}</div>
                     </div>
                 `}).join('') : '<p style="color: var(--gray-400); font-size: 0.8rem; padding: 8px;">No rocks assigned to you</p>';
             }
@@ -25629,11 +25931,11 @@ Return ONLY the JSON array:`;
                         if (hasMultipleLists) {
                             todosHtml += `<div style="font-size: 0.75rem; font-weight: 600; color: var(--gray-500); margin: 8px 0 4px 4px;">📹 ${listName}</div>`;
                         }
-                        todosHtml += todosByList[listName].map(t => {
+                        todosHtml += repoSortTasks(todosByList[listName]).map(t => {
                             const inUse = tasksInUse.has(`todo:${t.text}`);
                             return `
                                 <div class="repo-item ${inUse ? 'in-use' : ''}" draggable="${!inUse}" 
-                                     ondragstart="dragStart(event, 'todo', ${t.todoIdx})"
+                                     ondragstart="dragStart(event, 'todo', ${t.todoIdx}, '${t.id || ''}')"
                                      ondragend="dragEnd(event)"
                                      data-type="todo" data-idx="${t.todoIdx}">
                                     <input type="checkbox" class="item-check" onclick="toggleTodoFromDaily(${t.todoIdx})" ${t.done ? 'checked' : ''}>
@@ -25643,6 +25945,7 @@ Return ONLY the JSON array:`;
                                           onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}"
                                           title="Click to edit">${t.text}</span>
                                     ${inUse ? '<span class="in-use-badge">📍</span>' : ''}
+                                    <div class="shared-task-actions repo-actions">${repoTaskActions(t, 'todo')}</div>
                                 </div>
                             `;
                         }).join('');
@@ -25968,13 +26271,62 @@ Return ONLY the JSON array:`;
         // Drag and Drop
         let draggedItem = null;
         
-        function dragStart(event, type, idx) {
-            draggedItem = { type, idx, source: 'repository' };
+        // v3.72.0: `id` is new and optional, and it closes a LIVE bug that item 9b's sort
+        // would otherwise have made much worse. `idx` is an index into the FILTERED list
+        // renderRepository() drew, and getTaskData() re-derives its own filter to look the
+        // index back up — but the two filters have never matched. renderRepository excludes
+        // done rocks, textless records, snoozed to-dos and anything the search box hides;
+        // getTaskData excludes only `owner`/`done`. So dragging a repository row while the
+        // search box has text in it, or with a completed rock above it, has always been
+        // capable of picking up a DIFFERENT task than the one under your finger. Sorting the
+        // list (9b) would have broken it for every row rather than some.
+        // Addressing by id is the fix and it is also decision 7's own instruction. The index
+        // is still passed and still used as the fallback, because LOCAL tasks have no id that
+        // resolveTaskById() can find — they live in dailyPlanData.localTasks, which it does
+        // not search — so their drag stays index-based by necessity.
+        function dragStart(event, type, idx, id) {
+            draggedItem = { type, idx, id: id || '', source: 'repository' };
             event.dataTransfer.setData('text/plain', JSON.stringify(draggedItem));
             event.dataTransfer.effectAllowed = 'move';
             event.target.classList.add('dragging');
         }
         
+        // v3.72.0. The one place a repository drag turns into a {id,type} reference, used by
+        // both dropToMatrix() and dropToRuleSlot() - they held two byte-identical copies of
+        // this, which is how the id-stamp fix would have landed in one of them.
+        function _repoDragEntry(data) {
+            // Preferred: the row told us its id at dragstart.
+            if (data.id) {
+                const r = resolveTaskById(data.id);
+                if (r && r.record) {
+                    return { id: data.id, type: r.record.type || ((r.kind === 'rock') ? 'rock' : 'todo') };
+                }
+            }
+            // Fallback: local tasks (resolveTaskById does not search dailyPlanData.localTasks)
+            // and any row rendered before this version. getTaskData returns a spread COPY, so
+            // a defensive id stamp has to be written back to the real source record.
+            const rec = getTaskData(data.type, data.idx);
+            if (!rec) return null;
+            if (!rec.id) {
+                const newId = generateTaskId();
+                rec.id = newId;
+                const user = document.getElementById('dailyPlanUser')?.value;
+                if (data.type === 'rock') {
+                    const srcRocks = (yearData.quarters[currentQuarter].rocks || []).filter(r => r.owner === user);
+                    if (srcRocks[data.idx]) srcRocks[data.idx].id = newId;
+                } else if (data.type === 'todo') {
+                    const srcTodos = (yearData.quarters[currentQuarter].todos || []).filter(t => t.owner === user && !t.done);
+                    if (srcTodos[data.idx]) srcTodos[data.idx].id = newId;
+                } else if (data.type === 'local') {
+                    const lt = (dailyPlanData.localTasks || [])[data.idx];
+                    if (lt) lt.id = newId;
+                    saveDailyPlan();
+                }
+                autoSave();
+            }
+            return { id: rec.id, type: rec.type || data.type };
+        }
+
         function dragEnd(event) {
             event.target.classList.remove('dragging');
             draggedItem = null;
@@ -26065,6 +26417,231 @@ Return ONLY the JSON array:`;
             event.currentTarget.classList.remove('drag-over');
         }
         
+        // ==================== MOVE A TASK (v3.72.0, Hans's item 13) ====================
+        //
+        // §5.11b-6 item 13, and the reason it is one function rather than three: "Move" is a
+        // single idea — put this task somewhere else — and Hans arrived at it himself, from
+        // "long-press pops a menu" to *"to make it really simple we would just add a move
+        // icon and wording just like the rest of the menu."*
+        //
+        // THE ONE NON-NEGOTIABLE, and it is the `kanbanMoveCardToCell` lesson from Phase 3
+        // applied to this surface: the picker must commit through the SAME code the drag
+        // commits through. So the two commit tails have been EXTRACTED out of dropToMatrix()
+        // and dropToRuleSlot() into commitMatrixEntry() / commitRuleEntry(), and both the
+        // drag handlers and this picker call them. There is exactly one place that writes a
+        // matrix quadrant and exactly one that writes a Rule-of-3 slot, so dedup, persistence
+        // and the re-render fan-out cannot drift between "I dragged it" and "I picked it".
+        //
+        // WHY MOVING A *MEETING* TASK SHOWS UP ON TODAY, which is the half of his request
+        // that makes the feature worth having: the Matrix and the Rule of 3 store
+        // {id,type} REFERENCES into `yearData.quarters[currentQuarter].todos` — the very
+        // array the Weekly Meeting's To-Dos list renders. Adding a reference IS the move; no
+        // copy is made and nothing has to be kept in step afterwards. That is decision 7's
+        // "shared by all surfaces" paying for itself.
+
+        // Remove an id from every quadrant. Its own function because "moving" always means
+        // "and not still in the old place", and three callers needed it.
+        function _matrixForgetId(id) {
+            ['q1', 'q2', 'q3', 'q4'].forEach(function (q) {
+                dailyPlanData.matrix[q] = (dailyPlanData.matrix[q] || []).filter(function (e) {
+                    return !e || e.id !== id;
+                });
+            });
+        }
+
+        // The commit tail lifted out of dropToMatrix(). `skipDedup` exists for the
+        // quadrant-to-quadrant drag, which has already spliced itself out of its source and
+        // must not have its own entry filtered back out from under it.
+        function commitMatrixEntry(entry, quadrant, opts) {
+            if (!entry || !entry.id) return false;
+            if (!dailyPlanData.matrix) return false;
+            opts = opts || {};
+            if (!opts.skipDedup) _matrixForgetId(entry.id);
+            // A task cannot be in the Rule of 3 and a quadrant at once - the Rule of 3 is
+            // "the three things today", not a fifth quadrant. Drag enforced this implicitly
+            // by clearing the source slot; the picker has to do it explicitly.
+            if (Array.isArray(dailyPlanData.ruleOf3)) {
+                dailyPlanData.ruleOf3 = dailyPlanData.ruleOf3.map(function (e) {
+                    return (e && e.id === entry.id) ? null : e;
+                });
+            }
+            dailyPlanData.matrix[quadrant] = dailyPlanData.matrix[quadrant] || [];
+            dailyPlanData.matrix[quadrant].push(entry);
+            saveDailyPlan();
+            renderMatrix();
+            renderRuleOf3();
+            renderRepository();
+            return true;
+        }
+
+        // The commit tail lifted out of dropToRuleSlot().
+        function commitRuleEntry(entry, slotIdx) {
+            if (!entry || !entry.id) return false;
+            if (!Array.isArray(dailyPlanData.ruleOf3)) return false;
+            _matrixForgetId(entry.id);
+            dailyPlanData.ruleOf3 = dailyPlanData.ruleOf3.map(function (e) {
+                return (e && e.id === entry.id) ? null : e;
+            });
+            dailyPlanData.ruleOf3[slotIdx] = entry;
+            saveDailyPlan();
+            renderRuleOf3();
+            renderMatrix();
+            renderRepository();
+            return true;
+        }
+
+        const MOVE_QUADRANTS = [
+            { key: 'q1', label: 'Q1 — Do First',  hint: 'Urgent & Important' },
+            { key: 'q2', label: 'Q2 — Schedule',  hint: 'Not Urgent, Important' },
+            { key: 'q3', label: 'Q3 — Delegate',  hint: 'Urgent, Not Important' },
+            { key: 'q4', label: 'Q4 — Eliminate', hint: 'Not Urgent, Not Important' }
+        ];
+
+        let _moveTaskId = null;
+
+        // Where does this task sit right now? Read back rather than remembered, so the
+        // picker can tick the current home and refuse to "move" something to where it is.
+        function _moveCurrentHome(id) {
+            const out = { quadrant: '', ruleSlot: -1 };
+            if (!dailyPlanData || !dailyPlanData.matrix) return out;
+            ['q1', 'q2', 'q3', 'q4'].forEach(function (q) {
+                (dailyPlanData.matrix[q] || []).forEach(function (e) {
+                    if (e && e.id === id) out.quadrant = q;
+                });
+            });
+            (dailyPlanData.ruleOf3 || []).forEach(function (e, i) {
+                if (e && e.id === id) out.ruleSlot = i;
+            });
+            return out;
+        }
+
+        function openMoveTaskModal(id) {
+            if (typeof closeOpenTaskMenu === 'function') closeOpenTaskMenu();
+            const r = resolveTaskById(id);
+            if (!r || !r.record) { showToast('That task could not be found.', 'error'); return; }
+            const rec = r.record;
+
+            // A plan has to be loaded before a Rule-of-3 slot or a quadrant means anything.
+            // Reachable for real: the `⋯` on the Weekly Meeting's To-Dos carries Move too,
+            // and that page can be the landing tab, so dailyPlanData can still be {}.
+            const planReady = !!(dailyPlanData && dailyPlanData.matrix && Array.isArray(dailyPlanData.ruleOf3));
+
+            _moveTaskId = id;
+            const home = _moveCurrentHome(id);
+            const esc = (typeof escapeHtml === 'function') ? escapeHtml : function (s) { return s; };
+
+            const row = function (label, hint, onclick, marked, disabled) {
+                return '<button type="button" class="move-opt' + (marked ? ' move-opt-current' : '') + '"'
+                    + (disabled ? ' disabled' : ' onclick="' + onclick + '"') + '>'
+                    + '<span class="move-opt-tick">' + (marked ? '✓' : '') + '</span>'
+                    + '<span class="move-opt-body"><span class="move-opt-label">' + label + '</span>'
+                    + (hint ? '<span class="move-opt-hint">' + hint + '</span>' : '') + '</span></button>';
+            };
+
+            let html = '<div class="move-task-title">' + esc(String(rec.text || 'this task').substring(0, 120)) + '</div>';
+
+            if (!planReady) {
+                html += '<p class="move-note">Open <strong>My Daily Plan</strong> once first — the Rule of 3 and the '
+                     + 'matrix quadrants belong to a day\'s plan, and this device has not loaded one yet.</p>';
+            } else {
+                html += '<div class="move-group-name">Rule of 3</div>';
+                for (let i = 0; i < 3; i++) {
+                    const occupant = dailyPlanData.ruleOf3[i];
+                    const occRec = occupant ? resolveRuleEntry(occupant) : null;
+                    const mine = (home.ruleSlot === i);
+                    // An occupied slot says WHOSE it is and replaces on tap. The drag path
+                    // alert()s "slot is occupied, remove it first"; a picker that can see
+                    // the occupant has no excuse to make you go and clear it yourself.
+                    const hint = mine ? 'This task is already here'
+                        : (occRec ? 'Replaces: ' + esc(String(occRec.text || '').substring(0, 46)) : 'Empty');
+                    html += row('Slot ' + (i + 1), hint, "moveTaskToRuleSlotById(" + i + ")", mine, mine);
+                }
+                html += '<div class="move-group-name">Eisenhower quadrant</div>';
+                MOVE_QUADRANTS.forEach(function (q) {
+                    const mine = (home.quadrant === q.key);
+                    html += row(q.label, mine ? 'This task is already here' : q.hint,
+                                "moveTaskToQuadrantById('" + q.key + "')", mine, mine);
+                });
+            }
+
+            // "Another task category" = the Google Tasks list. Only offered where it can
+            // actually work: a rock is not a Google task, and a to-do with no googleTaskId
+            // has never been pushed, so there is nothing on Google's side to move.
+            // moveTaskToList() is the EXISTING mover (it POSTs `action:'moveTask'` and
+            // re-stamps googleTaskId from the response) - not reimplemented here.
+            const canList = (r.kind === 'todo') && !!rec.googleTaskId;
+            html += '<div class="move-group-name">Task category</div>';
+            if (canList) {
+                const opts = getTaskListOptions(rec.googleListId || '', rec.googleListName || 'To-Dos');
+                html += '<div class="move-list-row">'
+                     + '<select id="moveTaskListSelect">' + opts + '</select>'
+                     + '<button type="button" class="btn btn-primary" onclick="moveTaskToListById()">Move</button>'
+                     + '</div>'
+                     + '<p class="move-note">Currently in <strong>' + esc(rec.googleListName || 'To-Dos')
+                     + '</strong>. This one really moves it in Google Tasks, so it changes for everyone.</p>';
+            } else if (r.kind !== 'todo') {
+                html += '<p class="move-note">Only to-dos live in a Google Tasks list — a rock is not a Google task.</p>';
+            } else {
+                html += '<p class="move-note">This to-do has not been pushed to Google Tasks yet, so it has no list to move between. Sync first.</p>';
+            }
+
+            document.getElementById('moveTaskBody').innerHTML = html;
+            document.getElementById('moveTaskModal').classList.add('active');
+        }
+
+        function closeMoveTaskModal() {
+            _moveTaskId = null;
+            document.getElementById('moveTaskModal').classList.remove('active');
+        }
+
+        // Resolve the id to a {id,type} reference the two commit cores understand. The
+        // defensive id stamp the drag path does is unnecessary here by construction - we got
+        // here FROM an id, so the record has one.
+        function _moveEntryFor(id) {
+            const r = resolveTaskById(id);
+            if (!r || !r.record) return null;
+            const type = (r.kind === 'rock') ? 'rock' : 'todo';
+            return { id: id, type: r.record.type || type };
+        }
+
+        function moveTaskToQuadrantById(quadrant) {
+            const id = _moveTaskId;
+            const entry = _moveEntryFor(id);
+            if (!entry) { showToast('That task could not be found.', 'error'); return; }
+            if (!commitMatrixEntry(entry, quadrant)) { showToast('Could not move that task.', 'error'); return; }
+            const q = MOVE_QUADRANTS.filter(function (x) { return x.key === quadrant; })[0];
+            closeMoveTaskModal();
+            // rerenderAllTaskSurfaces so the Weekly Meeting's own list picks up the change
+            // when the move was started from there.
+            if (typeof rerenderAllTaskSurfaces === 'function') rerenderAllTaskSurfaces();
+            addLogEntry('Moved task to ' + (q ? q.label : quadrant));
+            showToast('Moved to ' + (q ? q.label : quadrant), 'success');
+        }
+
+        function moveTaskToRuleSlotById(slotIdx) {
+            const id = _moveTaskId;
+            const entry = _moveEntryFor(id);
+            if (!entry) { showToast('That task could not be found.', 'error'); return; }
+            if (!commitRuleEntry(entry, slotIdx)) { showToast('Could not move that task.', 'error'); return; }
+            closeMoveTaskModal();
+            if (typeof rerenderAllTaskSurfaces === 'function') rerenderAllTaskSurfaces();
+            addLogEntry('Moved task to Rule of 3 slot ' + (slotIdx + 1));
+            showToast('Moved to Rule of 3, slot ' + (slotIdx + 1), 'success');
+        }
+
+        async function moveTaskToListById() {
+            const id = _moveTaskId;
+            const sel = document.getElementById('moveTaskListSelect');
+            const r = resolveTaskById(id);
+            if (!sel || !r || r.kind !== 'todo') { showToast('That task could not be found.', 'error'); return; }
+            const newListId = sel.value;
+            if (!newListId || newListId === r.record.googleListId) { closeMoveTaskModal(); return; }
+            closeMoveTaskModal();
+            // r.idx is the index into q.todos, which is exactly what moveTaskToList expects.
+            await moveTaskToList(r.idx, newListId);
+            if (typeof rerenderAllTaskSurfaces === 'function') rerenderAllTaskSurfaces();
+        }
+
         function getTaskData(type, idx) {
             const user = document.getElementById('dailyPlanUser')?.value;
             if (type === 'rock') {
@@ -26097,24 +26674,10 @@ Return ONLY the JSON array:`;
             // has an id, store {id,type}. getTaskData returns a spread COPY, so a
             // defensive id stamp must be written back to the underlying record.
             if (data.source === 'repository') {
-                const rec = getTaskData(data.type, data.idx);
-                if (rec) {
-                    if (!rec.id) {
-                        const newId = generateTaskId();
-                        rec.id = newId;
-                        // Write the id back to the real source record (defensive; post-Phase-0 all records already have one).
-                        const user = document.getElementById('dailyPlanUser')?.value;
-                        if (data.type === 'rock') {
-                            const srcRocks = (yearData.quarters[currentQuarter].rocks || []).filter(r => r.owner === user);
-                            if (srcRocks[data.idx]) srcRocks[data.idx].id = newId;
-                        } else if (data.type === 'todo') {
-                            const srcTodos = (yearData.quarters[currentQuarter].todos || []).filter(t => t.owner === user && !t.done);
-                            if (srcTodos[data.idx]) srcTodos[data.idx].id = newId;
-                        }
-                        autoSave();
-                    }
-                    entry = { id: rec.id, type: rec.type || data.type };
-                }
+                // v3.72.0: id first. The index path below is kept for local tasks (no
+                // resolvable id) and for back-compat, but it is no longer the primary route -
+                // see dragStart's note on why the index has never been trustworthy here.
+                entry = _repoDragEntry(data);
             }
             // From another matrix quadrant — entry is already {id,type}.
             else if (data.source === 'matrix') {
@@ -26134,21 +26697,16 @@ Return ONLY the JSON array:`;
             }
             
             if (entry) {
-                // Remove from other quadrants first (dedup by id, not text).
-                if (data.source === 'repository') {
-                    ['q1', 'q2', 'q3', 'q4'].forEach(q => {
-                        dailyPlanData.matrix[q] = dailyPlanData.matrix[q].filter(t => t.id !== entry.id);
-                    });
-                }
-                
-                // Add to target quadrant
-                dailyPlanData.matrix[quadrant].push(entry);
-                saveDailyPlan();
-                renderMatrix();
-                renderRuleOf3();
-                renderRepository(); // Update grayed-out status
+                // v3.72.0: the commit tail that used to be written out here now lives in
+                // commitMatrixEntry(), which the Move picker (item 13) also calls - so
+                // dedup, persistence and the re-render fan-out cannot drift between a drag
+                // and a pick. Same rule Phase 3 locked for kanbanMoveCardToCell.
+                // skipDedup for a quadrant-to-quadrant drag: that branch has already
+                // spliced its own entry out of the source array, and re-filtering by id
+                // here would strip the entry we are about to push.
+                commitMatrixEntry(entry, quadrant, { skipDedup: data.source === 'matrix' });
             }
-            
+
             draggedItem = null;
         }
         
@@ -26497,23 +27055,7 @@ Return ONLY the JSON array:`;
             // id, store {id,type}. getTaskData returns a spread COPY, so a defensive id
             // stamp is written back to the underlying source record.
             if (data.source === 'repository') {
-                const rec = getTaskData(data.type, data.idx);
-                if (rec) {
-                    if (!rec.id) {
-                        const newId = generateTaskId();
-                        rec.id = newId;
-                        const user = document.getElementById('dailyPlanUser')?.value;
-                        if (data.type === 'rock') {
-                            const srcRocks = (yearData.quarters[currentQuarter].rocks || []).filter(r => r.owner === user);
-                            if (srcRocks[data.idx]) srcRocks[data.idx].id = newId;
-                        } else if (data.type === 'todo') {
-                            const srcTodos = (yearData.quarters[currentQuarter].todos || []).filter(t => t.owner === user && !t.done);
-                            if (srcTodos[data.idx]) srcTodos[data.idx].id = newId;
-                        }
-                        autoSave();
-                    }
-                    entry = { id: rec.id, type: rec.type || data.type };
-                }
+                entry = _repoDragEntry(data);   // v3.72.0 - id-addressed, see dragStart
             }
             // From matrix — matrix already holds {id,type}; move the reference over.
             else if (data.source === 'matrix') {
@@ -26562,23 +27104,7 @@ Return ONLY the JSON array:`;
                     alert('\u26A0\uFE0F Slot is occupied. Remove the existing task first, or drag to an empty slot.');
                     return;
                 }
-                const rec = getTaskData(data.type, data.idx);
-                if (rec) {
-                    if (!rec.id) {
-                        const newId = generateTaskId();
-                        rec.id = newId;
-                        const user = document.getElementById('dailyPlanUser')?.value;
-                        if (data.type === 'rock') {
-                            const srcRocks = (yearData.quarters[currentQuarter].rocks || []).filter(r => r.owner === user);
-                            if (srcRocks[data.idx]) srcRocks[data.idx].id = newId;
-                        } else if (data.type === 'todo') {
-                            const srcTodos = (yearData.quarters[currentQuarter].todos || []).filter(t => t.owner === user && !t.done);
-                            if (srcTodos[data.idx]) srcTodos[data.idx].id = newId;
-                        }
-                        autoSave();
-                    }
-                    entry = { id: rec.id, type: rec.type || data.type };
-                }
+                entry = _repoDragEntry(data);   // v3.72.0 - id-addressed, see dragStart
             }
             // From matrix — reference↔reference. On swap, the displaced Rule-of-3
             // reference goes back into the matrix; otherwise splice it out of the matrix.
@@ -26603,11 +27129,11 @@ Return ONLY the JSON array:`;
             }
 
             if (entry) {
-                dailyPlanData.ruleOf3[targetSlotIdx] = entry;
-                saveDailyPlan();
-                renderRuleOf3();
-                renderMatrix();
-                renderRepository();
+                // v3.72.0: shared commit tail - see commitMatrixEntry's note. The swap
+                // branches above have already put the displaced entry where it belongs, so
+                // by this point the only job left is "put `entry` in this slot", which is
+                // exactly what the picker needs too.
+                commitRuleEntry(entry, targetSlotIdx);
             }
 
             draggedItem = null;
