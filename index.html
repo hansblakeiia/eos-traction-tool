@@ -6462,9 +6462,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.79.0';
+        const EOS_VERSION = '3.80.0';
         const EOS_BUILD_DATE = '2026-07-31';
-        const EOS_BUILD_TIME = '13:05'; // v3.79.0: AI REWRITE IN THE COMPOSER - Hans's request after his own falsifying test proved Samsung's Writing Assist is Chrome-wide-absent on his phone (missing on google.com too, so no page markup could ever surface it; the pasted advice claiming otherwise was disproven by his own experiment). index.html only; no .gs change, so NO clasp deploy. A sparkle button sits bottom-LEFT of the composer card (where the mode chip sits in the Claude app he modelled the card on); tap -> four options: Tighten it up / Fix spelling & grammar / More professional / Friendlier. Rides the EXISTING plumbing: callAI() through the Task-AI route (aiRouting.taskAssist) with its own budget (AI_TASK_TOKEN_DEFAULTS.composerRewrite = 1600, overridable in Settings > AI Output Length). A rewrite REPLACES text - unlike dictation, which appends - so the previous text is held for a one-tap 'Undo rewrite' chip; a mis-tap can never cost a paragraph. A slow reply is DROPPED if the composer closed or the text changed while the model ran (the 3.64.0 recipient rule). Prompt names the wrong behaviours explicitly per the v3.65.1 lesson (no preamble, no quotes, keep URLs/names/numbers verbatim, same language). Missing API key -> callAI's standard Settings pointer; call failure -> toast, text untouched. Coarse-pointer only by construction (the composer itself is).
+        const EOS_BUILD_TIME = '13:50'; // v3.80.0: ANDROID BACK BUTTON + COMPOSER LIFT WATCHDOG - both from Hans's live-test round. index.html only; no .gs change, so NO clasp deploy. (1) BACK: the app had no history entries, so the system back button always left the site - from inside Settings, the Agenda page, anywhere. Now a guard entry is pushed at boot (coarse pointers only; handler also re-checks at event time, so desktop back is untouched) and popping it closes ONE layer topmost-first: composer (cancel, like the X) -> open row menu -> drawer -> changelog -> one non-gate modal (running its MODALS_SAVED_ON_NAVIGATE saver, so backing out of Settings SAVES) -> then page -> home tab -> then 'Press Back again to leave the EOS Tool' with a 3s window before a second press really exits. THE SIGN-IN/2FA GATES ARE NEVER CLOSED BY BACK - deliberately not routed through closeModalsBeforeNavigate(), which strips EVERY active overlay including the gates (v3.60.2: a gate you can walk around is not a gate). (2) WATCHDOG: his screenshot showed the mic/send row occasionally cut off at the keyboard again - some keyboard-animation race the visualViewport resize/scroll events miss on his Samsung. Rather than guess which event gets swallowed, the card position is re-checked every 300ms while the composer is open; _cmpLift early-returns when nothing drifted so the quiet cost is one rect read per tick. Interval cleared on close AND commit.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -6628,6 +6628,9 @@ Example:
             // v3.77.0 (item 7). Binds to #bottomNav itself, so it is inert wherever the
             // bar is display:none (desktop) and no-ops on fine pointers.
             initBottomNavReorder();
+            // v3.80.0. The guard entry is pushed on coarse pointers only and the popstate
+            // handler re-checks at event time, so desktop back behaviour is untouched.
+            initBackGuard();
             // v3.71.0 (item 3). Must run after the markup exists and before the first
             // showPage(), so the very first syncFabVisibility() already sees the modal state
             // - at this point #appBootGate is still `.modal-overlay active`, which is
@@ -9316,7 +9319,18 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.79.0 &mdash; 2026-07-31 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.80.0 &mdash; 2026-07-31 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Your two reports: the back button kicking you out of the tool, and the composer buttons occasionally hiding again.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>The phone&rsquo;s back button now behaves the way you expected.</strong> It closes whatever is on top first &mdash; Settings, the writing card, the slide-out menu, a task&rsquo;s &ctdot; menu &mdash; then takes you back to your home tab, and only leaves the tool after warning you: &ldquo;Press Back again to leave&rdquo;, with a second press within 3 seconds actually leaving. Backing out of Settings still saves, same as navigating away always has.</li>'
+                + '<li><strong>Why it was broken:</strong> the tool is one single page, so the back button had nothing to go &ldquo;back&rdquo; to and Android left the site entirely. It now keeps a placeholder in the browser history whose only job is to catch that press.</li>'
+                + '<li><strong>One deliberate boundary:</strong> the back button never closes the sign-in or two-factor screens &mdash; those are the front door, not a window.</li>'
+                + '<li><strong>The occasionally-hidden mic and send buttons:</strong> your screenshot showed the keyboard race coming back now and then. The card now double-checks its own position a few times a second the whole time it is open, so whichever animation event your phone swallows, the card corrects itself within a third of a second. If you ever see them cut off for longer than a blink, photograph it.</li>'
+                + '</ul>'
+                + '</div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.79.0 &mdash; 2026-07-31</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Your pick of option 3 &mdash; the AI writing help built into the composer, since Chrome will never show Samsung&rsquo;s.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>A sparkle button now sits at the bottom-left of the writing card</strong> &mdash; the same spot as the mode chip in the Claude app you screenshotted. Tap it and pick: <em>Tighten it up</em>, <em>Fix spelling &amp; grammar</em>, <em>More professional</em>, or <em>Friendlier</em>. The rewritten text lands right back in the card.</li>'
@@ -10853,6 +10867,106 @@ Example:
         // MODALS_SAVED_ON_NAVIGATE is the explicit list so adding a modal to it is a
         // decision someone makes on purpose.
         const MODALS_SAVED_ON_NAVIGATE = { settingsModal: 'saveSettings' };
+        // ============ ANDROID BACK BUTTON (v3.80.0, Hans's live-test report) ============
+        //
+        // "When I'm in Settings or the Agenda window and hit the back button it kicks me
+        // out of the whole tool." Of course it did: the app is one page with no history
+        // entries, so the system back button had nothing to pop and left the site.
+        //
+        // The pattern is the standard Android one: a GUARD history entry is pushed at
+        // boot, and popping it closes ONE layer, topmost first - composer, open row
+        // menu, drawer, changelog, then one non-gate modal (running its
+        // MODALS_SAVED_ON_NAVIGATE saver, so backing out of Settings still saves), then
+        // page -> home tab - and re-arms. At home with nothing open, it warns ("Press
+        // Back again to leave") and only a second press within 3s actually exits.
+        //
+        // Two deliberate boundaries: (1) the sign-in/2FA gates are NEVER closed by back
+        // - they are the front door, not a layer (v3.60.2's lesson: a gate you can walk
+        // around is not a gate); back at a gate goes straight to the leave-warning.
+        // (2) The guard is pushed ONLY on coarse pointers, and the handler re-checks at
+        // event time (the swipe-engine convention) - desktop back behaviour is untouched.
+        const BACK_GATE_IDS = ['appBootGate', 'googleSignInGate', 'appMfaGate', 'mktAuthGate'];
+        let _backGuardArmed = false;
+        let _backExitTimer = null;
+        function _backIsEnabled() {
+            try { return window.matchMedia('(hover: none) and (pointer: coarse)').matches; }
+            catch (e) { return false; }
+        }
+        function _backRearm() {
+            if (_backGuardArmed) return;
+            try { history.pushState({ eosBack: 1 }, ''); _backGuardArmed = true; } catch (e) {}
+        }
+        function _backGateUp() {
+            return BACK_GATE_IDS.some(function (id) {
+                const el = document.getElementById(id);
+                return el && el.classList.contains('active');
+            });
+        }
+        // Close exactly one layer; true if something closed.
+        function _backCloseTopmost() {
+            const cmp = document.getElementById('composerModal');
+            if (cmp && cmp.classList.contains('active')) { closeComposer(); return true; }
+            const menu = document.querySelector('.task-action-menu');
+            if (menu && typeof closeOpenTaskMenu === 'function') {
+                const open = Array.from(document.querySelectorAll('.task-action-menu'))
+                    .some(function (m) { return m.style.display !== 'none' && m.style.display !== ''; });
+                if (open) { closeOpenTaskMenu(); return true; }
+            }
+            const drawer = document.getElementById('mobileDrawer');
+            if (drawer && drawer.classList.contains('open')) { closeMobileDrawer(); return true; }
+            const cl = document.getElementById('changelogModal');
+            if (cl) { cl.remove(); return true; }
+            const overlays = Array.from(document.querySelectorAll('.modal-overlay.active'))
+                .filter(function (m) { return BACK_GATE_IDS.indexOf(m.id) === -1; });
+            if (overlays.length) {
+                // Topmost = highest effective z-index; ties go to the last in DOM order.
+                let top = overlays[0], topZ = -1;
+                overlays.forEach(function (m) {
+                    const z = parseInt(getComputedStyle(m).zIndex, 10) || 0;
+                    if (z >= topZ) { topZ = z; top = m; }
+                });
+                const saver = MODALS_SAVED_ON_NAVIGATE[top.id];
+                if (saver && typeof window[saver] === 'function') {
+                    try { window[saver](); } catch (e) { console.warn('save-on-back failed for ' + top.id, e); }
+                }
+                top.classList.remove('active');
+                return true;
+            }
+            return false;
+        }
+        function _homePageId() {
+            // The same alias map showPage's landing logic uses - enumerated for ALL five
+            // Default Landing Tab values (the 3.70.0 lesson: alias one of five and the
+            // other four open a blank app).
+            const v = (getSettings().defaultTab) || 'weeklyMeeting';
+            const alias = { weeklyMeeting: 'meeting', quarterlyRocks: 'quarterly', scorecard: 'quarterly' };
+            const id = alias[v] || v;
+            return document.getElementById(id) && document.getElementById(id).classList.contains('page')
+                ? id : 'meeting';
+        }
+        function _onBackPop() {
+            if (!_backIsEnabled()) return;   // desktop: never interfere
+            _backGuardArmed = false;
+            if (_backCloseTopmost()) { _backRearm(); return; }
+            const cur = document.querySelector('.page.active');
+            const home = _homePageId();
+            if (!_backGateUp() && cur && cur.id !== home) {
+                showPage(home);
+                _backRearm();
+                return;
+            }
+            // At the root: warn, and stay UNARMED for 3s so a second press really leaves.
+            showToast('Press Back again to leave the EOS Tool');
+            clearTimeout(_backExitTimer);
+            _backExitTimer = setTimeout(_backRearm, 3000);
+        }
+        function initBackGuard() {
+            if (window._backGuardBound) return;
+            window._backGuardBound = true;
+            window.addEventListener('popstate', _onBackPop);
+            if (_backIsEnabled()) _backRearm();
+        }
+
         function closeModalsBeforeNavigate() {
             document.querySelectorAll('.modal-overlay.active').forEach(function(m) {
                 const saver = MODALS_SAVED_ON_NAVIGATE[m.id];
@@ -27386,16 +27500,30 @@ Return ONLY the JSON array:`;
             if (!vv) { shell.style.top = ''; shell.style.bottom = ''; return; }
             const visibleBottom = vv.offsetTop + vv.height;
             const top = Math.max(6, visibleBottom - shell.offsetHeight - 10);
+            // Write only on real drift - the v3.80.0 watchdog calls this a few times a
+            // second, and a same-value style write every tick is pointless layout work.
+            const cur = parseFloat(shell.style.top);
+            if (!isNaN(cur) && Math.abs(cur - top) < 2 && shell.style.bottom === 'auto') return;
             shell.style.bottom = 'auto';
             shell.style.top = top + 'px';
         }
+        let _cmpLiftWatchdog = null;
         function _cmpLiftOn() {
             if (!window.visualViewport) return;
             window.visualViewport.addEventListener('resize', _cmpLift);
             window.visualViewport.addEventListener('scroll', _cmpLift);
+            // v3.80.0 WATCHDOG. Hans's screenshot showed the mic/send row occasionally
+            // cut off again - some keyboard-animation race the resize/scroll events
+            // miss on his phone. Rather than guess which event Samsung swallows, the
+            // position is re-checked every 300ms while the composer is open. _cmpLift
+            // early-returns when nothing drifted, so the quiet cost is one rect read.
+            clearInterval(_cmpLiftWatchdog);
+            _cmpLiftWatchdog = setInterval(_cmpLift, 300);
             _cmpLift();
         }
         function _cmpLiftOff() {
+            clearInterval(_cmpLiftWatchdog);
+            _cmpLiftWatchdog = null;
             const shell = document.querySelector('#composerModal .cmp-shell');
             if (shell) { shell.style.top = ''; shell.style.bottom = ''; }
             if (!window.visualViewport) return;
