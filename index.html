@@ -5092,6 +5092,10 @@
                      keeps its id and its display:none/'' toggle semantics (mktCheckAccess) - it
                      is just a menu row now instead of a toolbar button. -->
                 <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <!-- v3.81.0: the visible per-surface sync state Hans's item 6 asked for.
+                         Static markup, never unmounted, so #syncBadge-marketing cannot join
+                         this file's five dead selectors. -->
+                    <span id="syncBadge-marketing" onclick="syncBadgeExplain('marketing')" title="Sync state"></span>
                     <div id="mktCompanyToggle" class="mkt-company-toggle"></div>
                     <button class="btn btn-primary" onclick="mktNewCard('blog')">+ New Blog</button>
                     <div class="task-action-wrap">
@@ -5903,16 +5907,30 @@
             </div>
                     </div>
                     <div class="set-band" id="setBand-issues">
-                    <!-- Tool Issues -->
+                    <!-- Tool Issues - v3.81.0: a synced list of rows, not a single local
+                         textarea. #syncBadge-issues is mounted here permanently (never
+                         built lazily, never unmounted) so the Settings-hub contract holds
+                         and the id can never go dead. -->
                     <div style="margin-bottom: 16px; padding-top: 14px; border-top: 1px solid #e5e7eb;">
-                        <h4 style="color: #374151; margin-bottom: 8px; font-size: 0.95rem;">🐻 Issues & Feature Requests</h4>
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+                            <h4 style="color: #374151; margin-bottom: 8px; font-size: 0.95rem;">&#128059; Issues &amp; Feature Requests</h4>
+                            <span id="syncBadge-issues" onclick="syncBadgeExplain('issues')" title="Sync state"></span>
+                        </div>
                         <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 8px;">
-                            Log bugs or ideas here, then copy to share with Claude for fixes.
+                            Log bugs or ideas here. They sync to your other devices, and &ldquo;Copy for Claude&rdquo; hands the whole list over with any screenshots attached.
                         </p>
                         <textarea id="toolIssuesNotes" rows="3" placeholder="- Bug: something not working&#10;- Feature: add dark mode" style="width: 100%; font-size: 0.85rem;" onblur="saveToolIssues()"></textarea>
-                        <div style="display: flex; gap: 8px; margin-top: 8px;">
-                            <button class="btn btn-secondary" onclick="copyToolIssues()" style="flex: 1; padding: 6px 10px; font-size: 0.85rem;">📹 Copy for Claude</button>
-                            <button class="btn btn-secondary" onclick="clearToolIssues()" style="padding: 6px 10px; font-size: 0.85rem;">🗑️</button>
+                        <div id="issueDraftThumbs" style="display: none; gap: 6px; flex-wrap: wrap; margin-top: 6px;"></div>
+                        <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
+                            <button class="btn btn-primary" id="issueAddBtn" onclick="issuesAdd()" style="flex: 1; min-width: 120px; padding: 6px 10px; font-size: 0.85rem;">+ Add issue</button>
+                            <button class="btn btn-secondary" id="issueAttachBtn" onclick="issuesAttachPick()" style="padding: 6px 10px; font-size: 0.85rem;">&#128247; Screenshot</button>
+                        </div>
+                        <input type="file" id="issueImageInput" accept="image/*" multiple style="display: none;" onchange="issuesHandleFiles(this.files); this.value = '';">
+                        <div id="toolIssuesList" style="margin-top: 12px;"></div>
+                        <div style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
+                            <button class="btn btn-secondary" onclick="copyToolIssues()" style="flex: 1; min-width: 130px; padding: 6px 10px; font-size: 0.85rem;">Copy for Claude</button>
+                            <button class="btn btn-secondary" onclick="issuesSync(true)" style="padding: 6px 10px; font-size: 0.85rem;">Refresh</button>
+                            <button class="btn btn-secondary" onclick="issuesClearDone()" style="padding: 6px 10px; font-size: 0.85rem;">Clear done</button>
                         </div>
                     </div>
                     </div>
@@ -6462,9 +6480,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.80.0';
+        const EOS_VERSION = '3.81.0';
         const EOS_BUILD_DATE = '2026-07-31';
-        const EOS_BUILD_TIME = '13:50'; // v3.80.0: ANDROID BACK BUTTON + COMPOSER LIFT WATCHDOG - both from Hans's live-test round. index.html only; no .gs change, so NO clasp deploy. (1) BACK: the app had no history entries, so the system back button always left the site - from inside Settings, the Agenda page, anywhere. Now a guard entry is pushed at boot (coarse pointers only; handler also re-checks at event time, so desktop back is untouched) and popping it closes ONE layer topmost-first: composer (cancel, like the X) -> open row menu -> drawer -> changelog -> one non-gate modal (running its MODALS_SAVED_ON_NAVIGATE saver, so backing out of Settings SAVES) -> then page -> home tab -> then 'Press Back again to leave the EOS Tool' with a 3s window before a second press really exits. THE SIGN-IN/2FA GATES ARE NEVER CLOSED BY BACK - deliberately not routed through closeModalsBeforeNavigate(), which strips EVERY active overlay including the gates (v3.60.2: a gate you can walk around is not a gate). (2) WATCHDOG: his screenshot showed the mic/send row occasionally cut off at the keyboard again - some keyboard-animation race the visualViewport resize/scroll events miss on his Samsung. Rather than guess which event gets swallowed, the card position is re-checked every 300ms while the composer is open; _cmpLift early-returns when nothing drifted so the quiet cost is one rect read per tick. Interval cleared on close AND commit.
+        const EOS_BUILD_TIME = '16:20'; // v3.81.0: ISSUES SYNC + IMAGE ATTACHMENTS + VISIBLE PER-SURFACE SYNC STATE - Hans's item 6 (Sec 5.11b-7) and item 10 (Sec 5.11b-6), built together on his decision (b): a Supabase table plus a Storage bucket. index.html + schema.sql; NO .gs change, so NO clasp deploy. (1) ISSUES: eos_tool_issues was a single localStorage STRING that appeared nowhere else in the file - a missing feature, not a broken sync. It is now ONE ROW PER ISSUE in the tool_issues table (a shared text blob synced across two devices is last-write-wins over the whole note, which would erase what he just typed on the phone - the exact failure this feature exists to end). Local fallback is real and SAYS SO. (2) IMAGES: pick or paste a screenshot, downscaled to a 1600px long edge in the browser, uploaded to the PRIVATE tool-issues bucket, shown as thumbnails, and carried into the 'Hi Claude' block as 7-day SIGNED links - private because these are photographs of an internal tool and can carry client names. (3) MARKETING: pull-to-refresh on that page has existed since v3.70.0; what was missing is that mktPullFromCloud() returned false and did nothing without a Supabase profile, so a pull LOOKED like a refresh. mktRefreshFromPull() re-runs the access check first and reports the outcome. (4) THE BADGES: #syncBadge-issues and #syncBadge-marketing, both in STATIC markup and never unmounted, saying synced / local-only / error with the reason one tap away. Graceful degradation with no indicator is a sync bug with extra steps.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -6639,6 +6657,11 @@ Example:
             // v3.74.0 (item 4). One document-level focusin listener, so it covers fields inside
             // modals, fields rendered later, and surfaces that do not exist yet.
             initComposer();
+            // v3.81.0 (item 6). Paint both sync badges from whatever is knowable at boot, so
+            // neither surface can ever be silently local-only. The Supabase session resolves
+            // a moment later (checkAppWideSupabaseSession / mktCheckAccess), which repaints
+            // them; the short re-check catches a device that signs in during that window.
+            initSyncBadges();
 
             // Show default tab based on user preference
             const settings = getSettings();
@@ -9319,7 +9342,20 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.80.0 &mdash; 2026-07-31 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.81.0 &mdash; 2026-07-31 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Your decision (b) &mdash; the issues collector moves to the cloud, takes screenshots, and both surfaces now tell you whether they are actually syncing.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Issues &amp; Feature Requests now sync across your devices.</strong> File one on your phone and it is on your desktop, and Amanda sees it too. Each issue is its own entry with a tick to mark it done and an &times; to delete it &mdash; not one shared block of text, deliberately: two devices editing one block means whoever saves last wipes out the other, which is the exact problem this was meant to fix.</li>'
+                + '<li><strong>Screenshots attach in one tap.</strong> Tap <em>Screenshot</em>, pick the photo, and it rides along with the issue as a thumbnail. On the desktop you can also just paste a screenshot straight into the box. Images are shrunk on your phone before they upload, so it works on mobile data.</li>'
+                + '<li><strong>&ldquo;Copy for Claude&rdquo; now includes the pictures</strong> &mdash; each issue comes out numbered, with your name and date, and a link under it for every screenshot. Those links are private and expire after 7 days; if one has gone dead, open the tool and copy again.</li>'
+                + '<li><strong>Every issue now shows a sync badge, and so does the Marketing board.</strong> It says <em>Synced</em>, <em>Local only</em>, or <em>Sync error</em> &mdash; tap it and it tells you exactly why. This is the real answer to &ldquo;I thought we solved all of these sync across device issues&rdquo;: Marketing was quietly falling back to this-device-only whenever a device had no sign-in, and nothing on screen ever said so.</li>'
+                + '<li><strong>Pull down to refresh on the Marketing tab actually refreshes now.</strong> The gesture worked before but could silently do nothing; it now re-checks your sign-in first and tells you whether it worked.</li>'
+                + '<li><strong>Anything already typed in the old box was kept</strong> &mdash; it becomes your first synced issue the moment you open Settings. Signed out, everything still works on that device and the badge says <em>Local only</em> rather than pretending; screenshots are the one thing that needs a sign-in, and it says so instead of quietly dropping them.</li>'
+                + '</ul>'
+                + '</div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.80.0 &mdash; 2026-07-31</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Your two reports: the back button kicking you out of the tool, and the composer buttons occasionally hiding again.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>The phone&rsquo;s back button now behaves the way you expected.</strong> It closes whatever is on top first &mdash; Settings, the writing card, the slide-out menu, a task&rsquo;s &ctdot; menu &mdash; then takes you back to your home tab, and only leaves the tool after warning you: &ldquo;Press Back again to leave&rdquo;, with a second press within 3 seconds actually leaving. Backing out of Settings still saves, same as navigating away always has.</li>'
@@ -11631,8 +11667,8 @@ Example:
             if (id === 'kanban' && typeof pullKanbanFromCloud === 'function') {
                 return { label: 'Refreshing board…', run: function () { return pullKanbanFromCloud(true); } };
             }
-            if (id === 'marketing' && typeof mktPullFromCloud === 'function') {
-                return { label: 'Refreshing board…', run: function () { return mktPullFromCloud(); } };
+            if (id === 'marketing' && typeof mktRefreshFromPull === 'function') {
+                return { label: 'Refreshing board…', run: function () { return mktRefreshFromPull(); } };
             }
             return { label: 'Syncing…', run: function () { return manualSync(); } };
         }
@@ -13814,12 +13850,25 @@ Example:
             mktCloudPushTimer = setTimeout(mktPushToCloud, 800);
         }
 
+        // v3.81.0: the one place that decides whether this device can talk to the
+        // Marketing tables, in words fit to show a person. The old code answered this
+        // question with a bare `return` at two call sites, which is exactly the silent
+        // degradation the v3.73.0 diagnosis named.
+        function mktSyncBlocker() {
+            if (!mktGetSupabaseClient()) return 'This deployment has no Supabase configured, so the board stays on this device.';
+            if (!mktSupabaseProfile) return 'You are not signed in on this device, so the board is local-only. Sign in with Google and it will sync.';
+            if (!mktSupabaseProfile.firm_id) return 'Your account has no firm set, so the board cannot sync yet. Ask an owner to check the Supabase profiles table.';
+            return null;
+        }
+
         async function mktPushToCloud() {
             const sb = mktGetSupabaseClient();
-            // Not signed in / not configured -> local-only, same graceful-degradation
-            // tradeoff as the rest of the app's "Skip for now" path.
-            if (!sb || !mktSupabaseProfile) return;
+            // Still degrades gracefully when there is no session - but it SAYS SO now
+            // (v3.81.0). Same "Skip for now" tradeoff, no longer invisible.
+            const blocker = mktSyncBlocker();
+            if (blocker) { setSyncState('marketing', 'local', blocker); return; }
             const firmId = mktSupabaseProfile.firm_id;
+            setSyncState('marketing', 'syncing');
 
             try {
                 const cardRows = mktData.cards.map(function(c) { return mktCardToRow(c, firmId); });
@@ -13847,8 +13896,10 @@ Example:
                 const staleCols = (cloudColIds || []).map(function(r) { return r.id; })
                     .filter(function(id) { return localColIds.indexOf(id) === -1; });
                 if (staleCols.length) await sb.from('marketing_columns').delete().in('id', staleCols);
+                setSyncState('marketing', 'synced', '');
             } catch (e) {
                 console.error('Marketing cloud push failed:', e);
+                setSyncState('marketing', 'error', (e && e.message) ? e.message : 'The last save to the cloud failed.');
             }
         }
 
@@ -13859,8 +13910,10 @@ Example:
         // the merged data is still saved locally either way.
         async function mktPullFromCloud() {
             const sb = mktGetSupabaseClient();
-            if (!sb || !mktSupabaseProfile) return false;
+            const blocker = mktSyncBlocker();
+            if (blocker) { setSyncState('marketing', 'local', blocker); return false; }
             const firmId = mktSupabaseProfile.firm_id;
+            setSyncState('marketing', 'syncing');
 
             try {
                 const [cardsRes, colsRes] = await Promise.all([
@@ -13868,7 +13921,9 @@ Example:
                     sb.from('marketing_columns').select('*').eq('firm_id', firmId).order('position')
                 ]);
                 if (cardsRes.error || colsRes.error) {
-                    console.error('Marketing cloud pull failed:', cardsRes.error || colsRes.error);
+                    const err = cardsRes.error || colsRes.error;
+                    console.error('Marketing cloud pull failed:', err);
+                    setSyncState('marketing', 'error', (err && err.message) ? err.message : 'The last read from the cloud failed.');
                     return false;
                 }
 
@@ -13905,11 +13960,34 @@ Example:
                         mktRender();
                     }
                 }
+                setSyncState('marketing', 'synced', '');
                 return true;
             } catch (e) {
                 console.error('Marketing cloud pull failed:', e);
+                setSyncState('marketing', 'error', (e && e.message) ? e.message : 'The last read from the cloud failed.');
                 return false;
             }
+        }
+
+        // v3.81.0 - what pull-to-refresh runs on the Marketing page. The PTR wiring itself
+        // has existed since v3.70.0; what was missing is that mktPullFromCloud() returns
+        // false and does nothing when this device has no Supabase profile, so a pull LOOKED
+        // like a refresh and was not one. This re-runs the access check first (a device that
+        // signed in since the tab was opened gets its profile here), then pulls, then says
+        // out loud what happened.
+        async function mktRefreshFromPull() {
+            if (mktSyncBlocker() && typeof mktCheckAccess === 'function') {
+                try { await mktCheckAccess(); } catch (e) { /* mktCheckAccess reports its own gate */ }
+            }
+            const blocker = mktSyncBlocker();
+            if (blocker) {
+                setSyncState('marketing', 'local', blocker);
+                showToast('Marketing is local-only on this device — ' + blocker, 'info', 7000);
+                return false;
+            }
+            const ok = await mktPullFromCloud();
+            showToast(ok ? 'Marketing board refreshed.' : 'Marketing refresh failed — tap the sync badge for the reason.', ok ? 'info' : 'error', ok ? 4000 : 7000);
+            return ok;
         }
 
         // The gate. Called every time the Marketing tab is opened (showPage's
@@ -13928,6 +14006,8 @@ Example:
             if (!session) {
                 mktSupabaseSession = null;
                 mktSupabaseProfile = null;
+                setSyncState('marketing', 'local', 'You are not signed in on this device, so the board is local-only. Sign in with Google and it will sync.');
+                setSyncState('issues', 'local', issuesSyncBlocker() || '');
                 mktShowAuthGate();
                 return false;
             }
@@ -20005,45 +20085,708 @@ Example:
             document.getElementById('hostingGuideModal').classList.add('active');
         }
         
-        // ==================== TOOL ISSUES ====================
-        function loadToolIssues() {
-            const issues = localStorage.getItem('eos_tool_issues') || '';
-            const textarea = document.getElementById('toolIssuesNotes');
-            if (textarea) textarea.value = issues;
-        }
-        
-        function saveToolIssues() {
-            const textarea = document.getElementById('toolIssuesNotes');
-            if (textarea) {
-                localStorage.setItem('eos_tool_issues', textarea.value);
-            }
-        }
-        
-        function copyToolIssues() {
-            const textarea = document.getElementById('toolIssuesNotes');
-            if (!textarea || !textarea.value.trim()) {
-                alert('No issues to copy. Enter some issues first.');
-                return;
-            }
-            
-            const formatted = `Hi Claude! Here are some issues/feature requests I've noted while using the EOS Traction Tool:
+        // ==================== PER-SURFACE SYNC STATE (v3.81.0) ====================
+        //
+        // The v3.73.0 diagnosis of Hans's item 6 named the real defect on BOTH surfaces
+        // as the same thing: they degrade to local-only with no indication whatsoever, so
+        // "it isn't syncing" is indistinguishable from "it synced and nothing changed".
+        // This is the indicator. One state object, one renderer, one badge id per surface
+        // (#syncBadge-issues, #syncBadge-marketing) - both mounted in static markup and
+        // never unmounted, so the ids can never go dead the way five selectors in this
+        // file already have.
+        //
+        // States, deliberately only five: 'unknown' (not checked yet), 'syncing',
+        // 'synced', 'local' (working, but this device is on its own - with the REASON),
+        // 'error' (a call failed - with the message). Tapping the badge says the detail
+        // out loud rather than hiding it in the console.
+        const SYNC_SURFACE_LABEL = { issues: 'Issues', marketing: 'Marketing' };
+        const _syncState = {
+            issues:    { state: 'unknown', detail: '', at: 0 },
+            marketing: { state: 'unknown', detail: '', at: 0 }
+        };
 
-${textarea.value}
+        function setSyncState(surface, state, detail) {
+            const s = _syncState[surface];
+            if (!s) return;
+            s.state = state;
+            s.detail = detail || '';
+            if (state === 'synced') s.at = Date.now();
+            renderSyncBadge(surface);
+        }
 
-Can you help me fix these or implement these features?`;
-            
-            navigator.clipboard.writeText(formatted).then(() => {
-                alert('✅ Copied! Paste this into a new Claude conversation.');
-                saveToolIssues(); // Save when copying
+        function getSyncState(surface) {
+            return _syncState[surface] || null;
+        }
+
+        function _syncAgo(ts) {
+            if (!ts) return '';
+            const secs = Math.max(0, Math.round((Date.now() - ts) / 1000));
+            if (secs < 45) return 'just now';
+            if (secs < 3600) return Math.round(secs / 60) + 'm ago';
+            if (secs < 86400) return Math.round(secs / 3600) + 'h ago';
+            return new Date(ts).toLocaleDateString();
+        }
+
+        function _syncBadgeFace(s) {
+            if (s.state === 'syncing') return { mark: '↻', text: 'Syncing…', bg: '#eff6ff', ink: '#1d4ed8' };
+            if (s.state === 'synced')  return { mark: '✓', text: 'Synced · ' + _syncAgo(s.at), bg: '#ecfdf5', ink: '#047857' };
+            if (s.state === 'local')   return { mark: '○', text: 'Local only', bg: '#fffbeb', ink: '#b45309' };
+            if (s.state === 'error')   return { mark: '!', text: 'Sync error', bg: '#fef2f2', ink: '#b91c1c' };
+            return { mark: '·', text: 'Checking…', bg: '#f3f4f6', ink: '#6b7280' };
+        }
+
+        function renderSyncBadge(surface) {
+            const el = document.getElementById('syncBadge-' + surface);
+            if (!el) return;
+            const s = _syncState[surface];
+            if (!s) return;
+            const face = _syncBadgeFace(s);
+            el.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;'
+                + 'font-size:0.72rem;font-weight:600;cursor:pointer;white-space:nowrap;border:1px solid rgba(0,0,0,0.06);'
+                + 'background:' + face.bg + ';color:' + face.ink + ';';
+            el.title = s.detail || (SYNC_SURFACE_LABEL[surface] || surface) + ' sync state';
+            el.setAttribute('data-sync-state', s.state);
+            el.textContent = face.mark + ' ' + face.text;
+        }
+
+        function syncBadgeExplain(surface) {
+            const s = _syncState[surface];
+            if (!s) return;
+            const name = SYNC_SURFACE_LABEL[surface] || surface;
+            if (s.detail) { showToast(name + ': ' + s.detail, s.state === 'error' ? 'error' : 'info', 7000); return; }
+            if (s.state === 'synced') { showToast(name + ' synced ' + _syncAgo(s.at) + '.'); return; }
+            showToast(name + ': ' + _syncBadgeFace(s).text);
+        }
+
+        function renderAllSyncBadges() {
+            Object.keys(_syncState).forEach(renderSyncBadge);
+        }
+
+        // Boot paint. Both badges live in static markup, so this can never be a no-op for
+        // a missing element - and the harness asserts exactly that.
+        function initSyncBadges() {
+            const paint = function() {
+                const mb = mktSyncBlocker();
+                if (mb) setSyncState('marketing', 'local', mb);
+                else if (_syncState.marketing.state === 'unknown' || _syncState.marketing.state === 'local') setSyncState('marketing', 'unknown');
+                const ib = issuesSyncBlocker();
+                if (ib) setSyncState('issues', 'local', ib);
+                else if (_syncState.issues.state === 'unknown' || _syncState.issues.state === 'local') setSyncState('issues', 'unknown');
+            };
+            paint();
+            // The Supabase session is resolved asynchronously during boot; re-read once it
+            // has had a chance to land rather than leaving a stale "Local only" on screen.
+            setTimeout(paint, 2500);
+        }
+
+        // ==================== TOOL ISSUES (v3.81.0) ====================
+        //
+        // Hans's item 6 (Sec 5.11b-7) half (a) and his item 10 (Sec 5.11b-6), built
+        // together because they were always one decision. Before this release
+        // `eos_tool_issues` was a single localStorage STRING that appeared nowhere else
+        // in the file - not a broken sync, a missing feature.
+        //
+        // His decision, 2026-07-31: option (b), a Supabase table plus a Storage bucket.
+        //
+        // ONE ROW PER ISSUE, not one shared blob. A blob synced across two devices is
+        // last-write-wins over the whole note, so the desktop's next blur would silently
+        // erase what he just typed on the phone - the exact failure this feature exists
+        // to end. Rows also give an image somewhere to belong.
+        //
+        // LOCAL FALLBACK IS REAL, NOT SILENT: with no Supabase session everything still
+        // works on this device and the badge says "Local only" with the reason one tap
+        // away. Images are the one thing refused while signed out, and it says so rather
+        // than accepting them - a 4MB phone screenshot base64'd into a ~5MB localStorage
+        // quota would take the whole app's storage down with it.
+        const TOOL_ISSUES_KEY = 'eos_tool_issues';
+        const TOOL_ISSUES_BUCKET = 'tool-issues';
+        const ISSUE_IMG_MAX_EDGE = 1600;   // long edge after downscale
+        const ISSUE_IMG_QUALITY = 0.82;
+        const ISSUE_LINK_TTL = 60 * 60 * 24 * 7;  // export links: 7 days
+        const ISSUE_THUMB_TTL = 60 * 60;          // on-screen thumbnails: 1 hour
+
+        let toolIssues = [];             // newest first
+        let _issuePendingDeletes = [];   // ids deleted while offline
+        let _issueDraftImages = [];      // {id, name, blob, previewUrl} - staged, not uploaded
+        let _issueThumbUrls = {};        // storage path -> signed url (session cache)
+        let _issueSyncing = false;
+
+        function issueNewId(prefix) {
+            return (prefix || 'iss') + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+        }
+
+        // Deterministic id for the ONE issue migrated out of the old free-text blob, so
+        // Hans's phone and his desktop migrating the same text produce the same row
+        // instead of two near-duplicates.
+        function _issueHashId(text) {
+            let h = 5381;
+            for (let i = 0; i < text.length; i++) h = ((h << 5) + h + text.charCodeAt(i)) >>> 0;
+            return 'iss_legacy_' + h.toString(36);
+        }
+
+        function issuesLoadLocal() {
+            let raw = '';
+            try { raw = localStorage.getItem(TOOL_ISSUES_KEY) || ''; } catch (e) { raw = ''; }
+            toolIssues = [];
+            _issuePendingDeletes = [];
+            let draft = '';
+            if (!raw) return draft;
+            let parsed = null;
+            try { parsed = JSON.parse(raw); } catch (e) { parsed = null; }
+            if (parsed && parsed.v === 2 && Array.isArray(parsed.issues)) {
+                toolIssues = parsed.issues;
+                _issuePendingDeletes = Array.isArray(parsed.pendingDeletes) ? parsed.pendingDeletes : [];
+                draft = typeof parsed.draft === 'string' ? parsed.draft : '';
+            } else {
+                // Pre-3.81.0: the whole collector was one string. Preserve it EXACTLY as a
+                // single issue (splitting it into lines would be guessing at his format)
+                // and mark it dirty so it uploads on the next sync.
+                const body = String(raw).trim();
+                if (body) {
+                    toolIssues = [{
+                        id: _issueHashId(body), body: body, status: 'open', images: [],
+                        createdByEmail: '', createdByName: '',
+                        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+                        dirty: true
+                    }];
+                }
+            }
+            issuesSort();
+            return draft;
+        }
+
+        function issuesSort() {
+            toolIssues.sort(function(a, b) {
+                if ((a.status === 'done') !== (b.status === 'done')) return a.status === 'done' ? 1 : -1;
+                return (b.createdAt || '') < (a.createdAt || '') ? -1 : 1;
             });
         }
-        
-        function clearToolIssues() {
-            if (confirm('Clear all logged issues?')) {
-                const textarea = document.getElementById('toolIssuesNotes');
-                if (textarea) textarea.value = '';
-                localStorage.removeItem('eos_tool_issues');
+
+        function issuesSaveLocal() {
+            const ta = document.getElementById('toolIssuesNotes');
+            const payload = {
+                v: 2,
+                issues: toolIssues,
+                pendingDeletes: _issuePendingDeletes,
+                draft: ta ? (ta.value || '') : ''
+            };
+            try {
+                localStorage.setItem(TOOL_ISSUES_KEY, JSON.stringify(payload));
+            } catch (e) {
+                console.error('Issues save failed:', e);
+                showToast('Could not save issues on this device.', 'error');
             }
+        }
+
+        // Why this device can or cannot sync, in words fit to show a person.
+        function issuesSyncBlocker() {
+            const sb = mktGetSupabaseClient();
+            if (!sb) return 'This deployment has no Supabase configured, so issues stay on this device.';
+            if (!mktSupabaseProfile) return 'You are not signed in on this device, so issues are saved here only. Sign in with Google and they will sync everywhere.';
+            if (!mktSupabaseProfile.firm_id) return 'Your account has no firm set, so issues cannot sync yet. Ask an owner to check the Supabase profiles table.';
+            return null;
+        }
+
+        function issuesCurrentAuthor() {
+            const p = mktSupabaseProfile || {};
+            let email = p.email || '';
+            let name = p.display_name || '';
+            if (!email) { try { email = localStorage.getItem('eos_signed_in_email') || ''; } catch (e) {} }
+            if (!name && email) {
+                const m = (getSettings().teamMembers || []).find(function(x) {
+                    return (x.email || '').toLowerCase() === email.toLowerCase();
+                });
+                if (m) name = m.name || m.initials || '';
+            }
+            return { email: email, name: name };
+        }
+
+        function issueRowFromLocal(it, firmId) {
+            return {
+                id: it.id,
+                firm_id: firmId,
+                body: it.body || '',
+                status: it.status === 'done' ? 'done' : 'open',
+                images: it.images || [],
+                created_by_email: it.createdByEmail || '',
+                created_by_name: it.createdByName || '',
+                created_at: it.createdAt || new Date().toISOString(),
+                updated_at: it.updatedAt || new Date().toISOString()
+            };
+        }
+
+        function issueLocalFromRow(row) {
+            return {
+                id: row.id,
+                body: row.body || '',
+                status: row.status === 'done' ? 'done' : 'open',
+                images: Array.isArray(row.images) ? row.images : [],
+                createdByEmail: row.created_by_email || '',
+                createdByName: row.created_by_name || '',
+                createdAt: row.created_at || '',
+                updatedAt: row.updated_at || '',
+                dirty: false
+            };
+        }
+
+        // Push everything dirty, apply queued deletes, then take the cloud as truth and
+        // re-append anything that failed to push. Deliberately simple: the collector is
+        // append-mostly and two people never edit the same line of it.
+        async function issuesSync(announce) {
+            if (_issueSyncing) return false;
+            const blocker = issuesSyncBlocker();
+            if (blocker) {
+                setSyncState('issues', 'local', blocker);
+                if (announce) showToast(blocker, 'info', 7000);
+                return false;
+            }
+            _issueSyncing = true;
+            setSyncState('issues', 'syncing');
+            const sb = mktGetSupabaseClient();
+            const firmId = mktSupabaseProfile.firm_id;
+            try {
+                if (_issuePendingDeletes.length) {
+                    const { error } = await sb.from('tool_issues').delete().in('id', _issuePendingDeletes);
+                    if (error) throw error;
+                    _issuePendingDeletes = [];
+                }
+                const dirty = toolIssues.filter(function(i) { return i.dirty; });
+                const pushedIds = {};
+                if (dirty.length) {
+                    const { error } = await sb.from('tool_issues')
+                        .upsert(dirty.map(function(i) { return issueRowFromLocal(i, firmId); }));
+                    if (error) throw error;
+                    dirty.forEach(function(i) { i.dirty = false; pushedIds[i.id] = true; });
+                }
+                const { data, error } = await sb.from('tool_issues').select('*').eq('firm_id', firmId);
+                if (error) throw error;
+                const cloud = (data || []).map(issueLocalFromRow);
+                const cloudIds = {};
+                cloud.forEach(function(c) { cloudIds[c.id] = true; });
+                // The read is authoritative, with ONE exception, and the exception is the
+                // whole reason this is not a plain replace: a row this run just pushed that
+                // the read did not hand back (replication lag, a filtered row) is kept AND
+                // re-marked dirty, so the next sync tries again. A row we did NOT push that
+                // is missing from the read is another device's delete and is allowed to go.
+                // Clearing `dirty` before the read and then trusting the read blindly would
+                // make a just-filed issue disappear off the device that filed it.
+                toolIssues.forEach(function(i) {
+                    if (cloudIds[i.id]) return;
+                    if (i.dirty || pushedIds[i.id]) { i.dirty = true; cloud.push(i); }
+                });
+                toolIssues = cloud;
+                issuesSort();
+                issuesSaveLocal();
+                issuesRender();
+                setSyncState('issues', 'synced', '');
+                if (announce) showToast('Issues synced.');
+                return true;
+            } catch (e) {
+                console.error('Issues sync failed:', e);
+                const msg = (e && e.message) ? e.message : 'Unknown error';
+                setSyncState('issues', 'error',
+                    msg + (/tool_issues/.test(msg) || /does not exist/i.test(msg)
+                        ? ' — the tool_issues table may not have been created yet (schema.sql).' : ''));
+                if (announce) showToast('Issues sync failed: ' + msg, 'error', 7000);
+                return false;
+            } finally {
+                _issueSyncing = false;
+            }
+        }
+
+        // ---------- images ----------
+        // Downscaled in the browser before it ever leaves the phone: a 4MB screenshot
+        // becomes a few hundred KB, which matters on mobile data and keeps the bucket small.
+        function issuesDownscale(file) {
+            return new Promise(function(resolve, reject) {
+                const url = URL.createObjectURL(file);
+                const im = new Image();
+                im.onload = function() {
+                    const scale = Math.min(1, ISSUE_IMG_MAX_EDGE / Math.max(im.width, im.height));
+                    const w = Math.max(1, Math.round(im.width * scale));
+                    const h = Math.max(1, Math.round(im.height * scale));
+                    const cv = document.createElement('canvas');
+                    cv.width = w; cv.height = h;
+                    cv.getContext('2d').drawImage(im, 0, 0, w, h);
+                    cv.toBlob(function(blob) {
+                        URL.revokeObjectURL(url);
+                        if (!blob) { reject(new Error('That image could not be read on this device.')); return; }
+                        resolve(blob);
+                    }, 'image/jpeg', ISSUE_IMG_QUALITY);
+                };
+                im.onerror = function() {
+                    URL.revokeObjectURL(url);
+                    reject(new Error('That image format is not readable in this browser (HEIC photos often are not).'));
+                };
+                im.src = url;
+            });
+        }
+
+        function issuesAttachPick() {
+            const blocker = issuesSyncBlocker();
+            if (blocker) {
+                showToast('Screenshots need a sign-in — ' + blocker, 'error', 8000);
+                return;
+            }
+            const input = document.getElementById('issueImageInput');
+            if (input) input.click();
+        }
+
+        async function issuesHandleFiles(files) {
+            const list = Array.prototype.slice.call(files || []);
+            if (!list.length) return;
+            if (issuesSyncBlocker()) { showToast('Sign in first — screenshots are stored in the cloud, not on this device.', 'error', 7000); return; }
+            for (let i = 0; i < list.length; i++) {
+                const f = list[i];
+                if (!/^image\//.test(f.type || '')) { showToast('Skipped ' + (f.name || 'a file') + ' — not an image.'); continue; }
+                try {
+                    const blob = await issuesDownscale(f);
+                    const id = issueNewId('img');
+                    _issueDraftImages.push({ id: id, name: f.name || 'screenshot.jpg', blob: blob, previewUrl: URL.createObjectURL(blob) });
+                } catch (e) {
+                    showToast((e && e.message) || 'Could not read that image.', 'error', 7000);
+                }
+            }
+            issuesRenderDraftThumbs();
+        }
+
+        // Desktop convenience: a screenshot on the clipboard pastes straight into the box.
+        function issuesHandlePaste(e) {
+            const items = (e.clipboardData && e.clipboardData.items) || [];
+            const files = [];
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].kind === 'file' && /^image\//.test(items[i].type || '')) {
+                    const f = items[i].getAsFile();
+                    if (f) files.push(f);
+                }
+            }
+            if (!files.length) return;
+            e.preventDefault();
+            issuesHandleFiles(files);
+        }
+
+        function issuesRemoveDraftImage(id) {
+            const idx = _issueDraftImages.findIndex(function(x) { return x.id === id; });
+            if (idx === -1) return;
+            try { URL.revokeObjectURL(_issueDraftImages[idx].previewUrl); } catch (e) {}
+            _issueDraftImages.splice(idx, 1);
+            issuesRenderDraftThumbs();
+        }
+
+        async function issuesUploadDraftImages(issueId) {
+            const sb = mktGetSupabaseClient();
+            const firmId = mktSupabaseProfile.firm_id;
+            const out = [];
+            for (let i = 0; i < _issueDraftImages.length; i++) {
+                const img = _issueDraftImages[i];
+                const path = firmId + '/' + issueId + '/' + img.id + '.jpg';
+                const { error } = await sb.storage.from(TOOL_ISSUES_BUCKET)
+                    .upload(path, img.blob, { contentType: 'image/jpeg', upsert: true });
+                if (error) throw error;
+                out.push({ id: img.id, path: path, name: img.name || '' });
+            }
+            return out;
+        }
+
+        async function issuesSignedUrls(paths, ttl) {
+            const sb = mktGetSupabaseClient();
+            const out = {};
+            if (!sb || !paths.length) return out;
+            try {
+                const { data, error } = await sb.storage.from(TOOL_ISSUES_BUCKET).createSignedUrls(paths, ttl);
+                if (error) throw error;
+                (data || []).forEach(function(d) {
+                    if (d && d.path && d.signedUrl) out[d.path] = d.signedUrl;
+                });
+            } catch (e) {
+                console.error('Issue image links failed:', e);
+            }
+            return out;
+        }
+
+        // Thumbnails are drawn as empty frames first and filled in when the signed URLs
+        // come back, so a slow storage call can never hold up the list render.
+        async function issuesResolveThumbs() {
+            const imgs = Array.prototype.slice.call(document.querySelectorAll('#toolIssuesList img[data-issue-path]'));
+            const need = [];
+            imgs.forEach(function(el) {
+                const p = el.getAttribute('data-issue-path');
+                if (_issueThumbUrls[p]) { el.src = _issueThumbUrls[p]; return; }
+                if (need.indexOf(p) === -1) need.push(p);
+            });
+            if (!need.length) return;
+            const urls = await issuesSignedUrls(need, ISSUE_THUMB_TTL);
+            Object.keys(urls).forEach(function(p) { _issueThumbUrls[p] = urls[p]; });
+            imgs.forEach(function(el) {
+                const p = el.getAttribute('data-issue-path');
+                if (_issueThumbUrls[p]) el.src = _issueThumbUrls[p];
+            });
+        }
+
+        async function issuesOpenImage(path) {
+            let url = _issueThumbUrls[path];
+            if (!url) {
+                const urls = await issuesSignedUrls([path], ISSUE_THUMB_TTL);
+                url = urls[path];
+                if (url) _issueThumbUrls[path] = url;
+            }
+            if (!url) { showToast('Could not open that screenshot.', 'error'); return; }
+            window.open(url, '_blank', 'noopener');
+        }
+
+        async function issuesRemoveImage(issueId, imgId) {
+            const it = toolIssues.find(function(x) { return x.id === issueId; });
+            if (!it) return;
+            const img = (it.images || []).find(function(x) { return x.id === imgId; });
+            if (!img) return;
+            if (!confirm('Remove this screenshot?')) return;
+            const sb = mktGetSupabaseClient();
+            if (sb && !issuesSyncBlocker()) {
+                try { await sb.storage.from(TOOL_ISSUES_BUCKET).remove([img.path]); } catch (e) { console.error('Image delete failed:', e); }
+            }
+            it.images = (it.images || []).filter(function(x) { return x.id !== imgId; });
+            it.updatedAt = new Date().toISOString();
+            it.dirty = true;
+            issuesSaveLocal();
+            issuesRender();
+            issuesSync();
+        }
+
+        // ---------- list actions ----------
+        async function issuesAdd() {
+            const ta = document.getElementById('toolIssuesNotes');
+            const body = ta ? (ta.value || '').trim() : '';
+            if (!body && !_issueDraftImages.length) {
+                showToast('Type an issue first, or attach a screenshot.');
+                return;
+            }
+            const author = issuesCurrentAuthor();
+            const id = issueNewId('iss');
+            const now = new Date().toISOString();
+            let images = [];
+            if (_issueDraftImages.length) {
+                const btn = document.getElementById('issueAddBtn');
+                if (btn) { btn.disabled = true; btn.textContent = 'Uploading…'; }
+                try {
+                    images = await issuesUploadDraftImages(id);
+                } catch (e) {
+                    console.error('Screenshot upload failed:', e);
+                    showToast('Screenshots did not upload (' + ((e && e.message) || 'unknown error') + '). Your text was not filed — try again, or remove the images and file the text alone.', 'error', 9000);
+                    if (btn) { btn.disabled = false; btn.textContent = '+ Add issue'; }
+                    return;
+                }
+                if (btn) { btn.disabled = false; btn.textContent = '+ Add issue'; }
+                _issueDraftImages.forEach(function(x) { try { URL.revokeObjectURL(x.previewUrl); } catch (e) {} });
+                _issueDraftImages = [];
+            }
+            toolIssues.unshift({
+                id: id, body: body, status: 'open', images: images,
+                createdByEmail: author.email, createdByName: author.name,
+                createdAt: now, updatedAt: now, dirty: true
+            });
+            if (ta) ta.value = '';
+            issuesSort();
+            issuesSaveLocal();
+            issuesRenderDraftThumbs();
+            issuesRender();
+            issuesSync();
+        }
+
+        function issuesToggleDone(id) {
+            const it = toolIssues.find(function(x) { return x.id === id; });
+            if (!it) return;
+            it.status = it.status === 'done' ? 'open' : 'done';
+            it.updatedAt = new Date().toISOString();
+            it.dirty = true;
+            issuesSort();
+            issuesSaveLocal();
+            issuesRender();
+            issuesSync();
+        }
+
+        function issuesEdit(id, text) {
+            const it = toolIssues.find(function(x) { return x.id === id; });
+            if (!it) return;
+            const next = (text || '').trim();
+            if (next === (it.body || '')) return;   // same early-return the composer relies on
+            it.body = next;
+            it.updatedAt = new Date().toISOString();
+            it.dirty = true;
+            issuesSaveLocal();
+            issuesSync();
+        }
+
+        async function issuesDelete(id) {
+            const it = toolIssues.find(function(x) { return x.id === id; });
+            if (!it) return;
+            if (!confirm('Delete this issue?')) return;
+            const paths = (it.images || []).map(function(x) { return x.path; });
+            const sb = mktGetSupabaseClient();
+            if (sb && paths.length && !issuesSyncBlocker()) {
+                try { await sb.storage.from(TOOL_ISSUES_BUCKET).remove(paths); } catch (e) { console.error('Image delete failed:', e); }
+            }
+            toolIssues = toolIssues.filter(function(x) { return x.id !== id; });
+            if (_issuePendingDeletes.indexOf(id) === -1) _issuePendingDeletes.push(id);
+            issuesSaveLocal();
+            issuesRender();
+            issuesSync();
+        }
+
+        function issuesClearDone() {
+            const done = toolIssues.filter(function(x) { return x.status === 'done'; });
+            if (!done.length) { showToast('Nothing is marked done yet.'); return; }
+            if (!confirm('Delete ' + done.length + ' completed issue' + (done.length === 1 ? '' : 's') + '?')) return;
+            const sb = mktGetSupabaseClient();
+            const paths = [];
+            done.forEach(function(d) { (d.images || []).forEach(function(x) { paths.push(x.path); }); });
+            if (sb && paths.length && !issuesSyncBlocker()) {
+                try { sb.storage.from(TOOL_ISSUES_BUCKET).remove(paths); } catch (e) { console.error('Image delete failed:', e); }
+            }
+            done.forEach(function(d) { if (_issuePendingDeletes.indexOf(d.id) === -1) _issuePendingDeletes.push(d.id); });
+            toolIssues = toolIssues.filter(function(x) { return x.status !== 'done'; });
+            issuesSaveLocal();
+            issuesRender();
+            issuesSync();
+        }
+
+        // ---------- render ----------
+        function issuesRenderDraftThumbs() {
+            const wrap = document.getElementById('issueDraftThumbs');
+            if (!wrap) return;
+            if (!_issueDraftImages.length) { wrap.innerHTML = ''; wrap.style.display = 'none'; return; }
+            wrap.style.display = 'flex';
+            wrap.innerHTML = _issueDraftImages.map(function(img) {
+                return '<span style="position:relative;display:inline-block;">'
+                    + '<img src="' + img.previewUrl + '" alt="' + escapeHtml(img.name) + '" '
+                    + 'style="width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;">'
+                    + '<button onclick="issuesRemoveDraftImage(\'' + img.id + '\')" title="Remove" '
+                    + 'style="position:absolute;top:-7px;right:-7px;width:24px;height:24px;min-height:24px;line-height:1;padding:0;'
+                    + 'border-radius:50%;border:1px solid #e5e7eb;background:white;color:#b91c1c;font-size:0.8rem;cursor:pointer;">&times;</button>'
+                    + '</span>';
+            }).join('');
+        }
+
+        function _issueThumbsHtml(it) {
+            if (!(it.images || []).length) return '';
+            return '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">'
+                + it.images.map(function(img) {
+                    return '<span style="position:relative;display:inline-block;">'
+                        + '<img data-issue-path="' + escapeHtml(img.path) + '" alt="' + escapeHtml(img.name || 'screenshot') + '" '
+                        + 'onclick="issuesOpenImage(\'' + escapeHtml(img.path) + '\')" '
+                        + 'style="width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;background:#f3f4f6;cursor:zoom-in;">'
+                        + '<button onclick="issuesRemoveImage(\'' + it.id + '\',\'' + img.id + '\')" title="Remove screenshot" '
+                        + 'style="position:absolute;top:-7px;right:-7px;width:24px;height:24px;min-height:24px;line-height:1;padding:0;'
+                        + 'border-radius:50%;border:1px solid #e5e7eb;background:white;color:#b91c1c;font-size:0.8rem;cursor:pointer;">&times;</button>'
+                        + '</span>';
+                }).join('')
+                + '</div>';
+        }
+
+        function issuesRender() {
+            const list = document.getElementById('toolIssuesList');
+            if (!list) return;
+            if (!toolIssues.length) {
+                list.innerHTML = '<p style="font-size:0.78rem;color:var(--gray-500);margin:8px 0 0;">Nothing logged yet.</p>';
+                return;
+            }
+            list.innerHTML = toolIssues.map(function(it) {
+                const done = it.status === 'done';
+                const who = it.createdByName || it.createdByEmail || '';
+                const when = it.createdAt ? new Date(it.createdAt).toLocaleDateString() : '';
+                const meta = [who, when].filter(Boolean).join(' · ');
+                return '<div style="border:1px solid #e5e7eb;border-radius:8px;padding:8px 10px;margin-bottom:8px;'
+                    + 'background:' + (done ? '#f9fafb' : 'white') + ';">'
+                    + '<div style="display:flex;gap:8px;align-items:flex-start;">'
+                    + '<button onclick="issuesToggleDone(\'' + it.id + '\')" title="' + (done ? 'Reopen' : 'Mark done') + '" '
+                    + 'style="flex:0 0 auto;width:30px;height:30px;min-height:30px;padding:0;line-height:1;border-radius:4px;'
+                    + 'border:1px solid ' + (done ? '#047857' : '#d1d5db') + ';background:' + (done ? '#047857' : 'white') + ';'
+                    + 'color:white;font-size:0.75rem;cursor:pointer;">' + (done ? '&#10003;' : '') + '</button>'
+                    + '<div style="flex:1;min-width:0;">'
+                    + '<div contenteditable="true" onblur="issuesEdit(\'' + it.id + '\', this.innerText)" '
+                    + 'style="font-size:0.82rem;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;'
+                    + (done ? 'text-decoration:line-through;color:var(--gray-500);' : 'color:#1f2937;') + '">'
+                    + escapeHtml(it.body || '') + '</div>'
+                    + (meta ? '<div style="font-size:0.68rem;color:var(--gray-500);margin-top:3px;">' + escapeHtml(meta) + '</div>' : '')
+                    + _issueThumbsHtml(it)
+                    + '</div>'
+                    + '<button onclick="issuesDelete(\'' + it.id + '\')" title="Delete" '
+                    + 'style="flex:0 0 auto;width:30px;height:30px;min-height:30px;padding:0;line-height:1;border:none;'
+                    + 'background:none;color:#9ca3af;font-size:1rem;cursor:pointer;">&times;</button>'
+                    + '</div></div>';
+            }).join('');
+            issuesResolveThumbs();
+        }
+
+        // Entry point openSettings() calls. Paints from local storage first so the band is
+        // never empty while a network call is in flight, then reconciles.
+        function loadToolIssues() {
+            const draft = issuesLoadLocal();
+            const ta = document.getElementById('toolIssuesNotes');
+            if (ta) {
+                ta.value = draft;
+                if (!ta._issuePasteBound) { ta._issuePasteBound = true; ta.addEventListener('paste', issuesHandlePaste); }
+            }
+            issuesRenderDraftThumbs();
+            issuesRender();
+            const blocker = issuesSyncBlocker();
+            if (blocker) setSyncState('issues', 'local', blocker);
+            else issuesSync();
+        }
+
+        // Kept for the textarea's onblur: the half-typed issue in the compose box survives
+        // a navigation away, exactly as the old single-textarea collector did.
+        function saveToolIssues() {
+            issuesSaveLocal();
+        }
+
+        function copyToolIssues() {
+            const ta = document.getElementById('toolIssuesNotes');
+            const pending = ta ? (ta.value || '').trim() : '';
+            const open = toolIssues.filter(function(x) { return x.status !== 'done'; });
+            if (!open.length && !pending) {
+                alert('No issues to copy. Log one first.');
+                return;
+            }
+            const paths = [];
+            open.forEach(function(it) { (it.images || []).forEach(function(img) { paths.push(img.path); }); });
+
+            const build = function(links) {
+                const lines = [];
+                open.forEach(function(it, n) {
+                    const who = it.createdByName || it.createdByEmail || '';
+                    const when = it.createdAt ? new Date(it.createdAt).toLocaleDateString() : '';
+                    const tag = [who, when].filter(Boolean).join(', ');
+                    lines.push((n + 1) + '. ' + (tag ? '[' + tag + '] ' : '') + (it.body || '(screenshot only)'));
+                    (it.images || []).forEach(function(img) {
+                        const url = links[img.path];
+                        lines.push('   Screenshot: ' + (url || '(link unavailable - open the tool and copy again)'));
+                    });
+                });
+                if (pending) lines.push((open.length + 1) + '. ' + pending + '  [not filed yet]');
+                let out = 'Hi Claude! Here are some issues/feature requests I\'ve noted while using the EOS Traction Tool:\n\n'
+                    + lines.join('\n')
+                    + '\n\nCan you help me fix these or implement these features?';
+                if (paths.length) out += '\n\n(Screenshot links are signed and expire in 7 days - re-copy from the tool if one has gone dead.)';
+                return out;
+            };
+
+            const finish = function(text) {
+                navigator.clipboard.writeText(text).then(function() {
+                    showToast('Copied — paste it into a new Claude conversation.');
+                    issuesSaveLocal();
+                }, function() {
+                    alert('Could not reach the clipboard. Here is the text:\n\n' + text);
+                });
+            };
+
+            if (!paths.length || issuesSyncBlocker()) { finish(build({})); return; }
+            issuesSignedUrls(paths, ISSUE_LINK_TTL).then(function(links) { finish(build(links)); });
+        }
+
+        // The old collector's single trash button cleared everything at once. With real
+        // rows that would be a data-loss button, so it clears only what is marked done.
+        function clearToolIssues() {
+            issuesClearDone();
         }
         
         let currentIDSIndex = -1;
