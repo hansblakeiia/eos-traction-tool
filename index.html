@@ -598,6 +598,53 @@
         .tr-inline select { width: auto; margin: 0; font-size: 0.8rem; flex-shrink: 0; }
         .tr-inline input[type="date"] { width: 130px; margin: 0; font-size: 0.8rem; flex-shrink: 0; }
 
+        /* §5.11b-8 ITEM 6 — THE CALENDAR CHIP (v3.82.0).
+           The old control was a bare <input type="date"> with no label, which is why Hans said
+           it "means nothing to me… a simple 'Calendar' icon would have been better". The date
+           input is still here and still edits inline — it is stretched invisibly across the
+           chip, so tapping anywhere on the chip opens the platform's own date picker. That is
+           deliberately NOT `showPicker()`: a real input covering its own label works on every
+           browser without a capability check, and a date picker is exactly the kind of control
+           that must not depend on one. The chip's LABEL is what changed. */
+        .tr-datechip {
+            position: relative; display: inline-flex; align-items: center; gap: 5px;
+            height: 26px; padding: 0 9px; border: 1px solid var(--gray-200); border-radius: 13px;
+            background: #fff; color: var(--gray-700); font-size: 0.74rem; font-weight: 500;
+            cursor: pointer; white-space: nowrap; flex: 0 0 auto;
+        }
+        .tr-datechip:hover { border-color: var(--gray-500); }
+        .tr-datechip.is-empty { border-style: dashed; color: var(--gray-500); }
+        .tr-datechip.is-overdue { background: #fee2e2; border-color: #fecaca; color: #b91c1c; }
+        .tr-datechip.is-soon { background: #fef3c7; border-color: #fde68a; color: #92400e; }
+        /* The real control, covering the chip. opacity:0 rather than display:none or
+           visibility:hidden — both of those make it unclickable, which would turn the chip
+           into a decoration.
+           `inset: -1px`, not 0: an absolutely positioned child resolves inset against the
+           containing block's PADDING box, so `0` leaves the chip's own 1px border uncovered
+           and a tap on the rim hits the label instead of the picker. Measured (83×24 inside
+           an 85×26 chip) rather than reasoned about. */
+        .tr-datechip input[type="date"] {
+            position: absolute; inset: -1px; width: auto; height: auto;
+            margin: 0; padding: 0; border: 0; opacity: 0; cursor: pointer;
+        }
+        /* Owner select as a pill, sized to its content instead of stretching a whole line. */
+        .tr-ownerpill {
+            display: inline-flex; align-items: center; gap: 5px;
+            height: 26px; padding: 0 4px 0 8px; border: 1px solid var(--gray-200);
+            border-radius: 13px; background: #fff; flex: 0 0 auto; max-width: 100%;
+        }
+        .tr-ownerpill .tr-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .tr-ownerpill select {
+            border: 0; background: transparent; font-size: 0.74rem; font-weight: 500;
+            padding: 0 2px; height: 24px; min-height: 24px; color: var(--gray-700);
+            max-width: 100%; cursor: pointer;
+        }
+        .tr-ownerpill select:focus { outline: none; }
+        @media (hover: none) and (pointer: coarse) {
+            .tr-datechip, .tr-ownerpill { height: 30px; }
+            .tr-ownerpill select { height: 28px; min-height: 28px; }
+        }
+
         /* The coarse-pointer block further down sets `button { min-height: 44px }`, which
            would silently turn every 22px pill into a 44px one on exactly the device this
            row is meant to fit. Same trap that bit the .todo-ctl baseline in v3.62.0. */
@@ -1834,11 +1881,19 @@
                Worth saying plainly: compact is a DESKTOP density. In the 538px Weekly
                Meeting pane it gives the title 199px on one line, which is what it is for. */
             .todo-item.den-compact .tr-meta > .tr-pill:not(.tr-pill-due) { display: none; }
-            /* `full` density on a phone: the inline editors get their own full-width line
-               rather than competing with the title. */
+            /* `full` density on a phone: the inline editors get their own line rather than
+               competing with the title — but v3.82.0 stops them STRETCHING across it.
+               §5.11b-8 item 6, his words: the bare date box "means nothing to me, because it
+               doesn't let me know what it does", and the owner control "is huge, for what it
+               is (choosing who to assign the task to.)" Both were `flex: 1 1 <basis>`, so they
+               grew to fill a 348px line whatever their content needed. Now they size to their
+               content: a labelled calendar chip and an owner pill.
+               His decision when asked: keep them EDITING INLINE. `full` exists so the pre-3.66
+               in-the-row workflow survived the rewrite, and turning these into modal openers
+               would quietly retire it. */
             .tr-inline { width: 100%; }
-            .tr-inline input[type="date"] { flex: 1 1 130px; }
-            .tr-inline select { flex: 1 1 90px; }
+            .tr-inline input[type="date"] { flex: 0 0 auto; }
+            .tr-inline select { flex: 0 0 auto; max-width: 46%; }
 
             /* Issue items */
             .issue-item {
@@ -3462,7 +3517,8 @@
             .todo-item { flex-wrap: wrap; }
             /* Full-width own line, right-aligned. `align-self` is reset because the 3.66.2
                rule stretches the cluster to the row height to grow the tap targets - correct
-               when it sat BESIDE the text, wrong now that it sits under it. */
+               when it sat BESIDE the text, wrong now that it sits under it.
+               v3.82.0: this now applies to FULL density only - see the item-5 block below. */
             .todo-item .tr-actions {
                 flex: 1 1 100%;
                 justify-content: flex-end;
@@ -3470,8 +3526,18 @@
                 align-items: center;
                 margin-top: 2px;
             }
-            /* The title line keeps the checkbox and takes everything else. */
-            .todo-item .tr-main { flex: 1 1 auto; }
+            /* 🚨 THE TITLE LINE KEEPS THE CHECKBOX AND TAKES EVERYTHING ELSE — AND THE BASIS
+               IS THE WHOLE POINT (v3.82.0, his §5.11b-8 item 3).
+               This was `flex: 1 1 auto` from v3.73.0 until now, and it is why he asked "why is
+               it on some tasks the task is right next to the checkmark circle, and other tasks
+               are placed below the checkmark box". A flex item WRAPS ON ITS BASE SIZE BEFORE IT
+               IS EVER ALLOWED TO SHRINK, and `auto` resolves to max-content — so with
+               `flex-wrap: wrap` on the row above, a LONG title's base exceeded the line and
+               dropped .tr-main to its own row, stranding the checkbox alone on line 1. A short
+               title fit and stayed put. Basis 0 makes it shrink instead of wrap, always.
+               MEASURED at 412: cozy long rows 141 -> 114px, full 209 -> 182px and 190 -> 163px,
+               short rows unchanged, document still 412 wide. */
+            .todo-item .tr-main { flex: 1 1 0; }
             /* Gutter: 47px -> 36px. The group's 3px border stays (dragListOver turns it blue
                to show a drop target), only its padding goes. */
             .todo-list-group { padding-left: 0 !important; }
@@ -3479,6 +3545,46 @@
             /* Compact density is a deliberate ONE-LINE row, so it must not wrap. */
             .todo-item.den-compact { flex-wrap: nowrap; }
             .todo-item.den-compact .tr-actions { flex: 0 0 auto; margin-top: 0; }
+        }
+
+        /* §5.11b-8 ITEMS 1, 2 AND 5 — THE ROW ATOM RE-CUT PER DENSITY (v3.82.0).
+           His fourth phone-test round, after living on v3.81.0 with all three densities.
+
+           🚨 ITEM 5 IS AN EXPLICIT REVERSAL OF HIS OWN §5.11b-7 ITEM 8, AND IS RECORDED AS ONE.
+           In that round he asked for the task text to span the row with the icons dropping to
+           their own right-aligned line beneath; I built exactly that and stated the cost at the
+           time (rows 105 -> 122px). He has now red-boxed that strip as wasted space. His
+           annotations resolve where the item-8 layout survives, and it is not everywhere:
+             compact -> one line, `⋯` ONLY  ("only leave the three dots")
+             cozy    -> icons back on the title line (his pick when asked: `⋯` + 2 icons)
+             full    -> KEEP the own-line strip, but FILL it ("I would have at least expected
+                        more, if not all of the icons under the menu to show up across the
+                        bottom row") - so the line has to earn its height. */
+
+        /* ITEM 1 — compact gives the wording the row and keeps only the `⋯`.
+           Applied at EVERY width, not just phones: a density setting has to mean the same
+           thing everywhere or "compact" stops being a promise. Nothing is lost - the star, the
+           Gmail mark and the AI sparkle are all still inside the `⋯`, which is the Phase 1
+           floor. Measured at 412: title 213 -> 300px. */
+        .todo-item.den-compact .tr-actions > *:not(.task-action-wrap) { display: none; }
+
+        @media screen and (max-width: 768px) {
+            /* ITEM 5, cozy half: the strip goes, the icons ride the title line. */
+            .todo-item.den-cozy { flex-wrap: nowrap; }
+            .todo-item.den-cozy .tr-actions {
+                flex: 0 0 auto; margin-top: 0; align-self: flex-start; justify-content: flex-end;
+            }
+
+            /* ITEM 2 — the left gutter, and it is FIVE nested boxes rather than one.
+               Measured at 412: .page padding 12 + .section border-left 4 + .section padding 12
+               + .todo-item padding 6 = checkbox at 38px, 9% of the screen.
+               His decision on the 4px: drop it on PHONES ONLY. It is `.section`'s app-wide
+               colour-coded identity border (seven variants across every page) and NOT the drag
+               affordance he took it for - the list drag is the `⋮⋮ <list>` handle, and
+               .todo-list-group's own border is transparent until dragListOver paints it. So
+               desktop keeps the whole system and phones drop it, which is one rule to reverse.
+               38px -> 30px. Honest ceiling: the rest of the space he is feeling is VERTICAL. */
+            .page > .section, .section { border-left-width: 0; padding-left: 8px; padding-right: 8px; }
         }
 
         /* ITEM 5 — THE EDIT MEETING AGENDA ROW STACKS ON A PHONE.
@@ -6480,9 +6586,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.81.0';
+        const EOS_VERSION = '3.82.0';
         const EOS_BUILD_DATE = '2026-07-31';
-        const EOS_BUILD_TIME = '16:20'; // v3.81.0: ISSUES SYNC + IMAGE ATTACHMENTS + VISIBLE PER-SURFACE SYNC STATE - Hans's item 6 (Sec 5.11b-7) and item 10 (Sec 5.11b-6), built together on his decision (b): a Supabase table plus a Storage bucket. index.html + schema.sql; NO .gs change, so NO clasp deploy. (1) ISSUES: eos_tool_issues was a single localStorage STRING that appeared nowhere else in the file - a missing feature, not a broken sync. It is now ONE ROW PER ISSUE in the tool_issues table (a shared text blob synced across two devices is last-write-wins over the whole note, which would erase what he just typed on the phone - the exact failure this feature exists to end). Local fallback is real and SAYS SO. (2) IMAGES: pick or paste a screenshot, downscaled to a 1600px long edge in the browser, uploaded to the PRIVATE tool-issues bucket, shown as thumbnails, and carried into the 'Hi Claude' block as 7-day SIGNED links - private because these are photographs of an internal tool and can carry client names. (3) MARKETING: pull-to-refresh on that page has existed since v3.70.0; what was missing is that mktPullFromCloud() returned false and did nothing without a Supabase profile, so a pull LOOKED like a refresh. mktRefreshFromPull() re-runs the access check first and reports the outcome. (4) THE BADGES: #syncBadge-issues and #syncBadge-marketing, both in STATIC markup and never unmounted, saying synced / local-only / error with the reason one tap away. Graceful degradation with no indicator is a sync bug with extra steps.
+        const EOS_BUILD_TIME = '18:05'; // v3.82.0: THE TASK ROW ATOM RE-CUT PER DENSITY - Hans's fourth phone-test round (Sec 5.11b-8), three screenshots annotated plus a Google Tasks reference. index.html only; no .gs change, so NO clasp deploy. (1) THE WRAP TRAP, his best catch: `flex-wrap:wrap` (added 3.73.0 so the icons could take their own line) plus `.tr-main{flex:1 1 auto}` meant a LONG title wrapped BELOW the checkbox while a short one sat beside it - a flex item wraps on its BASE size before it is ever allowed to shrink, and `auto` is max-content. `flex:1 1 0` fixes it; cozy long rows 141->114, full 209->182, proven at 412 before anything else was touched. (2) COMPACT is `...` only - title 213->289px, still 50px tall. THE GMAIL MARK IS HIDDEN THERE TOO, which is his instruction and a real trade: reverse by exempting .tr-email-mark from the den-compact rule. (3) COZY takes the icons back onto the title line - AN EXPLICIT REVERSAL OF HIS OWN 5.11b-7 ITEM 8, recorded as one: list height 479->291px (-39%), rows 94/169/141 -> 56/94/66, and the title gives up 323->233px, which is the trade he chose when asked. (4) FULL keeps item 8's own-line strip but now FILLS it - 3 icons -> 9 - and the two unlabelled boxes become a calendar chip and an owner pill that STILL edit inline (his call: `full` exists to preserve the pre-3.66 in-row workflow). Full got SHORTER while showing more: 618->519px. (5) GUTTER 38->30px: `.section`'s 4px colour border drops on PHONES ONLY - it is an app-wide seven-variant identity system, NOT the drag affordance Hans took it for, so removing it was his call to re-make. The rest of the space he was feeling was vertical, and that is where it came from.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -9200,6 +9306,22 @@ Example:
                     label: 'Details…', color: '#6b7280', onclick: `openTodoDetail('${id}')` });
             }
 
+            // §5.11b-8 ITEM 5, full half (v3.82.0). At FULL density the action cluster keeps
+            // its own line under the title — the §5.11b-7 item-8 layout — and Hans's objection
+            // was not that the line exists but that it is nearly empty for the ~40px it costs:
+            // "I would have at least expected more, if not all of the icons under the menu to
+            // show up across the bottom row." So full promotes the WHOLE overflow set into the
+            // row. The `⋯` stays and still lists everything, because Phase 1's floor is that
+            // every action is reachable from it — promotion is additive, never a move.
+            // Deliberately todos-only: the Matrix, Rule-of-3 and repository rows are
+            // minimalCard surfaces where a nine-icon strip would be absurd.
+            if (context === 'todos' && rowDensity() === 'full' && !opts.menuOnly) {
+                overflow.forEach(function(s) {
+                    if (s === aiSpec) return;                    // rendered separately as aiBtn
+                    if (promoted.indexOf(s) === -1) promoted.push(s);
+                });
+            }
+
             const promotedHtml = promoted.map(s => s.rawLink
                 ? `<span style="padding:2px 6px;flex-shrink:0;font-size:0.9rem;">${s.icon}</span>`
                 : _taskActionBtn(s, true)).join('');
@@ -9342,7 +9464,19 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.81.0 &mdash; 2026-07-31 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.82.0 &mdash; 2026-07-31 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Your three annotated screenshots of Compact, Cozy and Full &mdash; the task row rebuilt for each one.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>You found a real bug, and it was mine.</strong> You asked why the task sits beside the circle on some rows and underneath it on others. It was every row with a long title: the icons were given their own line back in v3.73.0, and that same change made a long title drop to its own line too instead of just getting narrower. Fixed. <strong>Long rows in Cozy went 141px to 114px on their own, before any of the other changes.</strong></li>'
+                + '<li><strong>Compact now gives the wording the whole row and keeps only the &ctdot;</strong> &mdash; title width <strong>213px &rarr; 289px</strong>, still a 50px row. Worth knowing: the little Gmail mark is hidden there too, since you asked for only the three dots. It is still inside the &ctdot; on every row that has one, and it still shows in Cozy and Full. Say the word and I will let that one icon through.</li>'
+                + '<li><strong>Cozy: the empty icon strip you boxed is gone</strong> &mdash; the icons ride the title line again. <strong>The list went 479px to 291px, 39% shorter</strong>, and rows went 94/169/141px to 56/94/66px. The trade you picked: the title gives up some width (323px &rarr; 233px) to buy that height back.</li>'
+                + '<li><strong>Full keeps its bottom icon row, but it earns its place now &mdash; 3 icons became 9.</strong> Snooze, notes, subtask, email, move, assign and details all sit in the row instead of hiding. And the two boxes you called out are gone: the unlabelled date box is a <strong>calendar chip that reads &ldquo;Today&rdquo; or &ldquo;Jul 20&rdquo;</strong>, and the huge owner dropdown is a <strong>small pill with that person&rsquo;s colour</strong>. Both still edit right in the row &mdash; that is what Full is for. <strong>Full got shorter while showing more: 618px &rarr; 519px.</strong></li>'
+                + '<li><strong>The blue edge is off on phones.</strong> One thing worth correcting: it was not a handle for moving things around &mdash; it is the coloured left edge every section in the tool carries (green on Rocks, amber on Focus, and so on). It stays on the computer, where there is room for it, and it is gone on your phone. <strong>With the padding tightened too, the gap before the circle went 38px to 30px.</strong> Honestly, that is most of what is available sideways &mdash; the real space came from the height.</li>'
+                + '</ul>'
+                + '</div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.81.0 &mdash; 2026-07-31</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Your decision (b) &mdash; the issues collector moves to the cloud, takes screenshots, and both surfaces now tell you whether they are actually syncing.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Issues &amp; Feature Requests now sync across your devices.</strong> File one on your phone and it is on your desktop, and Amanda sees it too. Each issue is its own entry with a tick to mark it done and an &times; to delete it &mdash; not one shared block of text, deliberately: two devices editing one block means whoever saves last wipes out the other, which is the exact problem this was meant to fix.</li>'
@@ -18660,21 +18794,36 @@ Example:
                   + gmailMarkSvg(14) + '<span class="tr-chip-text">Open source email</span></a>'
                 : '';
 
-            // `full` density keeps the pre-3.66 inline editors verbatim. Nothing was taken
-            // away by this rewrite - it moved behind a setting, and this is that setting.
+            // `full` density keeps the pre-3.66 inline editors - Hans confirmed that when
+            // asked, so the in-the-row workflow survives. v3.82.0 (§5.11b-8 item 6) changes
+            // only what they LOOK like, on his two complaints: the date box was unlabelled
+            // ("this box means nothing to me… a simple 'Calendar' icon would have been
+            // better") and the owner control was "huge, for what it is".
+            // The date input is STILL an <input type="date"> and still fires the same
+            // updateTodo - it is stretched invisibly across the chip, so the whole chip opens
+            // the native picker. Nothing about the edit path changed; only the label did.
+            const _dueState = !t.dueDate ? 'is-empty'
+                : (!t.done && isOverdue(t.dueDate) ? 'is-overdue'
+                : (!t.done && isDueSoon(t.dueDate) ? 'is-soon' : ''));
+            const _dueLabel = t.dueDate ? formatDuePill(t.dueDate) : 'Set date';
+            const _ownerDot = ownerColorFor(t.owner);
             const inlineEditors = (density === 'full') ? `
                     <div class="tr-inline">
-                        <input type="date" value="${t.dueDate || ''}" onchange="updateTodo(${idx}, 'dueDate', this.value)"
-                               style="${t.dueDate && isOverdue(t.dueDate) && !t.done ? 'border-color: var(--danger); background: #fee2e2;' : ''}"
-                               title="Due date">
+                        <label class="tr-datechip ${_dueState}" title="Due date">
+                            <span aria-hidden="true">&#128197;</span><span>${escapeHtml(_dueLabel)}</span>
+                            <input type="date" value="${t.dueDate || ''}" onchange="updateTodo(${idx}, 'dueDate', this.value); rerenderAllTaskSurfaces();" aria-label="Due date">
+                        </label>
                         ${t.googleListName && t.googleListName !== 'To-Dos' ? `
                             <select onchange="moveTaskToList(${idx}, this.value)" title="Move to a different list">
                                 ${getTaskListOptions(t.googleListId, t.googleListName)}
                             </select>
                         ` : ''}
-                        <select onchange="updateTodo(${idx}, 'owner', this.value)" title="Owner">
-                            ${getTeamMemberOptions(t.owner, true)}
-                        </select>
+                        <span class="tr-ownerpill" title="Owner">
+                            <span class="tr-dot" style="background:${_ownerDot}"></span>
+                            <select onchange="updateTodo(${idx}, 'owner', this.value); rerenderAllTaskSurfaces();" aria-label="Owner">
+                                ${getTeamMemberOptions(t.owner, true)}
+                            </select>
+                        </span>
                     </div>` : '';
 
             // v3.67.0 (Hans's item 2, and the §5.11b-5 decision 8 gap named in the 3.66.1
