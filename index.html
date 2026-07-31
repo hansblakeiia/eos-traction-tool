@@ -3400,6 +3400,28 @@
         #composerModal .cmp-mic.cmp-recording { background: #fee2e2; color: #b91c1c; }
         #composerModal .cmp-send { background: var(--accent); color: #fff; font-size: 1.5rem; font-weight: 700; }
         #composerModal .cmp-send:active { background: var(--primary); }
+        /* v3.79.0: the AI rewrite controls. margin-right:auto on the sparkle pushes the
+           mic + send to the right, giving the Claude-app layout Hans modelled the card
+           on. The busy pulse is the only animation and lives on the button itself. */
+        #composerModal .cmp-ai {
+            flex: 0 0 auto; width: 48px; height: 48px; min-height: 48px; border-radius: 50%;
+            border: none; cursor: pointer; padding: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: #ede9fe; color: #6d28d9; margin-right: auto;
+        }
+        #composerModal .cmp-ai.cmp-ai-busy { animation: cmpAiPulse 1s ease-in-out infinite; }
+        @keyframes cmpAiPulse { 50% { opacity: 0.35; } }
+        #composerModal .cmp-undo {
+            flex: 0 0 auto; min-height: 44px; border: 1px solid var(--gray-300); border-radius: 22px;
+            background: #fff; color: var(--gray-600); font-size: 0.8rem; padding: 0 12px; cursor: pointer;
+        }
+        #composerModal .cmp-ai-menu { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 0 10px; }
+        #composerModal .cmp-ai-opt {
+            flex: 1 1 40%; min-height: 44px; border: 1px solid #ddd6fe; border-radius: 12px;
+            background: #f5f3ff; color: #5b21b6; font-size: 0.85rem; font-weight: 600;
+            cursor: pointer; padding: 6px 10px; font-family: inherit;
+        }
+        #composerModal .cmp-ai-opt:active { background: #ede9fe; }
 
         /* ==== v3.73.0 (Hans's items 2c, 3, 5, 8 + the ⋮⋮ handle) ======================
 
@@ -3974,7 +3996,19 @@
                 <div class="cmp-grow"></div>
                 <textarea id="composerInput" class="cmp-input" rows="1" spellcheck="true"
                           aria-label="Composer" data-no-composer="1"></textarea>
+                <!-- v3.79.0: the AI rewrite row. Hans asked for Samsung's Writing Assist
+                     inside the tool; Chrome never surfaces it on his phone (proven on
+                     google.com), so this is the in-tool equivalent riding the existing
+                     callAI plumbing. The sparkle sits bottom-LEFT (where the mode chip
+                     sits in the Claude app he modelled the card on); mic + send stay
+                     right. The sparkle icon is injected by initComposer() via
+                     aiSparkSvg() - same inline-SVG rule as the row atom. -->
+                <div class="cmp-ai-menu" id="composerAiMenu" style="display:none;"></div>
                 <div class="cmp-bar">
+                    <button type="button" class="cmp-ai" id="composerAiBtn" onclick="toggleComposerAiMenu()"
+                            aria-label="AI: improve this text" title="AI: improve this text"></button>
+                    <button type="button" class="cmp-undo" id="composerUndoBtn" style="display:none;"
+                            onclick="composerUndoRewrite()">&#8617; Undo rewrite</button>
                     <button type="button" class="cmp-mic" id="composerMic" onclick="composerToggleMic()"
                             aria-label="Dictate" title="Dictate">🎤</button>
                     <button type="button" class="cmp-send" onclick="composerCommit()"
@@ -6428,9 +6462,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.78.1';
+        const EOS_VERSION = '3.79.0';
         const EOS_BUILD_DATE = '2026-07-31';
-        const EOS_BUILD_TIME = '11:55'; // v3.78.1: THE KEYBOARD LIFT, FIXED FROM HANS'S SCREENSHOTS. His two photos showed the v3.78.0 card's mic and up-arrow half behind the Android keyboard until he dismissed it - the margin-bottom lift was under-lifting AND the textarea cap was computed from window.innerHeight, which still reports the FULL screen with the keyboard up on modern Android Chrome, so the card could be taller than the visible area. Two changes, both structural rather than tuned: (1) _cmpLift() now TOP-ANCHORS the absolute card so its bottom edge lands 10px above the visual viewport's real bottom (vv.offsetTop + vv.height) - position, not margin arithmetic, nothing left to be off by; (2) _cmpSyncGrow() caps the textarea from the VISIBLE height (vv.height), reserving ~130px for the head row, button bar and padding, so the whole card always fits above the keys. Growth re-places the card (grow -> lift, every call site). Verified in the harness with a FAKED visualViewport half the screen tall: card bottom lands exactly at the fake viewport bottom minus 10px and the buttons sit inside it; real-device confirmation is Hans's next tap.
+        const EOS_BUILD_TIME = '13:05'; // v3.79.0: AI REWRITE IN THE COMPOSER - Hans's request after his own falsifying test proved Samsung's Writing Assist is Chrome-wide-absent on his phone (missing on google.com too, so no page markup could ever surface it; the pasted advice claiming otherwise was disproven by his own experiment). index.html only; no .gs change, so NO clasp deploy. A sparkle button sits bottom-LEFT of the composer card (where the mode chip sits in the Claude app he modelled the card on); tap -> four options: Tighten it up / Fix spelling & grammar / More professional / Friendlier. Rides the EXISTING plumbing: callAI() through the Task-AI route (aiRouting.taskAssist) with its own budget (AI_TASK_TOKEN_DEFAULTS.composerRewrite = 1600, overridable in Settings > AI Output Length). A rewrite REPLACES text - unlike dictation, which appends - so the previous text is held for a one-tap 'Undo rewrite' chip; a mis-tap can never cost a paragraph. A slow reply is DROPPED if the composer closed or the text changed while the model ran (the 3.64.0 recipient rule). Prompt names the wrong behaviours explicitly per the v3.65.1 lesson (no preamble, no quotes, keep URLs/names/numbers verbatim, same language). Missing API key -> callAI's standard Settings pointer; call failure -> toast, text untouched. Coarse-pointer only by construction (the composer itself is).
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -9282,7 +9316,18 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.78.1 &mdash; 2026-07-31 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.79.0 &mdash; 2026-07-31 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Your pick of option 3 &mdash; the AI writing help built into the composer, since Chrome will never show Samsung&rsquo;s.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>A sparkle button now sits at the bottom-left of the writing card</strong> &mdash; the same spot as the mode chip in the Claude app you screenshotted. Tap it and pick: <em>Tighten it up</em>, <em>Fix spelling &amp; grammar</em>, <em>More professional</em>, or <em>Friendlier</em>. The rewritten text lands right back in the card.</li>'
+                + '<li><strong>Every rewrite comes with a one-tap &ldquo;Undo rewrite&rdquo; chip</strong> &mdash; dictation adds to your text, but a rewrite replaces it, and a replacement you did not like must never cost you a paragraph.</li>'
+                + '<li><strong>It uses your own AI setup</strong> &mdash; the same providers and routing as the task AI (Settings &rsaquo; AI &rsaquo; Which AI does what &rsaquo; Task AI), with its own output budget under AI Output Length. So it works identically on your phone, Amanda&rsquo;s, and the desktop, and never depends on what Samsung or Chrome do next.</li>'
+                + '<li><strong>Safety rails:</strong> if the reply comes back after you have closed the card or kept typing, it is thrown away rather than pasted over newer work; a failed call leaves your text untouched; and a missing API key points you at the exact Settings field.</li>'
+                + '</ul>'
+                + '</div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.78.1 &mdash; 2026-07-31</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Your two photos of the half-hidden mic and send buttons &mdash; fixed at the root, not nudged.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>The card now positions itself from the real visible area, not from arithmetic about the keyboard.</strong> Your photos showed the mic and up-arrow half-buried until you tapped the keyboard away. Two causes: the lift was computed as a margin and came up short, and the writing area sized itself against the full screen height &mdash; which Android still reports even with the keyboard up &mdash; so the card could be taller than what you could see. Both are gone: the card&rsquo;s bottom edge is now pinned 10px above whatever is actually visible, and the writing area can never grow past it.</li>'
@@ -20449,7 +20494,9 @@ Make sure your suggestions directly address the specific root cause and discussi
             // v3.63.0 - the per-task/per-card AI actions. Raised in v3.63.1: these are a
             // CAP, not a spend, so there is no cost to headroom, and the original 300/600/
             // 800 left none for a provider that reasons before it answers.
-            taskSteps: 900, taskDeadline: 500, taskEmail: 1200
+            taskSteps: 900, taskDeadline: 500, taskEmail: 1200,
+            // v3.79.0 - the composer's rewrite button. A cap with headroom, same logic.
+            composerRewrite: 1600
         };
 
         function getTaskTokens(key) {
@@ -27269,6 +27316,13 @@ Return ONLY the JSON array:`;
             label.textContent = _composerFieldLabel(el);
             document.getElementById('composerModal').classList.add('active');
             document.getElementById('composerMic').classList.remove('cmp-recording');
+            // v3.79.0: a fresh open starts with no rewrite state - the menu closed, the
+            // undo chip hidden, and nothing held to restore.
+            _cmpPrevText = null;
+            const aiMenu = document.getElementById('composerAiMenu');
+            if (aiMenu) aiMenu.style.display = 'none';
+            const undoBtn = document.getElementById('composerUndoBtn');
+            if (undoBtn) undoBtn.style.display = 'none';
             _cmpLiftOn();   // v3.78.0: keep the card above the keyboard
             _cmpSyncGrow();
             // Focus after paint, and put the caret at the END - he is continuing a thought,
@@ -27391,6 +27445,96 @@ Return ONLY the JSON array:`;
             }
         }
 
+        // ---- AI rewrite (v3.79.0) --------------------------------------------------
+        // Hans asked for Samsung's Writing Assist inside the tool. Chrome never surfaces
+        // Samsung's selection-menu AI on his phone (falsified on google.com itself, so it
+        // is Chrome-wide and no page markup can change it) - this is the in-tool
+        // equivalent, riding callAI() through the existing Task-AI route
+        // (aiRouting.taskAssist) with its own token budget (composerRewrite).
+        // A rewrite REPLACES the text (unlike dictation, which appends), so the previous
+        // text is held for a one-tap Undo - a mis-tap must never cost him a paragraph.
+        let _cmpPrevText = null;
+        const COMPOSER_REWRITES = [
+            { key: 'tighten', label: 'Tighten it up',
+              instr: 'Make it shorter and punchier without losing any information or changing the meaning.' },
+            { key: 'grammar', label: 'Fix spelling && grammar',
+              instr: 'Fix spelling, grammar and punctuation ONLY. Do not change the wording, tone or structure beyond what a correction requires.' },
+            { key: 'professional', label: 'More professional',
+              instr: 'Rewrite it in a clear, professional business tone.' },
+            { key: 'friendly', label: 'Friendlier',
+              instr: 'Rewrite it in a warm, friendly, conversational tone.' }
+        ];
+        function toggleComposerAiMenu() {
+            const m = document.getElementById('composerAiMenu');
+            if (!m) return;
+            if (m.style.display !== 'none') { m.style.display = 'none'; _cmpSyncGrow(); return; }
+            const ta = document.getElementById('composerInput');
+            if (!ta || !ta.value.trim()) {
+                showToast('Nothing to rewrite yet — write or dictate something first.');
+                return;
+            }
+            m.innerHTML = COMPOSER_REWRITES.map(function (r) {
+                return '<button type="button" class="cmp-ai-opt" onclick="composerRewrite(\'' + r.key + '\')">'
+                    + r.label.replace('&&', '&amp;') + '</button>';
+            }).join('');
+            m.style.display = 'flex';
+            _cmpSyncGrow();   // the menu adds height; the card must re-place itself
+        }
+        async function composerRewrite(key) {
+            const r = COMPOSER_REWRITES.find(function (x) { return x.key === key; });
+            const ta = document.getElementById('composerInput');
+            const menu = document.getElementById('composerAiMenu');
+            const btn = document.getElementById('composerAiBtn');
+            if (!r || !ta) return;
+            const original = ta.value;
+            if (!original.trim()) return;
+            if (menu) menu.style.display = 'none';
+            if (btn) { btn.disabled = true; btn.classList.add('cmp-ai-busy'); }
+            _cmpSyncGrow();
+            // Prompt rules follow the v3.65.1 lesson: name the wrong behaviours
+            // explicitly, because "return the rewritten text" alone is not a constraint.
+            const prompt = 'Rewrite the text between the markers.\n'
+                + 'Instruction: ' + r.instr.replace('&&', '&') + '\n'
+                + 'Rules: Return ONLY the rewritten text — no preamble, no quotation marks around it, '
+                + 'no explanations, no numbered options. Keep every URL, email address, name and number '
+                + 'exactly as written. Answer in the same language as the original. If the text already '
+                + 'satisfies the instruction, return it unchanged.\n'
+                + '---BEGIN TEXT---\n' + original + '\n---END TEXT---';
+            try {
+                const out = await callAI('taskAssist', prompt, {
+                    featureLabel: 'The rewrite helper', taskKey: 'composerRewrite',
+                    taskLabel: 'Rewrite', retry: true
+                });
+                // A slow reply must never overwrite newer state: if the composer was
+                // closed, retargeted, or the text was edited while the model ran, drop
+                // the result (the 3.64.0 recipient-guess rule).
+                if (!document.getElementById('composerModal').classList.contains('active')
+                    || ta.value !== original) return;
+                _cmpPrevText = original;
+                ta.value = out.trim();
+                const undo = document.getElementById('composerUndoBtn');
+                if (undo) undo.style.display = '';
+                _cmpSyncGrow();
+            } catch (e) {
+                // callAI already told him about a missing key; only a call failure
+                // needs a voice here. Either way the text is untouched.
+                if (!e || e.aiCode !== AI_ERR_NO_KEY) {
+                    showToast('Rewrite failed: ' + ((e && e.message) || e), 'error');
+                }
+            } finally {
+                if (btn) { btn.disabled = false; btn.classList.remove('cmp-ai-busy'); }
+                _cmpSyncGrow();
+            }
+        }
+        function composerUndoRewrite() {
+            const ta = document.getElementById('composerInput');
+            const undo = document.getElementById('composerUndoBtn');
+            if (_cmpPrevText !== null && ta) ta.value = _cmpPrevText;
+            _cmpPrevText = null;
+            if (undo) undo.style.display = 'none';
+            _cmpSyncGrow();
+        }
+
         // ---- Dictation -------------------------------------------------------------
         // The browser's own recogniser. APPENDS to what is already there rather than
         // replacing it - §5.11b-5 decision 13's rule, and the obvious one: you dictate to add
@@ -27459,6 +27603,11 @@ Return ONLY the JSON array:`;
                 if (el.closest('#googleSignInGate, #appMfaGate, #mktAuthGate, #setupWizardModal')) return;
                 openComposer(el);
             }, true);
+            // v3.79.0: the sparkle is injected here rather than written in the markup -
+            // aiSparkSvg() is the shared inline-SVG mark (same platform-font reasoning
+            // as the row atom's icons).
+            const aiBtn = document.getElementById('composerAiBtn');
+            if (aiBtn && typeof aiSparkSvg === 'function') aiBtn.innerHTML = aiSparkSvg(18);
             const ta = document.getElementById('composerInput');
             if (ta) {
                 ta.addEventListener('input', _cmpSyncGrow);
