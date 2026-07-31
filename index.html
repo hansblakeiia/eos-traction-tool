@@ -743,6 +743,20 @@
             padding-bottom: 4px;
         }
         .rating-buttons::-webkit-scrollbar { display: none; }
+        /* v3.76.0 (item 2b): the colour swatch in the Assign picker's person buttons. */
+        .assign-dot { width: 14px; height: 14px; border-radius: 50%; flex: 0 0 auto; display: inline-block; border: 1px solid rgba(0,0,0,0.15); }
+        /* v3.75.0 (item 1): the rating panel moved from the Weekly Meeting's .grid-2 -
+           whose `> * { min-width:0 }` was HALF of the v3.62.0 overflow fix - onto the
+           #agenda page. Its new home is plain block flow, where min-width:auto cannot
+           inflate a grid track, and .rating-buttons above carries the other half
+           (overflow-x:auto) with it. The guard below is written anyway so a future
+           wrap of this section in a grid or flex container cannot resurrect the 431px
+           document; A/B'd at runtime: removing .rating-buttons' overflow-x brings the
+           overflow straight back, so that declaration is the load-bearing one here.
+           The border-top/margin reset exists because the section used to sit under a
+           "This Week" heading that did not survive the move. */
+        #agenda .rating-section { margin-top: 0; padding-top: 0; border-top: none; min-width: 0; }
+        #agenda .rating-section > * { min-width: 0; }
 
         .rating-btn {
             width: 32px;
@@ -3667,6 +3681,16 @@
             .bnav-btn .bnav-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
             .bnav-btn.active { color: var(--primary); font-weight: 700; }
             .bnav-btn.active .bnav-icon { transform: translateY(-1px); }
+            /* v3.77.0 (item 7): long-press reorder. The wiggle only ever appears via
+               .nav-editing, which only the coarse-pointer gesture sets. The dragged
+               cell's transform is safe: no position:fixed descendants live inside a
+               nav button (the 3.70.0 containing-block trap does not apply here).
+               touch-callout/user-select off so a long-press selects nothing. */
+            #bottomNav .bnav-btn { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+            #bottomNav.nav-editing .bnav-btn[data-nav-key] { animation: bnavWiggle 0.26s ease-in-out infinite alternate; }
+            #bottomNav.nav-editing .bnav-btn.nav-dragging { animation: none; transition: none; opacity: 0.92; position: relative; z-index: 2; box-shadow: 0 4px 14px rgba(0,0,0,0.25); background: #fff; }
+            #bottomNav.nav-editing .bnav-btn:not([data-nav-key]) { opacity: 0.4; }
+            @keyframes bnavWiggle { from { transform: rotate(-2.4deg); } to { transform: rotate(2.4deg); } }
 
             #mobileDrawerScrim {
                 display: block; position: fixed; inset: 0; z-index: 2600;
@@ -3948,6 +3972,28 @@
             </div>
         </div>
 
+        <!-- ASSIGN A TASK (v3.76.0, Hans's 5.11b-7 item 2b). Same modal conventions as the
+             Move picker above: a real .modal-overlay, closed by closeModalsBeforeNavigate(),
+             FAB stands down, mobile width rule inherited, no inline max-height.
+             This is a STRAIGHT reassignment of the app-level owner field, committed through
+             updateTodo(idx,'owner',...) - the ONE existing owner-change path, which fires
+             syncTaskToNewOwner and pushes the task into the new owner's Google Tasks.
+             It is NOT decision 10's "@person -> Task Triage" routing: that is about
+             quick-add not dumping into someone else's lists, and it is STILL UNBUILT -
+             do not read this menu entry as decision 10 having shipped. -->
+        <div class="modal-overlay" id="assignTaskModal">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3 style="margin:0;">Assign task</h3>
+                    <button onclick="closeAssignTaskModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#9ca3af;line-height:1;">&times;</button>
+                </div>
+                <div id="assignTaskBody" style="overflow-y:auto;"></div>
+                <div style="display:flex;justify-content:flex-end;margin-top:14px;">
+                    <button class="btn btn-secondary" onclick="closeAssignTaskModal()">Close</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Quick-add FAB stack (v3.66.3). column-reverse, so the voice mic can be added as
              a sibling later and lands ABOVE the "+" without either moving. -->
         <div id="fabStack">
@@ -4113,19 +4159,10 @@
                 <div class="numbered-item"><span class="num">7</span><input type="text" id="oy_g7" placeholder="Goal 7"></div>
             </div>
             
-            <div class="section issues">
-                <h3>⚠️ Issues List (Long-term) 
-                    <button class="btn btn-secondary" onclick="promoteLongTermIssues()" style="float: right; padding: 4px 10px; font-size: 0.8rem;">
-                        ➡️ Send to Weekly IDS
-                    </button>
-                </h3>
-                <p style="font-size: 0.85rem; color: var(--gray-500); margin-bottom: 12px;">Issues to address at quarterly planning sessions. Click "Send to Weekly IDS" to add checked issues to this week's meeting.</p>
-                <div class="numbered-item"><input type="checkbox" id="i1_check" style="width: 18px; margin-right: 8px;"><span class="num">1</span><input type="text" id="i1" placeholder="Issue 1" style="flex: 1;"></div>
-                <div class="numbered-item"><input type="checkbox" id="i2_check" style="width: 18px; margin-right: 8px;"><span class="num">2</span><input type="text" id="i2" placeholder="Issue 2" style="flex: 1;"></div>
-                <div class="numbered-item"><input type="checkbox" id="i3_check" style="width: 18px; margin-right: 8px;"><span class="num">3</span><input type="text" id="i3" placeholder="Issue 3" style="flex: 1;"></div>
-                <div class="numbered-item"><input type="checkbox" id="i4_check" style="width: 18px; margin-right: 8px;"><span class="num">4</span><input type="text" id="i4" placeholder="Issue 4" style="flex: 1;"></div>
-                <div class="numbered-item"><input type="checkbox" id="i5_check" style="width: 18px; margin-right: 8px;"><span class="num">5</span><input type="text" id="i5" placeholder="Issue 5" style="flex: 1;"></div>
-            </div>
+            <!-- v3.75.0 (item 1): the "Issues List (Long-term)" section moved to the
+                 Weekly Pulse Meeting page (between IDS and Meeting Notes) - part of
+                 Hans's specified meeting layout. i1-i5 / i1_check-i5_check kept their
+                 ids so nothing else changed. Reversal: move the slice back here. -->
         </div>
         
         <!-- QUARTERLY PAGE -->
@@ -4222,7 +4259,7 @@
         <!-- MEETING AGENDA PAGE (v3.66.3, Hans feedback 2) -->
         <div id="agenda" class="page">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
-                <h2 class="page-title" style="margin: 0;">Meeting Agenda</h2>
+                <h2 class="page-title" style="margin: 0;">Meeting Agenda <span class="badge" id="meetingTimeBadge">~45 min • Mondays 9am</span></h2>
                 <div class="actions" style="margin: 0;">
                     <button class="btn btn-secondary" onclick="openEditAgendaModal()">Edit agenda</button>
                     <button class="btn btn-secondary" onclick="printMeeting()">Print agenda</button>
@@ -4232,113 +4269,135 @@
             <div class="section">
                 <div id="agendaItems"></div>
             </div>
-        </div>
-
-        <div id="meeting" class="page">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
-                <h2 class="page-title" style="margin: 0;">Weekly Pulse Meeting <span class="badge" id="meetingTimeBadge">~45 min • Mondays 9am</span></h2>
-                <div class="actions" style="margin: 0;">
-                    <button class="btn btn-secondary" onclick="openParseMeetingModal()">📥 Import from Otter</button>
-                    <button class="btn btn-secondary" onclick="printMeeting()">🖨️ Print Agenda</button>
-                    <button class="btn btn-primary" onclick="openExportTasksModal()">📹 Sync with Google Tasks</button>
+            <!-- v3.75.0 (Hans's item 1): the rating panel and Complete & Archive moved
+                 here from the Weekly Pulse Meeting page. The "This Week" heading that sat
+                 above the rating panel existed only to host the Open-agenda button, so it
+                 did not survive the move - the block is titled by its own h4. The time
+                 pill (#meetingTimeBadge) moved into the title above; updateMeetingTimeBadge()
+                 finds it by id wherever it lives.
+                 WARNING: #ratingButtons is the element behind the original §5.11b-5 mobile
+                 overflow. Its .rating-buttons class carries its own overflow-x:auto scroll
+                 row (half of the v3.62.0 fix, travels with it), and the #agenda
+                 .rating-section rules in the stylesheet guard its new home - the other
+                 half of that fix was a .grid-2 rule it left behind on the meeting page.
+                 A/B'd at runtime before shipping; see the v3.75.0 release notes. -->
+            <div class="section">
+                <div class="rating-section">
+                    <h4>Rate This Meeting (1-10)</h4>
+                    <div class="rating-buttons" id="ratingButtons"></div>
+                    <div id="ratingHistory" style="margin-top: 10px; font-size: 0.85rem; color: var(--gray-500);"></div>
+                </div>
+                <div class="actions">
                     <button class="btn btn-success" onclick="archiveMeeting()">✔ Complete & Archive</button>
                 </div>
             </div>
-            
-            <div class="grid-2">
-                <div>
-                    <!-- v3.66.3 (Hans feedback 2): the Meeting Agenda now lives on its own
-                         page (#agenda), reachable from the drawer's Focus group and from the
-                         link below. What stays on this tab is the rating panel.
-                         The agenda markup was MOVED, not duplicated - #agendaItems exists
-                         exactly once in the document, so renderAgendaItems() and
-                         saveAgendaEdits() keep working untouched by id. -->
-                    <div class="section">
-                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px;">
-                            <h3 style="margin: 0;">This Week</h3>
-                            <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.82rem;" onclick="showPage('agenda')">Open agenda &rsaquo;</button>
-                        </div>
-                        
-                        <div class="rating-section">
-                            <h4>Rate This Meeting (1-10)</h4>
-                            <div class="rating-buttons" id="ratingButtons"></div>
-                            <div id="ratingHistory" style="margin-top: 10px; font-size: 0.85rem; color: var(--gray-500);"></div>
-                        </div>
-                        
-                        <!-- v3.66.2 (Hans feedback 3): the Weekly Pomodoro Challenge panel
-                             is gone from the Weekly Meeting tab. The container id is kept
-                             (display:none) rather than deleted because renderPomodoroLeaderboard
-                             writes into it by id from several call sites and would throw on a
-                             null - the Pomodoro feature itself still lives on My Daily Plan,
-                             where the timer is, and is untouched. -->
-                        <div id="pomodoroLeaderboard" style="display: none;"></div>
-                    </div>
+        </div>
+
+        <div id="meeting" class="page">
+            <!-- v3.75.0 (Hans's §5.11b-7 item 1, held three rounds and now answered):
+                 the header is title + two buttons. "Agenda" is plain navigation with NO
+                 state badge - Hans ruled the agenda is a permanent fixture ("There will
+                 always be an agenda"), superseding the decision-2 reading that this
+                 button had to prove one exists this week. Print Agenda is deleted (the
+                 Agenda page has its own), Complete & Archive and the time pill live on
+                 #agenda now, and Sync with Google Tasks sits in the To-Dos controls row.
+                 The .grid-2 wrapper went with the emptied left column, so To-Dos runs
+                 full width (the rest of his item 8). -->
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+                <h2 class="page-title" style="margin: 0;">Weekly Pulse Meeting</h2>
+                <div class="actions" style="margin: 0;">
+                    <button class="btn btn-primary" onclick="showPage('agenda')">Agenda</button>
+                    <button class="btn btn-secondary" onclick="openParseMeetingModal()">📥 Otter</button>
                 </div>
-                
-                <div>
-                    <!-- To-Dos -->
-                    <div class="section">
-                        <!-- v3.62.0: the title keeps its own <h3> (updateSnoozedBadge appends
-                             the "N snoozed" pill into it), and the controls move out into a
-                             wrapping row where they all share one 38px baseline. -->
-                        <h3 style="margin: 0 0 10px;">To-Dos</h3>
-                        <div class="todo-controls">
-                            <div class="seg-control" id="todoOwnerSegments" role="group" aria-label="Filter to-dos by owner"></div>
-                            <!-- Value store for the segmented control above. Kept in the DOM so
-                                 every existing document.getElementById('todoOwnerFilter').value
-                                 reader keeps working unchanged. -->
-                            <select id="todoOwnerFilter" onchange="filterAndRenderTodos()" style="display: none;" aria-hidden="true" tabindex="-1">
-                                <option value="all">All Team</option>
-                            </select>
-                            <select id="todoSortOrder" class="todo-ctl" onchange="sortAndRenderTodos()">
-                                <option value="manual">My Order</option>
-                                <option value="starred">Starred First</option>
-                                <option value="dueDate">Due Date</option>
-                                <option value="title">Title (A-Z)</option>
-                                <option value="owner">Owner</option>
-                            </select>
-                            <button class="todo-ctl todo-ctl-add" onclick="addTodoWithList()">+ Add</button>
-                            <button class="todo-ctl todo-ctl-sync" onclick="syncAllTeam()" title="Sync all team members' tasks">All Team Sync</button>
-                        </div>
-                        <div id="todosContainer"></div>
+            </div>
+
+            <!-- To-Dos - first thing on the page, full width -->
+            <div class="section">
+                <!-- v3.62.0: the title keeps its own <h3> (updateSnoozedBadge appends
+                     the "N snoozed" pill into it), and the controls move out into a
+                     wrapping row where they all share one 38px baseline. -->
+                <h3 style="margin: 0 0 10px;">To-Dos</h3>
+                <div class="todo-controls">
+                    <div class="seg-control" id="todoOwnerSegments" role="group" aria-label="Filter to-dos by owner"></div>
+                    <!-- Value store for the segmented control above. Kept in the DOM so
+                         every existing document.getElementById('todoOwnerFilter').value
+                         reader keeps working unchanged. -->
+                    <select id="todoOwnerFilter" onchange="filterAndRenderTodos()" style="display: none;" aria-hidden="true" tabindex="-1">
+                        <option value="all">All Team</option>
+                    </select>
+                    <select id="todoSortOrder" class="todo-ctl" onchange="sortAndRenderTodos()">
+                        <option value="manual">My Order</option>
+                        <option value="starred">Starred First</option>
+                        <option value="dueDate">Due Date</option>
+                        <option value="title">Title (A-Z)</option>
+                        <option value="owner">Owner</option>
+                    </select>
+                    <button class="todo-ctl todo-ctl-add" onclick="addTodoWithList()">+ Add</button>
+                    <button class="todo-ctl todo-ctl-sync" onclick="syncAllTeam()" title="Sync all team members' tasks">All Team Sync</button>
+                    <!-- v3.75.0 (item 1): moved out of the page header - it is a to-do action,
+                         so it lives with the to-do controls. Same onclick, same modal. -->
+                    <button class="todo-ctl" onclick="openExportTasksModal()">📹 Sync with Google Tasks</button>
+                </div>
+                <div id="todosContainer"></div>
+            </div>
+
+            <!-- IDS -->
+            <div class="section">
+                <h3>💡 IDS - Issues 
+                    <button class="btn btn-secondary" onclick="viewArchivedIssues()" style="float: right; padding: 4px 10px; font-size: 0.8rem;">📁 View Archived</button>
+                </h3>
+                <div id="weeklyIssuesContainer"></div>
+                <button class="add-btn" onclick="addWeeklyIssue()">+ Add Issue</button>
+
+                <div id="idsWorkspace" style="margin-top: 15px; display: none;">
+                    <div style="background: var(--primary); color: white; padding: 8px 12px; border-radius: 6px 6px 0 0; font-weight: 600;">
+                        <span id="idsIssueTitle">Issue #1</span>
+                        <button onclick="closeIDSWorkspace()" style="float: right; background: none; border: none; color: white; cursor: pointer; font-size: 1.2rem;">×</button>
                     </div>
-                    
-                    <!-- IDS -->
-                    <div class="section">
-                        <h3>💡 IDS - Issues 
-                            <button class="btn btn-secondary" onclick="viewArchivedIssues()" style="float: right; padding: 4px 10px; font-size: 0.8rem;">📁 View Archived</button>
-                        </h3>
-                        <div id="weeklyIssuesContainer"></div>
-                        <button class="add-btn" onclick="addWeeklyIssue()">+ Add Issue</button>
-                        
-                        <div id="idsWorkspace" style="margin-top: 15px; display: none;">
-                            <div style="background: var(--primary); color: white; padding: 8px 12px; border-radius: 6px 6px 0 0; font-weight: 600;">
-                                <span id="idsIssueTitle">Issue #1</span>
-                                <button onclick="closeIDSWorkspace()" style="float: right; background: none; border: none; color: white; cursor: pointer; font-size: 1.2rem;">×</button>
-                            </div>
-                            <div style="background: var(--gray-50); padding: 12px; border-radius: 0 0 6px 6px; border: 1px solid var(--gray-200); border-top: none;">
-                                <div class="ids-step">
-                                    <h4><span class="ids-badge">I</span> Identify</h4>
-                                    <textarea id="idsIdentify" rows="2" placeholder="What is the real issue? Root cause..." onchange="saveCurrentIDS()"></textarea>
-                                </div>
-                                <div class="ids-step">
-                                    <h4><span class="ids-badge">D</span> Discuss</h4>
-                                    <textarea id="idsDiscuss" rows="2" placeholder="Key discussion points..." onchange="saveCurrentIDS()"></textarea>
-                                </div>
-                                <div class="ids-step">
-                                    <h4><span class="ids-badge">S</span> Solve</h4>
-                                    <textarea id="idsSolve" rows="2" placeholder="Solution / Action item..." onchange="saveCurrentIDS()"></textarea>
-                                </div>
-                                <div style="display: flex; gap: 8px; margin-top: 10px;">
-                                    <button class="btn btn-success" onclick="resolveIssue()" style="flex: 1;">✔ Create To-Do from Solution</button>
-                                    <button class="btn btn-secondary" onclick="askAIForHelp()" style="padding: 8px 12px;" title="Get AI suggestions">🤖 AI Help</button>
-                                </div>
-                            </div>
+                    <div style="background: var(--gray-50); padding: 12px; border-radius: 0 0 6px 6px; border: 1px solid var(--gray-200); border-top: none;">
+                        <div class="ids-step">
+                            <h4><span class="ids-badge">I</span> Identify</h4>
+                            <textarea id="idsIdentify" rows="2" placeholder="What is the real issue? Root cause..." onchange="saveCurrentIDS()"></textarea>
+                        </div>
+                        <div class="ids-step">
+                            <h4><span class="ids-badge">D</span> Discuss</h4>
+                            <textarea id="idsDiscuss" rows="2" placeholder="Key discussion points..." onchange="saveCurrentIDS()"></textarea>
+                        </div>
+                        <div class="ids-step">
+                            <h4><span class="ids-badge">S</span> Solve</h4>
+                            <textarea id="idsSolve" rows="2" placeholder="Solution / Action item..." onchange="saveCurrentIDS()"></textarea>
+                        </div>
+                        <div style="display: flex; gap: 8px; margin-top: 10px;">
+                            <button class="btn btn-success" onclick="resolveIssue()" style="flex: 1;">✔ Create To-Do from Solution</button>
+                            <button class="btn btn-secondary" onclick="askAIForHelp()" style="padding: 8px 12px;" title="Get AI suggestions">🤖 AI Help</button>
                         </div>
                     </div>
                 </div>
             </div>
-            
+
+            <!-- v3.75.0 (item 1): "Issues List (Long-term)" moved here from the 1-Year
+                 Plan page - Hans's specified meeting-body order includes it between IDS
+                 and Meeting Notes. Inputs i1-i5 / i1_check-i5_check keep their ids, so
+                 save/load and promoteLongTermIssues() are untouched. Reversal: move the
+                 slice back under the Goals section on the 1-Year page. -->
+            <div class="section issues">
+                <h3>⚠️ Issues List (Long-term) 
+                    <button class="btn btn-secondary" onclick="promoteLongTermIssues()" style="float: right; padding: 4px 10px; font-size: 0.8rem;">
+                        ➡️ Send to Weekly IDS
+                    </button>
+                </h3>
+                <p style="font-size: 0.85rem; color: var(--gray-500); margin-bottom: 12px;">Issues to address at quarterly planning sessions. Click "Send to Weekly IDS" to add checked issues to this week's meeting.</p>
+                <div class="numbered-item"><input type="checkbox" id="i1_check" style="width: 18px; margin-right: 8px;"><span class="num">1</span><input type="text" id="i1" placeholder="Issue 1" style="flex: 1;"></div>
+                <div class="numbered-item"><input type="checkbox" id="i2_check" style="width: 18px; margin-right: 8px;"><span class="num">2</span><input type="text" id="i2" placeholder="Issue 2" style="flex: 1;"></div>
+                <div class="numbered-item"><input type="checkbox" id="i3_check" style="width: 18px; margin-right: 8px;"><span class="num">3</span><input type="text" id="i3" placeholder="Issue 3" style="flex: 1;"></div>
+                <div class="numbered-item"><input type="checkbox" id="i4_check" style="width: 18px; margin-right: 8px;"><span class="num">4</span><input type="text" id="i4" placeholder="Issue 4" style="flex: 1;"></div>
+                <div class="numbered-item"><input type="checkbox" id="i5_check" style="width: 18px; margin-right: 8px;"><span class="num">5</span><input type="text" id="i5" placeholder="Issue 5" style="flex: 1;"></div>
+            </div>
+
+            <div class="section" style="margin-top: 15px;">
+                <h3>📝 Meeting Notes</h3>
+                <textarea class="notes-area" id="meetingNotes" placeholder="Customer headlines, discussion points, cascading messages..."></textarea>
+            </div>
             <!-- AI Assistant Modal -->
             <div class="modal-overlay" id="aiAssistModal">
                 <div class="modal" style="max-width: 600px;">
@@ -4371,11 +4430,14 @@
                     </div>
                 </div>
             </div>
-            
-            <div class="section" style="margin-top: 15px;">
-                <h3>📝 Meeting Notes</h3>
-                <textarea class="notes-area" id="meetingNotes" placeholder="Customer headlines, discussion points, cascading messages..."></textarea>
-            </div>
+
+            <!-- v3.66.2 (Hans feedback 3): the Weekly Pomodoro Challenge panel
+                 is gone from the Weekly Meeting tab. The container id is kept
+                 (display:none) rather than deleted because renderPomodoroLeaderboard
+                 writes into it by id from several call sites and would throw on a
+                 null - the Pomodoro feature itself still lives on My Daily Plan,
+                 where the timer is, and is untouched. -->
+            <div id="pomodoroLeaderboard" style="display: none;"></div>
         </div>
         
         <!-- MY DAILY PLAN PAGE -->
@@ -5251,6 +5313,27 @@
                                 <span style="font-size: 0.85rem;">Enable "Delegate" option for tasks assigned outside the team</span>
                             </label>
                         </div>
+                    </div>
+                    </div>
+                    <div class="set-band" id="setBand-ownerColors">
+                        <p class="set-scope set-scope-local">This device only today &mdash; a firm-wide copy is a named follow-up (it needs a Google_Tasks_Sync.gs round).</p>
+                    <!-- Owner Colours (v3.76.0, Hans's 5.11b-7 item 2a). In the Firm hub because
+                         3.68.0's ownership-x-subject axis puts firm-wide people-settings here.
+                         Stored in _settings.ownerColors, NOT on the team-member records:
+                         saveTeamSettings() in the .gs rebuilds each member from an explicit
+                         whitelist, so a color field there would be silently dropped on every
+                         cloud save and erased on the next pull - a phantom sync bug. See the
+                         ownerColorFor() comment in the script for the full reasoning.
+                         The pickers are populated by renderOwnerColorPickers() at openSettings();
+                         saveSettings() never reads them (each change persists immediately), so
+                         the rebuild cannot write undefined over anything. -->
+                    <div style="margin-bottom: 16px;">
+                        <h4 style="color: #1e40af; margin-bottom: 8px; font-size: 0.95rem;">Owner Colours</h4>
+                        <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 10px;">
+                            Each person's rows on the Weekly Meeting To-Dos are shaded with their colour when the owner filter is on "All Team". Pick any colour &mdash; the row tint stays readable automatically.
+                        </p>
+                        <div id="ownerColorPickers"></div>
+                        <button class="btn btn-secondary" onclick="resetOwnerColors()" style="padding: 6px 12px; font-size: 0.8rem;">Reset to defaults</button>
                     </div>
                     </div>
                     <div class="set-band" id="setBand-weeklyMeeting">
@@ -6315,9 +6398,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.74.0';
-        const EOS_BUILD_DATE = '2026-07-30';
-        const EOS_BUILD_TIME = '23:05'; // v3.74.0: THE COMPOSER - Hans's item 4, which is Sec 5.11b-6 items 11 AND 12 arriving together. index.html only; no .gs change, so NO clasp deploy. IT COULD ONLY BE BUILT BECAUSE HE ANSWERED THE BLOCKING QUESTION, in his own words: "This would be universally global for the entire EOS System", modelled on Claude's own mobile composer which he screenshotted - text rises up the screen as you type, a microphone beside the keyboard, an up-arrow that commits it back into the field. AND WHY IT DID NOT HAVE TO WAIT FOR THE SHARED AI-CALL HELPER, which Sec 5.11c says must precede item 12: that rule is about AI TRANSCRIPTION. Dictation here is the browser's own webkitSpeechRecognition - no API key, no provider routing, no backend, nothing for the helper to share. So the dependency did not apply and the mic shipped with the composer instead of a release later. ***Check whether a stated dependency applies to the implementation you actually chose, rather than to the one the note was written about.*** THE COMMIT PATH IS THE WHOLE RISK AND THE ORDERING IS WHAT MAKES IT SAFE: write the value -> fire the events the field's own handlers listen for -> forget the element. Many of those handlers re-render their own list (saveTodoTextFromDaily calls sortAndRenderTodos, which REPLACES the node), so holding a reference across the notify step would leave us writing into a detached node. PROVEN on the worst case rather than assumed: composing over a contenteditable to-do title whose onblur re-renders the whole list - the new text is in yearData (1), in localStorage (1), and visible in the re-rendered list, with the row count unchanged. AND OPENING IS SAFE FOR THE MIRROR-IMAGE REASON, checked in the code and not assumed: blurring the original field fires its onblur with the text UNCHANGED, and those handlers early-return on `newText === todo.text`, while onchange on an <input> does not fire at all unless the value changed. THREE EXCLUSIONS, STATED RATHER THAN SILENT, because "every text box" needs an honest reading. (1) NUMBER-ISH FIELDS - anything carrying inputmode decimal/numeric or type number/date keeps its own keypad; v3.71.0 put a decimal keypad on all 117 scorecard cells at his request and routing a scorecard number through a prose composer would undo that release. (2) LIVE-FILTER FIELDS - anything with an `oninput` attribute, because those exist to react to every keystroke (repository search, Kanban search) and a surface that hands the text over only at the end breaks the feature outright. Keyed off the ATTRIBUTE rather than a list of ids, so a search box written next year is covered the day it is written. (3) `data-no-composer`, the explicit opt-out. Verified: composerEligible() is false for a scorecard cell and for #repoSearch, and focusing either opens nothing. ONE document-level focusin listener in the CAPTURE phase, so it covers fields inside modals, fields rendered later, and surfaces that do not exist yet - the only way "every text box" can stay true as the app grows. Verified on his actual screenshot case, an <input> inside the Edit Meeting Agenda modal: the composer layers above it (z-index 9996 vs 1000, and below the 9997-9999 sign-in/2FA gates which must never be covered), prefills, commits into both the field and editingAgenda[0].title, and leaves the agenda modal open underneath. THE RISING TEXT IS LAYOUT, NOT ANIMATION: a bottom-anchored flex column where a spacer eats the slack, so the textarea grows and the column pushes it up. MEASURED with real sentences - text top 740 -> 695 -> 597 -> 427 -> 321px as content grows, capped at 55% of the viewport after which it scrolls internally, with the mic/send bar pinned at the bottom throughout and the shell never exceeding the viewport. No transform on any ancestor, because a transform makes a containing block for position:fixed descendants (the 3.70.0 trap). COARSE POINTERS ONLY - he described a phone, and a full-screen composer over a 1,280px desktop field is an obstruction rather than a help. AND IT HAS AN OFF SWITCH, in Settings > Me > Task rows, device-local in eos_ui_prefs.composer: not because the request is doubtful but because a change to how typing works everywhere should be reversible without waiting for a deploy. Verified off -> focusing opens nothing, and the preference persists. Dictation APPENDS rather than replaces (decision 13's rule, and the obvious one - losing typed text to a mis-tapped mic is unrecoverable), and a browser with no recogniser says so instead of failing silently. Closing with the X leaves the field exactly as it was - verified. v3.73.0: Hans's THIRD phone-test round (Sec 5.11b-7), the five items that are bugs or visible layout defects: his 2c, 3, 5, 8 and the phantom drag handle. index.html only; no .gs change, so NO clasp deploy. ITEM 2C IS A REGRESSION I SHIPPED IN 3.72.0 AND HIS THREE SYMPTOMS WERE ONE CAUSE. He reported: the Today `...` menu vanishes when the page moves, it appears away from the row he tapped, and sometimes tapping does nothing. All three are v3.72.0's `position:fixed` escape hatch, which existed because `.repo-items` is `max-height:350px; overflow-y:auto` and an absolutely-positioned menu cannot escape a clipping ancestor whatever its z-index. MEASURED at 412 before changing anything: the menu came out `fixed`, 327px tall, parked at a clamped viewport position instead of under its own row, overlapping the FAB - and the ancestor walk proved `#repoTodos` is the ONLY clipping ancestor, every element above it `overflow:visible`. So the fix removes the CAUSE rather than keeping the escape: on a phone the repository is its own full-screen segment since 3.70.0, so a 350px inner scroller inside a scrolling page is a scroller inside a scroller - which is also the likeliest reason a tap sometimes did nothing. With it gone the menu is `position:absolute`, hangs off its own row and travels with it: literally the same code path the Weekly Meeting rows have used since Phase 1, which is the parity he asked for. Verified: max-height none, overflow-y visible, menu position 'absolute', 32/32 rows. DESKTOP KEEPS BOTH the 350px cap (three columns side by side need it) and the fixed-escape - verified still 'fixed' and inside the viewport at 1280. ***THE LESSON: I built an escape hatch for a constraint I could have removed. When a workaround needs a viewport clamp, a scroll listener and a second positioning mode, check whether the thing it is working around is load-bearing on the surface that has the problem.*** ALSO: the FAB now stands down for an open row menu, the same way it stands down for a modal (3.71.0) - it is z-index 2400 against the menu's 4000 so it never actually covered it, but two floating panels 20px apart read as one broken one. THE PHANTOM DRAG HANDLE, found while reading his screenshot rather than reported: `.repo-item::before { content: "..." }` inside the coarse-pointer block printed a two-character DRAG HANDLE on every Today row on a phone, where dragging was deliberately rejected in v3.50.0 - an affordance for a gesture that does not exist. It WRAPPED to two lines in a narrow row, which is the doubled mark in his photo, and being later in the sheet it BEAT `.repo-item.rock::before { content: rock emoji }`, so rocks silently lost their marker on every phone. Removed; verified the rock emoji is back and repository text went 228 -> 248px. ITEM 8, MEETING TO-DO ROWS: measured at 412 (page 397) the checkbox started at x=47 and the title got 159px - 39% of the screen - while `.tr-actions` took 128px of the same line, almost as much as the title. His layout is right: text spans the row, icons drop to their own right-aligned line beneath. AFTER: title 159 -> 305px (77% of screen), gutter 47 -> 37px, actions on their own line right-aligned to within 12px of the row edge. COST, STATED PLAINLY: the row grew 105 -> 122px, because a 40px action line is a 40px action line. That is inherent to the layout he asked for and the title nearly doubled in exchange; the only lever left would be dropping the meta pill line, which he has not asked for. Desktop deliberately does NOT wrap - verified flex-wrap nowrap, row 68px, title 345px, actions on the title line. AND THE EMAIL CHIP IS WITHDRAWN, WHICH REVERSES DECISION 7 ON HIS INSTRUCTION: decision 7 locks a "full-width envelope chip carrying the email subject" from his own screenshot; he now says the Gmail icon makes it redundant. Measured: 13 of 35 rows carried BOTH, and they ALWAYS co-occur because renderTaskActions promotes the mark on exactly the condition that renders the chip. The reason it degraded is the part worth keeping: the chip was meant to carry the SUBJECT, and we never had it - extractEmailLink() in the .gs keeps links[i].link and discards links[i].description, which IS the subject - so it has always read "Open source email", a label for the action the icon already performs. A `CHIP_WITHDRAWN` constant sits at the emission site: if a clasp round ever keeps the description, flip it and the chip returns carrying information instead of repeating a button. Chips 13 -> 0, Gmail icons 23 unchanged. ITEM 5, EDIT MEETING AGENDA: seven controls on one line left the title input ~60px, wide enough to show its leading emoji and none of the words - exactly his screenshot. Now two lines: title owns the first (60 -> 236px, reads "Opening / Prayer"), the time box and the small buttons share the second, right-aligned. THE UP/DOWN ARROWS STAY ON MOBILE AND THAT IS A CORRECTION TO HIS PREMISE, NOT AN OVERSIGHT: he asked to drop them "if you can drag and drop the order", and on a phone you cannot - reordering here is HTML5 drag and mobile drag was rejected in v3.50.0, so on a phone the arrows ARE the reorder. They are removed on DESKTOP, where dragging works - verified 0 visible at 1280, 2 visible at 412. ITEM 3, THE DEAD SIDEBAR ENTRY: he asked what "2026 Annual Plan" in the drawer does. Nothing, and it could not. The Year group renders one button per <option> labelled `seededData[y].name`, and drawerSelectYear() is a no-op when you pick the year already loaded. With a single year on file the whole group is an entry that can only ever do nothing, so it is rendered only when there is somewhere to switch TO; it returns by itself when a second year exists. Drawer 14 -> 13 items, groups now Focus/Plan/Work/System. VERIFIED, seeded and asserted, in a fixed-width iframe with the coarse-pointer rules force-injected: all nine pages document scrollWidth == viewport at 375, 412 AND 1280, zero elements over the edge, ZERO console errors, Daily Plan re-measured with the REPOSITORY segment showing. NOT STARTED and each needs a decision or is its own job: his item 1 (Meeting/Agenda consolidation), 2a (owner colours - a THIRD palette against decision 11), 2b (Assign in the menu), 4 (the global composer + mic - he has now ANSWERED the open question: every text box, universally), 6 (device sync - DIAGNOSED, see the docs: Issues & Feature Requests is localStorage-only and has never synced anywhere, and Marketing syncs through Supabase but silently degrades to local-only when a device has no profile), 7 (long-press bottom-nav reorder). v3.72.0: RELEASE B of Hans's second phone-test list (Sec 5.11b-6) - items 16, 13 and the delete/archive/sort half of 9b, built as ONE job because they are one missing call, exactly as Sec 5.11b-6 said. index.html only; no .gs change, so NO clasp deploy. THE ROOT CAUSE, restated because it is the whole release: Sec 5.11b-5 decision 7 says the task row is "shared by all surfaces" and it was not - the Matrix and the Rule of 3 call renderTaskActions(), and the Today repository rendered its own `.repo-item` markup and called nothing. That single missing call is why Matrix rows have had a ... since Phase 1 and Today's list had none. Hans filed it as three notes; it was one gap. TWO LIVE BUGS FOUND WHILE BUILDING IT, both measured before being fixed, and both worse than the feature. (1) THE FOURTH DEAD SELECTOR IN THIS FILE: rerenderAllTaskSurfaces() guarded its repository repaint on getElementById('taskRepository') and NO element has ever had that id - the repository is #repositoryDropZone - so renderRepository() has never once been called from there. Measured: completing a task by id while standing on My Daily Plan left the repository at 32 rows when a manual renderRepository() gave 31. It mattered little while dragging was the only way to act on a Today row; it would have made every new ... action paint a stale row. AND THE OBVIOUS FIX IS UNSAFE, which is very likely why an element id was reached for: the element is ALWAYS in the DOM, so guarding on it alone calls renderRepository() from the To-Dos tab on a cold app, which measurably throws "Cannot read properties of undefined (reading 'q1')" because dailyPlanData is still {}. The real condition is "is a plan loaded", so it now tests `dailyPlanData && dailyPlanData.matrix`. (2) DRAGGING A REPOSITORY ROW WHILE THE SEARCH BOX HAD TEXT IN IT MOVED THE WRONG TASK. dragStart passed an INDEX into the list renderRepository drew, and getTaskData() re-derived its own filter to look it back up - and the two filters have never matched (the renderer also excludes done rocks, textless records, snoozed to-dos and anything the search hides). Proven: with "schwab" typed in the box the first visible row is "Invest remaining $10k 401k at Schwab", its index is 0, and getTaskData('todo',0) returns "Reconcile the Otter sheet https://..." - a different task entirely. The drag is id-addressed now (decision 7's own instruction); the index survives only as the fallback for LOCAL tasks, which resolveTaskById cannot find because it does not search dailyPlanData.localTasks. Item 9b's sort would have broken this for every row rather than some. ITEM 16: every Today repository row - 32 to-dos and 4 rocks in the fixture - now renders through renderTaskActions(rec,'repository',{menuOnly:true}). menuOnly drops the two SURFACE buttons (star, AI sparkle) and keeps the ... and everything in it, which is exactly the trade Hans offered: "I'll live without the star and the AI sparkle there." Both are still inside the menu, so Phase 1's "every action reachable from ..." floor is untouched. ITEM 13, and the one non-negotiable: the Move picker commits through the SAME code the drag commits through. The two commit tails were EXTRACTED out of dropToMatrix() and dropToRuleSlot() into commitMatrixEntry() / commitRuleEntry() and both callers now use them - one place writes a quadrant, one place writes a Rule-of-3 slot, so dedup, persistence and the re-render fan-out cannot drift between "I dragged it" and "I picked it". Same rule Phase 3 locked for kanbanMoveCardToCell. Destinations: three Rule-of-3 slots (an occupied slot NAMES its occupant and replaces on tap - the drag path just alert()s "remove it first", which a picker that can see the occupant has no excuse for), the four quadrants, and the Google Tasks list via the EXISTING moveTaskToList(), offered only where it can work (a rock is not a Google task; a to-do with no googleTaskId has never been pushed). New invariant enforced in both cores: a task cannot be in the Rule of 3 and a quadrant at once. WHY MOVING A MEETING TASK SHOWS UP ON TODAY - proven, not assumed: the Matrix and Rule of 3 hold {id,type} REFERENCES into the same quarter todos array the Weekly Meeting renders, so adding a reference IS the move. Moved a task from the Meeting page to Q1, navigated to My Daily Plan, found it in Q1. Move is on every surface's ... except COMPLETED mode, deliberately - that menu is a recovery menu. ITEM 9B: delete and archive come free with item 16 because the menu extras call archiveTaskById() / deleteTaskById(), the same id-addressed handlers the Meeting rows use - "works like the Meeting tab's" is literally true rather than re-implemented. Uncheck needs no entry: the repository filters !t.done so a ticked task leaves the list, and the Matrix and Rule of 3 have carried Uncheck since Phase 2. Sort is a new #repoSortOrder with the Meeting tab's five orders in its wording, its own value in eos_ui_prefs.repoSort (device-local), sorting a COPY - never the underlying arrays, which would silently rewrite the Meeting tab's manual order - and stamping the original filtered index on first so the drag fallback stays honest. HELD BACK FROM 9B AND SAID PLAINLY: "moving lists around" (reordering the repository's list GROUPS). The Meeting tab's list reordering is a separate drag system (dragListStart/dragListOver) over settings.todoListOrder, and wiring a second surface into it is its own job, not the tail of this one. A SHARED-CHROME FIX THE FEATURE FORCED: the ... menu is position:absolute inside .task-action-wrap and z-index:4000 does NOT let an absolutely-positioned box escape a clipping ancestor - `.repo-items` is `max-height:350px; overflow-y:auto`, so every Today menu opened INSIDE a scroller and was cut off. Fixed generally rather than for the repository: if any ancestor between the wrap and body clips, the menu switches to position:fixed at the button's screen coordinates, with a viewport clamp and a capture-phase scroll listener that closes it. Verified all 32 rows: 32/32 fixed, 32/32 escaped the scroller's bounds, 0 degenerate. Menus with no clipping ancestor (To-Dos, Weekly Meeting, Matrix) keep the absolute path they have had since Phase 1 - measured, still "absolute". VERIFIED, seeded and asserted, in a fixed-width iframe with the coarse-pointer rules force-injected: all nine pages document scrollWidth == viewport at 375, 412 AND 1280 with zero elements over the edge, AND the Daily Plan measured again with the REPOSITORY segment showing (the default 'today' segment hides that column entirely, so measuring it there measures a zero-size box - that mistake was made once in this session and caught). ZERO console errors. Drag parity proven by driving the real handlers: repository->Q2 2 to 3 and persisted, Q2->Q4 leaves 0 behind and arrives as 1 (the skipDedup path), an occupied Rule-of-3 slot still refuses, an empty one accepts. DESKTOP VERIFIED UNCHANGED at 1280: 18 scorecard columns, both Print buttons, matrix 2x2, three Daily Plan columns block, segment strip none, no bottom nav / FAB / PTR, tabs flex, sync bar flex. SETTINGS CONTRACT RE-PROVEN because this adds a new .modal-overlay: 5 of 6 hubs display:none, 98 inputs in the DOM, a field typed into a hidden hub round-tripped through save-on-navigate. NO new touch gesture, so the swipe / pull-to-refresh suite is unchanged and was not re-run. v3.71.0: RELEASE A of Hans's SECOND phone-test list (Sec 5.11b-6) - his items 3, 7, 8, 9a and 15, the five he himself flagged as small, independent and measurable. index.html only; no .gs change, so NO clasp deploy. ITEM 3, THE FAB OVER SETTINGS: syncFabVisibility() asked "which PAGE am I on?" and Settings is a MODAL over a page, so the answer was still dailyPlan and the "+" stayed up. Reproduced before fixing (fabWithSettingsOpen: "visible" at both 375 and 412) and it was not only Settings - the same "+" floated over the master print modal, the snooze picker, the AI drafter and every sign-in gate. Now gated on `.modal-overlay.active` - the SAME selector closeModalsBeforeNavigate() already trusts to enumerate open modals, so there is one definition of "a modal is open" rather than two - plus #changelogModal by id, because that one is built at runtime and is deliberately not a .modal-overlay (which is exactly why that function has to remove it separately). Watched with a MutationObserver on the modal elements THEMSELVES, not a subtree observer on <body>: modals are opened from ~30 sites, most of them a bare classList.add('active') rather than openModal(), so patching the two helpers would have missed most of them and been invisibly wrong - and a body-subtree class observer would fire on every render pass in the app for a gate that changes a few times a session. ITEM 7: My Daily Plan's header row was 104px with three buttons and a dropdown; it is 44px with one, and content starts at 149px instead of 209px. Print is deleted (the drawer's Print... master modal already has a "My Daily Plan" checkbox, and the desktop header still has its own); End Day moved to the BOTTOM of the Today column, under "Notes for Tomorrow" - it is the last thing you do on the page and it now sits beneath the notes it asks you to write. ITEM 9A - AND THERE WAS A REAL BUG UNDER IT, not just a redundant control: initDailyPlan() rebuilds #dailyPlanUser's innerHTML on EVERY navigation to the page, and rebuilding a <select>'s options resets its value to option 0. applySignedInUser() set the right person once at sign-in and the next visit threw it away. Invisible for Hans, who IS teamMembers[0] - Amanda would have been reading HIS day and writing into HIS storage key, every single time. Proven by stubbing eos_signed_in_email to amanda@ and visiting the page twice: 3.70.0 gives HB, HB; 3.71.0 gives AB, AB with storage key eos_dailyPlan_AB. The <select> is still in the DOM, CSS-hidden by #dailyPlanUserWrap, and is still the ONLY place the value lives - the #todoOwnerFilter (3.62.0) / #yearSelect (3.69.0) contract, so all ~45 readers including loadDailyPlan()'s eos_dailyPlan_<initials> key are untouched and nothing is duplicated. ITEM 8: all 117 scorecard week cells get inputmode="decimal" (and so does the Goal cell). `decimal` NOT `numeric`, and NOT type="number" - CHECKED AGAINST HIS REAL DATA FIRST, where "Blogs written" has a goal of "0.5", so a weekly 0.5 or 1.5 is legitimate; `numeric` gives no decimal point on iOS and type="number" would reject or blank values these cells are allowed to hold. THE SECOND HALF OF ITEM 8 DID NOT WORK THE WAY HE EXPECTED AND THE MEASUREMENT IS WHY: the two Print buttons live in the PAGE-TITLE row, not in the table, so dropping them on mobile buys 30px of vertical chrome (header 74 -> 44) and exactly 0px of column width. What actually squeezed the measurable name is that the this-week-only table needed Who 63 + Measurable 148 + Goal 55 + week 75 = 341px inside a 312px wrapper, so it was quietly scrolling 29px sideways INSIDE its own overflow-x:auto wrapper - which is why no document-overflow check ever flagged it. Trimmed Goal to 42 and the week cell's 66px floor (set in 3.67.0) to 54: measurable name 151 -> 176 at 412 and the internal scroll is 0 at both widths. At 375 the name column is at its own min-content floor so it stays 148 - reported rather than papered over. ITEM 15: Sync moved out of the drawer's System group into the drawer's blue header beside the "last synced" line. The drawer deliberately does NOT close on tap - that is the whole reason he wanted it there, and updateSyncStatus() now mirrors into #drawerSyncLine LIVE (it was only copied when the drawer was rebuilt, so with the button beside it the line would have read the old status for the entire sync). Verified by clicking it: line goes to "Pulling from Google Tasks...", drawer stays open, System group is 14 items instead of 15 with no Sync entry. A 45s WATCHDOG on that button because it was measured, not imagined: manualSync() awaits a bare fetch() with no timeout of its own, so on a phone with no signal the promise never settles and a plain try/finally left the button reading "Syncing..." and disabled forever. THIS IS A DEPARTURE FROM DECISION 4's LOCKED IA, recorded as a decision: it lists Sync Now first under System. An action belongs next to the status it changes. VERIFIED, seeded and asserted (39 to-dos incl. the 80-char-URL offender, 4 rocks, 9 measurables with 45 real weekly values, 6 matrix entries, 2 Rule-of-3 slots, 9 kanban cards, 8 marketing cards) in a fixed-width iframe with the coarse-pointer rules force-injected: all nine pages document scrollWidth == viewport at 375, 412 AND 1280, zero elements over the edge, ZERO console errors. DESKTOP UNCHANGED at 1280: 18 scorecard columns, measurable 197px, both Print buttons visible, matrix 2x2, all three Daily Plan columns block, no bottom nav / FAB / PTR indicator, tabs flex, sync bar flex. SETTINGS CONTRACT RE-PROVEN because the new observer watches #settingsModal: 5 of 6 hubs display:none, 98 inputs still in the DOM, and a field typed into a HIDDEN hub round-tripped through save-on-navigate and read back after reopen. NO new touch gesture, so the swipe/pull-to-refresh suite is unchanged and was not re-run. v3.70.0: the four items Hans queued for an unattended session - pull-to-refresh, Daily Plan segmentation, Eisenhower quadrant counts, Kanban's mobile column strip (his item 11) - plus one bug the harness found that shipped in 3.68.1 and 3.69.0 and was never seen. THE BUG FIRST, because it is the reusable lesson: 3.68.1's wrap rule listed FOUR selectors and TWO OF THEM MATCHED NOTHING. `.matrix-item` and `.rule-slot .item-text` do not exist - renderMatrix emits `.matrix-task > .task-text-editable` and renderRuleOf3 emits `.rule-slot > .task-text`. So only the repository column was ever protected, and the same 80-character URL sitting in the Rule of 3 made My Daily Plan 601px wide inside a 375 viewport, 601 inside 412 AND 1460 INSIDE 1280 - this was breaking the desktop too, for two releases, while both release notes said it was fixed. Measured, not reasoned: .daily-plan-grid had width 336 and scrollWidth 589, so 3.68.1's min-width:0 was correctly capping the TRACK and the TEXT was spilling out of it. It hid because the harness seeded the REPOSITORY and nothing else; it appeared the moment the Rule of 3 and the matrix were seeded and asserted. A fixture that covers one component of a page is not a fixture for the page. Same shape as the dead #scorecardTable selector: a rule that looks like protection and matches nothing - CHECK THAT A SELECTOR MATCHES BEFORE BELIEVING IT PROTECTS ANYTHING. Also closed `.matrix-grid` and `.input-row` (which had a guard only inside #setPanes) as the last two unguarded grid containers in the sheet - that is the fourth round of min-width:auto, so this time the pattern was fixed rather than the reported instance. PULL-TO-REFRESH, held from 3.69.0 because it needed his hands: arms only at scrollTop 0, only on a downward pull, coarse pointers only, and stands down entirely when the swipe engine's axis lock has taken the gesture. Bound AFTER initSwipeActions on purpose - document-level touch listeners fire in binding order, so _sw.axis is already settled by the time _onPtrMove sees the same event - but it runs its own axis test too, so ordering is a belt not the braces. VERIFIED BY SYNTHESISING REAL TOUCH EVENTS with matchMedia stubbed coarse, not by reasoning: vertical pull on a to-do row -> swipe releases (_sw null), pull arms, row transform stays 'none', release calls manualSync; horizontal swipe on the same row -> _sw.axis 'x', _ptr stands down, indicator stays parked, and a 75% swipe still commits and shows the Completed snackbar; scrolled to 400 -> never arms; upward drag -> never arms; over an open modal -> never arms; fine pointer -> NEITHER engine arms. `overscroll-behavior-y: contain` on html/body inside the 768 block is load-bearing: without it Chrome Android's own pull-to-refresh would reload the app mid-sync. The action is page-aware (Kanban/Marketing refresh their own board, everything else manualSync) because pulling on Kanban and getting a Google Tasks sync is a lie about what just happened. The page content deliberately does NOT translate - a transform on .page would make it a containing block for any position:fixed descendant. DAILY PLAN SEGMENTATION: Repository / Matrix / Today, the same visible segmented control as decision 2's Simple vs Detailed. Columns hide with display:none and are NEVER unmounted - same contract as the six Settings hubs, and proven the same way: typed into #tomorrowNotes, switched to another segment, saveDailyPlan() still persisted it and it survived navigating away and back. Defaults to Today (assumption stated to Hans: it is the part he actually uses and was the furthest to scroll to); the choice is remembered in eos_ui_prefs.dailyPlanSeg, device-local, so tapping another segment once changes it permanently. The CSS is `@media screen and (max-width:768px)` - the ONLY mobile block in this file that is not a bare max-width, and deliberately so: the print stylesheet hides #repositoryDropZone and lays the matrix out 2x2, and a print page box is not always wider than 768px, so without `screen and` printing while parked on Matrix would have silently dropped two thirds of the printout. QUADRANT COUNTS read the DOM the quadrant just rendered rather than the data array, because renderMatrix's own prune path rewrites innerHTML a second time and counting the array would have disagreed with the screen for exactly the entries hardest to notice. Shows open/total only when something is done. KANBAN ITEM 11: .kanban-columns-header measured 549px inside 375. The mobile pill strip already had overflow-x:auto, but its parent carries `min-width: max-content` for the DESKTOP column heads, and a child scroller inside an unbounded parent never scrolls - so the pills rode the board's own .kanban-scroll and reaching 'Shipped' dragged the whole board sideways. Fixed with a class SET BY THE RENDERER, not a media query, and that distinction is the durable part: isNarrowViewport() is 640px while every CSS mobile rule here is 768px, so between 641 and 768 a max-width:768 rule would collapse the desktop heads. Same reasoning as .mkt-board-mobile. Header now 336px, strip scrolls itself (555 in 336), tapping the last column moves the strip to 219 and the board to 0. The gradient affordance is now shared by both boards instead of written twice. BEFORE -> AFTER, seeded and asserted (6 todos, 2 rocks, 6 matrix entries, 2 Rule-of-3 slots, 8 marketing cards, 9 kanban cards), in a fixed-width iframe with the coarse-pointer rules force-injected: My Daily Plan doc 601 -> 375 at 375 and 601 -> 397 at 412, 10 elements over -> 0, page height 3121 -> 1520 (Today segment) at 375; 1460 -> 1265 at 1280 with 10 over -> 0. All nine pages doc scrollWidth = viewport at 375 / 412 / 1280. DESKTOP VERIFIED UNCHANGED at 1280: segment strip display:none, all three Daily Plan columns block, grid still 3 columns, matrix still 2x2, PTR indicator display:none, overscroll-behavior auto, header-controls flex, sync bar flex, no bottom nav or FAB, .page padding-bottom 25px, kanban heads 288px with no mobile class. HELD BACK DELIBERATELY: the in-tool Gmail viewer (item 1 / Sec 5.18) - it needs a gmail.readonly scope grant, a new backend action gated by requireTeamMemberFromToken_, a clasp deploy Hans has to run himself, and HTML sanitisation; shipping half of that is worse than not starting it.
+        const EOS_VERSION = '3.77.0';
+        const EOS_BUILD_DATE = '2026-07-31';
+        const EOS_BUILD_TIME = '01:35'; // v3.77.0: BOTTOM-NAV LONG-PRESS REORDER - Hans's Sec 5.11b-7 item 7 (= 5.11b-6 item 1). index.html only; no .gs change, so NO clasp deploy. Hold a nav cell 500ms -> the reorderable cells wiggle (his iOS model), drag horizontally to reorder, tap away to lock; order commits to eos_ui_prefs.bottomNav on EVERY drag release so a missed final tap can never lose it. The fixed More cell carries no data-nav-key: never wiggles, never drags, never moves (without it the drawer is unreachable). COEXISTENCE BY CONSTRUCTION: the swipe engine starts only on .todo-item and refuses buttons; this engine binds to #bottomNav itself and starts only on .bnav-btn; pull-to-refresh now EXCLUDES #bottomNav at touchstart (the bar is fixed chrome that never scrolls, so a pull there never meant refresh) - disjoint start targets, not runtime arbitration. Vertical-first movement on a nav cell always hands the touch to the page, even in edit mode. DELIBERATE exception to decision 1's no-timed-hold rule, recorded: that rule is about swipes on ROWS where holding still is hesitation; entering an edit mode is exactly what a long-press is for, per his own iOS-home-screen spec. Verified with the full v3.70.0-style synthesised-touch battery: long-press arms, short tap still navigates, vertical drag neither reorders nor blocks scroll, PTR and nav drag cannot arm during each other, row-swipe axis lock unaffected, fine pointer arms nothing, tap-away locks, reorder survives reload.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -6478,6 +6561,9 @@ Example:
             // listeners and they fire in binding order, so the swipe engine's axis lock has
             // already resolved for a given move event by the time the pull handler sees it.
             initPullToRefresh();
+            // v3.77.0 (item 7). Binds to #bottomNav itself, so it is inert wherever the
+            // bar is display:none (desktop) and no-ops on fine pointers.
+            initBottomNavReorder();
             // v3.71.0 (item 3). Must run after the markup exists and before the first
             // showPage(), so the very first syncFabVisibility() already sees the modal state
             // - at this point #appBootGate is still `.modal-overlay active`, which is
@@ -8528,7 +8614,16 @@ Example:
         // Re-render every task surface that is currently mounted. Guarded so a
         // To-Dos action doesn't blow up when the Daily Plan tab isn't in the DOM.
         function rerenderAllTaskSurfaces() {
-            try { if (typeof sortAndRenderTodos === 'function' && document.getElementById('todoList')) sortAndRenderTodos(); } catch (e) {}
+            // v3.76.0 — THE FIFTH DEAD SELECTOR, found by the Assign harness and sitting
+            // ONE LINE ABOVE the fourth (#taskRepository, fixed in 3.72.0): this guard
+            // read getElementById('todoList') and no element has ever had that id — the
+            // Weekly Meeting list is #todosContainer. So this function has NEVER ONCE
+            // repainted the meeting To-Dos. It went unnoticed because most callers
+            // (delete/archive/toggleTodo) also call sortAndRenderTodos() directly; the
+            // victims were any id-addressed mutation made while STANDING on the Meeting
+            // page that relied on this fan-out alone — including the new Assign commit,
+            // whose row kept its old owner tint until navigation. Measured, then fixed.
+            try { if (typeof sortAndRenderTodos === 'function' && document.getElementById('todosContainer')) sortAndRenderTodos(); } catch (e) {}
             try { if (typeof renderMatrix === 'function' && document.getElementById('matrixQ1')) renderMatrix(); } catch (e) {}
             try { if (typeof renderRuleOf3 === 'function' && document.getElementById('ruleOf3Slots')) renderRuleOf3(); } catch (e) {}
             // v3.72.0 — THE FOURTH DEAD SELECTOR IN THIS FILE. This guard read
@@ -8913,6 +9008,12 @@ Example:
             // own words: "just add a move icon and wording just like the rest of the menu").
             const moveSpec = { key: 'move', icon: '\u21F2', title: 'Move this task to the Rule of 3, a matrix quadrant or another list',
                 label: 'Move\u2026', color: '#0ea5e9', onclick: `openMoveTaskModal('${id}')` };
+            // v3.76.0 (Hans's 5.11b-7 item 2b): Assign, next to Move. A straight
+            // reassignment of the app-level owner field through the ONE existing
+            // owner-change path (updateTodo -> syncTaskToNewOwner). NOT decision 10's
+            // "@person -> Task Triage" quick-add routing, which is still unbuilt.
+            const assignSpec = { key: 'assign', icon: '\uD83D\uDC64', title: 'Assign this task to a team member',
+                label: 'Assign\u2026', color: '#7c3aed', onclick: `openAssignTaskModal('${id}')` };
 
             const menuExtras = Array.isArray(opts.menuExtras) ? opts.menuExtras : [];
             const completedCluster = Array.isArray(opts.completedCluster) ? opts.completedCluster : [];
@@ -8999,6 +9100,7 @@ Example:
             // Matrix and the Rule of 3 hold {id,type} REFERENCES into the same quarter
             // todos array the Meeting tab renders, so adding a reference IS the move.
             overflow.push(moveSpec);
+            overflow.push(assignSpec);
             // Date / list / owner / notes all in one place. On the To-Dos surface these used
             // to be inline editors in the row; at cozy and compact density they are pills,
             // and at compact the list pill is hidden entirely - so the menu has to hold the
@@ -9150,7 +9252,45 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.74.0 &mdash; 2026-07-30 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.77.0 &mdash; 2026-07-31 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Your item 7 &mdash; hold a bottom-bar icon, the others wiggle, drag to reorder, tap away to lock.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Exactly the iPhone-home-screen model you described.</strong> Hold any of your four slots for half a second and they start to wiggle (your phone also gives a small buzz); drag left or right to reorder; tap anywhere else to lock it in. A quick tap still just navigates, exactly as before.</li>'
+                + '<li><strong>The order saves the moment you let go of a drag</strong> &mdash; not on the final tap-away &mdash; so it can never be lost, and it survives reloads. It is per-device, like which four pages are in the bar.</li>'
+                + '<li><strong>The More cell never moves.</strong> It is the only way to reach everything else, so it stays pinned on the right and dims while you are rearranging.</li>'
+                + '<li><strong>The three touch gestures cannot fight each other, and I proved it rather than argued it:</strong> a swipe starts only on a task row, this starts only on a bar icon, and pull-to-refresh now ignores the bar entirely. The full simulated-touch battery ran: vertical drags on an icon still scroll the page, a pull cannot start a reorder, a reorder cannot start a pull, row swipes are untouched, and a mouse can never trigger any of it.</li>'
+                + '<li><strong>One honest note:</strong> the design rule from the swipe research says &ldquo;no timed holds&rdquo; &mdash; that rule is about swiping rows, where hesitating should not be punished. A long-press is the right tool for <em>entering an edit mode</em>, which is what you asked for, so this is a deliberate exception and it is recorded as one.</li>'
+                + '</ul>'
+                + '</div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.76.0 &mdash; 2026-07-31</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Your items 2b and 2a &mdash; Assign in the task menu, and owner colours instead of the initials pill.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Every task&rsquo;s &ctdot; menu has an Assign entry now, next to Move.</strong> It opens a person picker and goes through the same owner-change machinery the inline editor always used &mdash; so reassigning a task still pushes it into the new owner&rsquo;s Google Tasks. Rocks can be assigned too, but that is app-level only, because rocks never push to Google.</li>'
+                + '<li><strong>To be clear about what this is not:</strong> this hands the task straight to the other person&rsquo;s lists. The gentler &ldquo;@person routes to a Task Triage list for them to sort on their own terms&rdquo; idea from the design round is a different feature and is still unbuilt.</li>'
+                + '<li><strong>On the Weekly Meeting To-Dos, rows are now shaded with their owner&rsquo;s colour when the filter is on All Team</strong> &mdash; blue for you, pink for Amanda, purple for Both, exactly your example &mdash; and the little initials pill is gone, which was your whole point. Pick one person in the filter and there is no pill and no shading at all. &ldquo;Both&rdquo; tasks keep their pill on All Team, because a single colour cannot say &ldquo;shared&rdquo;.</li>'
+                + '<li><strong>Colours are yours to change: Settings &rsaquo; Firm &rsaquo; Owner Colours.</strong> Any colour you pick stays readable &mdash; the row tint is computed, and a too-light pick automatically gets darker label text. For now colours live on each device; making them firm-wide needs a small backend round, which I have written up as a follow-up rather than half-shipped.</li>'
+                + '<li><strong>Starred rows keep their yellow</strong> &mdash; starred means &ldquo;needs attention now&rdquo;, and that beats knowing whose row it is.</li>'
+                + '<li><strong>And a real bug the Assign work flushed out &mdash; the fifth &ldquo;dead selector&rdquo; in this file, one line above the fourth:</strong> the shared repaint helper checked for an element id that has never existed, so it has never once repainted the Weekly Meeting To-Dos. Most actions repaint that list themselves, which is why nothing looked broken; anything that relied on the shared helper while you were standing on the Meeting tab quietly showed stale rows until you navigated. Fixed and verified.</li>'
+                + '</ul>'
+                + '</div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.75.0 &mdash; 2026-07-30</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Your item 1 &mdash; the Meeting and Agenda pages rebuilt to your layout, after you answered the question that held it: the agenda always exists, so the button is just a button.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>The Weekly Pulse Meeting header is now the title plus two buttons: Agenda and Otter.</strong> The Agenda button is plain navigation with no status on it &mdash; your ruling that there is always an agenda superseded my earlier reading that it had to prove one exists this week, and both living docs record that as your decision. Print Agenda is deleted from this page (the Agenda page has its own).</li>'
+                + '<li><strong>To-Dos is the first thing on the page and runs the full width.</strong> The two-column grid went with the emptied left column &mdash; the narrow blue strip from your item 8 is gone. Body order is To-Dos, IDS, Issues List (Long-term), Meeting Notes.</li>'
+                + '<li><strong>Issues List (Long-term) moved here from the 1-Year Plan page.</strong> Your layout names it between IDS and Meeting Notes, and it only lived on the 1-Year page before &mdash; so I moved it rather than duplicate it. If you wanted it in both places, say so and I will revisit; reversing it is moving one block back.</li>'
+                + '<li><strong>Sync with Google Tasks now sits in the To-Dos controls row beside All Team Sync.</strong> You did not say where it should go &mdash; my call, on the grounds that it is a to-do action. Easy to move if you disagree.</li>'
+                + '<li><strong>The Agenda page now holds the whole meeting close-out:</strong> the ticking agenda, the ~45 min &bull; Mondays 9am pill in its title, Rate This Meeting with its history, and Complete &amp; Archive at the bottom. The "This Week" heading did not survive the move &mdash; it only ever existed to host the old Open-agenda button.</li>'
+                + '<li><strong>A small defect this fixed on the way:</strong> opening the Agenda page directly used to redraw the agenda without its tick marks until you visited the Meeting tab. It keeps them now.</li>'
+                + '</ul>'
+                + '</div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.74.0 &mdash; 2026-07-30</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Your note 4 &mdash; the full-screen writing box with the microphone, everywhere. Built because you answered the question I was stuck on.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Tap any text box on your phone and you get the full-screen writing surface you showed me.</strong> The text starts low and rises up the screen as you write, there is a microphone, and the up-arrow puts everything back into the box you came from. The &times; leaves the box exactly as it was. It works in <em>every</em> surface &mdash; tasks, meeting notes, the Marketing tab, and inside windows like <strong>Edit Meeting Agenda</strong>, which is where you photographed the problem.</li>'
@@ -10494,7 +10634,14 @@ Example:
                 // v3.66.3: the agenda page owns #agendaItems now, but renderAgendaItems()
                 // is unchanged and still finds it by id - the node moved, the contract did
                 // not. renderMeeting() also calls it and is equally unaffected.
+                // v3.75.0 (item 1): the rating panel + Complete & Archive live here now,
+                // so the page needs the same state pass renderMeeting() gives it. And
+                // loadMeetingState() also restores the agenda TICKS that
+                // renderAgendaItems() just rebuilt without - navigating straight to this
+                // page used to lose them visually (a pre-existing defect, now closed).
                 renderAgendaItems();
+                renderRatingHistory();
+                loadMeetingState(yearData.quarters?.[currentQuarter]?.currentMeeting || {});
             } else if (pageId === 'meeting') {
                 renderMeeting();
             } else if (pageId === 'history') {
@@ -10870,13 +11017,15 @@ Example:
                 .filter(function(k) { return !!NAV_ITEMS[k]; });
             let html = slots.map(function(key) {
                 const it = NAV_ITEMS[key];
+                // v3.77.0 (item 7): data-nav-key marks a REORDERABLE cell - both real pages
+                // and placeholders carry it; the fixed More cell never does.
                 if (it.placeholder) {
-                    return '<button type="button" class="bnav-btn" style="opacity:0.55;"'
+                    return '<button type="button" class="bnav-btn" data-nav-key="' + key + '" style="opacity:0.55;"'
                         + ' onclick="navPlaceholder(\'' + key + '\')">'
                         + '<span class="bnav-icon">' + it.icon + '</span>'
                         + '<span class="bnav-label">' + it.short + '</span></button>';
                 }
-                return '<button type="button" class="bnav-btn" data-nav-page="' + key + '"'
+                return '<button type="button" class="bnav-btn" data-nav-key="' + key + '" data-nav-page="' + key + '"'
                     + ' onclick="showPage(\'' + key + '\')">'
                     + '<span class="bnav-icon">' + it.icon + '</span>'
                     + '<span class="bnav-label">' + it.short + '</span></button>';
@@ -11218,7 +11367,10 @@ Example:
             // Never over an open modal, the drawer, or a menu - those have their own
             // scrollers and "refresh the page underneath" is not what the pull means there.
             const t = e.target;
-            if (t && t.closest && t.closest('.modal-overlay.active, #mobileDrawer, .task-action-menu, .kanban-move-picker, .kanban-dropdown-panel')) return;
+            // v3.77.0: #bottomNav joins the exclusions - the bar is FIXED chrome that
+            // never scrolls, so a pull starting on it never means "refresh the page",
+            // and the nav long-press/reorder gesture (item 7) owns touches there.
+            if (t && t.closest && t.closest('.modal-overlay.active, #mobileDrawer, .task-action-menu, .kanban-move-picker, .kanban-dropdown-panel, #bottomNav')) return;
             const p = e.touches ? e.touches[0] : e;
             _ptr = { x0: p.clientX, y0: p.clientY, active: false };
         }
@@ -11312,6 +11464,181 @@ Example:
             document.addEventListener('touchmove', _onPtrMove, { passive: false });
             document.addEventListener('touchend', _onPtrEnd);
             document.addEventListener('touchcancel', _onPtrCancel);
+        }
+
+        // ============ BOTTOM-NAV LONG-PRESS REORDER (v3.77.0, Hans's item 7) ============
+        //
+        // His model, his words: hold one down, the rest "kind of vibrate like on an Apple
+        // device", drag to reorder, tap away to lock. A gesture over an EXISTING store -
+        // the slots live in eos_ui_prefs.bottomNav (device-local) and toggleBottomNavItem()
+        // already edits the same array from Settings, so nothing new is persisted.
+        //
+        // HOW IT COEXISTS with the other two touch engines, by construction not by luck:
+        //   * The swipe engine only ever starts on a .todo-item and refuses buttons; this
+        //     one only ever starts on a .bnav-btn. The two can never claim the same touch.
+        //   * Pull-to-refresh now EXCLUDES #bottomNav at touchstart (see _onPtrStart): the
+        //     bar is fixed chrome that never scrolls, so a pull there never meant refresh.
+        //     And a pull starting on page content can never become a nav drag, because
+        //     this engine's touchstart never fires for it. Disjoint start targets, not
+        //     runtime arbitration.
+        //   * NOTE the deliberate exception to the "no timed hold" rule from decision 1:
+        //     that rule is about swipes on rows, where holding still means hesitating.
+        //     Entering an EDIT MODE is exactly what a long-press is for (his own spec
+        //     cites the iOS home screen), so a 500ms hold is correct here.
+        //
+        // The fixed fifth cell (More) carries no data-nav-key, so it never wiggles, never
+        // drags, and never moves - without it the drawer is unreachable on a phone.
+        const NAV_HOLD_MS = 500;
+        const NAV_MOVE_SLOP = 8;    // finger travel that cancels the hold (it's a scroll/tap)
+        let _nav = null;            // live touch state
+        let _navEdit = false;       // wiggle mode
+        let _navSuppressClick = false;
+
+        function _navIsEnabled() {
+            try { return window.matchMedia('(hover: none) and (pointer: coarse)').matches; }
+            catch (e) { return false; }
+        }
+        function _navBar() { return document.getElementById('bottomNav'); }
+
+        function _navEnterEdit() {
+            _navEdit = true;
+            _navSuppressClick = true;   // the release of the arming press must not navigate
+            const bar = _navBar();
+            if (bar) bar.classList.add('nav-editing');
+            try { if (navigator.vibrate) navigator.vibrate(30); } catch (e) {}
+        }
+        function _navExitEdit() {
+            _navEdit = false;
+            const bar = _navBar();
+            if (bar) bar.classList.remove('nav-editing');
+        }
+
+        function _onNavTouchStart(e) {
+            if (!_navIsEnabled()) return;
+            if (e.touches && e.touches.length > 1) { _nav = null; return; }
+            const btn = e.target && e.target.closest ? e.target.closest('#bottomNav .bnav-btn') : null;
+            if (!btn) return;
+            const t = e.touches ? e.touches[0] : e;
+            const draggable = btn.hasAttribute('data-nav-key');
+            _nav = { btn: btn, draggable: draggable, x0: t.clientX, y0: t.clientY,
+                     dragging: false, held: false, timer: null };
+            // Arming: only a draggable cell arms edit mode. In edit mode there is no
+            // second hold - a touch on a draggable cell is immediately a potential drag.
+            if (!_navEdit && draggable) {
+                _nav.timer = setTimeout(function() {
+                    if (_nav && !_nav.dragging) { _nav.held = true; _navEnterEdit(); }
+                }, NAV_HOLD_MS);
+            }
+        }
+
+        function _onNavTouchMove(e) {
+            if (!_nav) return;
+            const t = e.touches ? e.touches[0] : e;
+            const dx = t.clientX - _nav.x0;
+            const dy = t.clientY - _nav.y0;
+            if (!_nav.dragging) {
+                if (Math.abs(dx) < NAV_MOVE_SLOP && Math.abs(dy) < NAV_MOVE_SLOP) return;
+                // Finger is moving: this is not a hold any more.
+                if (_nav.timer) { clearTimeout(_nav.timer); _nav.timer = null; }
+                // Vertical-first is a page gesture even in edit mode - a nav drag is
+                // horizontal by definition, and this is what keeps it out of a fight
+                // with page scroll (the mandated battery test).
+                if (!_navEdit || !_nav.draggable || Math.abs(dy) > Math.abs(dx)) { _nav = null; return; }
+                _nav.dragging = true;
+                _nav.btn.classList.add('nav-dragging');
+                const r = _nav.btn.getBoundingClientRect();
+                _nav.grabOffset = _nav.x0 - r.left;
+                _nav.baseLeft = r.left;
+            }
+            // Once dragging, the page must not scroll or zoom underneath.
+            if (e.cancelable) e.preventDefault();
+            const wanted = t.clientX - _nav.grabOffset;
+            _nav.btn.style.transform = 'translateX(' + (wanted - _nav.baseLeft) + 'px)';
+            // Crossed a neighbour's midpoint? Move the node, then re-measure the base -
+            // the transform is always relative to the CURRENT layout slot.
+            const bar = _navBar();
+            const center = wanted + _nav.btn.getBoundingClientRect().width / 2;
+            const sibs = Array.from(bar.querySelectorAll('.bnav-btn[data-nav-key]')).filter(function(b) { return b !== _nav.btn; });
+            for (let i = 0; i < sibs.length; i++) {
+                const sr = sibs[i].getBoundingClientRect();
+                const mid = sr.left + sr.width / 2;
+                const before = _nav.btn.compareDocumentPosition(sibs[i]) & Node.DOCUMENT_POSITION_FOLLOWING;
+                if (before && center > mid) {
+                    sibs[i].parentNode.insertBefore(_nav.btn, sibs[i].nextSibling);
+                } else if (!before && center < mid) {
+                    sibs[i].parentNode.insertBefore(_nav.btn, sibs[i]);
+                } else { continue; }
+                _nav.btn.style.transform = '';
+                _nav.baseLeft = _nav.btn.getBoundingClientRect().left;
+                _nav.btn.style.transform = 'translateX(' + (wanted - _nav.baseLeft) + 'px)';
+                break;
+            }
+        }
+
+        function _onNavTouchEnd() {
+            if (!_nav) return;
+            if (_nav.timer) { clearTimeout(_nav.timer); _nav.timer = null; }
+            const wasDragging = _nav.dragging;
+            const held = _nav.held;
+            const btn = _nav.btn;
+            _nav = null;
+            if (wasDragging) {
+                btn.classList.remove('nav-dragging');
+                btn.style.transform = '';
+                // Commit the DOM order back into the store toggleBottomNavItem() edits.
+                // Persisting on every drag release means "tap away to lock" is purely
+                // cosmetic - a reorder can never be lost to a missed final tap.
+                const order = Array.from(_navBar().querySelectorAll('.bnav-btn[data-nav-key]'))
+                    .map(function(b) { return b.getAttribute('data-nav-key'); });
+                saveUiPrefs({ bottomNav: order });
+                renderBottomNav();          // clean repaint; the bar keeps .nav-editing
+                try { renderBottomNavPicker(); } catch (e) {}   // Settings mirror, if open
+                _navSuppressClick = true;   // the release must not navigate
+                setTimeout(function() { _navSuppressClick = false; }, 350);
+                return;
+            }
+            if (held) {
+                // The arming press just ended; keep suppressing its click briefly.
+                setTimeout(function() { _navSuppressClick = false; }, 350);
+            }
+        }
+        function _onNavTouchCancel() {
+            if (!_nav) return;
+            if (_nav.timer) clearTimeout(_nav.timer);
+            if (_nav.dragging) { _nav.btn.classList.remove('nav-dragging'); _nav.btn.style.transform = ''; }
+            _nav = null;
+        }
+
+        // While editing, a tap on a nav cell must not navigate (iOS home-screen rule);
+        // a tap anywhere OUTSIDE the bar locks the layout and leaves edit mode.
+        function _onNavClickCapture(e) {
+            if (!_navEdit && !_navSuppressClick) return;
+            if (e.target && e.target.closest && e.target.closest('#bottomNav')) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        }
+        function _onNavTapAway(e) {
+            if (!_navEdit) return;
+            if (e.target && e.target.closest && e.target.closest('#bottomNav')) return;
+            _navExitEdit();
+        }
+
+        function initBottomNavReorder() {
+            if (window._navReorderBound) return;
+            window._navReorderBound = true;
+            const bar = _navBar();
+            if (!bar) return;
+            // Bound on the BAR (which is static markup; only its children re-render), so
+            // these never fire for page-content touches at all.
+            bar.addEventListener('touchstart', _onNavTouchStart, { passive: true });
+            bar.addEventListener('touchmove', _onNavTouchMove, { passive: false });
+            bar.addEventListener('touchend', _onNavTouchEnd);
+            bar.addEventListener('touchcancel', _onNavTouchCancel);
+            // Long-press on a button would otherwise open the browser context menu.
+            bar.addEventListener('contextmenu', function(e) { if (_navIsEnabled()) e.preventDefault(); });
+            document.addEventListener('click', _onNavClickCapture, true);
+            document.addEventListener('touchstart', _onNavTapAway, { passive: true });
         }
 
         function toggleBottomNavItem(key) {
@@ -17788,28 +18115,144 @@ Example:
             closeModal('meetingEmailModal');
         }
 
+        // ==================== OWNER COLOURS (v3.76.0, Hans's item 2a) ====================
+        // A THIRD palette - people - separate from both the list palette and the brand
+        // chrome. Decision 11's "two palettes that never meet" is untouched because this
+        // one touches neither; recorded in the docs as an ADDITION to decision 11.
+        //
+        // STORAGE: _settings.ownerColors, which is DEVICE-LOCAL BY DESIGN. The obvious
+        // home - a `color` field on each team-member record - would look like it syncs
+        // firm-wide for free through saveTeamSettingsToCloud, and it would NOT:
+        // saveTeamSettings() in Google_Tasks_Sync.gs (~line 1455) rebuilds each member
+        // from an explicit whitelist (name/email/webAppUrl/webAppSecret/pushListId/
+        // pullListIds/taskLists/role), so a new field is silently DROPPED on every cloud
+        // save and then erased on the next pull - which would read as "the colours won't
+        // stick", a phantom sync bug. The firm-wide follow-up is an _OWNER_COLORS_
+        // sentinel row in the .gs beside _AI_SETTINGS_, plus a .gs version bump.
+        const OWNER_COLOR_DEFAULTS = { HB: '#2563eb', AB: '#ec4899', Both: '#9333ea' };
+        function ownerColorFor(initials) {
+            const s = getSettings();
+            return (s.ownerColors && s.ownerColors[initials]) || OWNER_COLOR_DEFAULTS[initials] || '#6b7280';
+        }
+        // Row shading is a fixed-ratio tint over white, so ANY user-picked colour keeps
+        // dark row text past WCAG 4.5:1 (a 14% tint of pure black is ~#dbdbdb, which is
+        // still ~9:1 against the row's #1f2937 text). Checked in the harness, not eyeballed.
+        function ownerTintFor(initials) {
+            return 'color-mix(in srgb, ' + ownerColorFor(initials) + ' 14%, white)';
+        }
+        function _hexRelLum(hex) {
+            const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+            if (!m) return null;
+            const n = parseInt(m[1], 16);
+            const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+            return 0.2126 * f((n >> 16) & 255) + 0.7152 * f((n >> 8) & 255) + 0.0722 * f(n & 255);
+        }
+        // The accent (pill/label text) is the colour as picked IF it can carry small text
+        // on the near-white tint; a light pick keeps its tint but gets a neutral dark
+        // label instead of unreadable pastel-on-pastel.
+        function ownerAccentFor(initials) {
+            const hex = ownerColorFor(initials);
+            const L = _hexRelLum(hex);
+            if (L === null) return '#374151';
+            const ratio = 1.05 / (L + 0.05);
+            return ratio >= 4.5 ? hex : '#374151';
+        }
+        function setOwnerColor(initials, hex) {
+            const s = getSettings();
+            s.ownerColors = s.ownerColors || {};
+            s.ownerColors[initials] = hex;
+            seededData._settings = s;
+            saveData();
+            try { sortAndRenderTodos(); } catch (e) {}
+        }
+        function resetOwnerColors() {
+            const s = getSettings();
+            delete s.ownerColors;
+            seededData._settings = s;
+            saveData();
+            renderOwnerColorPickers(s);
+            try { sortAndRenderTodos(); } catch (e) {}
+        }
+        function renderOwnerColorPickers(settings) {
+            const host = document.getElementById('ownerColorPickers');
+            if (!host) return;
+            const members = (settings.teamMembers || []).map(m => ({ key: m.initials, label: (m.name || m.initials) + ' (' + m.initials + ')' }));
+            members.push({ key: 'Both', label: 'Both (shared tasks)' });
+            host.innerHTML = members.map(m =>
+                '<label style="display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:0.85rem;">'
+                + '<input type="color" value="' + ownerColorFor(m.key) + '"'
+                + ' onchange="setOwnerColor(\'' + m.key + '\', this.value)"'
+                + ' style="width:44px;height:32px;padding:2px;margin:0;border:1px solid var(--gray-300);border-radius:6px;background:#fff;">'
+                + '<span>' + escapeHtml(m.label) + '</span></label>').join('');
+        }
+
+        // ==================== ASSIGN (v3.76.0, Hans's item 2b) ====================
+        let assignTaskTargetId = null;
+        function openAssignTaskModal(id) {
+            const r = resolveTaskById(id);
+            if (!r) { showToast('Could not find that task any more.', 'error'); return; }
+            if (r.kind === 'completedTodo') { showToast('Completed tasks keep their owner.'); return; }
+            assignTaskTargetId = id;
+            const settings = getSettings();
+            const current = (r.record.owner === 'HB/AB') ? 'Both' : (r.record.owner || '');
+            const people = (settings.teamMembers || []).map(m => ({ value: m.initials, label: (m.name || m.initials) + ' (' + m.initials + ')' }));
+            people.push({ value: 'Both', label: 'Both' });
+            const body = document.getElementById('assignTaskBody');
+            body.innerHTML =
+                '<div style="font-size:0.85rem;color:#6b7280;margin-bottom:10px;">'
+                + escapeHtml((r.record.text || '').slice(0, 120)) + '</div>'
+                + people.map(p =>
+                    '<button class="btn ' + (p.value === current ? 'btn-primary' : 'btn-secondary') + '"'
+                    + ' style="display:flex;align-items:center;gap:10px;width:100%;margin-bottom:8px;justify-content:flex-start;min-height:44px;"'
+                    + ' onclick="commitAssignTask(\'' + p.value + '\')">'
+                    + '<span class="assign-dot" style="background:' + ownerColorFor(p.value) + ';"></span>'
+                    + escapeHtml(p.label) + (p.value === current ? ' (current)' : '')
+                    + '</button>').join('');
+            document.getElementById('assignTaskModal').classList.add('active');
+        }
+        function closeAssignTaskModal() {
+            assignTaskTargetId = null;
+            document.getElementById('assignTaskModal').classList.remove('active');
+        }
+        function commitAssignTask(newOwner) {
+            const r = resolveTaskById(assignTaskTargetId);
+            closeAssignTaskModal();
+            if (!r) { showToast('Could not find that task any more.', 'error'); return; }
+            if (r.record.owner === newOwner) return;
+            if (r.kind === 'todo') {
+                // THE one owner-change path: updateTodo fires syncTaskToNewOwner, which
+                // pushes the task into the new owner's Google Tasks. Writing
+                // r.record.owner directly here would silently skip that push - the same
+                // one-path-per-mutation rule as commitMatrixEntry and kanbanMoveCardToCell.
+                updateTodo(r.idx, 'owner', newOwner);
+            } else if (r.kind === 'rock') {
+                // Rocks have no Google-Tasks push path at all, so a direct write skips
+                // nothing. App-level only, said here rather than discovered later.
+                r.record.owner = newOwner;
+                autoSave();
+            } else { return; }
+            rerenderAllTaskSurfaces();
+            try { if (document.getElementById('quarterly').classList.contains('active')) renderQuarter(); } catch (e) {}
+            showToast('Assigned to ' + newOwner, 'success');
+        }
+
         function renderTodoItem(t, idx, depth = 0, hasSubtasks = false, isExpanded = true) {
-            // Determine owner display and color
+            // Determine owner display and color.
+            // v3.76.0 (Hans's item 2a): the hardcoded HB-blue / AB-red pair is replaced by
+            // the assignable owner palette (ownerColorFor, Settings > Firm > Owner Colours).
+            // Note AB's accent therefore changes red -> pink by default - his own example.
             let ownerDisplay = '';
             let ownerColor = '#9ca3af';
             let ownerBg = 'transparent';
-            
+
             if (t.owner === 'Both' || t.owner === 'HB/AB') {
                 ownerDisplay = 'Both';
-                ownerColor = '#9333ea'; // Purple
-                ownerBg = '#f3e8ff';
+                ownerColor = ownerAccentFor('Both');
+                ownerBg = ownerTintFor('Both');
             } else if (t.owner) {
-                const settings = getSettings();
-                const member = settings.teamMembers.find(m => m.initials === t.owner);
                 ownerDisplay = t.owner;
-                // Color code based on member
-                if (t.owner.includes('HB')) {
-                    ownerColor = '#2563eb'; // Blue
-                    ownerBg = '#dbeafe';
-                } else if (t.owner.includes('AB')) {
-                    ownerColor = '#dc2626'; // Red
-                    ownerBg = '#fee2e2';
-                }
+                ownerColor = ownerAccentFor(t.owner);
+                ownerBg = ownerTintFor(t.owner);
             }
             
             // Calculate indentation. Decision 7 locks subtasks at ONE level of indent, so
@@ -17827,6 +18270,20 @@ Example:
             ` : (depth > 0 ? '' : '<span style="width: 14px; flex-shrink: 0;"></span>');
 
             const density = rowDensity();
+
+            // v3.76.0 (item 2a): owner colour-coding on the Weekly Meeting To-Dos.
+            // Filter on "All" -> the row background carries the owner, so the initials
+            // pill is redundant and is dropped (his words: "that was my whole point").
+            // A single-person filter -> every row is that person, so the pill is dropped
+            // there too and no shading is needed. 'Both' keeps its pill at "All" - a
+            // shared task is the one thing a single person's colour cannot say.
+            // Starred rows keep their yellow: starred means "needs attention now" and
+            // that beats ambient owner identity. Subtask rows keep their purple-edged
+            // background for the same reason. Done rows keep the completed styling.
+            const _ownerFilter = (document.getElementById('todoOwnerFilter') || {}).value || 'all';
+            const _shadeRow = _ownerFilter === 'all' && depth === 0 && !t.done && !t.starred && !!ownerDisplay;
+            const _rowShade = _shadeRow ? 'background:' + ownerTintFor(ownerDisplay === 'Both' ? 'Both' : t.owner) + ';' : '';
+            const _showOwnerPill = ownerDisplay === 'Both' && _ownerFilter === 'all';
 
             // --- meta line (v3.66.0) ---------------------------------------------
             // Date, Google list and owner were three fixed-width form controls sitting in
@@ -17859,13 +18316,13 @@ Example:
                     pills.push('<button class="tr-pill tr-pill-empty" onclick="openTodoDetail(\'' + t.id + '\')"'
                         + ' title="Set a due date">+ due</button>');
                 }
-                if (ownerDisplay) {
+                if (ownerDisplay && _showOwnerPill) {
                     pills.push('<button class="tr-pill" onclick="openTodoDetail(\'' + t.id + '\')"'
                         + ' title="Owner: ' + escapeHtml(ownerDisplay) + ' — click to reassign"'
                         + ' style="background:' + ownerBg + ';border-color:'
                         + (ownerBg === 'transparent' ? 'var(--gray-200)' : ownerBg) + ';color:' + ownerColor + ';">'
                         + '<span class="tr-pill-label">' + ownerDisplay + '</span></button>');
-                } else if (density !== 'compact') {
+                } else if (!ownerDisplay && density !== 'compact') {
                     pills.push('<button class="tr-pill tr-pill-empty" onclick="openTodoDetail(\'' + t.id + '\')"'
                         + ' title="Assign an owner">+ owner</button>');
                 }
@@ -17944,7 +18401,7 @@ Example:
             ];
 
             return `
-                <div class="todo-item den-${density} ${t.done ? 'completed' : ''} ${t.starred ? 'starred' : ''}" data-task-id="${t.id || ''}" style="margin-left: ${indentPx}px; ${depth > 0 ? 'border-left: 3px solid #c4b5fd; background: #faf5ff; border-radius: 0 6px 6px 0;' : ''}">
+                <div class="todo-item den-${density} ${t.done ? 'completed' : ''} ${t.starred ? 'starred' : ''}" data-task-id="${t.id || ''}" style="margin-left: ${indentPx}px; ${depth > 0 ? 'border-left: 3px solid #c4b5fd; background: #faf5ff; border-radius: 0 6px 6px 0;' : ''} ${_rowShade}">
                     ${expandButton}
                     <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTodo(${idx})">
                     <div class="tr-main">
@@ -22600,7 +23057,7 @@ Make sure your suggestions directly address the specific root cause and discussi
         // ("fix it in Settings > AI Tools"). Renaming a block would stale all of them.
         const SETTINGS_HUBS = [
             { key: 'firm', short: 'Firm', label: 'Firm', icon: '&#127970;', tint: '#fef3c7', ink: '#b45309',
-              bands: [['teamMembers', 'Team members'], ['weeklyMeeting', 'Weekly meeting'], ['quarters', 'Quarter dates']] },
+              bands: [['teamMembers', 'Team members'], ['ownerColors', 'Owner colours'], ['weeklyMeeting', 'Weekly meeting'], ['quarters', 'Quarter dates']] },
             { key: 'me', short: 'Me', label: 'Me', icon: '&#128100;', tint: '#e0f2fe', ink: '#0369a1',
               bands: [['signature', 'Email signature'], ['schedLinks', 'Booking links'], ['taskRows', 'Task rows'],
                       ['bottomBar', 'Phone bottom bar'], ['defaultTab', 'Landing tab'], ['pomodoro', 'Timers & alerts']] },
@@ -22791,7 +23248,8 @@ Make sure your suggestions directly address the specific root cause and discussi
         function openSettings(target) {
             const settings = getSettings();
             renderTeamMembersList(settings.teamMembers);
-            
+            renderOwnerColorPickers(settings); // v3.76.0 (item 2a)
+
             // Meeting settings
             document.getElementById('meetingDay').value = settings.meetingDay || 'Mondays';
             document.getElementById('meetingTime').value = settings.meetingTime || '9am';
