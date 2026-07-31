@@ -3339,19 +3339,27 @@
            Chrome the LAYOUT viewport does not shrink for the keyboard, so without this
            the mic/send row sits behind the keys, which is very likely the other half
            of "I don't like how the microphone works". */
+        /* v3.78.1: the shell is ABSOLUTE and TOP-ANCHORED BY JS while the keyboard is
+           up. Hans's screenshot showed the margin-bottom lift under-lifting by roughly
+           one button row - the mic and the up-arrow sat half behind the keys until he
+           dismissed the keyboard. Rather than tune that arithmetic, _cmpLift() now
+           places the card's TOP so its bottom edge lands 10px above the visual
+           viewport's real bottom (vv.offsetTop + vv.height), and _cmpSyncGrow() caps
+           the textarea from the VISIBLE height, not window.innerHeight - so the card
+           can neither be buried by the keyboard nor grow taller than what is visible.
+           The bottom rule below is only the no-keyboard / no-visualViewport rest state. */
         #composerModal .cmp-shell {
             display: flex; flex-direction: column;
-            width: auto; max-width: 720px;
-            margin: 0 10px calc(10px + env(safe-area-inset-bottom, 0px));
+            position: absolute; left: 10px; right: 10px;
+            bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+            max-width: 720px; margin: 0 auto;
             box-sizing: border-box;
             padding: 10px 14px 12px;
             background: #fff;
             border: 1px solid var(--gray-200);
             border-radius: 22px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22);
-            max-height: 70vh;
         }
-        @media (min-width: 740px) { #composerModal .cmp-shell { margin-left: auto; margin-right: auto; width: 100%; } }
         #composerModal {
             align-items: stretch !important; justify-content: flex-end !important;
             flex-direction: column; padding: 0 !important;
@@ -6420,9 +6428,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.78.0';
+        const EOS_VERSION = '3.78.1';
         const EOS_BUILD_DATE = '2026-07-31';
-        const EOS_BUILD_TIME = '11:20'; // v3.78.0: THE COMPOSER IS A DOCKED CARD, NOT A TAKEOVER - Hans's live-test verdict on v3.74.0's full-screen surface ('a complete white big blank - that's confusing'), speced by his two screenshots of Claude's own input box. index.html only; no .gs change, so NO clasp deploy. The composer is now a rounded card docked at the bottom; the page stays visible above it through a light scrim (rgba .28), so you always see where you are; the card grows upward as text grows (textarea cap 55vh -> 40vh); tapping the scrim closes WITHOUT changing anything, same contract as the X. The commit path, exclusions, dictation-appends and off switch are all UNTOUCHED - this is presentation plus one real fix: A KEYBOARD LIFT. Modern Android Chrome does not shrink the layout viewport for the on-screen keyboard (interactive-widget defaults to resizes-visual), so a bottom-anchored control row sits BEHIND the keys - very likely the other half of 'I don't like how the microphone works'. _cmpLift() reads visualViewport and lifts the card by margin-bottom (not transform - the 3.70.0 containing-block rule), listeners attached on open and removed on close/commit. Verifiable fully only on the device; the geometry (card docked, page visible, growth, scrim-close, commit round-trip, desktop never opens) is harness-proven.
+        const EOS_BUILD_TIME = '11:55'; // v3.78.1: THE KEYBOARD LIFT, FIXED FROM HANS'S SCREENSHOTS. His two photos showed the v3.78.0 card's mic and up-arrow half behind the Android keyboard until he dismissed it - the margin-bottom lift was under-lifting AND the textarea cap was computed from window.innerHeight, which still reports the FULL screen with the keyboard up on modern Android Chrome, so the card could be taller than the visible area. Two changes, both structural rather than tuned: (1) _cmpLift() now TOP-ANCHORS the absolute card so its bottom edge lands 10px above the visual viewport's real bottom (vv.offsetTop + vv.height) - position, not margin arithmetic, nothing left to be off by; (2) _cmpSyncGrow() caps the textarea from the VISIBLE height (vv.height), reserving ~130px for the head row, button bar and padding, so the whole card always fits above the keys. Growth re-places the card (grow -> lift, every call site). Verified in the harness with a FAKED visualViewport half the screen tall: card bottom lands exactly at the fake viewport bottom minus 10px and the buttons sit inside it; real-device confirmation is Hans's next tap.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -9274,7 +9282,16 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.78.0 &mdash; 2026-07-31 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.78.1 &mdash; 2026-07-31 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Your two photos of the half-hidden mic and send buttons &mdash; fixed at the root, not nudged.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>The card now positions itself from the real visible area, not from arithmetic about the keyboard.</strong> Your photos showed the mic and up-arrow half-buried until you tapped the keyboard away. Two causes: the lift was computed as a margin and came up short, and the writing area sized itself against the full screen height &mdash; which Android still reports even with the keyboard up &mdash; so the card could be taller than what you could see. Both are gone: the card&rsquo;s bottom edge is now pinned 10px above whatever is actually visible, and the writing area can never grow past it.</li>'
+                + '<li><strong>What to check on your phone:</strong> tap into any text box, and the mic and up-arrow should sit fully visible just above the keys &mdash; no down-arrow dance. If they are still cut off, photograph it again; the next lever is a different one.</li>'
+                + '</ul>'
+                + '</div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.78.0 &mdash; 2026-07-31</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Your composer feedback &mdash; it is now the docked card from your Claude screenshots, not a full-screen blank.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Tap a text box and you get a rounded card at the bottom of the screen &mdash; the page stays visible above it.</strong> No more white takeover; you can always see where you are, which was exactly your complaint. The card grows upward as you write, just like the Claude app you screenshotted.</li>'
@@ -27285,30 +27302,38 @@ Return ONLY the JSON array:`;
             const ta = document.getElementById('composerInput');
             if (!ta) return;
             ta.style.height = 'auto';
-            // v3.78.0: 40vh, down from 55 - the card and its control row now have to fit
-            // ABOVE the keyboard, and the card is the whole surface rather than a strip
-            // at the bottom of a blank page.
-            const max = Math.round(window.innerHeight * 0.40);
+            // v3.78.1: the cap comes from the VISIBLE height, not window.innerHeight.
+            // With the keyboard up, innerHeight still reports the full screen on modern
+            // Android Chrome, so a 40%-of-innerHeight textarea plus the head and the
+            // button row exceeded what was actually visible - which is exactly how the
+            // mic and the up-arrow ended up half behind the keys in Hans's screenshot.
+            // ~130px covers the head row, the button bar and the card's padding.
+            const vv = window.visualViewport;
+            const visible = (vv && vv.height) ? vv.height : window.innerHeight;
+            const max = Math.round(Math.max(72, Math.min(visible * 0.5, visible - 130)));
             ta.style.height = Math.min(ta.scrollHeight, max) + 'px';
             ta.style.overflowY = (ta.scrollHeight > max) ? 'auto' : 'hidden';
+            _cmpLift();   // growth changes the card's height, so it must re-place too
         }
 
-        // v3.78.0 KEYBOARD LIFT. Modern Android Chrome does NOT shrink the layout
-        // viewport for the on-screen keyboard (interactive-widget defaults to
-        // resizes-visual), so a bottom-docked card would sit behind the keys - the
-        // mic and the up-arrow would be exactly where the keyboard is. visualViewport
-        // reports the real visible height; the difference becomes margin-bottom on the
-        // shell. Margin, deliberately NOT a transform: the 3.70.0 rule about
-        // containing blocks stays unbroken even if something fixed ever lands inside.
+        // v3.78.0/v3.78.1 KEYBOARD LIFT. Modern Android Chrome does NOT shrink the
+        // layout viewport for the on-screen keyboard (interactive-widget defaults to
+        // resizes-visual), so a bottom-docked card renders behind the keys. v3.78.0
+        // lifted with margin-bottom arithmetic and Hans's screenshot showed it
+        // under-lifting by about a button row. v3.78.1 places the card's TOP directly:
+        // the visual viewport's bottom in layout coordinates is vv.offsetTop +
+        // vv.height, and the card's bottom edge goes 10px above it. Position, not
+        // margin - there is no arithmetic left to be off by. Not a transform (the
+        // 3.70.0 containing-block rule).
         function _cmpLift() {
             const shell = document.querySelector('#composerModal .cmp-shell');
             const vv = window.visualViewport;
             if (!shell) return;
-            if (!vv) { shell.style.marginBottom = ''; return; }
-            const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-            shell.style.marginBottom = kb > 0
-                ? 'calc(' + (kb + 8) + 'px + env(safe-area-inset-bottom, 0px))'
-                : '';
+            if (!vv) { shell.style.top = ''; shell.style.bottom = ''; return; }
+            const visibleBottom = vv.offsetTop + vv.height;
+            const top = Math.max(6, visibleBottom - shell.offsetHeight - 10);
+            shell.style.bottom = 'auto';
+            shell.style.top = top + 'px';
         }
         function _cmpLiftOn() {
             if (!window.visualViewport) return;
@@ -27318,7 +27343,7 @@ Return ONLY the JSON array:`;
         }
         function _cmpLiftOff() {
             const shell = document.querySelector('#composerModal .cmp-shell');
-            if (shell) shell.style.marginBottom = '';
+            if (shell) { shell.style.top = ''; shell.style.bottom = ''; }
             if (!window.visualViewport) return;
             window.visualViewport.removeEventListener('resize', _cmpLift);
             window.visualViewport.removeEventListener('scroll', _cmpLift);
