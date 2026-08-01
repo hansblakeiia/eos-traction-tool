@@ -653,6 +653,38 @@
             .todo-item .todo-text { font-size: 0.92rem; }
         }
 
+        /* Per-page "mini settings" popover (v3.84.0, Hans's wrench). Styled off the task
+           action menu so a second popover pattern is not invented; z-index sits below the
+           4000 the row menus use, since this one lives in a page header that nothing
+           overlaps. */
+        .page-prefs-panel {
+            position: absolute; right: 0; top: calc(100% + 6px); z-index: 2600;
+            min-width: 208px; max-width: 78vw;
+            background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
+            box-shadow: 0 10px 28px rgba(0,0,0,0.16); padding: 6px 0; text-align: left;
+        }
+        .page-prefs-panel .pp-head {
+            font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+            color: var(--gray-500); padding: 8px 12px 4px;
+        }
+        .page-prefs-panel .pp-item {
+            display: flex; align-items: center; justify-content: space-between; gap: 10px;
+            width: 100%; background: none; border: 0; text-align: left; cursor: pointer;
+            padding: 8px 12px; font-size: 0.85rem; font-family: inherit; color: var(--gray-700);
+        }
+        .page-prefs-panel .pp-item:hover { background: #f9fafb; }
+        .page-prefs-panel .pp-item.active { font-weight: 700; color: var(--primary); }
+        .page-prefs-panel .pp-tick { color: var(--primary); font-weight: 700; }
+        .page-prefs-panel .pp-foot { border-top: 1px solid #f3f4f6; margin-top: 4px; padding: 4px 0 0; }
+        .page-prefs-panel .pp-link {
+            width: 100%; background: none; border: 0; cursor: pointer; text-align: left;
+            padding: 8px 12px; font-size: 0.8rem; font-family: inherit; color: var(--primary); font-weight: 600;
+        }
+        .page-prefs-panel .pp-link:hover { background: #f9fafb; }
+        @media (hover: none) and (pointer: coarse) {
+            .page-prefs-panel .pp-item { min-height: 44px; }
+        }
+
         /* Issue item active state */
         .issue-item.active-ids {
             background: #e8f4fd;
@@ -4033,7 +4065,7 @@
                  "More" cell opens the same drawer and both stay. -->
             <button id="mobileNavBtn" onclick="openMobileDrawer()" aria-label="Open menu" title="Menu">&#9776;</button>
             <h1>📊 EOS Traction Tool</h1>
-            <div class="header-subtitle"><span id="companyNameDisplay">Intelligent Investing LLC</span> <span id="versionBadge" style="font-size: 0.7rem; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 10px; margin-left: 8px; cursor: pointer;" onclick="showVersionInfo()" title="Click for version info">v3.11.2</span> <span id="signedInBadge" style="font-size: 0.72rem; background: rgba(255,255,255,0.15); padding: 2px 8px; border-radius: 10px; margin-left: 6px; display:none; cursor:pointer;" onclick="signOutGoogle()" title="Click to sign out"></span> <span id="headerSecurityLink" style="font-size: 0.72rem; margin-left: 6px; display:none; cursor:pointer;" onclick="openMktSecurity()" title="Two-factor authentication settings">🔒</span></div>
+            <div class="header-subtitle"><span id="companyNameDisplay">Intelligent Investing LLC</span> <span id="versionBadge" style="font-size: 0.7rem; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 10px; margin-left: 8px; cursor: pointer;" onclick="showVersionInfo()" title="Click for version info">v3.11.2</span> <span id="signedInBadge" style="font-size: 0.72rem; background: rgba(255,255,255,0.15); padding: 2px 8px; border-radius: 10px; margin-left: 6px; display:none;" title="Signed in. Sign out from the menu, bottom right."></span> <span id="headerSecurityLink" style="font-size: 0.72rem; margin-left: 6px; display:none; cursor:pointer;" onclick="openMktSecurity()" title="Two-factor authentication settings">🔒</span></div>
             <div class="header-controls">
                 <div class="version-selector">
                     <label>Year:</label>
@@ -4478,6 +4510,20 @@
                 <div class="actions" style="margin: 0;">
                     <button class="btn btn-primary" onclick="showPage('agenda')">Agenda</button>
                     <button class="btn btn-secondary" onclick="openParseMeetingModal()">📥 Otter</button>
+                    <!-- v3.84.0: back up here on Hans's instruction, which REVERSES v3.75.0's
+                         stated assumption ("it is a to-do action, so it lives with the to-do
+                         controls"). That note said the reversal was one button line, and it
+                         was. Same onclick, same modal. -->
+                    <button class="btn btn-secondary" onclick="openExportTasksModal()">🔄 Sync Tasks</button>
+                    <!-- v3.84.0: per-page settings. His ask: "why would you want to create a
+                         settings icon (perhaps a wrench) in the Weekly Pulse Meeting page, and
+                         inside that would have your order of tasks preference, and your view
+                         preferences". Everything in here ALSO stays in main Settings - this is
+                         a shortcut, never a second home for the value. -->
+                    <span style="position: relative; display: inline-block;">
+                        <button class="btn btn-secondary" id="meetingPrefsBtn" onclick="toggleMeetingPrefs(event)" title="View preferences for this page" aria-label="View preferences for this page" aria-expanded="false">🔧</button>
+                        <div id="meetingPrefsPanel" class="page-prefs-panel" style="display:none;"></div>
+                    </span>
                 </div>
             </div>
 
@@ -4504,9 +4550,6 @@
                     </select>
                     <button class="todo-ctl todo-ctl-add" onclick="addTodoWithList()">+ Add</button>
                     <button class="todo-ctl todo-ctl-sync" onclick="syncAllTeam()" title="Sync all team members' tasks">All Team Sync</button>
-                    <!-- v3.75.0 (item 1): moved out of the page header - it is a to-do action,
-                         so it lives with the to-do controls. Same onclick, same modal. -->
-                    <button class="todo-ctl" onclick="openExportTasksModal()">📹 Sync with Google Tasks</button>
                 </div>
                 <div id="todosContainer"></div>
             </div>
@@ -5395,7 +5438,23 @@
 
                     <!-- ============ STEP 10 — PACKAGE & SEND ============ -->
                     <div class="mkt-step" id="mktStepPackage">
-                        <div class="mkt-step-head"><span class="mkt-step-num">10</span> Package &amp; Send</div>
+                        <div class="mkt-step-head">
+                            <span class="mkt-step-num">10</span> Package &amp; Send
+                            <button type="button" class="btn btn-secondary" id="mktCtaBtn" onclick="mktSuggestCta()" style="font-size:0.75rem; padding:4px 10px; margin-left:auto; color:var(--primary);">AI: Suggest CTA</button>
+                        </div>
+                        <!-- v3.84.0: the closing call-to-action, which used to be hardcoded and
+                             identical on every post. Left blank it publishes the house default,
+                             so nothing changes for a card nobody edits. The button underneath
+                             it ("Schedule a Conversation") is fixed brand furniture and is not
+                             editable here on purpose. -->
+                        <div style="background:#fff; border:1px solid var(--gray-200); border-radius:6px; padding:10px; margin-bottom:10px;">
+                            <label style="font-size:0.78rem; font-weight:600; color:var(--gray-500); display:block; margin-bottom:4px;">Closing call to action &mdash; make it match THIS blog</label>
+                            <input type="text" id="mktCtaHeading" placeholder="Leave blank for the standard tax-efficiency close"
+                                style="width:100%; padding:7px; border:1px solid var(--gray-200); border-radius:6px; font-size:0.88rem; box-sizing:border-box; margin-bottom:6px;">
+                            <textarea id="mktCtaBody" rows="3" placeholder="One or two sentences inviting the reader to talk — about what this post was actually about."
+                                style="width:100%; padding:7px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; font-size:0.85rem; box-sizing:border-box; resize:vertical;"></textarea>
+                            <p style="font-size:0.72rem; color:var(--gray-500); margin:6px 0 0;">The &ldquo;Schedule a Conversation&rdquo; button is added automatically below this.</p>
+                        </div>
                         <div id="mktWpInfo" style="display:none; margin-bottom:8px; padding:8px 10px; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:6px; font-size:0.82rem;"></div>
                         <div id="mktPackagedInfo" style="display:none; margin-bottom:8px; padding:8px 10px; background:#fef3c7; border:1px solid #fde68a; border-radius:6px; font-size:0.82rem;"></div>
                         <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -6007,7 +6066,15 @@
                             <button class="btn btn-secondary" onclick="document.getElementById('importFile').click();" style="padding: 6px 12px; font-size: 0.85rem;">📥 Import</button>
                             <button class="btn btn-secondary" onclick="openNewYearModal(); closeModal('settingsModal');" style="padding: 6px 12px; font-size: 0.85rem;">📹 New Year</button>
                         </div>
-                        
+                        <!-- v3.84.0: Save Year and Compare Years move here OUT of the slide-out
+                             menu, on Hans's instruction. Both are year-level data operations
+                             and this is the Data band, so they are finally somewhere that
+                             explains them. The drawer keeps navigation and Print. -->
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;">
+                            <button class="btn btn-secondary" onclick="closeModal('settingsModal'); openSaveModal();" style="padding: 6px 12px; font-size: 0.85rem;">&#128190; Save Year</button>
+                            <button class="btn btn-secondary" onclick="closeModal('settingsModal'); showPage('history');" style="padding: 6px 12px; font-size: 0.85rem;">&#128202; Compare Years</button>
+                        </div>
+
                         <!-- Backup Reminder Setting -->
                         <div style="background: white; border: 1px solid #d1d5db; border-radius: 6px; padding: 10px; margin-top: 10px;">
                             <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
@@ -6611,9 +6678,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.83.0';
+        const EOS_VERSION = '3.84.0';
         const EOS_BUILD_DATE = '2026-07-31';
-        const EOS_BUILD_TIME = '20:40'; // v3.83.0: TWO COMPOSER FIXES HANS FLAGGED ASAP + THE MARKETING 'MY ADDITIONAL TAKE' STEP. index.html + schema.sql (one additive column); NO .gs change, so NO clasp deploy. (1) THE CARET LANDS WHERE HE TAPPED. v3.74.0 deliberately parked it at the END ('he is continuing a thought, not replacing one') - true for a one-line task title, wrong for a blog, where tapping mid-draft and being thrown to the bottom makes the composer unusable for editing. Resolved BEFORE focus moves (focusing the composer destroys the original field's selection): the field's own selectionStart when the browser has already placed the caret, else the recorded pointerdown coordinates through caretRangeFromPoint/caretPositionFromPoint, else the end - so a browser supporting neither is no worse off than before. (2) ENTER INSERTS A NEWLINE IN A TEXTAREA - A REVERSAL OF v3.74.0's RULE, on his report: 'it acts like the blue up arrow and kicks you out of the text box altogether. That's not normally how text boxes work on phones.' Right: a phone keyboard has no Shift to reach the other behaviour with. TEXTAREA -> newline (the up arrow is the only commit); single-line <input> and contenteditable titles keep Enter-commits, mirroring what those fields already do alone. (3) MARKETING: step 3 renamed 'My Initial Take' (label only - field id and card.take UNCHANGED, no migration) and a NEW step 5 'My Additional Take' between Blog Draft and Finalize, exactly where he put it. New card field additionalTake + marketing_cards.additional_take. 'AI: Work this in' is MY addition, not his - a box that cannot reach the blog is a sticky note; the prompt's whole job is RESTRAINT (existing sentences come back byte-for-byte, additive only), it drops a slow reply if the draft changed meanwhile, and it carries the v3.79.0 one-tap Undo because it REPLACES.
+        const EOS_BUILD_TIME = '23:15'; // v3.84.0: THE REPEATED BLOG CTA + PER-PAGE MINI SETTINGS + THE DRAWER IA HANS DICTATED. index.html + schema.sql Part 4 (two additive columns); NO .gs change, so NO clasp deploy. (1) THE CTA WAS NOT IN HIS FIRM CONTEXT - he went looking there and it was hardcoded in this file as WP_CTA_BUTTON, appended to EVERY post regardless of subject ('Is Your Current Plan Truly Tax-Efficient?'). It also contradicted his OWN rule: _Firm Summary.md section 11 says 'rotate the close... cycle them', and a fixed block cannot. Headline + sentence are now per-card (blank = the old default, so untouched cards publish exactly as before); the Schedule a Conversation BUTTON stays fixed brand furniture. 'AI: Suggest CTA' drafts one from the actual blog and is told not to reach for tax framing unless the post earned it. (2) THE WRENCH: a per-page prefs popover on the Weekly Meeting header - sort order + row view. EVERYTHING STAYS IN MAIN SETTINGS TOO; this writes into #todoSortOrder and through setRowDensity(), the same single write paths, so the two surfaces cannot disagree - the #todoOwnerFilter contract, fourth instance. (3) SYNC WITH GOOGLE TASKS moves back up beside Agenda/Otter - reverses v3.75.0's stated assumption, which had named the reversal as one button line. (4) THE GOOGLE TASKS LIST HEADING was 0.8rem against 0.9rem rows - SMALLER than the tasks it labels. Now 1rem/800 at both emission sites. (5) DRAWER IA IS HIS, GROUP BY GROUP, superseding decision 4 where they differ: Plan first, then Work (Meeting, Agenda, Today), then Focus (Calendar, Kanban, Marketing, Gmail, Chat), then System (Print, History, Settings). 'My Daily Plan' RENAMED 'Today' - AN EXPLICIT REVERSAL of v3.66.1, recorded. Save Year and Compare Years leave the drawer for Settings > System > Data. Gmail/Chat/History are placeholders, never dead links. (6) The header name badge no longer signs you out on tap - the drawer footer already puts the name and the words together, which is the arrangement he asked for.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -8685,6 +8752,94 @@ Example:
             const hint = document.getElementById('rowDensityHint');
             if (hint) hint.textContent = ROW_DENSITY_LABELS[cur].hint;
         }
+        // ============ PER-PAGE "MINI SETTINGS" (v3.84.0, Hans's wrench) ============
+        //
+        // His ask, in his words: *"why would you want to create a 'settings' icon (perhaps a
+        // wrench) in the Weekly Pulse Meeting page, and inside that would have your 'order' of
+        // tasks preference, and your view preferences (compact, cozy, full)... I would still
+        // keep them all in the main settings section, but where it makes sense, give some view
+        // preferences or 'mini' settings for each page where it makes sense."*
+        //
+        // 🚨 THE CONTRACT THAT MAKES THIS SAFE IS THE ONE THIS FILE ALREADY HAS THREE
+        // INSTANCES OF (#todoOwnerFilter, #yearSelect, #dailyPlanUser): A SHORTCUT MUST NEVER
+        // BECOME A SECOND HOME FOR THE VALUE. Sort order lives in `#todoSortOrder` and nowhere
+        // else — this panel writes into that select and fires its own handler. Density lives
+        // in `eos_ui_prefs` and is written through `setRowDensity()`, the same function the
+        // Settings panel calls, which already re-renders the Settings segments and repaints
+        // every task surface. So the two surfaces can never disagree, and deleting this whole
+        // block would cost nothing but the shortcut.
+        function meetingPrefsHtml() {
+            const sel = document.getElementById('todoSortOrder');
+            const curSort = sel ? sel.value : 'manual';
+            const curDen = rowDensity();
+            const sortRows = sel ? Array.prototype.map.call(sel.options, function(o) {
+                return '<button type="button" class="pp-item' + (o.value === curSort ? ' active' : '') + '"'
+                    + ' onclick="meetingPrefsSetSort(\'' + o.value + '\')">'
+                    + '<span>' + escapeHtml(o.textContent) + '</span>'
+                    + (o.value === curSort ? '<span class="pp-tick">&#10003;</span>' : '') + '</button>';
+            }).join('') : '';
+            const denRows = ROW_DENSITIES.map(function(d) {
+                return '<button type="button" class="pp-item' + (d === curDen ? ' active' : '') + '"'
+                    + ' onclick="meetingPrefsSetDensity(\'' + d + '\')">'
+                    + '<span>' + ROW_DENSITY_LABELS[d].label + '</span>'
+                    + (d === curDen ? '<span class="pp-tick">&#10003;</span>' : '') + '</button>';
+            }).join('');
+            return '<div class="pp-head">Sort order</div>' + sortRows
+                 + '<div class="pp-head">Row view</div>' + denRows
+                 + '<div class="pp-foot"><button type="button" class="pp-link" onclick="closeMeetingPrefs(); openSettings(\'taskRows\');">All settings&nbsp;&rsaquo;</button></div>';
+        }
+
+        function renderMeetingPrefs() {
+            const panel = document.getElementById('meetingPrefsPanel');
+            if (!panel) return;
+            panel.innerHTML = meetingPrefsHtml();
+        }
+
+        function toggleMeetingPrefs(ev) {
+            if (ev) ev.stopPropagation();
+            const panel = document.getElementById('meetingPrefsPanel');
+            if (!panel) return;
+            if (panel.style.display !== 'none') { closeMeetingPrefs(); return; }
+            renderMeetingPrefs();
+            panel.style.display = 'block';
+            const btn = document.getElementById('meetingPrefsBtn');
+            if (btn) btn.setAttribute('aria-expanded', 'true');
+            // Capture phase, and bound on the NEXT frame so the click that opened it does not
+            // immediately close it again.
+            setTimeout(function () { document.addEventListener('click', _meetingPrefsAway, true); }, 0);
+        }
+
+        function closeMeetingPrefs() {
+            const panel = document.getElementById('meetingPrefsPanel');
+            if (panel) panel.style.display = 'none';
+            const btn = document.getElementById('meetingPrefsBtn');
+            if (btn) btn.setAttribute('aria-expanded', 'false');
+            document.removeEventListener('click', _meetingPrefsAway, true);
+        }
+
+        function _meetingPrefsAway(e) {
+            const panel = document.getElementById('meetingPrefsPanel');
+            if (!panel || panel.style.display === 'none') return;
+            if (e.target.closest && e.target.closest('#meetingPrefsPanel, #meetingPrefsBtn')) return;
+            closeMeetingPrefs();
+        }
+
+        function meetingPrefsSetSort(v) {
+            const sel = document.getElementById('todoSortOrder');
+            if (!sel) return;
+            sel.value = v;
+            // Fire the select's OWN handler rather than duplicating what it does — the same
+            // write-then-notify ordering the composer commit path uses, and for the same
+            // reason: the handler re-renders the list, so nothing may be held across it.
+            if (typeof sortAndRenderTodos === 'function') sortAndRenderTodos();
+            renderMeetingPrefs();
+        }
+
+        function meetingPrefsSetDensity(d) {
+            setRowDensity(d);       // the one write path; repaints every surface itself
+            renderMeetingPrefs();
+        }
+
         function setRowDensity(d) {
             if (ROW_DENSITIES.indexOf(d) === -1) return;
             saveUiPrefs({ rowDensity: d });
@@ -9489,7 +9644,22 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.83.0 &mdash; 2026-07-31 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.84.0 &mdash; 2026-07-31 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">The repeated blog ending, a wrench on the Meeting page, bigger list names, and the menu rebuilt to your groups.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Found the repeated blog ending &mdash; it was not your firm context.</strong> &ldquo;Is Your Current Plan Truly Tax-Efficient?&rdquo; was hardcoded in the tool and stapled to the bottom of every post regardless of subject. Your own writing rules said it should not be: your firm summary tells the AI to <em>rotate the close</em>, and a fixed block cannot. <strong>The closing headline and sentence are now per-blog</strong>, on the Package &amp; Send step, with an <strong>AI: Suggest CTA</strong> button that writes one from the actual post &mdash; and is told not to reach for tax framing unless the post earned it. Leave both boxes blank and you get the old text, so nothing already in flight changes.</li>'
+                + '<li><strong>A wrench on the Weekly Pulse Meeting header</strong> &mdash; your sort order and your row view (Compact / Cozy / Full), right where you are looking. <strong>Both still live in main Settings too</strong>, exactly as you asked; this writes into the same one place the value has always lived, so the two can never drift apart. There is an &ldquo;All settings&nbsp;&rsaquo;&rdquo; link at the bottom of it.</li>'
+                + '<li><strong>&ldquo;Sync with Google Tasks&rdquo; moved up beside Agenda and Otter</strong>, as you asked. It sat in the to-do controls row because I put it there in v3.75.0 and said at the time that moving it back was one line. It was.</li>'
+                + '<li><strong>The Google Tasks list name is bigger and bolder than the tasks under it now.</strong> It was genuinely smaller than the task text before &mdash; a heading in a smaller font than the thing it labels.</li>'
+                + '<li><strong>The slide-out menu is rebuilt to your grouping:</strong> <strong>Plan</strong> (Vision, 1-Year Plan, Rocks &amp; Scorecard) &rarr; <strong>Work</strong> (Weekly Meeting, Meeting Agenda, Today) &rarr; <strong>Focus</strong> (Calendar, Kanban, Marketing, Gmail, Google Chat) &rarr; <strong>System</strong> (Print, History, Settings). <strong>&ldquo;My Daily Plan&rdquo; is now &ldquo;Today&rdquo;.</strong> Gmail, Google Chat and History are reserved slots that say &ldquo;coming soon&rdquo; rather than pretending to work.</li>'
+                + '<li><strong>Save Year and Compare Years moved into Settings &rsaquo; System &amp; Support &rsaquo; Data</strong> &mdash; they are year-level data jobs, and the menu is for getting places.</li>'
+                + '<li><strong>Your name in the header no longer signs you out when tapped.</strong> You were right that it was redundant, and it was worse than redundant &mdash; tapping your own name ended your session. The Sign out button sits directly beside your name at the bottom of the slide-out menu, which is the arrangement you described.</li>'
+                + '<li><strong>One thing to run:</strong> the per-blog CTA adds two database fields &mdash; SQL <strong>Part 4</strong>, alongside the parts still waiting. Until then it works on this device only.</li>'
+                + '</ul>'
+                + '</div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.83.0 &mdash; 2026-07-31</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Your two writing-box complaints, and the &ldquo;one more thought&rdquo; step for a blog that is already drafted.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Tapping into the middle of a long draft now puts the cursor where you tapped</strong> &mdash; not at the very end. It used to jump to the bottom on purpose, on the reasoning that you were carrying on writing rather than editing. That is fine for a one-line task name and useless for a blog, which is exactly what you ran into.</li>'
@@ -11207,7 +11377,16 @@ Example:
             // starred needing attention now) and does not exist, while My Daily Plan is a
             // real page the decision files under WORK. Renaming the existing page after the
             // unbuilt one hid the gap instead of showing it.
-            dailyPlan: { label: 'My Daily Plan', short: 'Daily', icon: '📅', tint: '#ede9fe', ink: '#7c3aed' },
+            // 🚨 v3.84.0 - RENAMED BACK TO "Today" ON HANS'S INSTRUCTION, WHICH REVERSES THE
+            // v3.66.1 DECISION RECORDED DIRECTLY ABOVE, and is recorded as a reversal rather
+            // than shipped as a tweak. That note argued the rename "hid the gap" - decision 4's
+            // Focus > Today is a DIFFERENT, unbuilt view (today's tasks + starred), and naming
+            // the existing page after it made the missing one invisible. His ruling supersedes
+            // it, and the ground has moved under the old argument anyway: since v3.70.0 this
+            // page has had a "Today" segment and defaults to it, so it IS his today view. The
+            // consequence, stated rather than buried: decision 4's separate Today view now has
+            // no name available and should be considered folded into this page, not pending.
+            dailyPlan: { label: 'Today', short: 'Today', icon: '📅', tint: '#ede9fe', ink: '#7c3aed' },
             // v3.66.3 (Hans feedback 2): the agenda is its own page now.
             agenda:    { label: 'Meeting Agenda', short: 'Agenda', icon: '🗒️', tint: '#e0f2fe', ink: '#0369a1' },
             // v3.66.3 (Hans feedback 5): Calendar as an explicit PLACEHOLDER, selectable for
@@ -11225,7 +11404,21 @@ Example:
             quarterly: { label: 'Rocks & Scorecard', short: 'Rocks', icon: '🪨', tint: '#d1fae5', ink: '#047857' },
             kanban:    { label: 'Kanban',    short: 'Kanban',  icon: '🗂️', tint: '#cffafe', ink: '#0e7490' },
             marketing: { label: 'Marketing', short: 'Market',  icon: '📣', tint: '#fce7f3', ink: '#be185d' },
-            history:   { label: 'Compare Years', short: 'Years', icon: '📊', tint: '#e0e7ff', ink: '#4338ca' }
+            history:   { label: 'Compare Years', short: 'Years', icon: '📊', tint: '#e0e7ff', ink: '#4338ca' },
+            // v3.84.0 (his fourth IA pass). Three additions, ALL placeholders, because a
+            // reserved slot that says "coming soon" is honest and a silent gap is not - the
+            // same reasoning that put Calendar here in v3.66.3.
+            gmail:     { label: 'Gmail', short: 'Gmail', icon: '✉️', tint: '#fee2e2', ink: '#b91c1c',
+                         placeholder: 'Gmail inside the tool is specified in Sec 5.18 (a read-only source-email viewer) - not built yet.' },
+            gchat:     { label: 'Google Chat', short: 'Chat', icon: '💬', tint: '#dcfce7', ink: '#047857',
+                         placeholder: 'Google Chat is documented in Sec 5.19 - nothing decided or built yet.' },
+            // 🚨 NOT the same thing as `history` above. That key drives the COMPARE YEARS
+            // page, whose element id happens to be `history` - a collision this file has
+            // carried since Phase 1 and which is recorded in __CLAUDE.md. THIS is decision
+            // 14's replayable log, which does not exist. Keys deliberately kept distinct so
+            // nobody merges them later on the strength of the name.
+            historyLog:{ label: 'History', short: 'History', icon: '🕑', tint: '#f3f4f6', ink: '#4b5563',
+                         placeholder: 'The History log (decision 14) is not built yet. For year-over-year numbers, use Compare Years in Settings > System.' }
         };
         // Focus / Plan / Work / System, in decision 4's order and with each real page in
         // the group decision 4 assigns it. v3.66.1 corrected three departures that v3.66.0
@@ -11250,10 +11443,24 @@ Example:
         // which looks like an oversight there, since it is the default landing tab and the
         // To-Dos list lives inside it. On a phone `.tabs` is hidden, so leaving it out of
         // the drawer would make it unreachable for anyone who removed it from the bottom bar.
+        // 🚨 v3.84.0 — THE GROUPS AND THEIR ORDER ARE HANS'S, DICTATED ITEM BY ITEM, AND THIS
+        // SUPERSEDES DECISION 4's IA WHEREVER THE TWO DISAGREE. Recorded as his call rather
+        // than folded in quietly, because decision 4 is a locked artifact and three of the
+        // four groups have changed membership:
+        //   Plan   FIRST now (was second)   — Vision, 1-Year Plan, Rocks & Scorecard
+        //   Work   — Weekly Meeting, Meeting Agenda, Today   (his: "My Daily Plan right under
+        //            Meeting Agenda", and Meeting/Agenda move OUT of Focus into Work)
+        //   Focus  — Calendar, Kanban, Marketing, Gmail, Google Chat   (i.e. the places work
+        //            arrives FROM, rather than today's work; his naming, kept verbatim)
+        //   System — Print, History, Settings
+        // Save Year and Compare Years leave this menu entirely and live in
+        // Settings › System & Support › Data, also his instruction. The drawer stops being
+        // the place actions accumulate, which is the failure v3.66.1 flagged and v3.69.0 had
+        // to accept for want of anywhere else to put them; Settings is now that somewhere.
         const DRAWER_GROUPS = [
-            { name: 'Focus',  pages: ['meeting', 'agenda', 'calendar'] },
             { name: 'Plan',   pages: ['vision', 'plan', 'quarterly'] },
-            { name: 'Work',   pages: ['dailyPlan', 'kanban', 'marketing'] },
+            { name: 'Work',   pages: ['meeting', 'agenda', 'dailyPlan'] },
+            { name: 'Focus',  pages: ['calendar', 'kanban', 'marketing', 'gmail', 'gchat'] },
             // v3.71.0 (Hans's item 15): "Sync Now" is no longer an item in this group - it
             // moved into the drawer's blue header, beside the "last synced" line it reports
             // on (#drawerSyncLine). Decision 4 lists it first under System, so this IS a
@@ -11261,15 +11468,20 @@ Example:
             // status it changes, and reading "last synced 40 minutes ago" then scrolling past
             // three groups to do something about it was the complaint.
             // TO REVERSE: put the object back here and delete .dh-syncrow from .drawer-head.
-            { name: 'System', pagesAfterActions: ['history'], actionsLast: [
-                // v3.69.0: these three arrive from the mobile header, which Hans asked to
-                // strip. Save Year and Print were removed from this menu in v3.66.1 for
-                // growing it beyond decision 4 - that reasoning is superseded, because with
-                // the header controls gone the drawer is the only place they can live.
-                { label: 'Save Year', icon: '💾', tint: '#dcfce7', ink: '#047857', run: 'openSaveModal()' },
-                { label: 'Print…', icon: '🖨️', tint: '#e0e7ff', ink: '#4338ca', run: 'openMasterPrintModal()' },
+            // v3.84.0 — his order for this group is Print, History, Settings, so it uses
+            // three slots: an action, then a page, then an action. SAVE YEAR AND COMPARE
+            // YEARS ARE GONE FROM HERE — both moved into Settings › System & Support › Data
+            // on his instruction. That retires v3.69.0's reluctant "the drawer is the only
+            // place they can live", which was true only because Settings had no home for
+            // them; it does now.
+            { name: 'System',
+              actions: [
+                { label: 'Print…', icon: '🖨️', tint: '#e0e7ff', ink: '#4338ca', run: 'openMasterPrintModal()' }
+              ],
+              pagesAfterActions: ['historyLog'],
+              actionsLast: [
                 { label: 'Settings', icon: '⚙️', tint: '#f3f4f6', ink: '#4b5563', run: 'openSettings()' }
-            ] }
+              ] }
         ];
         // Decision 5 says "user-configurable which 4-5 appear", so five is the ceiling, not
         // four - v3.66.0 hardcoded 4 and made the fifth unreachable. Plus the fixed "More"
@@ -13150,6 +13362,63 @@ Example:
             showToast('Draft restored. Your additional take is still in its box.');
         }
 
+        // Proposes a closing CTA drawn from THIS blog. The firm summary's §11 is explicit
+        // that the close should rotate, and a hardcoded block cannot — so the prompt is
+        // pointed at what the post actually argued, and told in as many words to avoid the
+        // tax-efficiency framing unless the post earned it, which is the exact repetition
+        // Hans reported.
+        async function mktSuggestCta() {
+            const card = mktGetCard(mktEditingId);
+            if (!card) return;
+            const blog = document.getElementById('mktBlog').value.trim();
+            if (!blog) { showToast('Write or generate the Blog Draft first — the CTA is drawn from it.'); return; }
+            if (!requireAI('marketing', 'Marketing AI')) return;
+
+            const btn = document.getElementById('mktCtaBtn');
+            const original = btn.textContent;
+            btn.disabled = true; btn.textContent = 'Thinking...';
+            try {
+                const prompt =
+                    'Below is a blog post by Hans Blake, an independent fee-only RIA who writes ' +
+                    'in a plainspoken, educational, never salesy voice.\n\n' +
+                    'Write the CLOSING call-to-action that sits under it, inviting the reader to ' +
+                    'start a conversation with the firm.\n\n' +
+                    'RULES:\n' +
+                    '- It must be about what THIS post was actually about. Do not default to tax ' +
+                    'efficiency, tax exposure or Roth conversions unless the post is genuinely ' +
+                    'about them.\n' +
+                    '- No hype, no urgency, no FOMO, no fear-selling. Never promise or imply ' +
+                    'outperformance. Never imply personalised advice — this is a regulated RIA.\n' +
+                    '- No bragging about advisors. Do not write anything like "this is where a ' +
+                    'good advisor earns their keep".\n' +
+                    '- Do not use the firm tagline here, and avoid the words "quiet" and phrases ' +
+                    'like "that\'s worth sitting with".\n' +
+                    '- A question headline is fine but not required; vary it.\n\n' +
+                    'BLOG:\n"""\n' + blog.slice(0, 6000) + '\n"""\n\n' +
+                    'Return EXACTLY two lines and nothing else:\n' +
+                    'Line 1: the headline (under 70 characters, no quotes, no Markdown).\n' +
+                    'Line 2: one or two sentences, under 50 words.';
+
+                const raw = await callAI('marketing', prompt, { featureLabel: 'Marketing AI',
+                                         temperature: 0.6, taskKey: 'tighten', taskLabel: 'Suggested CTA', retry: true });
+                const parts = String(raw).replace(/```[a-z]*\s*/gi, '').trim()
+                                  .split('\n').map(function (x) { return x.replace(/^#+\s*/, '').trim(); })
+                                  .filter(Boolean);
+                if (!parts.length) throw new Error('The model returned nothing.');
+                document.getElementById('mktCtaHeading').value = parts[0].replace(/^["']|["']$/g, '');
+                document.getElementById('mktCtaBody').value = parts.slice(1).join(' ');
+                card.ctaHeading = document.getElementById('mktCtaHeading').value;
+                card.ctaBody = document.getElementById('mktCtaBody').value;
+                mktSave();
+                showToast('CTA drafted from this blog. Edit it freely — or clear both boxes for the standard close.');
+            } catch (error) {
+                showToast('Could not draft a CTA: ' + error.message);
+                console.error('mktSuggestCta error:', error);
+            } finally {
+                btn.disabled = false; btn.textContent = original;
+            }
+        }
+
         async function mktTightenBlog() {
             const card = mktGetCard(mktEditingId);
             if (!card) return;
@@ -13516,6 +13785,8 @@ Example:
             // v3.83.0: the second take. Its own field so the first one is never overwritten -
             // the whole point of the step is that both survive.
             document.getElementById('mktAdditionalTake').value = card.additionalTake || '';
+            document.getElementById('mktCtaHeading').value = card.ctaHeading || '';
+            document.getElementById('mktCtaBody').value = card.ctaBody || '';
             // A fresh open has nothing to undo, same contract as the composer's rewrite chip.
             _mktWorkInPrev = null;
             const _wiUndo = document.getElementById('mktWorkInUndoBtn');
@@ -13610,6 +13881,8 @@ Example:
             card.brainstormSources = document.getElementById('mktBrainstormSource').value;
             card.take   = document.getElementById('mktTake').value;
             card.additionalTake = document.getElementById('mktAdditionalTake').value;
+            card.ctaHeading = document.getElementById('mktCtaHeading').value;
+            card.ctaBody = document.getElementById('mktCtaBody').value;
             card.blog   = document.getElementById('mktBlog').value;
             card.social = document.getElementById('mktSocial').value;
             card.quote  = document.getElementById('mktQuote').value;
@@ -13641,6 +13914,8 @@ Example:
             card.brainstormSources = document.getElementById('mktBrainstormSource').value;
             card.take   = document.getElementById('mktTake').value;
             card.additionalTake = document.getElementById('mktAdditionalTake').value;
+            card.ctaHeading = document.getElementById('mktCtaHeading').value;
+            card.ctaBody = document.getElementById('mktCtaBody').value;
             card.blog   = document.getElementById('mktBlog').value;
             card.social = document.getElementById('mktSocial').value;
             card.quote  = document.getElementById('mktQuote').value;
@@ -14054,6 +14329,8 @@ Example:
                 chosen_topic: card.chosenTopic || '',
                 take: card.take || '',
                 additional_take: card.additionalTake || '',
+                cta_heading: card.ctaHeading || '',
+                cta_body: card.ctaBody || '',
                 blog: card.blog || '',
                 social: card.social || '',
                 quote: card.quote || '',
@@ -14084,6 +14361,8 @@ Example:
                 chosenTopic: row.chosen_topic || '',
                 take: row.take || '',
                 additionalTake: row.additional_take || '',
+                ctaHeading: row.cta_heading || '',
+                ctaBody: row.cta_body || '',
                 blog: row.blog || '',
                 social: row.social || '',
                 quote: row.quote || '',
@@ -14732,10 +15011,30 @@ Example:
         const WP_READING_TIME_TOP =
             '<strong>[rt_reading_time label="Reading Time:" postfix="minutes" postfix_singular="minute"]</strong>';
 
-        const WP_CTA_BUTTON =
-            '<h2>Is Your Current Plan Truly Tax-Efficient?</h2>\n'
-          + '<p>Not just this year &mdash; but structured correctly for the long game? Let\'s have a deep, honest conversation about your goals, your tax exposure, and what a plan built on truth and transparency actually looks like.</p>\n'
-          + '<p>[su_button url="https://investedwithyou.com/connect/#schedule" target="blank" style="soft" background="#A4C739" size="10" icon_color="#A4C739"]Schedule a Conversation[/su_button]</p>';
+        // 🚨 v3.84.0 — THIS IS WHERE THE REPEATED CLOSING CAME FROM, AND IT WAS NOT THE FIRM
+        // CONTEXT. Hans went looking in his firm-context folder for why every blog ended with
+        // "Is Your Current Plan Truly Tax-Efficient?" — it was hardcoded here and appended to
+        // every post regardless of subject. It also quietly contradicted his OWN documented
+        // rule: `_Firm Summary.md` §11 says *"Rotate the close — tagline, callback to the
+        // opening image, a plain forward-looking sentence, an invitation to think — cycle
+        // them."* A fixed closing block cannot cycle.
+        //
+        // THE BUTTON IS BRAND FURNITURE AND STAYS FIXED — same wording, same URL, same
+        // shortcode, same colour, because that is a house asset rather than a piece of
+        // writing. Only the HEADLINE and the SENTENCE above it become per-card, and both
+        // default to the text below, so a card nobody has touched publishes exactly what it
+        // always did. Nothing breaks on upgrade; blogs simply stop repeating themselves.
+        const WP_CTA_HEADING_DEFAULT = 'Is Your Current Plan Truly Tax-Efficient?';
+        const WP_CTA_BODY_DEFAULT =
+            'Not just this year — but structured correctly for the long game? Let\'s have a deep, honest conversation about your goals, your tax exposure, and what a plan built on truth and transparency actually looks like.';
+        const WP_CTA_LINK =
+            '<p>[su_button url="https://investedwithyou.com/connect/#schedule" target="blank" style="soft" background="#A4C739" size="10" icon_color="#A4C739"]Schedule a Conversation[/su_button]</p>';
+
+        function buildCtaBlock(card) {
+            const h = ((card && card.ctaHeading) || '').trim() || WP_CTA_HEADING_DEFAULT;
+            const b = ((card && card.ctaBody) || '').trim() || WP_CTA_BODY_DEFAULT;
+            return '<h2>' + escapeHtml(h) + '</h2>\n<p>' + escapeHtml(b) + '</p>\n' + WP_CTA_LINK;
+        }
 
         const WP_DISCLOSURE =
             '<h6 style="font-size: 10px;"><strong>Disclosure:</strong> This blog may reflect the perspectives and research of Intelligent Investing and, where applicable, incorporates insights from guest interviews or expert opinions. Any external views or opinions shared do not necessarily reflect the stance of Intelligent Investing. We may also utilize tools such as ChatGPT to enhance readability, grammar, and flow, while all core ideas remain proprietary to our firm.</h6>\n'
@@ -14743,10 +15042,10 @@ Example:
 
         // Wraps converted blog HTML with the standard top and bottom boilerplate.
         // Kept separate from mdToHtml so the body conversion stays pure.
-        function wrapBlogForWordPress(bodyHtml) {
+        function wrapBlogForWordPress(bodyHtml, card) {
             return WP_READING_TIME_TOP + '\n\n'
                  + bodyHtml + '\n\n'
-                 + WP_CTA_BUTTON + '\n\n'
+                 + buildCtaBlock(card) + '\n\n'
                  + WP_DISCLOSURE;
         }
 
@@ -14931,7 +15230,7 @@ Example:
                         action: 'postToWordPress',
                         secretKey: member.webAppSecret || '',
                         title: title,
-                        content: wrapBlogForWordPress(mdToHtml(body)),
+                        content: wrapBlogForWordPress(mdToHtml(body), card),
                         categoryIds: chosenCategoryIds,
                         notifyEditor: notify
                     })
@@ -17996,7 +18295,7 @@ Example:
                              ondrop="dropList(event)"
                              ondragleave="dragListLeave(event)"
                              style="margin-bottom: 12px; border-left: 3px solid transparent; padding-left: 8px; transition: all 0.2s;">
-                            <div style="font-size: 0.8rem; font-weight: 600; color: var(--gray-500); margin-bottom: 4px; padding-left: 4px; cursor: grab; user-select: none;" 
+                            <div style="font-size: 1rem; font-weight: 800; color: var(--gray-700); margin-bottom: 6px; padding-left: 4px; cursor: grab; user-select: none; letter-spacing: -0.01em;" 
                                  title="Drag to reorder task lists">
                                 ⋮⋮ ${listName}
                             </div>
@@ -18014,7 +18313,7 @@ Example:
                 // Phase 1: static, always-expanded group-by-list header (single default list).
                 const singleListName = (listNames[0] || 'To-Dos');
                 const groupHeader = tasksInList.length > 0
-                    ? `<div style="font-size: 0.8rem; font-weight: 600; color: var(--gray-500); margin-bottom: 4px; padding-left: 4px; user-select: none;">${singleListName}</div>`
+                    ? `<div style="font-size: 1rem; font-weight: 800; color: var(--gray-700); margin-bottom: 6px; padding-left: 4px; user-select: none; letter-spacing: -0.01em;">${singleListName}</div>`
                     : '';
                 todosHtml = groupHeader + renderTaskHierarchy(hierarchicalTasks, 0);
             }
