@@ -822,6 +822,23 @@
             padding-bottom: 4px;
         }
         .rating-buttons::-webkit-scrollbar { display: none; }
+        /* v3.85.0 (Hans): "make the Rate this meeting numbers 1-10 smaller so they fit across
+           the width of the mobile device... instead of having to scroll to the right."
+           Ten buttons + nine gaps have to live inside ~343px of content box on a 375 screen.
+           flex:1 1 0 with min-width:0 lets them share the row evenly and shrink together, so
+           the arithmetic is the browser's rather than a hand-picked px value that would be
+           wrong on the next screen size.
+           🚨 .rating-buttons' own overflow-x:auto IS DELIBERATELY LEFT IN PLACE. v3.75.0
+           A/B'd it at runtime and proved it is the load-bearing half of the overflow guard in
+           this element's new home on #agenda - removing it brings a 431px document straight
+           back. This rule makes the scroller unnecessary; it does not make it safe to delete. */
+        @media (max-width: 768px) {
+            .rating-buttons { gap: 3px; padding-bottom: 2px; }
+            .rating-buttons .rating-btn {
+                flex: 1 1 0; min-width: 0; padding: 0; font-size: 0.82rem;
+                min-height: 38px; height: 38px; line-height: 38px; text-align: center;
+            }
+        }
         /* v3.76.0 (item 2b): the colour swatch in the Assign picker's person buttons. */
         .assign-dot { width: 14px; height: 14px; border-radius: 50%; flex: 0 0 auto; display: inline-block; border: 1px solid rgba(0,0,0,0.15); }
         /* v3.75.0 (item 1): the rating panel moved from the Weekly Meeting's .grid-2 -
@@ -3574,6 +3591,10 @@
                to show a drop target), only its padding goes. */
             .todo-list-group { padding-left: 0 !important; }
             .todo-item { padding-left: 6px; padding-right: 6px; }
+            /* v3.85.0 (Hans): the To-Dos "+ Add" control is redundant on a phone - the FAB
+               (bottom right, #fabStack) adds a to-do from this very page. Hidden rather than
+               removed, so desktop keeps it and the reversal is deleting this rule. */
+            .todo-ctl-add { display: none; }
             /* Compact density is a deliberate ONE-LINE row, so it must not wrap. */
             .todo-item.den-compact { flex-wrap: nowrap; }
             .todo-item.den-compact .tr-actions { flex: 0 0 auto; margin-top: 0; }
@@ -4370,7 +4391,7 @@
         <!-- QUARTERLY PAGE -->
         <div id="quarterly" class="page">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h2 class="page-title" style="margin-bottom: 0;">Quarterly Rocks & Scorecard</h2>
+                <h2 class="page-title" style="margin-bottom: 0;">Rocks, Scorecard &amp; IDS</h2>
                 <!-- v3.71.0 (Hans's item 8): hidden on phones only, to give the measurable
                      name back its width. Both are still reachable on a phone from the
                      drawer's "Print…" (master print modal: "Quarterly Rocks" and
@@ -4454,6 +4475,71 @@
                     </div>
                     <button class="add-btn" onclick="addMeasurable()">+ Add Measurable</button>
                 </div>
+
+            <!-- v3.85.0 (Hans): IDS and the long-term Issues List move here from the Weekly
+                 Pulse Meeting page, below Rocks and the Scorecard, and the page is retitled
+                 "Rocks, Scorecard & IDS" to say so. He named BOTH headings in his request, so
+                 both moved - stated plainly, because if he meant only the IDS block then putting
+                 the long-term list back is one slice move, exactly as v3.75.0 recorded when it
+                 brought that list over from the 1-Year page.
+                 Every id inside both blocks is unchanged (weeklyIssuesContainer, idsWorkspace,
+                 idsIdentify/Discuss/Solve, i1-i5, i1_check-i5_check), so renderWeeklyIssues,
+                 startIDS, saveCurrentIDS, promoteLongTermIssues and the save/load paths are all
+                 untouched - this is a DOM MOVE, not a rewrite.
+                 v3.75.0 IS SUPERSEDED HERE: its stated meeting-body order was To-Dos, IDS,
+                 Issues List, Meeting Notes. Only To-Dos remains on that page now. -->
+            <!-- IDS -->
+            <div class="section">
+                <h3>💡 IDS - Issues 
+                    <button class="btn btn-secondary" onclick="viewArchivedIssues()" style="float: right; padding: 4px 10px; font-size: 0.8rem;">📁 View Archived</button>
+                </h3>
+                <div id="weeklyIssuesContainer"></div>
+                <button class="add-btn" onclick="addWeeklyIssue()">+ Add Issue</button>
+
+                <div id="idsWorkspace" style="margin-top: 15px; display: none;">
+                    <div style="background: var(--primary); color: white; padding: 8px 12px; border-radius: 6px 6px 0 0; font-weight: 600;">
+                        <span id="idsIssueTitle">Issue #1</span>
+                        <button onclick="closeIDSWorkspace()" style="float: right; background: none; border: none; color: white; cursor: pointer; font-size: 1.2rem;">×</button>
+                    </div>
+                    <div style="background: var(--gray-50); padding: 12px; border-radius: 0 0 6px 6px; border: 1px solid var(--gray-200); border-top: none;">
+                        <div class="ids-step">
+                            <h4><span class="ids-badge">I</span> Identify</h4>
+                            <textarea id="idsIdentify" rows="2" placeholder="What is the real issue? Root cause..." onchange="saveCurrentIDS()"></textarea>
+                        </div>
+                        <div class="ids-step">
+                            <h4><span class="ids-badge">D</span> Discuss</h4>
+                            <textarea id="idsDiscuss" rows="2" placeholder="Key discussion points..." onchange="saveCurrentIDS()"></textarea>
+                        </div>
+                        <div class="ids-step">
+                            <h4><span class="ids-badge">S</span> Solve</h4>
+                            <textarea id="idsSolve" rows="2" placeholder="Solution / Action item..." onchange="saveCurrentIDS()"></textarea>
+                        </div>
+                        <div style="display: flex; gap: 8px; margin-top: 10px;">
+                            <button class="btn btn-success" onclick="resolveIssue()" style="flex: 1;">✔ Create To-Do from Solution</button>
+                            <button class="btn btn-secondary" onclick="askAIForHelp()" style="padding: 8px 12px;" title="Get AI suggestions">🤖 AI Help</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- v3.75.0 (item 1): "Issues List (Long-term)" moved here from the 1-Year
+                 Plan page - Hans's specified meeting-body order includes it between IDS
+                 and Meeting Notes. Inputs i1-i5 / i1_check-i5_check keep their ids, so
+                 save/load and promoteLongTermIssues() are untouched. Reversal: move the
+                 slice back under the Goals section on the 1-Year page. -->
+            <div class="section issues">
+                <h3>⚠️ Issues List (Long-term) 
+                    <button class="btn btn-secondary" onclick="promoteLongTermIssues()" style="float: right; padding: 4px 10px; font-size: 0.8rem;">
+                        ➡️ Send to Weekly IDS
+                    </button>
+                </h3>
+                <p style="font-size: 0.85rem; color: var(--gray-500); margin-bottom: 12px;">Issues to address at quarterly planning sessions. Click "Send to Weekly IDS" to add checked issues to this week's meeting.</p>
+                <div class="numbered-item"><input type="checkbox" id="i1_check" style="width: 18px; margin-right: 8px;"><span class="num">1</span><input type="text" id="i1" placeholder="Issue 1" style="flex: 1;"></div>
+                <div class="numbered-item"><input type="checkbox" id="i2_check" style="width: 18px; margin-right: 8px;"><span class="num">2</span><input type="text" id="i2" placeholder="Issue 2" style="flex: 1;"></div>
+                <div class="numbered-item"><input type="checkbox" id="i3_check" style="width: 18px; margin-right: 8px;"><span class="num">3</span><input type="text" id="i3" placeholder="Issue 3" style="flex: 1;"></div>
+                <div class="numbered-item"><input type="checkbox" id="i4_check" style="width: 18px; margin-right: 8px;"><span class="num">4</span><input type="text" id="i4" placeholder="Issue 4" style="flex: 1;"></div>
+                <div class="numbered-item"><input type="checkbox" id="i5_check" style="width: 18px; margin-right: 8px;"><span class="num">5</span><input type="text" id="i5" placeholder="Issue 5" style="flex: 1;"></div>
+            </div>
             </div>
         </div>
         
@@ -4488,6 +4574,14 @@
                     <h4>Rate This Meeting (1-10)</h4>
                     <div class="rating-buttons" id="ratingButtons"></div>
                     <div id="ratingHistory" style="margin-top: 10px; font-size: 0.85rem; color: var(--gray-500);"></div>
+                </div>
+                <!-- v3.85.0 (Hans): Meeting Notes moved off the Weekly Pulse Meeting page to sit
+                     under Rate This Meeting and above Complete & Archive - his exact placement.
+                     It is a close-out artefact, so it belongs with the close-out. #meetingNotes
+                     keeps its id, so every reader finds it wherever it lives. -->
+                <div class="section" style="margin-top: 15px;">
+                <h3>📝 Meeting Notes</h3>
+                <textarea class="notes-area" id="meetingNotes" placeholder="Customer headlines, discussion points, cascading messages..."></textarea>
                 </div>
                 <div class="actions">
                     <button class="btn btn-success" onclick="archiveMeeting()">✔ Complete & Archive</button>
@@ -4554,63 +4648,8 @@
                 <div id="todosContainer"></div>
             </div>
 
-            <!-- IDS -->
-            <div class="section">
-                <h3>💡 IDS - Issues 
-                    <button class="btn btn-secondary" onclick="viewArchivedIssues()" style="float: right; padding: 4px 10px; font-size: 0.8rem;">📁 View Archived</button>
-                </h3>
-                <div id="weeklyIssuesContainer"></div>
-                <button class="add-btn" onclick="addWeeklyIssue()">+ Add Issue</button>
 
-                <div id="idsWorkspace" style="margin-top: 15px; display: none;">
-                    <div style="background: var(--primary); color: white; padding: 8px 12px; border-radius: 6px 6px 0 0; font-weight: 600;">
-                        <span id="idsIssueTitle">Issue #1</span>
-                        <button onclick="closeIDSWorkspace()" style="float: right; background: none; border: none; color: white; cursor: pointer; font-size: 1.2rem;">×</button>
-                    </div>
-                    <div style="background: var(--gray-50); padding: 12px; border-radius: 0 0 6px 6px; border: 1px solid var(--gray-200); border-top: none;">
-                        <div class="ids-step">
-                            <h4><span class="ids-badge">I</span> Identify</h4>
-                            <textarea id="idsIdentify" rows="2" placeholder="What is the real issue? Root cause..." onchange="saveCurrentIDS()"></textarea>
-                        </div>
-                        <div class="ids-step">
-                            <h4><span class="ids-badge">D</span> Discuss</h4>
-                            <textarea id="idsDiscuss" rows="2" placeholder="Key discussion points..." onchange="saveCurrentIDS()"></textarea>
-                        </div>
-                        <div class="ids-step">
-                            <h4><span class="ids-badge">S</span> Solve</h4>
-                            <textarea id="idsSolve" rows="2" placeholder="Solution / Action item..." onchange="saveCurrentIDS()"></textarea>
-                        </div>
-                        <div style="display: flex; gap: 8px; margin-top: 10px;">
-                            <button class="btn btn-success" onclick="resolveIssue()" style="flex: 1;">✔ Create To-Do from Solution</button>
-                            <button class="btn btn-secondary" onclick="askAIForHelp()" style="padding: 8px 12px;" title="Get AI suggestions">🤖 AI Help</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            <!-- v3.75.0 (item 1): "Issues List (Long-term)" moved here from the 1-Year
-                 Plan page - Hans's specified meeting-body order includes it between IDS
-                 and Meeting Notes. Inputs i1-i5 / i1_check-i5_check keep their ids, so
-                 save/load and promoteLongTermIssues() are untouched. Reversal: move the
-                 slice back under the Goals section on the 1-Year page. -->
-            <div class="section issues">
-                <h3>⚠️ Issues List (Long-term) 
-                    <button class="btn btn-secondary" onclick="promoteLongTermIssues()" style="float: right; padding: 4px 10px; font-size: 0.8rem;">
-                        ➡️ Send to Weekly IDS
-                    </button>
-                </h3>
-                <p style="font-size: 0.85rem; color: var(--gray-500); margin-bottom: 12px;">Issues to address at quarterly planning sessions. Click "Send to Weekly IDS" to add checked issues to this week's meeting.</p>
-                <div class="numbered-item"><input type="checkbox" id="i1_check" style="width: 18px; margin-right: 8px;"><span class="num">1</span><input type="text" id="i1" placeholder="Issue 1" style="flex: 1;"></div>
-                <div class="numbered-item"><input type="checkbox" id="i2_check" style="width: 18px; margin-right: 8px;"><span class="num">2</span><input type="text" id="i2" placeholder="Issue 2" style="flex: 1;"></div>
-                <div class="numbered-item"><input type="checkbox" id="i3_check" style="width: 18px; margin-right: 8px;"><span class="num">3</span><input type="text" id="i3" placeholder="Issue 3" style="flex: 1;"></div>
-                <div class="numbered-item"><input type="checkbox" id="i4_check" style="width: 18px; margin-right: 8px;"><span class="num">4</span><input type="text" id="i4" placeholder="Issue 4" style="flex: 1;"></div>
-                <div class="numbered-item"><input type="checkbox" id="i5_check" style="width: 18px; margin-right: 8px;"><span class="num">5</span><input type="text" id="i5" placeholder="Issue 5" style="flex: 1;"></div>
-            </div>
-
-            <div class="section" style="margin-top: 15px;">
-                <h3>📝 Meeting Notes</h3>
-                <textarea class="notes-area" id="meetingNotes" placeholder="Customer headlines, discussion points, cascading messages..."></textarea>
-            </div>
             <!-- AI Assistant Modal -->
             <div class="modal-overlay" id="aiAssistModal">
                 <div class="modal" style="max-width: 600px;">
@@ -4656,7 +4695,14 @@
         <!-- MY DAILY PLAN PAGE -->
         <div id="dailyPlan" class="page">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h2 class="page-title" style="margin-bottom: 0;">📅 My Daily Plan</h2>
+                <h2 class="page-title" style="margin-bottom: 0;">📅 Today</h2>
+                <span style="position: relative; display: inline-block;">
+                    <!-- v3.85.0: the wrench, second surface. Today has two real preferences
+                         (repository sort + row view) and both already live in one place each,
+                         so this is a shortcut and never a second store. -->
+                    <button class="btn btn-secondary" id="dailyPlanPrefsBtn" onclick="togglePagePrefs('dailyPlan', event)" title="View preferences for this page" aria-label="View preferences for this page" aria-expanded="false">🔧</button>
+                    <div id="dailyPlanPrefsPanel" class="page-prefs-panel" style="display:none;"></div>
+                </span>
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <!-- v3.71.0 (Hans's item 9a): the "Current User" picker is gone from the
                          page. The <select> itself STAYS IN THE DOM, CSS-hidden by the
@@ -6678,9 +6724,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.84.0';
-        const EOS_BUILD_DATE = '2026-07-31';
-        const EOS_BUILD_TIME = '23:15'; // v3.84.0: THE REPEATED BLOG CTA + PER-PAGE MINI SETTINGS + THE DRAWER IA HANS DICTATED. index.html + schema.sql Part 4 (two additive columns); NO .gs change, so NO clasp deploy. (1) THE CTA WAS NOT IN HIS FIRM CONTEXT - he went looking there and it was hardcoded in this file as WP_CTA_BUTTON, appended to EVERY post regardless of subject ('Is Your Current Plan Truly Tax-Efficient?'). It also contradicted his OWN rule: _Firm Summary.md section 11 says 'rotate the close... cycle them', and a fixed block cannot. Headline + sentence are now per-card (blank = the old default, so untouched cards publish exactly as before); the Schedule a Conversation BUTTON stays fixed brand furniture. 'AI: Suggest CTA' drafts one from the actual blog and is told not to reach for tax framing unless the post earned it. (2) THE WRENCH: a per-page prefs popover on the Weekly Meeting header - sort order + row view. EVERYTHING STAYS IN MAIN SETTINGS TOO; this writes into #todoSortOrder and through setRowDensity(), the same single write paths, so the two surfaces cannot disagree - the #todoOwnerFilter contract, fourth instance. (3) SYNC WITH GOOGLE TASKS moves back up beside Agenda/Otter - reverses v3.75.0's stated assumption, which had named the reversal as one button line. (4) THE GOOGLE TASKS LIST HEADING was 0.8rem against 0.9rem rows - SMALLER than the tasks it labels. Now 1rem/800 at both emission sites. (5) DRAWER IA IS HIS, GROUP BY GROUP, superseding decision 4 where they differ: Plan first, then Work (Meeting, Agenda, Today), then Focus (Calendar, Kanban, Marketing, Gmail, Chat), then System (Print, History, Settings). 'My Daily Plan' RENAMED 'Today' - AN EXPLICIT REVERSAL of v3.66.1, recorded. Save Year and Compare Years leave the drawer for Settings > System > Data. Gmail/Chat/History are placeholders, never dead links. (6) The header name badge no longer signs you out on tap - the drawer footer already puts the name and the words together, which is the arrangement he asked for.
+        const EOS_VERSION = '3.85.0';
+        const EOS_BUILD_DATE = '2026-08-01';
+        const EOS_BUILD_TIME = '02:10'; // v3.85.0: HANS'S FIFTH ROUND. index.html only; NO schema change and NO .gs change, so NO clasp deploy and NO new SQL. (1) SCORECARD ENTER ON A PHONE - and the handler was never wrong, it was UNREACHABLE. handleScorecardKey has moved Enter to the next row down for a long time; v3.71.0's inputmode='decimal' raises Android's NUMERIC keypad, which has no Enter key at all unless the field asks for an action key. enterkeyhint='next' asks. *** A keyboard only offers the action key the input asks for. *** Plus scrollIntoView on the next cell (it was usually under the keyboard) and a blur at the end of a column instead of trapping focus. NOTE this is the OPPOSITE of v3.83.0's composer rule, deliberately: a scorecard cell is a one-value field, a blog box is not. (2) THE WRENCH IS A REGISTRY NOW, not one hardcoded panel, and Today gets one (repository sort + row view). Kanban and Marketing did NOT get one and the reason is stated: both already carry their preferences as visible toolbars, so a wrench there would either duplicate a control or be empty - a shortcut must never become a second home for the value. (3) '+ Add' hidden on phones (the FAB does it). (4) IDS + the long-term Issues List MOVED to the Rocks page, retitled 'Rocks, Scorecard & IDS'; Meeting Notes MOVED to the Agenda page between Rate This Meeting and Complete & Archive. Both are DOM MOVES - every id is unchanged, so renderWeeklyIssues, startIDS, promoteLongTermIssues and the notes save/load are untouched. This SUPERSEDES v3.75.0's meeting-body order; only To-Dos remains on that page. (5) The 1-10 rating row now fits a phone without scrolling (flex:1 1 0, so the browser does the arithmetic) - and .rating-buttons' overflow-x guard is DELIBERATELY LEFT IN, because v3.75.0 A/B'd it as load-bearing in that element's home. Making the scroller unnecessary is not the same as making it safe to delete.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -8768,77 +8814,116 @@ Example:
         // Settings panel calls, which already re-renders the Settings segments and repaints
         // every task surface. So the two surfaces can never disagree, and deleting this whole
         // block would cost nothing but the shortcut.
-        function meetingPrefsHtml() {
-            const sel = document.getElementById('todoSortOrder');
-            const curSort = sel ? sel.value : 'manual';
-            const curDen = rowDensity();
-            const sortRows = sel ? Array.prototype.map.call(sel.options, function(o) {
-                return '<button type="button" class="pp-item' + (o.value === curSort ? ' active' : '') + '"'
-                    + ' onclick="meetingPrefsSetSort(\'' + o.value + '\')">'
-                    + '<span>' + escapeHtml(o.textContent) + '</span>'
-                    + (o.value === curSort ? '<span class="pp-tick">&#10003;</span>' : '') + '</button>';
-            }).join('') : '';
-            const denRows = ROW_DENSITIES.map(function(d) {
-                return '<button type="button" class="pp-item' + (d === curDen ? ' active' : '') + '"'
-                    + ' onclick="meetingPrefsSetDensity(\'' + d + '\')">'
-                    + '<span>' + ROW_DENSITY_LABELS[d].label + '</span>'
-                    + (d === curDen ? '<span class="pp-tick">&#10003;</span>' : '') + '</button>';
-            }).join('');
-            return '<div class="pp-head">Sort order</div>' + sortRows
-                 + '<div class="pp-head">Row view</div>' + denRows
-                 + '<div class="pp-foot"><button type="button" class="pp-link" onclick="closeMeetingPrefs(); openSettings(\'taskRows\');">All settings&nbsp;&rsaquo;</button></div>';
+        // v3.85.0: the wrench is a registry now, not one hardcoded panel, because Hans asked
+        // for it on more pages. Each entry lists the preferences THAT page actually has - it is
+        // deliberately not a fixed template, since an empty or duplicated panel is worse than
+        // no panel. `read` returns the current value, `set` writes it through the SINGLE
+        // existing write path, and nothing here stores anything of its own.
+        const PAGE_PREFS = {
+            meeting: [
+                { title: 'Sort order', options: function () {
+                        const sel = document.getElementById('todoSortOrder');
+                        return sel ? Array.prototype.map.call(sel.options, function (o) { return { v: o.value, label: o.textContent }; }) : [];
+                    },
+                    read: function () { const s = document.getElementById('todoSortOrder'); return s ? s.value : ''; },
+                    set: function (v) {
+                        const s = document.getElementById('todoSortOrder');
+                        if (!s) return;
+                        s.value = v;                       // the one home for this value
+                        if (typeof sortAndRenderTodos === 'function') sortAndRenderTodos();
+                    } },
+                { title: 'Row view', options: function () {
+                        return ROW_DENSITIES.map(function (d) { return { v: d, label: ROW_DENSITY_LABELS[d].label }; });
+                    },
+                    read: rowDensity,
+                    set: setRowDensity }
+            ],
+            dailyPlan: [
+                { title: 'Sort order', options: function () {
+                        const labels = { manual: 'My Order', starred: 'Starred First', dueDate: 'Due Date', title: 'Title (A-Z)', owner: 'Owner' };
+                        return REPO_SORTS.map(function (k) { return { v: k, label: labels[k] || k }; });
+                    },
+                    read: repoSortOrder,
+                    set: setRepoSortOrder },
+                { title: 'Row view', options: function () {
+                        return ROW_DENSITIES.map(function (d) { return { v: d, label: ROW_DENSITY_LABELS[d].label }; });
+                    },
+                    read: rowDensity,
+                    set: setRowDensity }
+            ]
+        };
+        const PAGE_PREFS_SETTINGS_BAND = { meeting: 'taskRows', dailyPlan: 'taskRows' };
+        let _pagePrefsOpen = null;
+
+        function pagePrefsHtml(page) {
+            const groups = PAGE_PREFS[page] || [];
+            return groups.map(function (g) {
+                const cur = g.read();
+                return '<div class="pp-head">' + g.title + '</div>'
+                    + g.options().map(function (o) {
+                        return '<button type="button" class="pp-item' + (o.v === cur ? ' active' : '') + '"'
+                            + ' onclick="pagePrefsSet(this)" data-pp-page="' + escapeHtml(page) + '" data-pp-group="' + escapeHtml(g.title) + '" data-pp-value="' + escapeHtml(String(o.v)) + '">'
+                            + '<span>' + escapeHtml(o.label) + '</span>'
+                            + (o.v === cur ? '<span class="pp-tick">&#10003;</span>' : '') + '</button>';
+                      }).join('');
+            }).join('')
+            + '<div class="pp-foot"><button type="button" class="pp-link" onclick="closePagePrefs(); openSettings(&quot;'
+            + (PAGE_PREFS_SETTINGS_BAND[page] || 'taskRows') + '&quot;);">All settings&nbsp;&rsaquo;</button></div>'
         }
 
-        function renderMeetingPrefs() {
-            const panel = document.getElementById('meetingPrefsPanel');
-            if (!panel) return;
-            panel.innerHTML = meetingPrefsHtml();
+        // Reads its arguments off the button instead of having them interpolated into an
+        // inline onclick string. Nothing to escape, and a group title containing an
+        // apostrophe can never break the handler.
+        function pagePrefsSet(btn) {
+            const page = btn.getAttribute('data-pp-page');
+            const groupTitle = btn.getAttribute('data-pp-group');
+            const value = btn.getAttribute('data-pp-value');
+            const g = (PAGE_PREFS[page] || []).find(function (x) { return x.title === groupTitle; });
+            if (!g) return;
+            g.set(value);
+            renderPagePrefs(page);
         }
 
-        function toggleMeetingPrefs(ev) {
+        function renderPagePrefs(page) {
+            const panel = document.getElementById(page + 'PrefsPanel');
+            if (panel) panel.innerHTML = pagePrefsHtml(page);
+        }
+
+        function togglePagePrefs(page, ev) {
             if (ev) ev.stopPropagation();
-            const panel = document.getElementById('meetingPrefsPanel');
+            const panel = document.getElementById(page + 'PrefsPanel');
             if (!panel) return;
-            if (panel.style.display !== 'none') { closeMeetingPrefs(); return; }
-            renderMeetingPrefs();
+            if (panel.style.display !== 'none') { closePagePrefs(); return; }
+            closePagePrefs();
+            renderPagePrefs(page);
             panel.style.display = 'block';
-            const btn = document.getElementById('meetingPrefsBtn');
+            _pagePrefsOpen = page;
+            const btn = document.getElementById(page + 'PrefsBtn');
             if (btn) btn.setAttribute('aria-expanded', 'true');
-            // Capture phase, and bound on the NEXT frame so the click that opened it does not
-            // immediately close it again.
-            setTimeout(function () { document.addEventListener('click', _meetingPrefsAway, true); }, 0);
+            setTimeout(function () { document.addEventListener('click', _pagePrefsAway, true); }, 0);
         }
 
-        function closeMeetingPrefs() {
-            const panel = document.getElementById('meetingPrefsPanel');
-            if (panel) panel.style.display = 'none';
-            const btn = document.getElementById('meetingPrefsBtn');
-            if (btn) btn.setAttribute('aria-expanded', 'false');
-            document.removeEventListener('click', _meetingPrefsAway, true);
+        function closePagePrefs() {
+            Object.keys(PAGE_PREFS).forEach(function (page) {
+                const panel = document.getElementById(page + 'PrefsPanel');
+                if (panel) panel.style.display = 'none';
+                const btn = document.getElementById(page + 'PrefsBtn');
+                if (btn) btn.setAttribute('aria-expanded', 'false');
+            });
+            _pagePrefsOpen = null;
+            document.removeEventListener('click', _pagePrefsAway, true);
         }
 
-        function _meetingPrefsAway(e) {
-            const panel = document.getElementById('meetingPrefsPanel');
-            if (!panel || panel.style.display === 'none') return;
-            if (e.target.closest && e.target.closest('#meetingPrefsPanel, #meetingPrefsBtn')) return;
-            closeMeetingPrefs();
+        function _pagePrefsAway(e) {
+            if (!_pagePrefsOpen) return;
+            if (e.target.closest && e.target.closest('.page-prefs-panel, #meetingPrefsBtn, #dailyPlanPrefsBtn')) return;
+            closePagePrefs();
         }
 
-        function meetingPrefsSetSort(v) {
-            const sel = document.getElementById('todoSortOrder');
-            if (!sel) return;
-            sel.value = v;
-            // Fire the select's OWN handler rather than duplicating what it does — the same
-            // write-then-notify ordering the composer commit path uses, and for the same
-            // reason: the handler re-renders the list, so nothing may be held across it.
-            if (typeof sortAndRenderTodos === 'function') sortAndRenderTodos();
-            renderMeetingPrefs();
-        }
-
-        function meetingPrefsSetDensity(d) {
-            setRowDensity(d);       // the one write path; repaints every surface itself
-            renderMeetingPrefs();
-        }
+        // Back-compat shims: the Weekly Meeting markup and the v3.84.0 harness call these.
+        function toggleMeetingPrefs(ev) { togglePagePrefs('meeting', ev); }
+        function closeMeetingPrefs() { closePagePrefs(); }
+        function renderMeetingPrefs() { renderPagePrefs('meeting'); }
 
         function setRowDensity(d) {
             if (ROW_DENSITIES.indexOf(d) === -1) return;
@@ -9644,7 +9729,21 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.84.0 &mdash; 2026-07-31 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.85.0 &mdash; 2026-08-01 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Scorecard entry on a phone, sections moved where you asked, and the rating row finally fits.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Scorecard: Enter drops you to the next box down.</strong> Worth knowing what was actually wrong &mdash; that behaviour has existed for a long time and you could not reach it. When we put the number keypad on those cells, Android stopped showing an Enter key at all, so there was nothing to press. The cells now ask the keyboard for a <em>Next</em> key. The next box also scrolls into view (it was usually behind the keyboard), and at the bottom of a column it lets go instead of trapping you. <strong>This needs your phone to confirm</strong> &mdash; a simulator cannot show me a real keypad.</li>'
+                + '<li><strong>The wrench is now on &ldquo;Today&rdquo; as well</strong> &mdash; sort order and row view. <strong>Kanban and Marketing did not get one, on purpose:</strong> both already show their view controls as toolbars on the page, so a wrench there would either duplicate a control or open empty. Tell me if you would rather those toolbars <em>moved into</em> a wrench to save the space, and I will do that instead.</li>'
+                + '<li><strong>&ldquo;+ Add&rdquo; is gone from the To-Dos row on phones</strong> &mdash; the big blue + does the same job. It is still there on the computer.</li>'
+                + '<li><strong>IDS and the long-term Issues List moved to the Rocks page</strong>, below Rocks and the Scorecard, and that page is now titled <strong>&ldquo;Rocks, Scorecard &amp; IDS&rdquo;</strong>. You named both lists, so both moved &mdash; say the word if you only meant the IDS block and I will put the long-term list back.</li>'
+                + '<li><strong>Meeting Notes moved to the Agenda page</strong>, under <em>Rate This Meeting</em> and above <em>Complete &amp; Archive</em>, exactly where you put it. The Weekly Pulse Meeting page is now just your To-Dos.</li>'
+                + '<li><strong>The 1&ndash;10 rating buttons fit across the screen now</strong> &mdash; no sideways scrolling. They share the row evenly, so it works out on any phone width rather than being tuned to one.</li>'
+                + '<li><strong>Nothing to run for this one</strong> &mdash; no database change and no Apps Script change.</li>'
+                + '</ul>'
+                + '</div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.84.0 &mdash; 2026-07-31</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">The repeated blog ending, a wrench on the Meeting page, bigger list names, and the menu rebuilt to your groups.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Found the repeated blog ending &mdash; it was not your firm context.</strong> &ldquo;Is Your Current Plan Truly Tax-Efficient?&rdquo; was hardcoded in the tool and stapled to the bottom of every post regardless of subject. Your own writing rules said it should not be: your firm summary tells the AI to <em>rotate the close</em>, and a fixed block cannot. <strong>The closing headline and sentence are now per-blog</strong>, on the Package &amp; Send step, with an <strong>AI: Suggest CTA</strong> button that writes one from the actual post &mdash; and is told not to reach for tax framing unless the post earned it. Leave both boxes blank and you get the old text, so nothing already in flight changes.</li>'
@@ -17708,7 +17807,14 @@ Example:
                         // type="number" would reject or silently blank anything non-numeric
                         // that these cells are allowed to hold. updateScorecard() still gets a
                         // string and still parseFloat()s it, so nothing downstream changes.
-                        return `<td data-week="${w}"><input type="text" inputmode="decimal" value="${val}" class="${cls}"
+                        // v3.85.0 (Hans): `enterkeyhint="next"` is THE missing piece on a phone.
+                        // handleScorecardKey has moved Enter to the next row since long before
+                        // this release - but v3.71.0's `inputmode="decimal"` raises Android's
+                        // NUMERIC keypad, and that keypad has no Enter key at all unless the
+                        // field asks for an action key. So there was nothing to press: the
+                        // handler was never wrong, it was unreachable.
+                        // *** A keyboard only offers the action key the input asks for. ***
+                        return `<td data-week="${w}"><input type="text" inputmode="decimal" enterkeyhint="next" value="${val}" class="${cls}"
                             data-row="${idx}" data-week="${w}"
                             onchange="updateScorecard(${idx}, ${w}, this.value, ${goal}, '${goalDir}')"
                             onkeydown="handleScorecardKey(event, ${idx}, ${w})"></td>`;
@@ -17818,7 +17924,17 @@ Example:
                     if (nextInput) {
                         nextInput.focus();
                         nextInput.select();
+                        // v3.85.0: on a phone the next row is very often under the keyboard, so
+                        // focusing it silently was indistinguishable from nothing happening.
+                        // `nearest` rather than `center` so a cell already on screen does not
+                        // jump the table around under his thumb.
+                        try { nextInput.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) {}
                     }
+                } else {
+                    // Last row of the column: end the run rather than trapping focus. Blurring
+                    // also fires the pending onchange and drops the keypad, which is what
+                    // "finished this column" should feel like.
+                    try { event.target.blur(); } catch (e) {}
                 }
             } else if (event.key === 'Tab' && !event.shiftKey) {
                 // Tab moves to next week in same row
