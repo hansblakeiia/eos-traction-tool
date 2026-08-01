@@ -524,7 +524,11 @@
                      keeps its id, so every reader finds it wherever it lives. -->
                 <div class="section" style="margin-top: 15px;">
                 <h3>📝 Meeting Notes</h3>
-                <textarea class="notes-area" id="meetingNotes" placeholder="Customer headlines, discussion points, cascading messages..."></textarea>
+                <!-- v3.92.0: onchange persists on blur, the same wiring the IDS boxes have
+                     had all along. There is deliberately NO oninput ATTRIBUTE here - the
+                     composer excludes any field that carries one (getAttribute('oninput')),
+                     so the debounce is attached with addEventListener instead. -->
+                <textarea class="notes-area" id="meetingNotes" onchange="saveMeetingNotes()" placeholder="Customer headlines, discussion points, cascading messages..."></textarea>
                 </div>
                 <div class="actions">
                     <button class="btn btn-success" onclick="archiveMeeting()">✔ Complete & Archive</button>
@@ -842,7 +846,11 @@
                     
                     <div class="nightly-review">
                         <div class="nightly-header">📝 Notes for Tomorrow</div>
-                        <textarea id="tomorrowNotes" placeholder="What do you want to remember for tomorrow?"></textarea>
+                        <!-- v3.92.0: saveDailyPlan() already reads this field, but nothing on the
+                             element ever called it - it was saved only as a side effect of touching
+                             an unrelated task, so it survived by luck. onchange makes that reliable
+                             (no oninput attribute: composer, rule 24). -->
+                        <textarea id="tomorrowNotes" onchange="saveDailyPlan()" placeholder="What do you want to remember for tomorrow?"></textarea>
                         <!-- v3.71.0 (item 7): End Day arrives here from the page header. Same
                              onclick, same function - it is the last thing you do on this page
                              and it sits under the notes it asks you to write. -->
@@ -1083,7 +1091,11 @@
 
                     <label>Owner &mdash; reassign this card</label>
                     <select id="kcOwnerSelect" onchange="kcOwnerSelectChanged(this)" style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; box-sizing:border-box; margin-bottom:6px;"></select>
-                    <input type="text" id="kcOwner" placeholder="Or type a new owner (e.g. Gerrit, Hermes AI Agent)" style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; box-sizing:border-box;">
+                    <!-- A2 (v3.92.0): hidden until the select's "+ Add new owner" is chosen.
+                         It stays the ONLY place the owner value lives - kcOwnerSelectChanged
+                         mirrors the picked name into it and saveKanbanCardModal reads it, so
+                         this is the hidden-control contract, not a second source of truth. -->
+                    <input type="text" id="kcOwner" placeholder="Type the new owner's name (e.g. Gerrit, Hermes AI Agent)" style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; box-sizing:border-box; display:none;">
 
                     <label>Labels (comma separated)</label>
                     <input type="text" id="kcLabels" placeholder="e.g. Final CTA, Trust / Quotes" style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; box-sizing:border-box;">
@@ -1099,10 +1111,18 @@
 
                     <label>Activity</label>
                     <div id="kcActivity"></div>
+
+                    <!-- A3 (v3.92.0): the destructive and the publishing action leave the
+                         footer, so Save has no dangerous neighbour under a thumb. Delete
+                         keeps its existing confirm(); WP Draft keeps its id and handler
+                         (Part C removes it outright - this is a relocation, not that). -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-top:16px; padding-top:10px; border-top:1px solid var(--gray-200);">
+                        <button type="button" onclick="deleteKanbanCard()" style="background:none; border:none; padding:0; font-size:0.82rem; color:var(--gray-500); text-decoration:underline; cursor:pointer;">Delete card</button>
+                        <button class="btn btn-secondary" id="kcWordPressBtn" onclick="sendCardToWordPress()" style="color:var(--primary); font-size:0.8rem; padding:5px 10px;" title="Create a WordPress draft from this card">WP Draft</button>
+                    </div>
                 </div>
                 <div class="modal-actions">
-                    <button class="btn btn-secondary" onclick="deleteKanbanCard()" style="color:var(--danger);">🗑️ Delete Card</button>
-                    <button class="btn btn-secondary" id="kcWordPressBtn" onclick="sendCardToWordPress()" style="color:var(--primary);" title="Create a WordPress draft from this card">WP Draft</button>
+                    <button class="btn btn-secondary" onclick="deleteKanbanCard()" style="display:none;">🗑️ Delete Card</button>
                     <button class="btn btn-secondary" id="kcArchiveBtn">🗄 Archive</button>
                     <button class="btn btn-primary" onclick="saveKanbanCardModal()">Save</button>
                 </div>
@@ -2676,9 +2696,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.91.0';
+        const EOS_VERSION = '3.92.0';
         const EOS_BUILD_DATE = '2026-08-01';
-        const EOS_BUILD_TIME = '14:45'; // v3.91.0: THE TODAY HEADER, AND A POPOVER THAT OUTLIVED ITS PAGE. Two of Hans's 2026-08-01 reports. *** (1) THE WRENCH WAS STRANDED IN THE MIDDLE OF THE TODAY HEADER, and the cause was structural rather than cosmetic: the row is display:flex + justify-content:space-between and had THREE children - the title, the wrench <span>, and a div holding the sync button - so space-between did exactly what it is supposed to do and parked the middle child in the centre. It is TWO children now (title | right-hand group), and "Sync Tasks" became an icon-only button beside the wrench, matched to btn-secondary so the pair reads as one control cluster. THE TEXT LABEL IS GONE, SO title= AND aria-label= ARE NOW THE ONLY THING NAMING THAT BUTTON - they are load-bearing, not decoration. #dailyPlanUserWrap stays in the DOM, CSS-hidden, per the hidden-control contract: ~45 call sites read #dailyPlanUser. *** (2) THE KANBAN MOVE PICKER SURVIVED A TAB SWITCH. #kanbanMovePicker is appendChild'd to <body>, NOT to the page div, so hiding a page cannot hide it - open a card's ... > Move, switch tabs, and it hung over the new page. THE GENERAL LESSON: a popover that escapes its page to <body> is invisible to every page-level teardown, and showPage() closed NOTHING at all before this release. New dismissTransientPopovers() closes the ... menu and the move picker; showPage() calls it first thing, before the page changes underneath. Every future body-level popover belongs in that one function - a dismissal written at the call site gets forgotten exactly once per new popover. *** MEASURED, dailyPlan at 375/412/768/1280, before-copy rendered from the deployed v3.90.0 via CLAUDE_PROJECT_DIR so the real file was never swapped: zero horizontal overflow and zero page errors at every width, before AND after. *** (previously v3.90.0: THE ARTIFACT STATUS ROW IS GONE, AND THE STATUS IS DERIVED INSTEAD. Hans: "I'm not really sure what the status section in the blog card at the top is supposed to help with" (§5.11b-6 item 5, open since 2026-07-30). It was not helping with anything, and the code says so three ways. *** (1) NOTHING IN THE APP EVER READ blogStatus/socialStatus/quoteStatus - no filter, no sort, no gate on Package & Send. Written in four places, read in zero. *** (2) TWO OF THE FOUR OPTIONS WERE UNREACHABLE EXCEPT BY HAND: the vocabulary is -/draft/ok/sent, but the app only auto-set 4 of the 12 artifact-state combinations, so 'ok' was never set for ANY artifact and 'sent' only ever for Blog. *** (3) IT WAS THE THIRD COPY OF THE SAME FACT - the board tile already badges it, the board already has an Approved column owned by Hans, and the 9-step checklist already knows whether each artifact exists. *** THE FIX: three <select>s deleted from the modal; new mktDeriveStatus(card, kind) computes it with precedence sent > approved > draft > none, from card.wordpressPostId, the artifact text, and columnId==='approved'. A badge can now never disagree with the card's actual work, which is exactly the failure a hand-maintained field invites. *** ROLLBACK-SAFE BY DESIGN: the stored *Status fields are NOT deleted and the four auto-set sites still write them, so rolling back to <=3.89.0 finds them intact. They are simply no longer read. *** THREE LIVE CRASH SITES WERE REMOVED WITH THEM: the AI Blog Draft, AI Social and quote-pick handlers each did getElementById('mkt*Status').value='draft', which would have thrown TypeError on null the moment the selects went away - the kind of breakage a screenshot cannot see. *** MEASURED: the modal top loses a whole row; nine pages at 375/412/768/1280 with the card modal OPEN. *** (previously v3.89.0: THE DEAD `.kanban-toolbar` RULE, RESURRECTED BY DELETING ONE LINE. styles.css line 2902 held a stray literal `<style>` tag - carried over verbatim from index.html:2918 by the v3.88.0 extraction, and present for an unknown number of releases before that. The CSS parser reads it as a bad qualified rule and DISCARDS TOKENS THROUGH THE NEXT {...} BLOCK, which was `.kanban-toolbar`. So the toolbar computed `display:block` while the source plainly said `display:flex`, and reading the source would never have told you. Measured before/after: display block->flex, flex-wrap nowrap->wrap. *** THIS IS THE SIXTH DEAD-SELECTOR BUG IN THIS PROJECT AND THE FIRST INVISIBLE TO A GREP - the selector was present, correctly spelled, in the right file. Only the browser knew it had been dropped. The check that finds this class of bug is comparing document.styleSheets[n].cssRules - what the parser actually KEPT - against the source; the live sheet went 635 rules -> 636. *** WHAT IT LOOKS LIKE: on desktop `justify-content:space-between` finally applies, so the board pills sit left and Local-only/Sync/Rename/Delete sit right ON ONE LINE instead of stacking - the page got 16px shorter. On phone and tablet the row still wraps to two lines and the newly-applied gap:10px + margin-bottom:16px add 26px of breathing room. *** SCOPE, MEASURED: of 36 screenshots (nine pages x 375/412/768/1280) only the FOUR kanban shots changed; the other 32 are byte-identical to v3.88.0. Overflow counts unchanged at every width. *** INFRASTRUCTURE: styles.css was added to .claude/hooks/snapshot.js TRACKED in this release. It became a deployed product file in v3.88.0 with no snapshot protection, and a bad edit to it is a totally unstyled app for the whole firm. *** (previously v3.88.0: THE STYLESHEET MOVED OUT, AND NOTHING ELSE CHANGED. The head <style> element (index.html lines 16-4073, 198,500 bytes, 10.4% of the file) is now styles.css, linked with <link rel="stylesheet" href="styles.css?v=3.88.0">. No build step - GitHub Pages serves it directly. *** THE CACHE-BUST QUERY IS LOAD-BEARING: the tool ships as one big file and browsers cache it hard, so the ?v= must be bumped to the new EOS_VERSION on every release that touches styles.css, or returning devices keep the old CSS against the new HTML. *** DEPLOY CHANGE: this release ships TWO files. A deploy that pushes index.html without styles.css serves an app with no CSS at all - a white unstyled page for the whole firm. *** VERIFIED AT ZERO PIXELS: 36 screenshots (nine pages x 375/412/768/1280) before and after are BYTE-IDENTICAL PNGs, and all 36 measurement rows (document width, height, overflow count, active page, coarse-pointer state, page errors) match exactly. *** THE CSS WAS MOVED, NOT EDITED - including a stray literal `<style>` line that sits inside it (was line 2918, now styles.css line 2902). The CSS parser treats that as a bad qualified rule and DISCARDS THE RULE THAT FOLLOWS IT, which is `.kanban-toolbar` - so the Kanban toolbar has never had its `display:flex` and computes `display:block` today. That is a real pre-existing defect, deliberately PRESERVED here so this release stays at zero rendered pixels. Deleting that one line is the fix and it is a separate change with its own before/after. *** (previously v3.87.0: THE TWO PARKED .gs ITEMS, BUNDLED INTO ONE CLASP ROUND SO HANS RUNS COMMANDS ONCE INSTEAD OF TWICE. *** REQUIRES Google_Tasks_Sync.gs 3.52.0 TO BE DEPLOYED - both halves degrade to exactly the old behaviour until it is, so index.html can ship first and safely. *** (1) THE EMAIL SUBJECT, discarded by the .gs since v3.42.0: extractEmailLink kept links[i].link and threw away links[i].description, which IS the subject. New .gs extractEmailSubject() sends it; the client carries emailSubject through all five task-creation sites and BACKFILLS it onto existing records on the next sync, so rows synced under the old backend fill in rather than staying chip-less forever. *** CHIP_WITHDRAWN IS DELETED RATHER THAN FLIPPED TO false, and that distinction is the whole fix: a boolean would switch the chip on for every task with a LINK, including all the ones that still have no subject - which is precisely the state that made it a second button for the same action and got it withdrawn in v3.73.0. The chip is now gated on the SUBJECT existing, so it can never again appear without the information that justifies it, and it turns itself on per task as subjects arrive. An element justified by the information it carries should be gated on that information, not on a flag someone has to remember to flip. *** (2) WORDPRESS REPUBLISH IN PLACE: postToWordPress always did POST /wp/v2/posts - a create, never an update - so revising a blog made a SECOND draft and left Trevor two copies. It now accepts postId and targets /wp/v2/posts/<id>. The card has stored that id since v3.58.0; it had nowhere to send it. Client asks, on a card that was already sent, whether to revise that post or make a new one. *** THE SAFETY RULE, in the .gs: status is sent ONLY on a create. Sending status:'draft' on an UPDATE would silently UNPUBLISH a post Trevor had already published - a routine revision taking a live page off the site. An update sends title + content only. A create answers 201 and an update answers 200, so the check accepts both. ***))))
+        const EOS_BUILD_TIME = '16:10'; // v3.92.0: NOTHING IS LOST - ONE DEFECT CLASS, FOUR INSTANCES, CLOSED TOGETHER: work the app dropped because saving was tied to a button, not to typing. NOT ON THE QUEUE - found by a subagent sweep for the defect class, not by a bug report. *** (1) THE WEEKLY MEETING NOTES WERE NEVER PERSISTED AT ALL UNTIL THE MEETING WAS ARCHIVED, AND THIS IS THE HEADLINE - STILL THE WORST INSTANCE IN THE RELEASE. currentMeeting.notes was written in exactly ONE place, archiveMeeting(); until then the typed text reached NO STORAGE OF ANY KIND. MEASURED against the deployed v3.91.0: 97 characters typed, currentMeeting.notes held 0. renderMeeting() - which repaints #meetingNotes from that same, empty field - runs on three triggers, precisely: opening the Weekly Pulse Meeting tab (showPage('meeting')), a YEAR SWITCH, and AFTER SAVING SETTINGS. Any one of those three, or simply a reload or a browser restart, wiped the box, because there was never anything written down to restore - the tab switch is one trigger among several, not the cause. Fixed with new saveMeetingNotes(), wired onchange on the textarea plus a debounced 800ms input listener; the write mirrors toggleAgenda() exactly - into currentMeeting, then autoSave(). *** (2) "NOTES FOR TOMORROW" SURVIVED ONLY BY LUCK. saveDailyPlan() has always READ #tomorrowNotes but nothing on the element ever called it - it was persisted only as a side effect of the user happening to touch one of roughly 40 unrelated task actions elsewhere on the page. Now onchange="saveDailyPlan()" plus the same debounced input pattern. THIS IS A DIFFERENT FAILURE FROM (1), worth keeping separate in your head: not "always lost" but "intermittently lost", which is harder for a user to report and easier for a developer to disbelieve. *** (3) KANBAN CARD AUTOSAVE - kanbanAutosaveCard() plus an 800ms debounced listener scoped to #kanbanCardModal, mirroring mktAutosaveCard. WHAT IT DELIBERATELY DOES NOT MIRROR MATTERS MORE THAN WHAT IT DOES: saveKanbanCardModal carries three side effects that must NEVER fire on a timer - columnId is gated by kanbanWipLimitBlocking() (autosaving a column change would walk straight past the one rule the board enforces); history would gain an "edited" row per typing pause (Activity is a log a person reads); and owner/label auto-registration would register every partial string typed en route to the real one - "Ger", "Gerr", "Gerri" - each with its own hash colour, which is exactly the registry rot Kanban spec Part B1 exists to stop. So autosave writes title/owner/labels/dueDate/description ONLY; column, history and the registries stay on the explicit Save. Title mirrors Save's newTitle || card.title guard so a card can never be blanked. TWO EDGE CASES WERE CLOSED ON PURPOSE: there is NO "is the modal still open" guard, because a timer firing just after close is the single most valuable write the function makes - it is the last thing the person typed; and openKanbanCard flushes the outgoing card's pending autosave BEFORE kanbanEditingCardId moves on, so opening a second card inside the debounce window cannot drop the first card's last edit. A focusout listener commits immediately on leaving a field, so clicking the X or the backdrop lands the work before the modal is gone. *** (4) THE SETTINGS ISSUE DRAFT WAS ALMOST FINE, AND THE QUEUE'S ASSUMPTION ABOUT IT WAS WRONG. #toolIssuesNotes was already onblur="saveToolIssues()" into the v3.81.0 {v:2, issues, pendingDeletes, draft} envelope - NO STORAGE WAS ADDED AND NONE WAS NEEDED. All that shipped is a debounced input listener closing the one real hole, a refresh with the caret still in the box. STILL OPEN, NOT FIXED HERE: staged screenshots (_issueDraftImages - {id, name, blob, previewUrl}, "staged, not uploaded") are in-memory blobs only, so pasting a screenshot and refreshing before pressing the file button still loses the image - that needs the parked storage decision, not an afternoon. *** ALSO SHIPPED, SAME MODAL, KANBAN SPEC PARTS A2 AND A3 - docs/kanban-card-spec.md is new, the Parts A-E spec existed nowhere on disk before this release, and the name it was drafted under, "v3.54.0", is a COLLISION with the 2026-07-22 Marketing drag-and-drop release and must not be reused for it. A2: #kcOwner was permanently visible beside the reassign dropdown, asking to be typed in - it is hidden by default now and revealed only by the select's "+ Add new owner" option; #kcOwner remains the ONLY place the owner value lives (hidden-control contract, rule 16, fourth instance), and openKanbanCard re-collapses it on every open since the modal is never unmounted. A3: the footer was Delete / WP Draft / Archive / Save - a destructive action and a publishing action sitting beside Save, under a thumb. Footer is now Archive + Save; "Delete card" is a small underlined text link below Activity, same confirm(). WP Draft MOVED into the body row rather than being deleted - deleting it outright is Part C, queued for v3.94.0, and doing it here would have been that change made carelessly. ONE DEVIATION TO RECORD HONESTLY: the OLD footer Delete button was not deleted from the markup, only hidden (style="display:none") - its line carries a trash-can emoji and this file's rule is never to str_replace a line containing one, so the hide was a substring edit of the style attribute that touches no emoji bytes; Part C's cleanup should delete that line for real. *** THE COMPOSER TRAP, AVOIDED IN FOUR PLACES HERE AND WORTH STATING AS A GENERAL RULE: every new as-you-type save in this release is wired with addEventListener, NEVER an inline oninput= attribute - the composer excludes any field carrying that attribute (index.html:25085, el.getAttribute('oninput')), so an inline oninput on #meetingNotes would have silently removed the app's longest-form text box from the composer while looking exactly like a pure improvement. An attribute used as a feature flag makes the obvious way to write the code the wrong way. *** MEASURED, card modal open at 375/412/768/1280, before-copy rendered from the deployed v3.91.0 via CLAUDE_PROJECT_DIR so the real file was never swapped: footer went from four buttons (Delete Card / WP Draft / Archive / Save) to two (Archive / Save) at every width, with one hidden button left behind in the footer markup (the retired Delete); #kcOwner visible true->false at every width, #kcOwnerSelect stays visible; "Delete card" text link false->true, #kcWordPressBtn still visible, wpBtnInFooter true->false. Modal height UNCHANGED at 375 (718px), 412 (818px) and 1280 (640px) - pinned by the modal's inline max-height (rule 10) - and 28px SHORTER at 768 (923->895). Zero overflow inside the modal and zero page errors, before and after, at every width. *** ALSO MEASURED, a behaviour harness at 412x915 run against BOTH builds so every case reproduces the loss on v3.91.0 first, then passes on v3.92.0: meeting notes survive the Weekly Meeting tab (FAIL->PASS, 0 of 97 chars -> 97); meeting notes reach currentMeeting.notes (FAIL->PASS, 0->97 chars); tomorrow notes persist with no other action (FAIL->PASS, empty->stored); kanban card edit survives close-without-Save (FAIL->PASS, 0->83 chars) and reopening the card shows the restored text (FAIL->PASS, 0->83 chars in the box); issue draft persists with the caret still in the box (FAIL->PASS, empty->stored). THE THREE "AUTOSAVE MUST NOT DO THIS" CHECKS PASS ON BOTH BUILDS, WHICH IS THE POINT: no history rows added; no partial owner registered (the harness types "Ger" then "Gerrit" and abandons it - registry stays at 1 while card.owner correctly becomes "Gerrit"); and a column change typed into the modal does NOT move the card past a WIP limit. Zero page errors in both runs. THE HARNESS DISABLES THE COMPOSER via its own eos_ui_prefs.composer switch, because the composer intercepts every text field on a coarse pointer and would otherwise swallow the keystrokes - worth knowing for the next harness written here. *** NO .gs CHANGE, NO CLASP ROUND - Google_Tasks_Sync.gs stays at its current version. styles.css IS UNCHANGED so the ?v= on the <link> is deliberately NOT bumped; all new styling is inline on the new elements. *** (previously v3.91.0: THE TODAY HEADER, AND A POPOVER THAT OUTLIVED ITS PAGE. Two of Hans's 2026-08-01 reports. *** (1) THE WRENCH WAS STRANDED IN THE MIDDLE OF THE TODAY HEADER, and the cause was structural rather than cosmetic: the row is display:flex + justify-content:space-between and had THREE children - the title, the wrench <span>, and a div holding the sync button - so space-between did exactly what it is supposed to do and parked the middle child in the centre. It is TWO children now (title | right-hand group), and "Sync Tasks" became an icon-only button beside the wrench, matched to btn-secondary so the pair reads as one control cluster. THE TEXT LABEL IS GONE, SO title= AND aria-label= ARE NOW THE ONLY THING NAMING THAT BUTTON - they are load-bearing, not decoration. #dailyPlanUserWrap stays in the DOM, CSS-hidden, per the hidden-control contract: ~45 call sites read #dailyPlanUser. *** (2) THE KANBAN MOVE PICKER SURVIVED A TAB SWITCH. #kanbanMovePicker is appendChild'd to <body>, NOT to the page div, so hiding a page cannot hide it - open a card's ... > Move, switch tabs, and it hung over the new page. THE GENERAL LESSON: a popover that escapes its page to <body> is invisible to every page-level teardown, and showPage() closed NOTHING at all before this release. New dismissTransientPopovers() closes the ... menu and the move picker; showPage() calls it first thing, before the page changes underneath. Every future body-level popover belongs in that one function - a dismissal written at the call site gets forgotten exactly once per new popover. *** MEASURED, dailyPlan at 375/412/768/1280, before-copy rendered from the deployed v3.90.0 via CLAUDE_PROJECT_DIR so the real file was never swapped: zero horizontal overflow and zero page errors at every width, before AND after. *** (previously v3.90.0: THE ARTIFACT STATUS ROW IS GONE, AND THE STATUS IS DERIVED INSTEAD. Hans: "I'm not really sure what the status section in the blog card at the top is supposed to help with" (§5.11b-6 item 5, open since 2026-07-30). It was not helping with anything, and the code says so three ways. *** (1) NOTHING IN THE APP EVER READ blogStatus/socialStatus/quoteStatus - no filter, no sort, no gate on Package & Send. Written in four places, read in zero. *** (2) TWO OF THE FOUR OPTIONS WERE UNREACHABLE EXCEPT BY HAND: the vocabulary is -/draft/ok/sent, but the app only auto-set 4 of the 12 artifact-state combinations, so 'ok' was never set for ANY artifact and 'sent' only ever for Blog. *** (3) IT WAS THE THIRD COPY OF THE SAME FACT - the board tile already badges it, the board already has an Approved column owned by Hans, and the 9-step checklist already knows whether each artifact exists. *** THE FIX: three <select>s deleted from the modal; new mktDeriveStatus(card, kind) computes it with precedence sent > approved > draft > none, from card.wordpressPostId, the artifact text, and columnId==='approved'. A badge can now never disagree with the card's actual work, which is exactly the failure a hand-maintained field invites. *** ROLLBACK-SAFE BY DESIGN: the stored *Status fields are NOT deleted and the four auto-set sites still write them, so rolling back to <=3.89.0 finds them intact. They are simply no longer read. *** THREE LIVE CRASH SITES WERE REMOVED WITH THEM: the AI Blog Draft, AI Social and quote-pick handlers each did getElementById('mkt*Status').value='draft', which would have thrown TypeError on null the moment the selects went away - the kind of breakage a screenshot cannot see. *** MEASURED: the modal top loses a whole row; nine pages at 375/412/768/1280 with the card modal OPEN. *** (previously v3.89.0: THE DEAD `.kanban-toolbar` RULE, RESURRECTED BY DELETING ONE LINE. styles.css line 2902 held a stray literal `<style>` tag - carried over verbatim from index.html:2918 by the v3.88.0 extraction, and present for an unknown number of releases before that. The CSS parser reads it as a bad qualified rule and DISCARDS TOKENS THROUGH THE NEXT {...} BLOCK, which was `.kanban-toolbar`. So the toolbar computed `display:block` while the source plainly said `display:flex`, and reading the source would never have told you. Measured before/after: display block->flex, flex-wrap nowrap->wrap. *** THIS IS THE SIXTH DEAD-SELECTOR BUG IN THIS PROJECT AND THE FIRST INVISIBLE TO A GREP - the selector was present, correctly spelled, in the right file. Only the browser knew it had been dropped. The check that finds this class of bug is comparing document.styleSheets[n].cssRules - what the parser actually KEPT - against the source; the live sheet went 635 rules -> 636. *** WHAT IT LOOKS LIKE: on desktop `justify-content:space-between` finally applies, so the board pills sit left and Local-only/Sync/Rename/Delete sit right ON ONE LINE instead of stacking - the page got 16px shorter. On phone and tablet the row still wraps to two lines and the newly-applied gap:10px + margin-bottom:16px add 26px of breathing room. *** SCOPE, MEASURED: of 36 screenshots (nine pages x 375/412/768/1280) only the FOUR kanban shots changed; the other 32 are byte-identical to v3.88.0. Overflow counts unchanged at every width. *** INFRASTRUCTURE: styles.css was added to .claude/hooks/snapshot.js TRACKED in this release. It became a deployed product file in v3.88.0 with no snapshot protection, and a bad edit to it is a totally unstyled app for the whole firm. *** (previously v3.88.0: THE STYLESHEET MOVED OUT, AND NOTHING ELSE CHANGED. The head <style> element (index.html lines 16-4073, 198,500 bytes, 10.4% of the file) is now styles.css, linked with <link rel="stylesheet" href="styles.css?v=3.88.0">. No build step - GitHub Pages serves it directly. *** THE CACHE-BUST QUERY IS LOAD-BEARING: the tool ships as one big file and browsers cache it hard, so the ?v= must be bumped to the new EOS_VERSION on every release that touches styles.css, or returning devices keep the old CSS against the new HTML. *** DEPLOY CHANGE: this release ships TWO files. A deploy that pushes index.html without styles.css serves an app with no CSS at all - a white unstyled page for the whole firm. *** VERIFIED AT ZERO PIXELS: 36 screenshots (nine pages x 375/412/768/1280) before and after are BYTE-IDENTICAL PNGs, and all 36 measurement rows (document width, height, overflow count, active page, coarse-pointer state, page errors) match exactly. *** THE CSS WAS MOVED, NOT EDITED - including a stray literal `<style>` line that sits inside it (was line 2918, now styles.css line 2902). The CSS parser treats that as a bad qualified rule and DISCARDS THE RULE THAT FOLLOWS IT, which is `.kanban-toolbar` - so the Kanban toolbar has never had its `display:flex` and computes `display:block` today. That is a real pre-existing defect, deliberately PRESERVED here so this release stays at zero rendered pixels. Deleting that one line is the fix and it is a separate change with its own before/after. *** (previously v3.87.0: THE TWO PARKED .gs ITEMS, BUNDLED INTO ONE CLASP ROUND SO HANS RUNS COMMANDS ONCE INSTEAD OF TWICE. *** REQUIRES Google_Tasks_Sync.gs 3.52.0 TO BE DEPLOYED - both halves degrade to exactly the old behaviour until it is, so index.html can ship first and safely. *** (1) THE EMAIL SUBJECT, discarded by the .gs since v3.42.0: extractEmailLink kept links[i].link and threw away links[i].description, which IS the subject. New .gs extractEmailSubject() sends it; the client carries emailSubject through all five task-creation sites and BACKFILLS it onto existing records on the next sync, so rows synced under the old backend fill in rather than staying chip-less forever. *** CHIP_WITHDRAWN IS DELETED RATHER THAN FLIPPED TO false, and that distinction is the whole fix: a boolean would switch the chip on for every task with a LINK, including all the ones that still have no subject - which is precisely the state that made it a second button for the same action and got it withdrawn in v3.73.0. The chip is now gated on the SUBJECT existing, so it can never again appear without the information that justifies it, and it turns itself on per task as subjects arrive. An element justified by the information it carries should be gated on that information, not on a flag someone has to remember to flip. *** (2) WORDPRESS REPUBLISH IN PLACE: postToWordPress always did POST /wp/v2/posts - a create, never an update - so revising a blog made a SECOND draft and left Trevor two copies. It now accepts postId and targets /wp/v2/posts/<id>. The card has stored that id since v3.58.0; it had nowhere to send it. Client asks, on a card that was already sent, whether to revise that post or make a new one. *** THE SAFETY RULE, in the .gs: status is sent ONLY on a create. Sending status:'draft' on an UPDATE would silently UNPUBLISH a post Trevor had already published - a routine revision taking a live page off the site. An update sends title + content only. A create answers 201 and an update answers 200, so the check accepts both. ***)))))
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -5709,7 +5729,19 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.91.0 &mdash; 2026-08-01 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.92.0 &mdash; 2026-08-01 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Nothing is lost &mdash; four places where the app was quietly dropping what you typed now save it as you go.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Weekly Meeting notes are no longer at risk of disappearing before you archive the meeting.</strong> They were never actually saved as you wrote them &mdash; only when the meeting was archived &mdash; so a reload, a browser restart, switching years, or even saving Settings could wipe out everything typed so far, with no warning. Notes now save as you type, with no change to how the page looks or works.</li>'
+                + '<li><strong>&ldquo;Notes for Tomorrow&rdquo; on the Daily Plan now actually saves on its own.</strong> It always looked saved, but it was only ever being written as a side effect of clicking something else on the page &mdash; so it could quietly vanish if that box was the last thing you touched before closing the tab. It now saves itself, the same as the meeting notes above.</li>'
+                + '<li><strong>Editing a Kanban card no longer depends on remembering to hit Save.</strong> Title, owner, labels, due date and description now save automatically as you type or as you leave a field, so closing the card, tapping the backdrop, or switching boards mid-edit no longer costs you the last few changes. <strong>Moving the card to a different column, and the Activity log, still only happen when you press Save</strong> &mdash; on purpose, so a column move still respects the board&rsquo;s WIP limits and Activity does not fill up with a new line for every pause while typing.</li>'
+                + '<li><strong>The Issue Tracker&rsquo;s draft box closes its one remaining gap.</strong> It was already saving when you clicked away from it; now it also saves a moment after you stop typing, so a refresh with your cursor still in the box does not lose it. <strong>Screenshots pasted into an issue are still not safely stored</strong> &mdash; refreshing before you press the upload button still loses them; that needs a bigger storage change, not this release.</li>'
+                + '<li><strong>The Kanban card window is calmer to use on a phone.</strong> Delete and the WordPress button used to sit right next to Save at the bottom, which put a destructive action under your thumb next to the one you actually meant to tap. Delete is now a small text link below the card&rsquo;s activity history, with the same confirmation as before; the footer is just Archive and Save.</li>'
+                + '</ul>'
+                + '</div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.91.0 &mdash; 2026-08-01</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>The Today header is tidier.</strong> &ldquo;Sync Tasks&rdquo; is now a compact <strong>&#128260; icon</strong> sitting right beside the <strong>&#128295; wrench</strong>, both right-aligned opposite <strong>&#128197; Today</strong>. The wrench used to sit stranded in the middle of the row &mdash; the header is a three-part layout and the wrench was the middle part, so it got pushed to the centre. It is a two-part layout now.</li>'
                 + '<li><strong>Fixed: the Kanban &ldquo;Move to&hellip;&rdquo; picker followed you to other tabs.</strong> Opening a card&rsquo;s &ldquo;&#8943;&rdquo; menu, choosing Move, and then switching tabs left the picker floating on top of the new page. Changing pages now closes any open menu or picker first.</li>'
@@ -13149,6 +13181,13 @@ Example:
 
         // ---- Card detail modal ----
         function openKanbanCard(cardId) {
+            // A1 (v3.92.0): flush any pending autosave for the card we are leaving BEFORE
+            // kanbanEditingCardId moves on. Opening a second card inside the debounce window
+            // would otherwise drop the first card's last edit.
+            if (kanbanEditingCardId && kanbanEditingCardId !== cardId) {
+                clearTimeout(kanbanAutosaveTimer);
+                kanbanAutosaveCard();
+            }
             // Issue 1 fix: any lingering card ⋯ menu (or move-picker) must close before
             // the modal opens (or before we bail), otherwise it floats over Card Details.
             if (typeof closeOpenTaskMenu === 'function') closeOpenTaskMenu();
@@ -13158,7 +13197,11 @@ Example:
             if (!card) return;
             kanbanEditingCardId = cardId;
             document.getElementById('kcTitle').value = card.title || '';
-            document.getElementById('kcOwner').value = card.owner || '';
+            const ownerBox = document.getElementById('kcOwner');
+            ownerBox.value = card.owner || '';
+            // A2: the modal is never unmounted, so a reveal from a previous card would
+            // persist into this one. Every open starts collapsed.
+            ownerBox.style.display = 'none';
             document.getElementById('kcLabels').value = (card.labels || []).join(', ');
             document.getElementById('kcDueDate').value = card.dueDate || '';
             document.getElementById('kcDescription').value = card.description || '';
@@ -13349,11 +13392,80 @@ Example:
         function kcOwnerSelectChanged(sel) {
             const box = document.getElementById('kcOwner');
             if (!box) return;
-            if (sel.value === '__add__') { box.value = ''; box.focus(); }
-            else { box.value = sel.value; }
+            // A2 (v3.92.0): the text box is the value carrier either way - it is only ever
+            // SHOWN for "+ Add new", where there is something to type. Picking a known name
+            // still mirrors into it, hidden, so saveKanbanCardModal reads one field as before.
+            if (sel.value === '__add__') { box.value = ''; box.style.display = ''; box.focus(); }
+            else { box.value = sel.value; box.style.display = 'none'; }
         }
 
+        // ---- A1 (v3.92.0): debounced autosave for the open card modal ----
+        //
+        // Same shape as mktAutosaveCard, but deliberately NOT a field-for-field mirror of
+        // saveKanbanCardModal, because that function carries three side effects that must
+        // never fire on a timer:
+        //
+        //   1. columnId is gated by kanbanWipLimitBlocking(). Autosaving a column change
+        //      would walk straight past the one rule the board actually enforces.
+        //   2. history would gain an "edited" row per typing pause. Activity is a log a
+        //      person reads.
+        //   3. owner/label auto-registration would register every partial string typed on
+        //      the way to the real one - "Ger", "Gerr", "Gerri" - each with its own hash
+        //      colour. That is exactly the registry rot Part B1 exists to stop.
+        //
+        // So this writes the typed fields and nothing else. Column, history and the
+        // registries stay on the explicit Save. openKanbanCard already reads straight from
+        // the card object, so restoring in-progress work costs nothing extra.
+        let kanbanAutosaveTimer = null;
+
+        function kanbanAutosaveCard() {
+            if (!kanbanEditingCardId) return;
+            const board = getActiveKanbanBoard();
+            const card = board && board.cards.find(c => c.id === kanbanEditingCardId);
+            if (!card) return;
+            // NO "is the modal still open" guard here, deliberately. A pending timer that
+            // fires just after the modal closes is the single most valuable write this
+            // function makes - it is the last thing the person typed. The fields are not
+            // cleared on close, and kanbanEditingCardId still names the card, so it lands
+            // exactly where it was typed.
+
+            const t = document.getElementById('kcTitle').value.trim();
+            if (t) card.title = t;   // mirrors Save's `newTitle || card.title` - never blank a card
+            card.owner = document.getElementById('kcOwner').value.trim();
+            card.labels = document.getElementById('kcLabels').value.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+            card.dueDate = document.getElementById('kcDueDate').value || null;
+            card.description = document.getElementById('kcDescription').value;
+            // Deliberately NO card.updatedAt: a Kanban card has no such field, and the
+            // board's "Last Updated" sort reads the last history entry instead - which
+            // autosave does not write, on purpose (see above). Adding a timestamp here
+            // would be a field written by one place and read by none, which is the exact
+            // shape v3.90.0 deleted from the Marketing card.
+
+            saveKanbanData();   // already debounces its own cloud push by 1500ms
+        }
+
+        // Scoped to #kanbanCardModal only. The global autoSave listener excludes anything
+        // inside .modal, so this neither double-saves nor fights it.
+        ['input', 'change'].forEach(function(evt) {
+            document.addEventListener(evt, function(e) {
+                if (!e.target.closest || !e.target.closest('#kanbanCardModal')) return;
+                clearTimeout(kanbanAutosaveTimer);
+                kanbanAutosaveTimer = setTimeout(kanbanAutosaveCard, 800);
+            });
+        });
+
+        // Leaving a field commits it immediately rather than 800ms later. This is what
+        // closes the last gap: clicking the X or the backdrop blurs the field first, so
+        // the work is already on the card before the modal is gone - a refresh in the
+        // intervening moment can no longer lose it.
+        document.addEventListener('focusout', function(e) {
+            if (!e.target.closest || !e.target.closest('#kanbanCardModal')) return;
+            clearTimeout(kanbanAutosaveTimer);
+            kanbanAutosaveCard();
+        });
+
         function saveKanbanCardModal() {
+            clearTimeout(kanbanAutosaveTimer);   // Save is authoritative; no stale timer behind it
             const board = getActiveKanbanBoard();
             const card = board.cards.find(c => c.id === kanbanEditingCardId);
             if (!card) return;
@@ -14225,6 +14337,36 @@ Example:
             renderRatingHistory();
             renderPomodoroLeaderboard();
         }
+
+        // ---- v3.92.0: Meeting Notes persist as they are written ----
+        //
+        // Until now `currentMeeting.notes` was written in exactly ONE place - archiveMeeting()
+        // - while renderMeeting() repaints the textarea from that same field on every visit to
+        // the page. So notes typed during a meeting survived only if the meeting was archived
+        // in the same sitting: tapping another tab and coming back repainted an empty box over
+        // an hour of writing, with no warning and nothing to undo. This is the worst instance
+        // of the defect class this release exists to close.
+        //
+        // The write mirrors toggleAgenda() exactly - into currentMeeting, then autoSave().
+        function saveMeetingNotes() {
+            const box = document.getElementById('meetingNotes');
+            if (!box) return;
+            const q = yearData.quarters?.[currentQuarter];
+            if (!q) return;
+            q.currentMeeting = q.currentMeeting || {};
+            q.currentMeeting.notes = box.value;
+            autoSave();
+        }
+
+        // Debounced as-you-type, ON TOP of the onchange blur save, because a meeting note is
+        // long-form and the laptop closing is not a blur event. Attached rather than declared
+        // inline: an oninput ATTRIBUTE would remove this field from the composer (rule 24).
+        let meetingNotesTimer = null;
+        document.addEventListener('input', function(e) {
+            if (!e.target || e.target.id !== 'meetingNotes') return;
+            clearTimeout(meetingNotesTimer);
+            meetingNotesTimer = setTimeout(saveMeetingNotes, 800);
+        });
         
         function getAgendaItems() {
             const settings = getSettings();
@@ -17587,6 +17729,16 @@ Example:
         function saveToolIssues() {
             issuesSaveLocal();
         }
+
+        // v3.92.0: the draft was already blur-persisted (onblur on #toolIssuesNotes, into the
+        // v3.81.0 {v:2, ..., draft} envelope) - this closes the one remaining hole, a refresh
+        // with the caret still in the box. Attached, not an oninput attribute (composer, rule 24).
+        let toolIssuesTimer = null;
+        document.addEventListener('input', function(e) {
+            if (!e.target || e.target.id !== 'toolIssuesNotes') return;
+            clearTimeout(toolIssuesTimer);
+            toolIssuesTimer = setTimeout(saveToolIssues, 800);
+        });
 
         function copyToolIssues() {
             const ta = document.getElementById('toolIssuesNotes');
@@ -23976,6 +24128,15 @@ Return ONLY the JSON array:`;
             
             localStorage.setItem(`eos_dailyPlan_${user}`, JSON.stringify(dailyPlanData));
         }
+
+        // v3.92.0: same reasoning as #meetingNotes - blur is not the only way a person stops
+        // typing. Attached, not an oninput attribute (composer, rule 24).
+        let tomorrowNotesTimer = null;
+        document.addEventListener('input', function(e) {
+            if (!e.target || e.target.id !== 'tomorrowNotes') return;
+            clearTimeout(tomorrowNotesTimer);
+            tomorrowNotesTimer = setTimeout(saveDailyPlan, 800);
+        });
 
         // ==================== CROSS-TAB TODO SYNC (v3.24.0) ====================
         // A todo can be dragged into its owner's Daily Plan (Eisenhower Matrix or
