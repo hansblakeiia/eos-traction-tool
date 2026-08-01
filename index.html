@@ -5308,9 +5308,14 @@
                     </div>
 
                     <div id="mktBlogFields">
-                        <!-- ============ STEP 3 — MY TAKE ============ -->
+                        <!-- ============ STEP 3 — MY INITIAL TAKE ============ -->
+                        <!-- v3.83.0: renamed from "My Take" on Hans's ask, because step 5 now
+                             adds a SECOND take after the draft exists. "Initial" vs
+                             "Additional" is his wording. The field id (`mktTake`) and the data
+                             key (`card.take`) are UNCHANGED — this is a label change, so no
+                             migration and no risk to anything already written. -->
                         <div class="mkt-step" id="mktStepTake">
-                            <div class="mkt-step-head"><span class="mkt-step-num">3</span> My Take</div>
+                            <div class="mkt-step-head"><span class="mkt-step-num">3</span> My Initial Take</div>
                             <label style="font-size:0.78rem;font-weight:400;color:var(--gray-500); display:block; margin-bottom:4px;">Press Win+H and just talk. Stories, opinions, what clients ask you. This is what makes it sound like you.</label>
                             <textarea id="mktTake" rows="5" placeholder="What do you actually think about this? What do clients get wrong? What have you seen?"
                                 style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; box-sizing:border-box; resize:vertical; margin-bottom:14px;"></textarea>
@@ -5326,19 +5331,39 @@
                                 style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; box-sizing:border-box; resize:vertical; margin-bottom:14px;"></textarea>
                         </div>
 
-                        <!-- ============ STEP 5 — FINALIZE DRAFT ============ -->
+                        <!-- ============ STEP 5 — MY ADDITIONAL TAKE (v3.83.0, Hans's ask) ============
+                             His case, in his words: "sometimes I will have written a blog, and even
+                             perhaps finalized it. Before it publishes, there may be some additional
+                             thoughts I want to add to the blog, without changing the blog completely."
+                             Placed deliberately AFTER the draft and BEFORE Finalize, which is where
+                             he put it — the thought only exists once there is a draft to react to.
+                             "Work this in" is MY addition, not his, and it is the difference between
+                             this being a working step and a sticky note nobody reads: the box on its
+                             own would never reach the blog. Removing it is one button line. -->
+                        <div class="mkt-step" id="mktStepAdditionalTake">
+                            <div class="mkt-step-head">
+                                <span class="mkt-step-num">5</span> My Additional Take
+                                <button type="button" class="btn btn-secondary" id="mktWorkInBtn" onclick="mktWorkInAdditionalTake()" style="font-size:0.75rem; padding:4px 10px; margin-left:auto; color:var(--primary);">AI: Work this in</button>
+                            </div>
+                            <label style="font-size:0.78rem;font-weight:400;color:var(--gray-500); display:block; margin-bottom:4px;">Second thoughts after reading the draft &mdash; something to add, a caveat, a story you forgot. &ldquo;Work this in&rdquo; weaves it into the draft above and leaves the rest of your words alone.</label>
+                            <textarea id="mktAdditionalTake" rows="4" placeholder="One more thing I'd want a reader to know..."
+                                style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; box-sizing:border-box; resize:vertical; margin-bottom:8px;"></textarea>
+                            <button type="button" class="btn btn-secondary" id="mktWorkInUndoBtn" onclick="mktUndoWorkIn()" style="display:none; font-size:0.75rem; padding:4px 10px; margin-bottom:14px;">&#8630; Undo &ldquo;Work this in&rdquo;</button>
+                        </div>
+
+                        <!-- ============ STEP 6 — FINALIZE DRAFT ============ -->
                         <div class="mkt-step" id="mktStepFinalize">
                             <div class="mkt-step-head">
-                                <span class="mkt-step-num">5</span> Finalize Draft
+                                <span class="mkt-step-num">6</span> Finalize Draft
                                 <button type="button" class="btn btn-secondary" id="mktTightenBtn" onclick="mktTightenBlog()" style="font-size:0.75rem; padding:4px 10px; margin-left:auto; color:var(--primary);">AI: Tighten</button>
                             </div>
                             <div style="font-size:0.8rem; color:var(--gray-500); margin-bottom:14px;">Hand-edit the draft above until it's yours. &ldquo;AI: Tighten&rdquo; does one editorial pass &mdash; grammar, flow, cutting fluff &mdash; without changing your meaning.</div>
                         </div>
 
-                        <!-- ============ STEP 6 — TITLE / HEADLINE ============ -->
+                        <!-- ============ STEP 7 — TITLE / HEADLINE ============ -->
                         <div class="mkt-step" id="mktStepTitle">
                             <div class="mkt-step-head">
-                                <span class="mkt-step-num">6</span> Title / Headline
+                                <span class="mkt-step-num">7</span> Title / Headline
                                 <button type="button" class="btn btn-secondary" id="mktTitlesBtn" onclick="mktSuggestTitles()" style="font-size:0.75rem; padding:4px 10px; margin-left:auto; color:var(--primary);">AI: Suggest Titles</button>
                             </div>
                             <input type="text" id="mktTitle" placeholder="Generated last, from the finished blog."
@@ -5347,20 +5372,20 @@
                         </div>
                     </div>
 
-                    <!-- ============ STEP 7 — SOCIAL POST COPY ============ -->
+                    <!-- ============ STEP 8 — SOCIAL POST COPY ============ -->
                     <div class="mkt-step" id="mktStepSocial">
                         <div class="mkt-step-head">
-                            <span class="mkt-step-num">7</span> Social Post Copy
+                            <span class="mkt-step-num">8</span> Social Post Copy
                             <button type="button" class="btn btn-secondary" id="mktSocialBtn" onclick="mktSuggestSocial()" style="font-size:0.75rem; padding:4px 10px; margin-left:auto; color:var(--primary);">AI: Write Social</button>
                         </div>
                         <textarea id="mktSocial" rows="4" placeholder="LinkedIn / Facebook wording. Generated from the final blog, or written directly for a standalone post."
                             style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; box-sizing:border-box; resize:vertical; margin-bottom:14px;"></textarea>
                     </div>
 
-                    <!-- ============ STEP 8 — QUOTES ============ -->
+                    <!-- ============ STEP 9 — QUOTES ============ -->
                     <div class="mkt-step" id="mktStepQuote">
                         <div class="mkt-step-head">
-                            <span class="mkt-step-num">8</span> Quote (for IntelliQuotes)
+                            <span class="mkt-step-num">9</span> Quote (for IntelliQuotes)
                             <button type="button" class="btn btn-secondary" id="mktQuotesBtn" onclick="mktSuggestQuotes()" style="font-size:0.75rem; padding:4px 10px; margin-left:auto; color:var(--primary);">AI: Suggest Quotes</button>
                         </div>
                         <div id="mktQuoteOptions" style="display:none; margin-bottom:8px;"></div>
@@ -5368,9 +5393,9 @@
                             style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; box-sizing:border-box; resize:vertical; margin-bottom:14px;"></textarea>
                     </div>
 
-                    <!-- ============ STEP 9 — PACKAGE & SEND ============ -->
+                    <!-- ============ STEP 10 — PACKAGE & SEND ============ -->
                     <div class="mkt-step" id="mktStepPackage">
-                        <div class="mkt-step-head"><span class="mkt-step-num">9</span> Package &amp; Send</div>
+                        <div class="mkt-step-head"><span class="mkt-step-num">10</span> Package &amp; Send</div>
                         <div id="mktWpInfo" style="display:none; margin-bottom:8px; padding:8px 10px; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:6px; font-size:0.82rem;"></div>
                         <div id="mktPackagedInfo" style="display:none; margin-bottom:8px; padding:8px 10px; background:#fef3c7; border:1px solid #fde68a; border-radius:6px; font-size:0.82rem;"></div>
                         <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -6586,9 +6611,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '3.82.0';
+        const EOS_VERSION = '3.83.0';
         const EOS_BUILD_DATE = '2026-07-31';
-        const EOS_BUILD_TIME = '18:05'; // v3.82.0: THE TASK ROW ATOM RE-CUT PER DENSITY - Hans's fourth phone-test round (Sec 5.11b-8), three screenshots annotated plus a Google Tasks reference. index.html only; no .gs change, so NO clasp deploy. (1) THE WRAP TRAP, his best catch: `flex-wrap:wrap` (added 3.73.0 so the icons could take their own line) plus `.tr-main{flex:1 1 auto}` meant a LONG title wrapped BELOW the checkbox while a short one sat beside it - a flex item wraps on its BASE size before it is ever allowed to shrink, and `auto` is max-content. `flex:1 1 0` fixes it; cozy long rows 141->114, full 209->182, proven at 412 before anything else was touched. (2) COMPACT is `...` only - title 213->289px, still 50px tall. THE GMAIL MARK IS HIDDEN THERE TOO, which is his instruction and a real trade: reverse by exempting .tr-email-mark from the den-compact rule. (3) COZY takes the icons back onto the title line - AN EXPLICIT REVERSAL OF HIS OWN 5.11b-7 ITEM 8, recorded as one: list height 479->291px (-39%), rows 94/169/141 -> 56/94/66, and the title gives up 323->233px, which is the trade he chose when asked. (4) FULL keeps item 8's own-line strip but now FILLS it - 3 icons -> 9 - and the two unlabelled boxes become a calendar chip and an owner pill that STILL edit inline (his call: `full` exists to preserve the pre-3.66 in-row workflow). Full got SHORTER while showing more: 618->519px. (5) GUTTER 38->30px: `.section`'s 4px colour border drops on PHONES ONLY - it is an app-wide seven-variant identity system, NOT the drag affordance Hans took it for, so removing it was his call to re-make. The rest of the space he was feeling was vertical, and that is where it came from.
+        const EOS_BUILD_TIME = '20:40'; // v3.83.0: TWO COMPOSER FIXES HANS FLAGGED ASAP + THE MARKETING 'MY ADDITIONAL TAKE' STEP. index.html + schema.sql (one additive column); NO .gs change, so NO clasp deploy. (1) THE CARET LANDS WHERE HE TAPPED. v3.74.0 deliberately parked it at the END ('he is continuing a thought, not replacing one') - true for a one-line task title, wrong for a blog, where tapping mid-draft and being thrown to the bottom makes the composer unusable for editing. Resolved BEFORE focus moves (focusing the composer destroys the original field's selection): the field's own selectionStart when the browser has already placed the caret, else the recorded pointerdown coordinates through caretRangeFromPoint/caretPositionFromPoint, else the end - so a browser supporting neither is no worse off than before. (2) ENTER INSERTS A NEWLINE IN A TEXTAREA - A REVERSAL OF v3.74.0's RULE, on his report: 'it acts like the blue up arrow and kicks you out of the text box altogether. That's not normally how text boxes work on phones.' Right: a phone keyboard has no Shift to reach the other behaviour with. TEXTAREA -> newline (the up arrow is the only commit); single-line <input> and contenteditable titles keep Enter-commits, mirroring what those fields already do alone. (3) MARKETING: step 3 renamed 'My Initial Take' (label only - field id and card.take UNCHANGED, no migration) and a NEW step 5 'My Additional Take' between Blog Draft and Finalize, exactly where he put it. New card field additionalTake + marketing_cards.additional_take. 'AI: Work this in' is MY addition, not his - a box that cannot reach the blog is a sticky note; the prompt's whole job is RESTRAINT (existing sentences come back byte-for-byte, additive only), it drops a slow reply if the draft changed meanwhile, and it carries the v3.79.0 one-tap Undo because it REPLACES.
         
         // Shared Settings Sheet - any team member's Apps Script URL can serve this
         // This URL is used to load/save team settings from the shared Google Sheet
@@ -9464,7 +9489,19 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.82.0 &mdash; 2026-07-31 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.83.0 &mdash; 2026-07-31 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Your two writing-box complaints, and the &ldquo;one more thought&rdquo; step for a blog that is already drafted.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Tapping into the middle of a long draft now puts the cursor where you tapped</strong> &mdash; not at the very end. It used to jump to the bottom on purpose, on the reasoning that you were carrying on writing rather than editing. That is fine for a one-line task name and useless for a blog, which is exactly what you ran into.</li>'
+                + '<li><strong>Enter now just drops down a line.</strong> You were right that it should &mdash; a phone keyboard has no Shift key to reach the other behaviour with, so making Enter send was borrowing a rule from a chat box that does not belong in a blog box. <strong>The blue up-arrow is now the only way to close the writing card</strong> for big boxes. Short one-line fields (a task name, a title) still commit on Enter, because that is what they already did on their own.</li>'
+                + '<li><strong>New step 5 on a blog card: &ldquo;My Additional Take&rdquo;</strong>, sitting between Blog Draft and Finalize, exactly where you put it. Step 3 is now called <strong>&ldquo;My Initial Take&rdquo;</strong> to match. Everything you have already written in step 3 is untouched.</li>'
+                + '<li><strong>&ldquo;AI: Work this in&rdquo; weaves the new thought into the draft and leaves the rest of your wording alone.</strong> That button is my addition, not your request &mdash; a box that cannot reach the blog is just a sticky note. It is told in as many words not to reword, reorder or trim a single existing sentence; the only new writing it is allowed to invent is a transition sentence. <strong>One-tap Undo</strong> sits under it, and if you carry on editing while it is thinking, the reply is thrown away rather than pasted over your newer text.</li>'
+                + '<li><strong>One small thing to run:</strong> this adds a field, so there is a one-line database change in Settings &rsaquo; the SQL I sent you (Part 3). Until you run it, the additional take saves on this device but will not follow you to your phone.</li>'
+                + '</ul>'
+                + '</div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v3.82.0 &mdash; 2026-07-31</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Your three annotated screenshots of Compact, Cozy and Full &mdash; the task row rebuilt for each one.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>You found a real bug, and it was mine.</strong> You asked why the task sits beside the circle on some rows and underneath it on others. It was every row with a long title: the icons were given their own line back in v3.73.0, and that same change made a long title drop to its own line too instead of just getting narrower. Fixed. <strong>Long rows in Cozy went 141px to 114px on their own, before any of the other changes.</strong></li>'
@@ -13026,6 +13063,93 @@ Example:
         // One editorial pass over the CURRENT blog textarea - grammar, flow, cutting fluff -
         // without changing Hans's meaning or inventing anything. Operates on whatever is in
         // the field (drafted or hand-written), so it works whether or not AI drafted it.
+        // ============ "WORK THIS IN" (v3.83.0, step 5) ============
+        // Hans's case: the draft is written, maybe even finalised, and he has one more thought
+        // "without changing the blog completely". So the prompt's whole job is RESTRAINT — the
+        // existing prose is not up for revision, only for extension. It is the opposite
+        // instruction to Tighten, which is licensed to rewrite everything.
+        //
+        // Replaces the draft, so it carries the same one-tap undo the composer's AI rewrite
+        // does (v3.79.0's rule: a replacement you did not like must never cost you a paragraph).
+        let _mktWorkInPrev = null;
+
+        async function mktWorkInAdditionalTake() {
+            const card = mktGetCard(mktEditingId);
+            if (!card) return;
+            const blog = document.getElementById('mktBlog').value.trim();
+            const extra = document.getElementById('mktAdditionalTake').value.trim();
+            if (!blog)  { showToast('There is no draft to add to yet — write or generate the Blog Draft first.'); return; }
+            if (!extra) { showToast('Type your additional thought first.'); return; }
+
+            if (!requireAI('marketing', 'Marketing AI')) return;
+            if (!confirm('This weaves your additional take into the Blog Draft above and leaves the rest of your wording alone. You can undo it in one tap. Continue?')) return;
+
+            const btn = document.getElementById('mktWorkInBtn');
+            const original = btn.textContent;
+            btn.disabled = true; btn.textContent = 'Working it in...';
+
+            try {
+                const prompt =
+                    'Below is a FINISHED blog draft by Hans, an independent RIA who writes in a ' +
+                    'plainspoken, educational, non-salesy voice, and a NEW THOUGHT he wants added ' +
+                    'to it.\n\n' +
+                    'Your job is ADDITIVE and nothing else. Work the new thought into the draft ' +
+                    'at the place it fits best, in his voice, as one or two paragraphs (or a ' +
+                    'short new section with a Markdown heading if that reads better).\n\n' +
+                    'HARD RULES — the draft is finished and is NOT up for revision:\n' +
+                    '- Do NOT reword, reorder, condense, "improve" or re-punctuate any existing ' +
+                    'sentence. Every sentence already in the draft must come back byte-for-byte ' +
+                    'unless the new material genuinely has to interrupt it.\n' +
+                    '- Do NOT delete anything, and do NOT change the headings that are there.\n' +
+                    '- Do NOT invent facts, numbers, names or stories beyond what the new thought ' +
+                    'actually says. If it is vague, keep it vague.\n' +
+                    '- Add a brief transition sentence if the insert would otherwise read abruptly. ' +
+                    'That is the ONLY new writing you are authorised to invent.\n\n' +
+                    'DRAFT:\n"""\n' + blog + '\n"""\n\n' +
+                    'NEW THOUGHT TO WORK IN:\n"""\n' + extra + '\n"""\n\n' +
+                    'Return ONLY the complete updated blog body in Markdown. No preamble, no ' +
+                    'commentary, no code fences, no H1 title.';
+
+                const raw = await callAI('marketing', prompt, { featureLabel: 'Marketing AI',
+                                         temperature: 0.4, taskKey: 'tighten', taskLabel: 'Worked-in take', retry: true });
+                const clean = String(raw).replace(/^```(?:markdown)?\s*/i, '').replace(/```\s*$/, '').trim();
+                if (!clean) throw new Error('The model returned nothing.');
+
+                // Drop a slow reply if he kept editing while it was in flight - same guard the
+                // composer's rewrite uses, and for the same reason.
+                const nowBlog = document.getElementById('mktBlog').value.trim();
+                if (nowBlog !== blog) {
+                    showToast('You edited the draft while that was running, so it was discarded rather than pasted over your newer text.');
+                    return;
+                }
+
+                _mktWorkInPrev = blog;
+                document.getElementById('mktBlog').value = clean;
+                card.blog = clean;
+                mktSave();
+                const undo = document.getElementById('mktWorkInUndoBtn');
+                if (undo) undo.style.display = '';
+                showToast('Worked in. Read the new part - and Undo is right there if it drifted.');
+
+            } catch (error) {
+                showToast('Could not work it in: ' + error.message);
+                console.error('mktWorkInAdditionalTake error:', error);
+            } finally {
+                btn.disabled = false; btn.textContent = original;
+            }
+        }
+
+        function mktUndoWorkIn() {
+            if (_mktWorkInPrev === null) return;
+            const card = mktGetCard(mktEditingId);
+            document.getElementById('mktBlog').value = _mktWorkInPrev;
+            if (card) { card.blog = _mktWorkInPrev; mktSave(); }
+            _mktWorkInPrev = null;
+            const undo = document.getElementById('mktWorkInUndoBtn');
+            if (undo) undo.style.display = 'none';
+            showToast('Draft restored. Your additional take is still in its box.');
+        }
+
         async function mktTightenBlog() {
             const card = mktGetCard(mktEditingId);
             if (!card) return;
@@ -13389,6 +13513,13 @@ Example:
             document.getElementById('mktBrainstormIdeas').value = card.brainstormIdeas || '';
             document.getElementById('mktBrainstormSource').value = card.brainstormSources || 'rss';
             document.getElementById('mktTake').value   = card.take   || '';
+            // v3.83.0: the second take. Its own field so the first one is never overwritten -
+            // the whole point of the step is that both survive.
+            document.getElementById('mktAdditionalTake').value = card.additionalTake || '';
+            // A fresh open has nothing to undo, same contract as the composer's rewrite chip.
+            _mktWorkInPrev = null;
+            const _wiUndo = document.getElementById('mktWorkInUndoBtn');
+            if (_wiUndo) _wiUndo.style.display = 'none';
             document.getElementById('mktBlog').value   = card.blog   || '';
             document.getElementById('mktSocial').value = card.social || '';
             document.getElementById('mktQuote').value  = card.quote  || '';
@@ -13478,6 +13609,7 @@ Example:
             card.brainstormIdeas   = document.getElementById('mktBrainstormIdeas').value;
             card.brainstormSources = document.getElementById('mktBrainstormSource').value;
             card.take   = document.getElementById('mktTake').value;
+            card.additionalTake = document.getElementById('mktAdditionalTake').value;
             card.blog   = document.getElementById('mktBlog').value;
             card.social = document.getElementById('mktSocial').value;
             card.quote  = document.getElementById('mktQuote').value;
@@ -13508,6 +13640,7 @@ Example:
             card.brainstormIdeas   = document.getElementById('mktBrainstormIdeas').value;
             card.brainstormSources = document.getElementById('mktBrainstormSource').value;
             card.take   = document.getElementById('mktTake').value;
+            card.additionalTake = document.getElementById('mktAdditionalTake').value;
             card.blog   = document.getElementById('mktBlog').value;
             card.social = document.getElementById('mktSocial').value;
             card.quote  = document.getElementById('mktQuote').value;
@@ -13920,6 +14053,7 @@ Example:
                 brainstorm_topics: card.brainstormTopics || [],
                 chosen_topic: card.chosenTopic || '',
                 take: card.take || '',
+                additional_take: card.additionalTake || '',
                 blog: card.blog || '',
                 social: card.social || '',
                 quote: card.quote || '',
@@ -13949,6 +14083,7 @@ Example:
                 brainstormTopics: row.brainstorm_topics || [],
                 chosenTopic: row.chosen_topic || '',
                 take: row.take || '',
+                additionalTake: row.additional_take || '',
                 blog: row.blog || '',
                 social: row.social || '',
                 quote: row.quote || '',
@@ -28248,6 +28383,10 @@ Return ONLY the JSON array:`;
         const COMPOSER_MIN_CHARS_HINT = 0;
         let _cmpTarget = null;        // the field we were opened from
         let _cmpKind = '';            // 'value' | 'text'
+        // v3.83.0: where the last touch landed, recorded in the capture phase so it is
+        // already known by the time focusin fires. Used only when the field's own selection
+        // has not been placed yet — see _cmpCaretOffset().
+        let _cmpTapPoint = null;      // {x, y, t}
         let _cmpRecog = null;         // live SpeechRecognition, if dictating
         let _cmpOpenedAt = 0;
 
@@ -28331,12 +28470,162 @@ Return ONLY the JSON array:`;
             if (undoBtn) undoBtn.style.display = 'none';
             _cmpLiftOn();   // v3.78.0: keep the card above the keyboard
             _cmpSyncGrow();
-            // Focus after paint, and put the caret at the END - he is continuing a thought,
-            // not replacing one.
+            // v3.83.0: THE CARET LANDS WHERE HE TAPPED, not at the end.
+            // v3.74.0 put it at the end on the reasoning that "he is continuing a thought,
+            // not replacing one". That holds for a one-line task title and is wrong for a
+            // blog: tapping into the middle of a long draft and being thrown to the bottom
+            // makes the composer unusable for editing, which is what he reported.
+            // Resolved INSIDE the timeout, immediately before focus moves — and the timing is
+            // the load-bearing part. Focusing the composer destroys the original field's
+            // selection, so this must happen first; but reading it at focusin time would be
+            // too EARLY on a phone, where the browser may not place the caret from the tap
+            // until pointerup, after focusin has already fired. Waiting until the last
+            // possible moment catches both orderings without having to know which one his
+            // device uses. Opening the overlay does not move focus — only ta.focus() does.
             setTimeout(function () {
-                try { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); } catch (e) {}
+                const wanted = _cmpCaretOffset(el, ta.value.length);
+                try { ta.focus(); ta.setSelectionRange(wanted, wanted); } catch (e) {}
                 _cmpSyncGrow();
+                // Keep the caret on screen when it lands inside a draft long enough to scroll.
+                try {
+                    if (ta.scrollHeight > ta.clientHeight) {
+                        const ratio = ta.value.length ? (wanted / ta.value.length) : 0;
+                        ta.scrollTop = Math.max(0, ratio * (ta.scrollHeight - ta.clientHeight) - ta.clientHeight * 0.3);
+                    }
+                } catch (e) {}
             }, 40);
+        }
+
+        // Where in the text did he actually touch? Two sources, in order of trust:
+        //   1. The field's own selection. On a phone the browser has usually placed the caret
+        //      from the tap by the time focusin fires, so this is exact when it is available.
+        //   2. The recorded pointer coordinates resolved through caretRangeFromPoint /
+        //      caretPositionFromPoint. This is the fallback for the case the ordering goes the
+        //      other way - the composer overlay opens before the browser finishes placing the
+        //      caret, so the tap never reaches the field at all.
+        // Falls back to the end, which is the pre-3.83.0 behaviour, so a browser that supports
+        // neither is no worse off than before.
+        function _cmpCaretOffset(el, len) {
+            const clamp = function (n) {
+                return (typeof n === 'number' && isFinite(n)) ? Math.max(0, Math.min(len, Math.round(n))) : null;
+            };
+            if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                try {
+                    if (el.selectionStart !== null && el.selectionStart === el.selectionEnd && el.selectionStart > 0) {
+                        const s = clamp(el.selectionStart);
+                        if (s !== null) return s;
+                    }
+                } catch (e) { /* selectionStart throws on some input types */ }
+            } else {
+                const s = clamp(_cmpContentEditableOffset(el));
+                if (s !== null && s > 0) return s;
+            }
+            const p = _cmpTapPoint;
+            if (p && (Date.now() - p.t) < 1500) {
+                const s = clamp(_cmpOffsetFromPoint(el, p.x, p.y));
+                if (s !== null) return s;
+            }
+            return len;
+        }
+
+        // Plain-text offset of the collapsed selection inside a contenteditable, in the same
+        // character space as textContent - which is what _cmpRead() hands the composer.
+        function _cmpContentEditableOffset(el) {
+            try {
+                const sel = window.getSelection();
+                if (!sel || !sel.rangeCount) return null;
+                const r = sel.getRangeAt(0);
+                if (!el.contains(r.startContainer)) return null;
+                const pre = document.createRange();
+                pre.selectNodeContents(el);
+                pre.setEnd(r.startContainer, r.startOffset);
+                return pre.toString().length;
+            } catch (e) { return null; }
+        }
+
+        function _cmpOffsetFromPoint(el, x, y) {
+            // A form control's text lives in an internal editor the range APIs will not walk
+            // into: MEASURED, `caretRangeFromPoint` over a <textarea> returns a range on the
+            // element itself, so the offset comes back 0 and the fallback silently does
+            // nothing. That is the whole reason for the mirror below rather than a one-liner.
+            if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') return _cmpMirrorOffset(el, x, y);
+            try {
+                let node = null, off = null;
+                if (document.caretRangeFromPoint) {
+                    const r = document.caretRangeFromPoint(x, y);
+                    if (r) { node = r.startContainer; off = r.startOffset; }
+                } else if (document.caretPositionFromPoint) {
+                    const p = document.caretPositionFromPoint(x, y);
+                    if (p) { node = p.offsetNode; off = p.offset; }
+                }
+                if (off === null || !node || !el.contains(node)) return null;
+                const pre = document.createRange();
+                pre.selectNodeContents(el);
+                pre.setEnd(node, off);
+                return pre.toString().length;
+            } catch (e) { return null; }
+        }
+
+        // Which character did his finger land on, inside a <textarea>?
+        // Renders the same text into an off-screen div wearing the textarea's own type
+        // metrics, then BINARY-SEARCHES the character offset whose caret box contains the
+        // tap. Caret positions increase monotonically in reading order, so comparing
+        // (top, then left) is a valid ordering to search on - about twelve measurements for
+        // a blog-length draft rather than one per character.
+        function _cmpMirrorOffset(el, x, y) {
+            let mirror = null;
+            try {
+                const cs = window.getComputedStyle(el);
+                const rect = el.getBoundingClientRect();
+                const relX = x - rect.left - parseFloat(cs.borderLeftWidth || 0);
+                const relY = y - rect.top - parseFloat(cs.borderTopWidth || 0) + (el.scrollTop || 0);
+                if (relX < 0 || relY < 0) return null;
+
+                mirror = document.createElement('div');
+                ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'fontVariant', 'letterSpacing',
+                 'textTransform', 'wordSpacing', 'textIndent', 'lineHeight', 'tabSize',
+                 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft'].forEach(function (k) {
+                    try { mirror.style[k] = cs[k]; } catch (e) {}
+                });
+                mirror.style.position = 'absolute';
+                mirror.style.top = '-99999px';
+                mirror.style.left = '0';
+                mirror.style.visibility = 'hidden';
+                mirror.style.whiteSpace = 'pre-wrap';
+                mirror.style.overflowWrap = 'break-word';
+                mirror.style.wordBreak = cs.wordBreak;
+                mirror.style.boxSizing = 'content-box';
+                mirror.style.width = (el.clientWidth
+                    - parseFloat(cs.paddingLeft || 0) - parseFloat(cs.paddingRight || 0)) + 'px';
+                document.body.appendChild(mirror);
+
+                const text = el.value || '';
+                const marker = document.createElement('span');
+                marker.textContent = '​';
+                const place = function (i) {
+                    mirror.textContent = text.slice(0, i);
+                    mirror.appendChild(marker);
+                    // A trailing text node keeps the last line from collapsing, which would
+                    // otherwise make every offset near the end measure at the same spot.
+                    mirror.appendChild(document.createTextNode(text.slice(i) || '.'));
+                    return { t: marker.offsetTop, l: marker.offsetLeft, h: marker.offsetHeight || parseFloat(cs.fontSize) || 16 };
+                };
+
+                let lo = 0, hi = text.length, guard = 0;
+                while (lo < hi && guard++ < 64) {
+                    const mid = (lo + hi) >> 1;
+                    const m = place(mid);
+                    if (m.t + m.h <= relY) lo = mid + 1;          // that offset is on a line above the tap
+                    else if (m.t > relY) hi = mid;                 // below it
+                    else if (m.l < relX) lo = mid + 1;             // same line, left of the tap
+                    else hi = mid;
+                }
+                return Math.max(0, Math.min(text.length, lo));
+            } catch (e) {
+                return null;
+            } finally {
+                if (mirror && mirror.parentNode) mirror.parentNode.removeChild(mirror);
+            }
         }
 
         function _composerFieldLabel(el) {
@@ -28613,6 +28902,15 @@ Return ONLY the JSON array:`;
         // No per-field wiring, which is the only way "every text box" can stay true as the app
         // grows.
         function initComposer() {
+            // v3.83.0: record the touch BEFORE focus moves. pointerdown fires ahead of
+            // focusin, so by the time the composer opens we already know where on the field
+            // his finger landed — which is the fallback for placing the caret when the
+            // browser has not finished placing its own. Passive + capture: it never
+            // interferes with the swipe engine, PTR or the nav long-press, all of which
+            // listen for touch* rather than pointer*.
+            document.addEventListener('pointerdown', function (e) {
+                _cmpTapPoint = { x: e.clientX, y: e.clientY, t: Date.now() };
+            }, { capture: true, passive: true });
             document.addEventListener('focusin', function (e) {
                 if (!composerActiveHere()) return;
                 const el = e.target;
@@ -28631,11 +28929,24 @@ Return ONLY the JSON array:`;
             const ta = document.getElementById('composerInput');
             if (ta) {
                 ta.addEventListener('input', _cmpSyncGrow);
-                // Enter sends, exactly as it does in the surface he modelled this on;
-                // Shift+Enter is a newline. Single-line fields have no use for a newline
-                // anyway, and a textarea keeps Shift+Enter.
+                // 🚨 v3.83.0 — ENTER NOW DEPENDS ON WHAT WE ARE EDITING, AND THIS REVERSES
+                // v3.74.0's rule for multi-line fields, on his report.
+                // v3.74.0 made Enter commit, "exactly as it does in the surface he modelled
+                // this on" — Claude's own composer, where Enter sends a message. That was the
+                // wrong analogy for a BLOG. His words: writing a long draft and hitting Enter
+                // "acts like the blue up arrow and kicks you out of the text box altogether.
+                // That's not normally how text boxes work on phones." He is right — a phone
+                // keyboard's Enter inside a multi-line box inserts a newline, and there is no
+                // Shift key on a phone to reach the other behaviour with.
+                // So: a <textarea> target gets a NEWLINE (the up arrow is the only commit).
+                // A single-line <input> or a contenteditable title keeps Enter-commits, which
+                // mirrors what those fields do on their own — the to-do title's own keydown
+                // handler blurs on Enter, and a one-line input has no use for a newline.
                 ta.addEventListener('keydown', function (ev) {
-                    if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); composerCommit(); }
+                    if (ev.key !== 'Enter' || ev.shiftKey) return;
+                    if (_cmpTarget && _cmpTarget.tagName === 'TEXTAREA') return;  // let it type
+                    ev.preventDefault();
+                    composerCommit();
                 });
             }
             window.addEventListener('resize', function () {
