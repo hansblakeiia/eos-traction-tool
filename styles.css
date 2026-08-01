@@ -2899,8 +2899,13 @@
             resize: vertical;
             font-family: inherit;
         }
-    <style>
         /* ==================== KANBAN BOARD ==================== */
+        /* v3.89.0: a stray literal `<style>` tag sat on the line above this one,
+           carried over verbatim from index.html:2918 when the CSS was extracted
+           in v3.88.0. The CSS parser read it as a bad qualified rule and discarded
+           tokens through the next {...} block — which is `.kanban-toolbar` — so
+           this rule had never once been applied and the toolbar computed
+           `display: block`. Deleting that one line is the whole fix. */
         .kanban-toolbar {
             display: flex;
             align-items: center;
