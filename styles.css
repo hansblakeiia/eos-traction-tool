@@ -2204,14 +2204,37 @@
             /* Hide some elements on very small screens */
             .hide-mobile { display: none !important; }
 
-            /* ---- Kanban: Filter/Sort/Search toolbar + Triage/Archive rows ---- */
-            .kanban-filter-toolbar { gap: 6px; }
-            .kanban-search-wrap { flex: 1 1 100%; order: -1; }
-            .kanban-search-input { width: 100%; box-sizing: border-box; }
-            .kanban-search-input:focus { width: 100%; }
-            .kanban-filter-btn { flex: 1 1 auto; justify-content: center; padding: 9px 10px; }
-            .kanban-view-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; }
-            .kanban-view-tab { flex-shrink: 0; }
+            /* ---- Kanban: Filter/Sort/Search toolbar + Triage/Archive rows ----
+               v4.2.0 (round 14 item 2): the top of this page measured 570px of chrome
+               before the first card at 375 AND 412 - 62% of the screen. Each block is now
+               ONE row: board tabs scroll sideways beside the sync pill and the ⋯ menu;
+               the search shares its row with Filter and Sort instead of taking a
+               full-width line of its own.
+               The view-tab rules carry `#kanban` NOT for scoping but for SPECIFICITY:
+               the base .kanban-view-tabs rule (flex-wrap: wrap) sits LATER in this sheet
+               than this block, so the plain-class nowrap written here in v3.97.0 was
+               silently losing on source order - the Archive tab really did wrap to a
+               second line while the rule that said it couldn't sat here looking like
+               protection (CSS trap #10; dead-rule shape #11). */
+            /* EVERY rule below is #kanban-scoped for the same source-order reason - the
+               base kanban rules all sit later in the sheet, so a bare class here loses.
+               Measured, not theoretical: .kanban-search-input's base width:200px was
+               beating this block's width:100%, which is why the filter row wrapped at
+               375 and not at 412. */
+            #kanban .kanban-toolbar { flex-wrap: nowrap; gap: 8px; margin-bottom: 8px; }
+            #kanban .kanban-board-tabs { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            #kanban .kanban-board-pill { flex-shrink: 0; }
+            #kanban .kanban-board-actions { flex-shrink: 0; }
+            #kanban .kanban-view-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; margin-bottom: 8px; }
+            #kanban .kanban-view-tab { flex-shrink: 0; }
+            #kanban .kanban-filter-toolbar { gap: 6px; margin-bottom: 10px; }
+            /* flex-basis 0, not auto: a flex item WRAPS on its base size before it is
+               ever allowed to shrink (trap #9), and the input's natural width was the
+               base. Basis 0 means the wrap can never be triggered by the search itself. */
+            #kanban .kanban-search-wrap { flex: 1 1 0; min-width: 0; }
+            #kanban .kanban-search-input { width: 100%; box-sizing: border-box; }
+            #kanban .kanban-search-input:focus { width: 100%; }
+            #kanban .kanban-filter-btn { flex: 0 0 auto; justify-content: center; padding: 9px 10px; }
             .kanban-triage-row, .kanban-archive-row { flex-wrap: wrap; row-gap: 6px; }
             .kanban-triage-col-select { order: 1; }
             .kanban-triage-title, .kanban-archive-title { order: 2; flex: 1 1 100%; white-space: normal; }
@@ -2915,6 +2938,13 @@
             margin-bottom: 16px;
         }
         .kanban-board-tabs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        /* v4.2.0 (round 14 item 2): Rename/Delete Board moved into the board's ⋯ menu at
+           every width (same universal-floor rule as the Marketing toolbar, v3.62.0). The
+           buttons stay in the markup - their lines carry emoji and are never str_replaced -
+           and are retired by attribute selector, the house pattern for taking a control
+           off the page. Reversal: delete these two lines. */
+        .kanban-board-actions button[onclick^="renameKanbanBoard"],
+        .kanban-board-actions button[onclick^="deleteKanbanBoard"] { display: none; }
         .kanban-board-pill {
             padding: 7px 14px; border-radius: 8px; border: 1px solid var(--gray-200);
             background: white; cursor: pointer; font-weight: 600; font-size: 0.88rem;
