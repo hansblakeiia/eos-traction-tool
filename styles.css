@@ -3033,6 +3033,25 @@
         .kanban-drag-mode .kanban-mobile-pill-add { display: none; }
         .kanban-drag-mode .kanban-mobile-pill.drop-hot { border-color: var(--accent); background: #dbeafe; color: var(--primary); }
         .kanban-drag-mode .kanban-mobile-pill.drop-current { opacity: 0.55; }
+        /* ---- v4.5.0: derived Kanban rows on Today / Weekly Meeting (round 14 item 4).
+           No second record - these style rows derived live from the boards. min-width:0
+           + overflow-wrap:anywhere per trap #8; the check circle carries its own
+           min-height so the coarse-pointer button rule cannot inflate the row. */
+        .kb-task-section { margin-top: 14px; }
+        .kb-task-section-head { font-weight: 700; font-size: 0.8rem; color: var(--gray-600); text-transform: uppercase; letter-spacing: 0.03em; margin: 10px 0 6px; }
+        .kb-task-row {
+            display: flex; align-items: center; gap: 10px; background: white;
+            border: 1px solid var(--gray-200); border-radius: 8px;
+            padding: 8px 10px; margin-bottom: 6px;
+        }
+        .kb-task-check {
+            width: 24px; height: 24px; min-height: 24px; flex-shrink: 0; padding: 0;
+            border-radius: 50%; border: 2px solid var(--gray-300); background: white; cursor: pointer;
+        }
+        .kb-task-check:hover { border-color: var(--accent); background: #eff6ff; }
+        .kb-task-main { flex: 1 1 0; min-width: 0; cursor: pointer; display: block; }
+        .kb-task-title { display: block; font-size: 0.88rem; font-weight: 600; color: var(--gray-800); overflow-wrap: anywhere; }
+        .kb-task-src { display: block; font-size: 0.72rem; color: var(--gray-500); margin-top: 1px; }
         .kanban-mobile-owner-section { }
         .kanban-mobile-owner-head { margin-bottom: 4px; }
         .kanban-mobile-col .kanban-col-cell { width: 100%; }
