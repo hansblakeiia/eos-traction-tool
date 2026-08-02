@@ -667,6 +667,10 @@
         .page-prefs-panel .pp-link:hover { background: #f9fafb; }
         @media (hover: none) and (pointer: coarse) {
             .page-prefs-panel .pp-item { min-height: 44px; }
+            /* v4.3.0: a long-press on a card arms the drag - it must not also start a
+               text selection or the iOS callout. Coarse pointers only; desktop keeps
+               normal selection for copying a card title. */
+            .kanban-card { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
         }
 
         /* Issue item active state */
@@ -3002,6 +3006,33 @@
         .kanban-mobile-pill-count.limit { color: #b91c1c; }
         .kanban-mobile-pill-add { color: var(--gray-400); font-size: 1rem; padding: 6px 14px; }
         .kanban-mobile-col { display: flex; flex-direction: column; gap: 14px; }
+        /* ---- v4.3.0: mobile long-press drag (round 14 item 1, an EXPLICIT REVERSAL of
+           v3.50.0's no-mobile-drag decision, on Hans's second ask). Keyed off classes the
+           RENDERER and the drag engine set - never a media query (rule 21). Drop targets
+           exist ONLY while a card is lifted (round 14 Q1, decided): the pill strip pins
+           to the viewport top and becomes a two-across grid of fat targets, then
+           collapses on release. At rest nothing here applies and item 2's reclaimed
+           chrome is untouched. */
+        .kanban-card.kb-lifted { opacity: 0.35; }
+        .kanban-card.kb-ghost {
+            position: fixed; z-index: 4000; margin: 0; pointer-events: none; opacity: 0.95;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.28); border-color: var(--accent);
+        }
+        .kanban-columns-header-mobile.kanban-drag-mode .kanban-mobile-switcher {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 3500;
+            display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;
+            padding: 12px; margin: 0; background: white;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+            max-height: 55vh; overflow-y: auto;
+        }
+        .kanban-drag-mode .kanban-mobile-pill {
+            min-height: 54px; min-width: 0; display: flex; align-items: center;
+            justify-content: center; text-align: center; white-space: normal;
+            font-size: 0.9rem; border-radius: 10px;
+        }
+        .kanban-drag-mode .kanban-mobile-pill-add { display: none; }
+        .kanban-drag-mode .kanban-mobile-pill.drop-hot { border-color: var(--accent); background: #dbeafe; color: var(--primary); }
+        .kanban-drag-mode .kanban-mobile-pill.drop-current { opacity: 0.55; }
         .kanban-mobile-owner-section { }
         .kanban-mobile-owner-head { margin-bottom: 4px; }
         .kanban-mobile-col .kanban-col-cell { width: 100%; }
