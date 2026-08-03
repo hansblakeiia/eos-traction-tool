@@ -3632,6 +3632,45 @@
             cursor: pointer; padding: 6px 10px; font-family: inherit;
         }
         #composerModal .cmp-ai-opt:active { background: #ede9fe; }
+        /* v4.9.0 — the Composer / Summarize / Bullets / Table panels (Hans's Writing
+           Assist screenshots). Deliberately reuses the .cmp-ai-opt visual language and
+           the card's own bottom-anchored column: these are new PANELS, not a new
+           surface, so nothing here re-implements the composer's layout or lift. */
+        #composerModal .cmp-ai-group {
+            width: 100%; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em;
+            text-transform: uppercase; color: #6b7280; padding: 6px 2px 0;
+        }
+        #composerModal .cmp-gen-panel, #composerModal .cmp-result-panel {
+            border: 1px solid #ddd6fe; border-radius: 12px; background: #faf5ff;
+            padding: 10px; margin-bottom: 8px;
+        }
+        #composerModal .cmp-gen-panel textarea {
+            width: 100%; box-sizing: border-box; font-family: inherit; font-size: 0.9rem;
+            padding: 8px; border: 1px solid #ddd6fe; border-radius: 8px; resize: vertical;
+        }
+        #composerModal .cmp-gen-row {
+            display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center;
+        }
+        #composerModal .cmp-gen-row select {
+            flex: 1 1 40%; min-width: 0; min-height: 44px; font-family: inherit;
+            font-size: 0.85rem; padding: 6px 8px; border: 1px solid #ddd6fe;
+            border-radius: 10px; background: white; color: #5b21b6; font-weight: 600;
+        }
+        #composerModal .cmp-gen-row .btn { flex: 1 1 40%; min-height: 44px; }
+        /* A generated table can be wider than a phone; it scrolls INSIDE its own box so
+           the card itself never gains a horizontal scrollbar. */
+        #composerModal .cmp-result-panel { max-height: 46vh; overflow: auto; }
+        #composerModal .cmp-result-scroll { overflow-x: auto; }
+        #composerModal .cmp-result-panel table {
+            border-collapse: collapse; font-size: 0.8rem; background: white; min-width: 100%;
+        }
+        #composerModal .cmp-result-panel th, #composerModal .cmp-result-panel td {
+            border: 1px solid #ddd6fe; padding: 5px 8px; text-align: left; vertical-align: top;
+        }
+        #composerModal .cmp-result-panel th { background: #f5f3ff; color: #5b21b6; font-weight: 700; }
+        #composerModal .cmp-result-text {
+            font-size: 0.88rem; line-height: 1.5; color: #1f2937; white-space: pre-wrap;
+        }
 
         /* ==== v3.73.0 (Hans's items 2c, 3, 5, 8 + the ⋮⋮ handle) ======================
 
