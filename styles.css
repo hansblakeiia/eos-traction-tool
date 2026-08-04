@@ -56,6 +56,15 @@
             border: none;
             font-size: 0.9rem;
         }
+
+        /* v4.15.0 (round 15 item 7, Q4): the year picker and Save Year leave the desktop
+           header for Settings > System & Support > Data — mobile moved them to the drawer in
+           v3.69.0, and the desktop header follows Hans's Q4 answer. #yearSelect STAYS MOUNTED
+           inside .version-selector as the only place the year value lives (rule 16); the
+           drawer's year buttons and Settings' year chips both render from it and write back.
+           Reversal for each: delete its one rule here. */
+        .version-selector { display: none; }
+        #saveYearHeaderBtn { display: none; }
         
         .header-btn {
             padding: 8px 14px;
@@ -1540,6 +1549,16 @@
         .slot-placeholder {
             color: var(--gray-400);
             font-size: 0.85rem;
+        }
+
+        /* v4.15.0 (round 15 item 2): the empty-slot hint names only the gesture this device
+           has — v3.97.0 built hold-on-touch / click-on-desktop, so the joint "Hold or click"
+           wording was wrong on both. Both spans are always in the markup; these rules pick
+           one. Default (fine pointer) shows Click; the coarse-pointer flip shows Hold. */
+        .slot-hint-coarse { display: none; }
+        @media (hover: none) and (pointer: coarse) {
+            .slot-hint-coarse { display: inline; }
+            .slot-hint-fine { display: none; }
         }
         
         .rule-slot .task-text {
