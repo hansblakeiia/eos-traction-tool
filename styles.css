@@ -4202,16 +4202,29 @@
            the selected state's background is also set inline from that colour — the CSS only
            carries the shape. Mobile-only by construction: the engine binds only while the
            renderer's mobile strip class is on, never via a media query (rule 21). */
+        /* v4.13.1: z-index above #bottomNav (2500) and the FAB (2400) — the sheet shipped
+           at 2400 and Hans's first on-device test found the commit button hidden under the
+           nav (rule 12: two fixed overlays means two clearances; the modal answer here is
+           to stack ABOVE the nav, not to clear it). The sheet is now a flex column: header
+           and pinned footer never move, only .kms-scroll scrolls — same pattern as the
+           Settings pinned Save footer (v3.68.0). */
         #kanbanMoveSheet .kms-backdrop {
-            position: fixed; inset: 0; background: rgba(15, 20, 30, 0.42); z-index: 2390;
+            position: fixed; inset: 0; background: rgba(15, 20, 30, 0.42); z-index: 3000;
         }
         #kanbanMoveSheet .kms-sheet {
-            position: fixed; left: 0; right: 0; bottom: 0; z-index: 2400;
+            position: fixed; left: 0; right: 0; bottom: 0; z-index: 3010;
             background: #fff; border-radius: 16px 16px 0 0;
-            padding: 14px 14px calc(16px + env(safe-area-inset-bottom, 0px));
+            padding: 14px 14px 0;
             box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.25);
             transform: translateY(105%); transition: transform 0.2s ease-out;
-            max-height: 78vh; overflow-y: auto;
+            max-height: 80vh; max-height: 80dvh;
+            display: flex; flex-direction: column;
+        }
+        #kanbanMoveSheet .kms-scroll { overflow-y: auto; min-height: 0; flex: 1 1 auto; }
+        #kanbanMoveSheet .kms-footer {
+            flex-shrink: 0; border-top: 1px solid var(--gray-200);
+            padding: 10px 0 calc(14px + env(safe-area-inset-bottom, 0px));
+            background: #fff;
         }
         #kanbanMoveSheet.kms-open .kms-sheet { transform: none; }
         @media (prefers-reduced-motion: reduce) {
