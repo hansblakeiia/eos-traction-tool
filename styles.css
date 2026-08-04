@@ -3043,33 +3043,11 @@
         .kanban-mobile-pill-count.limit { color: #b91c1c; }
         .kanban-mobile-pill-add { color: var(--gray-400); font-size: 1rem; padding: 6px 14px; }
         .kanban-mobile-col { display: flex; flex-direction: column; gap: 14px; }
-        /* ---- v4.3.0: mobile long-press drag (round 14 item 1, an EXPLICIT REVERSAL of
-           v3.50.0's no-mobile-drag decision, on Hans's second ask). Keyed off classes the
-           RENDERER and the drag engine set - never a media query (rule 21). Drop targets
-           exist ONLY while a card is lifted (round 14 Q1, decided): the pill strip pins
-           to the viewport top and becomes a two-across grid of fat targets, then
-           collapses on release. At rest nothing here applies and item 2's reclaimed
-           chrome is untouched. */
-        .kanban-card.kb-lifted { opacity: 0.35; }
-        .kanban-card.kb-ghost {
-            position: fixed; z-index: 4000; margin: 0; pointer-events: none; opacity: 0.95;
-            box-shadow: 0 12px 32px rgba(0,0,0,0.28); border-color: var(--accent);
-        }
-        .kanban-columns-header-mobile.kanban-drag-mode .kanban-mobile-switcher {
-            position: fixed; top: 0; left: 0; right: 0; z-index: 3500;
-            display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;
-            padding: 12px; margin: 0; background: white;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.18);
-            max-height: 55vh; overflow-y: auto;
-        }
-        .kanban-drag-mode .kanban-mobile-pill {
-            min-height: 54px; min-width: 0; display: flex; align-items: center;
-            justify-content: center; text-align: center; white-space: normal;
-            font-size: 0.9rem; border-radius: 10px;
-        }
-        .kanban-drag-mode .kanban-mobile-pill-add { display: none; }
-        .kanban-drag-mode .kanban-mobile-pill.drop-hot { border-color: var(--accent); background: #dbeafe; color: var(--primary); }
-        .kanban-drag-mode .kanban-mobile-pill.drop-current { opacity: 0.55; }
+        /* ---- v4.13.0: the v4.3.0 long-press drag CSS was deleted here. The drag is
+           superseded by the mobile move sheet (rules at the end of this file) — Hans's
+           round 15 design, chosen after the drag was confirmed broken on his device.
+           The kb-lifted/kb-ghost/kanban-drag-mode/drop-hot/drop-current classes no
+           longer exist in the JS either. */
         /* ---- v4.5.0: derived Kanban rows on Today / Weekly Meeting (round 14 item 4).
            No second record - these style rows derived live from the boards. min-width:0
            + overflow-wrap:anywhere per trap #8; the check circle carries its own
@@ -4215,3 +4193,76 @@
             color: #93c5fd; font-weight: 700; font-size: 0.85rem; font-family: inherit;
             padding: 4px 2px; min-height: 0;
         }
+
+        /* ==================== Kanban mobile move sheet (v4.13.0, round 15 item 8) ====================
+           Hans's select-then-commit design, approved from the rev-2 mockup. The sheet is
+           appended to <body> (never inside #kanban), so these are base rules with their own
+           kms- namespace — no collision with the kanban mobile block (rule 10b) is possible.
+           Column buttons take their colour from the board's own col.color (inline, set by JS);
+           the selected state's background is also set inline from that colour — the CSS only
+           carries the shape. Mobile-only by construction: the engine binds only while the
+           renderer's mobile strip class is on, never via a media query (rule 21). */
+        #kanbanMoveSheet .kms-backdrop {
+            position: fixed; inset: 0; background: rgba(15, 20, 30, 0.42); z-index: 2390;
+        }
+        #kanbanMoveSheet .kms-sheet {
+            position: fixed; left: 0; right: 0; bottom: 0; z-index: 2400;
+            background: #fff; border-radius: 16px 16px 0 0;
+            padding: 14px 14px calc(16px + env(safe-area-inset-bottom, 0px));
+            box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.25);
+            transform: translateY(105%); transition: transform 0.2s ease-out;
+            max-height: 78vh; overflow-y: auto;
+        }
+        #kanbanMoveSheet.kms-open .kms-sheet { transform: none; }
+        @media (prefers-reduced-motion: reduce) {
+            #kanbanMoveSheet .kms-sheet { transition: none; }
+        }
+        .kms-head {
+            display: flex; justify-content: space-between; align-items: center;
+            font-weight: 700; font-size: 0.95rem; color: var(--gray-800);
+        }
+        .kms-x {
+            background: none; border: none; cursor: pointer; color: var(--gray-500);
+            font-size: 1.05rem; padding: 4px 8px; min-height: 0;
+        }
+        .kms-title {
+            font-size: 0.78rem; color: var(--gray-500); margin: 0 0 12px;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .kms-lbl {
+            font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase;
+            color: var(--gray-500); margin: 0 0 6px; font-weight: 600;
+        }
+        .kms-cols {
+            display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;
+            margin-bottom: 12px;
+        }
+        .kms-cols > * { min-width: 0; }
+        .kms-col {
+            border: 2px solid var(--gray-200); border-left-width: 6px; border-radius: 10px;
+            background: #f8f9fb; color: var(--gray-800); cursor: pointer;
+            min-height: 52px; font-weight: 700; font-size: 0.9rem; font-family: inherit;
+            text-align: left; padding: 10px 12px; overflow-wrap: anywhere;
+        }
+        .kms-col small { display: block; font-weight: 400; font-size: 0.68rem; color: var(--gray-500); }
+        .kms-col.kms-sel { color: #fff; border-color: transparent; }
+        .kms-col.kms-sel small { color: rgba(255, 255, 255, 0.85); }
+        .kms-col:disabled { opacity: 0.45; cursor: default; }
+        .kms-people { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+        .kms-people > * { min-width: 0; }
+        .kms-who {
+            flex: 1 1 30%; min-height: 46px; border: 2px solid var(--gray-200);
+            border-radius: 10px; background: #f8f9fb; color: var(--gray-800);
+            font-weight: 600; font-size: 0.85rem; font-family: inherit; cursor: pointer;
+            padding: 8px 6px; overflow-wrap: anywhere;
+        }
+        .kms-who small { display: block; font-weight: 400; font-size: 0.66rem; color: var(--gray-500); }
+        .kms-who.kms-sel { background: #1a365d; color: #fff; border-color: #1a365d; }
+        .kms-who.kms-sel small { color: rgba(255, 255, 255, 0.85); }
+        .kms-who:disabled { opacity: 0.45; cursor: default; }
+        .kms-commit {
+            width: 100%; border: none; border-radius: 12px; padding: 15px;
+            font-size: 0.98rem; font-weight: 700; font-family: inherit; cursor: pointer;
+            background: var(--accent); color: #fff;
+        }
+        .kms-commit:disabled { background: #c7cdd6; color: #69707c; cursor: default; }
