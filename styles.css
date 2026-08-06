@@ -3962,25 +3962,54 @@
            and the mic becomes a second child sitting above the "+" when it lands, with no
            repositioning of either. Building the "+" as a lone fixed button would have made
            that a rewrite.
-           Mobile only: on desktop the "+ Add" control is already visible in the To-Dos
-           header, so a floating duplicate would just be clutter. */
-        #fabStack { display: none; }
+           v4.20.0 — THE MOBILE-ONLY RESTRICTION IS LIFTED, and the line that used to sit
+           here is an explicit reversal worth recording: "Mobile only: on desktop the
+           '+ Add' control is already visible in the To-Dos header, so a floating duplicate
+           would just be clutter." That was written when the FAB served ONLY Meeting and
+           Today, where it was true. v4.19.0 made the "+" context-aware across six pages —
+           on Quarterly, Marketing, Kanban and the 1-Year Plan the real add control can sit
+           far down a long page — and Hans's original item-10 annotation was drawn on a
+           DESKTOP screenshot asking for exactly this pair. He confirmed: both buttons, all
+           six pages. The mic is the second child the old note predicted, and because the
+           stack is column-reverse it sits ABOVE the "+" without either moving.
+           Visibility per page is still JS (syncFabVisibility / FAB_PAGES), never a media
+           query — same reasoning as rule 21. */
+        #fabStack {
+            display: flex; flex-direction: column-reverse; align-items: center; gap: 12px;
+            position: fixed; right: 24px; z-index: 2400;
+            bottom: 24px;   /* desktop has no bottom nav to clear */
+        }
+        .fab {
+            width: 56px; height: 56px; min-height: 56px; border-radius: 50%;
+            border: none; cursor: pointer; padding: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.7rem; line-height: 1; font-family: inherit;
+            background: var(--accent); color: #fff;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+            transition: transform 0.12s ease;
+        }
+        .fab:active { transform: scale(0.93); }
+        /* The mic is deliberately NOT the same colour as the "+": two identical accent
+           circles stacked on top of each other read as one control that has been drawn
+           twice. Slate reads as secondary without needing a label. */
+        .fab-mic { background: #475569; font-size: 1.35rem; }
+        .fab-mic.fab-listening { background: #dc2626; }
+        /* RULE 12 - "two fixed overlays means two clearances". The mobile block already
+           gives `.page` an 84px bottom padding for exactly this reason ("the FAB is fixed
+           74px up and 56px across, so it sat on top of the last row of every page").
+           Desktop never needed one because the stack was hidden there; it does now, and the
+           stack is TALLER on desktop because there are two buttons: 24 bottom + 56 + 12 gap
+           + 56 = 148px. Without this the last row of every desktop page sits under the pair
+           and there is no way to scroll it clear - the same defect this rule was written for,
+           arriving on a second surface. */
+        @media (min-width: 769px) {
+            .page { padding-bottom: 148px; }
+        }
         @media (max-width: 768px) {
             #fabStack {
-                display: flex; flex-direction: column-reverse; align-items: center; gap: 12px;
-                position: fixed; right: 16px; z-index: 2400;
+                right: 16px;
                 bottom: calc(74px + env(safe-area-inset-bottom, 0px));
             }
-            .fab {
-                width: 56px; height: 56px; min-height: 56px; border-radius: 50%;
-                border: none; cursor: pointer; padding: 0;
-                display: flex; align-items: center; justify-content: center;
-                font-size: 1.7rem; line-height: 1; font-family: inherit;
-                background: var(--accent); color: #fff;
-                box-shadow: 0 4px 14px rgba(0,0,0,0.3);
-                transition: transform 0.12s ease;
-            }
-            .fab:active { transform: scale(0.93); }
         }
 
         /* ============ SWIPE ACTIONS (v3.66.0) ============
