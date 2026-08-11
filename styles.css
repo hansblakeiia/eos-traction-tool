@@ -4166,6 +4166,15 @@
         .cal-topbar > * { min-width: 0; }
         .cal-topbar .page-title { flex: 1 1 auto; }
         .cal-mt-btn { padding: 6px 12px; font-size: 0.85rem; white-space: nowrap; }
+        /* v4.24.0 (round 17 item 4): the toolbar — and the mini-month, when open — stay
+           pinned while the agenda scrolls, so "Today", the month picker and the gear are
+           always reachable. Sticky, not fixed: rule 20's "never transform .page" constraint
+           stays honoured and the bar keeps the page's own width. */
+        .cal-sticky { position: sticky; top: 0; z-index: 60; background: #fff; padding-bottom: 4px; border-bottom: 1px solid #f3f4f6; margin-bottom: 10px; }
+        .cal-sticky > * { min-width: 0; }
+        .cal-sticky .cal-topbar { margin-bottom: 0; }
+        .cal-sticky .cal-mini-month { margin: 8px 0 4px; }
+        .cal-gear { font-size: 1.05rem; line-height: 1; padding: 6px 10px; }
         .cal-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
         .cal-chips > * { min-width: 0; }
         .cal-chip {
