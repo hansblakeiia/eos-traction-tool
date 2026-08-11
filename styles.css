@@ -4290,3 +4290,23 @@
             .cal-mini-month { max-width: none; }
             .cal-chip-text { max-width: 110px; }
         }
+
+        /* ==================== v4.25.0 — THE MOBILE HEADER IS GONE (round 17) ============
+           His annotation on the v4.23.0 screenshot, chosen knowingly over reveal-on-scroll:
+           "it would give more real estate to the pages, and I don't think it provides a lot
+           of information". The v3.62.1→v3.69.0 chrome arc ends here: 295px → 116px → 0.
+           Everything the header carried is in the More drawer — company name and version in
+           its head, sync line beside the Sync button, and the foot line reads
+           [who is signed in] [version → changelog] [2FA lock, when a session exists]
+           [Sign out]. The header ELEMENTS stay mounted (rule 16): #versionBadge and
+           #signedInBadge remain the value carriers every mirror reads, and the Saved
+           indicator was never in the header (it is position:fixed) so it is untouched.
+           Reversal is deleting this one rule. */
+        @media screen and (max-width: 768px) {
+            header { display: none; }
+        }
+        .dh-ver {
+            flex: 0 0 auto; border: 1px solid var(--gray-200); background: #f8f9fb;
+            color: var(--gray-800); border-radius: 999px; padding: 3px 10px;
+            font-size: 0.72rem; font-weight: 700; font-family: inherit; cursor: pointer;
+        }
