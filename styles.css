@@ -3883,7 +3883,11 @@
             #mobileDrawer {
                 display: flex; flex-direction: column;
                 position: fixed; top: 0; bottom: 0; left: 0; z-index: 2700;
-                width: min(84vw, 320px);
+                /* v4.27.0: was min(84vw, 320px). The foot is a six-item control strip now,
+                   and 320px minus padding holds the five chips with ~10px left for the
+                   NAME — which is how "Hans" got crushed on his phone. 94vw keeps a scrim
+                   sliver so the close-by-tap affordance survives. */
+                width: min(94vw, 400px);
                 background: #fff;
                 box-shadow: 4px 0 24px rgba(0,0,0,0.2);
                 transform: translateX(-102%);
@@ -3948,10 +3952,16 @@
             }
             .drawer-foot {
                 flex-shrink: 0; border-top: 1px solid var(--gray-200);
-                padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+                padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
                 font-size: 0.8rem; color: var(--gray-500);
-                display: flex; align-items: center; gap: 8px;
+                display: flex; align-items: center; gap: 5px;
             }
+            /* v4.27.0 (round 17 addendum 2): the foot is a six-item control strip now and
+               must FIT ON ONE LINE at 375. The name span carries min-width:0 inline (the
+               flex cousin of rule 8 — without it the name CUTS instead of ellipsizing,
+               which is exactly what his screenshot showed), and every chip is nowrap so
+               "Sign out" can never fold into a two-line box again. */
+            .drawer-foot > span { min-width: 0; }
         }
 
         /* ============ QUICK-ADD FAB (v3.66.3, Hans feedback 6) ============
@@ -4317,6 +4327,26 @@
         }
         .dh-ver {
             flex: 0 0 auto; border: 1px solid var(--gray-200); background: #f8f9fb;
-            color: var(--gray-800); border-radius: 999px; padding: 3px 10px;
-            font-size: 0.72rem; font-weight: 700; font-family: inherit; cursor: pointer;
+            color: var(--gray-800); border-radius: 999px; padding: 3px 7px;
+            font-size: 0.7rem; font-weight: 700; font-family: inherit; cursor: pointer;
+            white-space: nowrap;
         }
+        /* Sign out, as a compact strip chip. It used to lean on .sb-undo, which is scoped
+           to #swipeSnackbar and styles NOTHING here — the default button box his
+           screenshot showed was that class silently not applying (the dead-selector shape,
+           in CSS scoping form). */
+        .dh-out { color: var(--danger); border-color: #fecaca; background: #fff; }
+        /* v4.27.0: the version flash — with the header badge hidden on mobile, the version
+           shows itself once at load and gets out of the way. pointer-events:none so it can
+           never block a tap. */
+        .ver-flash {
+            position: fixed; top: calc(14px + env(safe-area-inset-top, 0px)); left: 50%;
+            transform: translateX(-50%); z-index: 3000; pointer-events: none;
+            background: rgba(30, 41, 59, 0.92); color: #fff;
+            font-size: 0.8rem; font-weight: 700; padding: 8px 16px; border-radius: 999px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25); opacity: 0;
+            animation: verFlashIn 0.35s ease forwards;
+        }
+        .ver-flash-out { animation: verFlashOut 0.6s ease forwards; }
+        @keyframes verFlashIn { from { opacity: 0; transform: translate(-50%, -8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+        @keyframes verFlashOut { from { opacity: 1; transform: translate(-50%, 0); } to { opacity: 0; transform: translate(-50%, -8px); } }
