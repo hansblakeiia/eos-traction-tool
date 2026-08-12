@@ -4323,7 +4323,14 @@
             header h1 { font-size: 1.1rem; margin: 0; }
             header .header-subtitle { font-size: 0.78rem; }
             #mobileNavBtn { display: none; }
-            header #versionBadge, header #signedInBadge, header #headerSecurityLink { display: none; }
+            /* v4.28.0 (round 17 addendum 3): the VERSION stays in the blue bar — his pick
+               of what the slim header may keep ("so when clicking it, I can easily see
+               what you've done"), tap → changelog. The signed-in badge and 2FA lock stay
+               hidden — and !important is load-bearing there: handleGoogleSignInResponse
+               sets an INLINE display:inline-block on the badge, which beats any plain
+               stylesheet rule; that inline write is also the drawer-foot mirror's
+               visibility signal, so it must keep happening — it just must not WIN here. */
+            header #signedInBadge, header #headerSecurityLink { display: none !important; }
         }
         .dh-ver {
             flex: 0 0 auto; border: 1px solid var(--gray-200); background: #f8f9fb;
