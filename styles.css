@@ -4301,9 +4301,19 @@
            [Sign out]. The header ELEMENTS stay mounted (rule 16): #versionBadge and
            #signedInBadge remain the value carriers every mirror reads, and the Saved
            indicator was never in the header (it is position:fixed) so it is untouched.
-           Reversal is deleting this one rule. */
+           Reversal is deleting this one rule.
+           v4.26.0 (round 17 addendum, SAME DAY): the full hide lasted one release — his
+           refinement supersedes it: "a little header... aesthetically pleasing". What
+           remains on mobile is the title with the company centered under it. The
+           hamburger is hidden (More opens the same drawer); the version badge, signed-in
+           badge and 2FA lock are hidden here because the drawer foot carries all of them
+           — the elements stay mounted as value carriers, exactly as before. */
         @media screen and (max-width: 768px) {
-            header { display: none; }
+            header { margin-bottom: 8px; }
+            header h1 { font-size: 1.1rem; margin: 0; }
+            header .header-subtitle { font-size: 0.78rem; }
+            #mobileNavBtn { display: none; }
+            header #versionBadge, header #signedInBadge, header #headerSecurityLink { display: none; }
         }
         .dh-ver {
             flex: 0 0 auto; border: 1px solid var(--gray-200); background: #f8f9fb;
