@@ -4294,11 +4294,115 @@
         .cal-mm-sel:not(.cal-mm-today) .cal-mm-num { box-shadow: inset 0 0 0 2px var(--accent); }
         .cal-mm-dots { display: flex; gap: 2px; height: 4px; }
         .cal-mm-dots i { width: 4px; height: 4px; border-radius: 50%; display: block; }
+
+        /* ==================== v4.29.0 — CALENDAR CLIENT B (the write release) ============
+           The Week | Day segment, the coaching band, the event action pills, and the
+           desktop week grid. Every new grid/flex container carries its min-width:0 guard
+           on creation (rule 8); wide content scrolls inside .cal-wk-scroll, never the page. */
+        .cal-seg { display: inline-flex; border: 1px solid var(--gray-200); border-radius: 999px; overflow: hidden; flex: 0 0 auto; }
+        .cal-seg-btn {
+            border: none; background: #fff; font-family: inherit; font-size: 0.8rem;
+            padding: 6px 14px; cursor: pointer; color: var(--gray-500); white-space: nowrap;
+        }
+        .cal-seg-on { background: var(--accent); color: #fff; font-weight: 600; }
+        .cal-coach {
+            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+            background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 10px;
+            padding: 10px 12px; margin-bottom: 12px; font-size: 0.85rem; color: var(--gray-800);
+        }
+        .cal-coach > * { min-width: 0; }
+        .cal-coach-line { flex: 1 1 240px; overflow-wrap: anywhere; line-height: 1.5; }
+        .cal-coach-btn { flex: 0 0 auto; }
+        /* Inline variant: rides inside today's agenda group, so it sizes like a bubble. */
+        .cal-coach-inline { margin-bottom: 0; padding: 8px 12px; font-size: 0.82rem; }
+        .cal-ev-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+        .cal-ev-actions > * { min-width: 0; }
+        .cal-ev-act {
+            border: 1px solid var(--gray-200); background: #fff; border-radius: 999px;
+            padding: 4px 12px; font-size: 0.76rem; font-family: inherit; cursor: pointer;
+            color: var(--gray-800); white-space: nowrap;
+        }
+        .cal-ev-act-danger { color: #b91c1c; border-color: #fecaca; }
+        .cal-week { border: 1px solid var(--gray-200); border-radius: 12px; background: #fff; margin-bottom: 14px; }
+        .cal-week > * { min-width: 0; }
+        .cal-wk-bar { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 10px 4px; }
+        .cal-wk-bar > * { min-width: 0; }
+        .cal-wk-bar-label { font-weight: 700; font-size: 0.9rem; color: var(--gray-800); }
+        .cal-wk-scroll { overflow-x: auto; }
+        .cal-wk-inner { min-width: 720px; }
+        .cal-wk-head, .cal-wk-allday, .cal-wk-body { display: grid; grid-template-columns: 52px repeat(7, 1fr); }
+        .cal-wk-head > *, .cal-wk-allday > *, .cal-wk-body > * { min-width: 0; }
+        .cal-wk-head { border-bottom: 1px solid #f3f4f6; }
+        .cal-wk-dhead {
+            background: none; border: none; font-family: inherit; cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0;
+        }
+        .cal-wk-dow { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--gray-500); }
+        .cal-wk-num {
+            font-size: 0.95rem; font-weight: 600; color: var(--gray-800);
+            width: 30px; height: 30px; line-height: 30px; text-align: center; border-radius: 50%;
+        }
+        .cal-wk-dhead-today .cal-wk-num { background: var(--accent); color: #fff; }
+        .cal-wk-dhead-today .cal-wk-dow { color: var(--accent); font-weight: 700; }
+        .cal-wk-allday { border-bottom: 1px solid #f3f4f6; }
+        .cal-wk-adcell { padding: 3px 2px; border-left: 1px solid #f3f4f6; }
+        .cal-wk-chip {
+            display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+            white-space: nowrap; font-size: 0.68rem; border-radius: 6px; padding: 2px 6px;
+            margin: 1px 2px; background: #f3f4f6; color: var(--gray-800); cursor: default;
+        }
+        .cal-wk-chip[data-cal-go], .cal-wk-chip[data-cal-evkey] { cursor: pointer; }
+        .cal-wk-chip-todo { background: #eff6ff; border-left: 3px solid #2563eb; }
+        .cal-wk-chip-rock { background: #ecfdf5; border-left: 3px solid #047857; }
+        .cal-wk-chip-kanban { background: #ecfeff; border-left: 3px solid #0e7490; }
+        .cal-wk-chip-meeting { background: #eff6ff; border-left: 3px solid #1d4ed8; }
+        .cal-wk-chip-r3 { background: #f5f3ff; border-left: 3px solid #7c3aed; }
+        .cal-wk-axis { position: relative; }
+        .cal-wk-hour {
+            height: 48px; font-size: 0.64rem; color: #9ca3af; text-align: right;
+            padding-right: 6px; transform: translateY(-0.5em);
+        }
+        .cal-wk-col {
+            position: relative; border-left: 1px solid #f3f4f6;
+            background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 47px, #f3f4f6 47px, #f3f4f6 48px);
+        }
+        .cal-wk-col-today { background-color: #fafbff; }
+        .cal-wk-ev {
+            position: absolute; border-radius: 8px; border-left: 3px solid #d1d5db;
+            padding: 2px 6px; font-size: 0.72rem; overflow: hidden; user-select: none;
+            -webkit-user-select: none; touch-action: manipulation; cursor: pointer;
+        }
+        .cal-wk-ev > * { min-width: 0; }
+        .cal-wk-ev-drag { cursor: grab; }
+        .cal-wk-dragging { opacity: 0.8; cursor: grabbing; z-index: 6; box-shadow: 0 4px 14px rgba(0,0,0,0.18); }
+        .cal-wk-ev-time { display: block; font-weight: 700; font-size: 0.62rem; color: var(--gray-500); white-space: nowrap; }
+        .cal-wk-ev-title { display: block; overflow: hidden; text-overflow: ellipsis; }
+        .cal-wk-gap {
+            position: absolute; left: 4px; right: 4px; border: 1px dashed #a5b4fc; border-radius: 8px;
+            background: rgba(238, 242, 255, 0.55); color: #4f46e5; font-size: 0.7rem; font-weight: 600;
+            display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 2;
+        }
+        .cal-wk-now { position: absolute; left: 0; right: 0; height: 2px; background: #dc2626; z-index: 4; pointer-events: none; }
+        .cal-ev-card {
+            position: fixed; z-index: 4000; background: #fff; border: 1px solid var(--gray-200);
+            border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15); padding: 12px;
+            width: 300px; max-width: calc(100vw - 24px);
+        }
+        .cal-ev-card > * { min-width: 0; overflow-wrap: anywhere; }
+        .cal-ev-card-title { font-weight: 700; font-size: 0.92rem; color: var(--gray-800); margin-bottom: 4px; }
+        .cal-ev-card-meta { font-size: 0.78rem; color: var(--gray-500); margin-bottom: 2px; }
         @media screen and (max-width: 768px) {
             .cal-day { grid-template-columns: 44px 1fr; }
             .cal-agenda { max-width: none; }
             .cal-mini-month { max-width: none; }
             .cal-chip-text { max-width: 110px; }
+            /* v4.29.0 belt: the week grid and its segment are desktop-only. !important on
+               purpose — the view is also driven by inline display writes, and an inline
+               write must never be able to strand a phone in the grid (the v4.26.0 badge
+               lesson, applied in advance). */
+            #calViewSeg { display: none !important; }
+            #calWeek { display: none !important; }
+            #calAgenda { display: block !important; }
         }
 
         /* ==================== v4.25.0 — THE MOBILE HEADER IS GONE (round 17) ============
