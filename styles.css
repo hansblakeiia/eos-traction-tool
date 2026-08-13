@@ -4408,7 +4408,14 @@
             position: absolute; left: 4px; right: 4px; border: 1px dashed #a5b4fc; border-radius: 8px;
             background: rgba(238, 242, 255, 0.55); color: #4f46e5; font-size: 0.7rem; font-weight: 600;
             display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 2;
+            /* v4.32.0 (round 19 item 2, his verdict on the always-on overlays:
+               "cluttered"): the target exists at rest but paints NOTHING until the
+               pointer is over it — the grid reads like Google's until you reach for a
+               free slot. Opacity, not display, so the click target never moves and a
+               tap on a touch grid still lands (a tablet just never sees the preview). */
+            opacity: 0; transition: opacity 0.12s ease;
         }
+        .cal-wk-gap:hover { opacity: 1; }
         .cal-wk-now { position: absolute; left: 0; right: 0; height: 2px; background: #dc2626; z-index: 4; pointer-events: none; }
         .cal-ev-card {
             position: fixed; z-index: 4000; background: #fff; border: 1px solid var(--gray-200);
@@ -4485,6 +4492,32 @@
         @media screen and (max-width: 768px) {
             .cal-sidebar { display: none !important; }
             .cal-layout { display: block; }
+        }
+
+        /* ==================== v4.32.0 — ROUND 19 ============
+           The collapsible desktop header (item 4, his custom answer), the eosChoose
+           category headings (item 3), and the hover-reveal gap targets live up in the
+           .cal-wk-gap block (item 2). */
+        .hdr-toggle {
+            border: none; background: none; font-family: inherit; cursor: pointer;
+            color: var(--gray-500); font-size: 0.7rem; padding: 4px 10px; flex: 0 0 auto;
+            align-self: center;
+        }
+        .hdr-toggle:hover { color: var(--gray-800); }
+        @media screen and (min-width: 769px) {
+            /* ONE rule hides the whole header (rule 16 — everything stays mounted).
+               Hiding the parent is immune to inline display writes on its children,
+               which is the v4.26.0 badge trap. */
+            body.eos-hdr-collapsed header { display: none; }
+        }
+        @media screen and (max-width: 768px) {
+            /* Belt: the tabs row is already display:none here, but the chevron must
+               never surface on a phone whatever later chrome work does to .tabs. */
+            .hdr-toggle { display: none !important; }
+        }
+        .eos-choice-head {
+            font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.04em; color: var(--gray-500); padding: 8px 2px 2px;
         }
 
         /* ==================== v4.25.0 — THE MOBILE HEADER IS GONE (round 17) ============
