@@ -4330,6 +4330,25 @@
         .cal-wk-bar-label { font-weight: 700; font-size: 0.9rem; color: var(--gray-800); }
         .cal-wk-scroll { overflow-x: auto; }
         .cal-wk-inner { min-width: 720px; }
+        /* v4.30.0 (round 18 item 3): the day is ALWAYS 24h; this scroller is what makes
+           that livable — it opens at 8 AM and the head + all-day strip stay above it. */
+        .cal-wk-vscroll { max-height: calc(100vh - 360px); min-height: 430px; overflow-y: auto; }
+        /* v4.30.0 (round 18 item 5): the calendar page uses the whole desktop width —
+           :has() keys the shell's cap off the ACTIVE page, so every other page keeps 1400px. */
+        .container:has(#calendar.active) { max-width: none; }
+        .cal-ev-recur-note { font-size: 0.72rem; color: var(--gray-500); flex: 1 1 100%; }
+        .cal-undo-toast {
+            position: fixed; left: 50%; transform: translateX(-50%); bottom: 24px; z-index: 5000;
+            display: flex; align-items: center; gap: 14px; background: #1f2937; color: #f9fafb;
+            border-radius: 10px; padding: 10px 16px; font-size: 0.85rem;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); max-width: calc(100vw - 32px);
+        }
+        .cal-undo-toast > * { min-width: 0; }
+        .cal-undo-msg { overflow-wrap: anywhere; }
+        .cal-undo-btn {
+            border: none; background: none; color: #93c5fd; font-weight: 700; font-family: inherit;
+            font-size: 0.85rem; cursor: pointer; flex: 0 0 auto; padding: 2px 4px;
+        }
         .cal-wk-head, .cal-wk-allday, .cal-wk-body { display: grid; grid-template-columns: 52px repeat(7, 1fr); }
         .cal-wk-head > *, .cal-wk-allday > *, .cal-wk-body > * { min-width: 0; }
         .cal-wk-head { border-bottom: 1px solid #f3f4f6; }
@@ -4346,10 +4365,12 @@
         .cal-wk-dhead-today .cal-wk-dow { color: var(--accent); font-weight: 700; }
         .cal-wk-allday { border-bottom: 1px solid #f3f4f6; }
         .cal-wk-adcell { padding: 3px 2px; border-left: 1px solid #f3f4f6; }
+        /* v4.30.0 (round 18 item 4, his red box): chips span the whole day column and
+           read at agenda size, matching Google's banner rows. */
         .cal-wk-chip {
-            display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
-            white-space: nowrap; font-size: 0.68rem; border-radius: 6px; padding: 2px 6px;
-            margin: 1px 2px; background: #f3f4f6; color: var(--gray-800); cursor: default;
+            display: block; overflow: hidden; text-overflow: ellipsis;
+            white-space: nowrap; font-size: 0.78rem; border-radius: 6px; padding: 3px 8px;
+            margin: 2px 3px; background: #f3f4f6; color: var(--gray-800); cursor: default;
         }
         .cal-wk-chip[data-cal-go], .cal-wk-chip[data-cal-evkey] { cursor: pointer; }
         .cal-wk-chip-todo { background: #eff6ff; border-left: 3px solid #2563eb; }
