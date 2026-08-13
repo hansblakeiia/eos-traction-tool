@@ -4432,6 +4432,61 @@
             #calAgenda { display: block !important; }
         }
 
+        /* ==================== v4.31.0 — THE DESKTOP SIDEBAR (round 18 item 6) ============
+           Mini-month that picks the week, calendar + EOS-layer checkboxes, and the
+           default write-calendar — WITHOUT meet-with (his answer; other people's
+           calendars are decision-4 territory). Desktop only: at 768 and below the
+           sidebar is display:none and the phone keeps the toolbar Month toggle,
+           which the desktop hides here instead (rule 16's shape — the button stays
+           mounted, the reversal is deleting one rule). Every new grid/flex container
+           carries its min-width:0 guard on creation (rule 8). */
+        .cal-layout { display: flex; align-items: flex-start; gap: 16px; }
+        .cal-layout > * { min-width: 0; }
+        .cal-main { flex: 1 1 auto; }
+        .cal-sidebar {
+            flex: 0 0 248px; width: 248px;
+            position: sticky; top: 64px;
+            max-height: calc(100vh - 88px); overflow-y: auto;
+            display: flex; flex-direction: column; gap: 12px;
+        }
+        .cal-sidebar > * { min-width: 0; }
+        .cal-sidebar .cal-mini-month { margin-bottom: 0; max-width: none; }
+        .cal-sb-block { background: #fff; border: 1px solid var(--gray-200); border-radius: 12px; padding: 10px 12px; }
+        .cal-sb-block > * { min-width: 0; }
+        .cal-sb-head {
+            font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.04em; color: var(--gray-500); margin-bottom: 4px;
+        }
+        .cal-sb-head-gap { margin-top: 10px; }
+        .cal-sb-row {
+            display: flex; align-items: center; gap: 8px; padding: 4px 0;
+            cursor: pointer; font-size: 0.82rem; color: var(--gray-800);
+        }
+        .cal-sb-row > * { min-width: 0; }
+        .cal-sb-row input { flex: 0 0 auto; accent-color: var(--accent); margin: 0; cursor: pointer; }
+        /* No background here: this block sits LATER in the sheet than .cal-chip-dot-*
+           (rule 10b — same specificity, source order decides), so a default painted
+           here would grey out every EOS layer dot. Calendar rows colour inline;
+           EOS rows always carry their cal-chip-dot-<key> class. */
+        .cal-sb-dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+        .cal-sb-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .cal-sb-select {
+            width: 100%; font-family: inherit; font-size: 0.82rem; padding: 6px 8px;
+            border: 1px solid var(--gray-200); border-radius: 8px; background: #fff; color: var(--gray-800);
+        }
+        /* The selected week's row — clicking a mini-month day PICKS A WEEK on desktop. */
+        .cal-mm-inwk:not(.cal-mm-blank) { background: #eef2ff; }
+        @media screen and (min-width: 769px) {
+            /* The sidebar month is always on screen here — a second month behind a
+               toolbar toggle would just be the same control twice. */
+            #calMonthToggle { display: none; }
+            #calStickyBar .cal-mini-month { display: none !important; }
+        }
+        @media screen and (max-width: 768px) {
+            .cal-sidebar { display: none !important; }
+            .cal-layout { display: block; }
+        }
+
         /* ==================== v4.25.0 — THE MOBILE HEADER IS GONE (round 17) ============
            His annotation on the v4.23.0 screenshot, chosen knowingly over reveal-on-scroll:
            "it would give more real estate to the pages, and I don't think it provides a lot
