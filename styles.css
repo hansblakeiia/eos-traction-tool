@@ -4515,10 +4515,15 @@
                never surface on a phone whatever later chrome work does to .tabs. */
             .hdr-toggle { display: none !important; }
         }
+        /* v4.33.0 (round 19 addendum): "headers perhaps bold and dark blue above the
+           tasks" — his words. Shared by the Block-time picker (eosChoose {heading}
+           rows) and the Rule-of-3 / Matrix slot picker's new group heads. */
         .eos-choice-head {
-            font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
-            letter-spacing: 0.04em; color: var(--gray-500); padding: 8px 2px 2px;
+            font-size: 0.82rem; font-weight: 700; color: var(--primary);
+            padding: 10px 2px 3px; border-bottom: 1px solid var(--gray-200);
+            margin-bottom: 6px;
         }
+        .eos-choice-head:first-child { padding-top: 2px; }
 
         /* ==================== v4.25.0 — THE MOBILE HEADER IS GONE (round 17) ============
            His annotation on the v4.23.0 screenshot, chosen knowingly over reveal-on-scroll:
