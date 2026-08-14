@@ -3317,6 +3317,35 @@
             .daily-plan-grid { min-height: 0; }
         }
 
+        /* ==== v4.37.0 (issues-2026-08-13 item 2) - Today toolbar cleanup on the phone ======
+           His cut of the Repository segment's chrome: the search collapses to an icon in the
+           page-title row (.dp-search-btn), the in-card search bar and the sort row come off the
+           page - sort already lives under the wrench (PAGE_PREFS.dailyPlan 'Sort order'), and the
+           icon reveals the search on demand - and the Repository column's "(drop here to return)"
+           header, a desktop drag affordance, is hidden. Desktop is untouched: the search bar and
+           sort row stay in the card and the icon button stays hidden. Reverse by deleting this
+           block plus the #dailyPlanSearchBtn markup.
+           `screen and` per rule 13: the print sheet styles these same nodes and a print page box
+           is not always wider than 768px. */
+        .dp-search-btn { display: none; }
+        @media screen and (max-width: 768px) {
+            .dp-search-btn { display: inline-flex; align-items: center; justify-content: center; }
+            /* Hidden by default (his "get rid of the long search bar, save space"); the title-row
+               icon toggles body.dp-search-open to reveal + focus it. */
+            #repoSearch { display: none; }
+            body.dp-search-open #repoSearch { display: block; }
+            /* Sort row: still reachable under the wrench; off the card so it stops eating a row.
+               Uses the id #repoSortWrap, not .repo-sort-row: the base `.repo-sort-row{display:flex}`
+               sits LATER in this sheet (~line 3680) and would win the equal-specificity tie by
+               source order (rule 10). The id (1,0,0) beats the class (0,1,0) regardless of order.
+               #repoSortWrap has no inline display, so nothing overrides this. */
+            #repoSortWrap { display: none; }
+            /* The Repository column header carries "(drop here to return)" - a desktop
+               drag-to-return affordance, meaningless on a phone, and the segment tab already
+               says "Repository". Scoped to the repo column so Matrix/Today keep their headers. */
+            #repositoryDropZone > h3 { display: none; }
+        }
+
         /* ==== v3.71.0 RELEASE A (Hans's second phone list: items 7, 8, 9a) ============
            Three small, independent rules. Written LAST in the sheet on purpose - source
            order is the second tiebreak after specificity in this file and has caught us
