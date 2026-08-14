@@ -4610,3 +4610,22 @@
         .ver-flash-out { animation: verFlashOut 0.6s ease forwards; }
         @keyframes verFlashIn { from { opacity: 0; transform: translate(-50%, -8px); } to { opacity: 1; transform: translate(-50%, 0); } }
         @keyframes verFlashOut { from { opacity: 1; transform: translate(-50%, 0); } to { opacity: 0; transform: translate(-50%, -8px); } }
+
+        /* ==================== v4.38.0 — ADD AN EVENT (client half) =====================
+           The desktop new-event entry points and the drag-to-create ghost block. The
+           toolbar "+ New event" button is desktop-only BY CONTRACT (the phone keeps no
+           new-event entry, design §6); the sidebar button lives inside #calSidebar,
+           which is already display:none at 768 and below, so it needs no rule of its own.
+           Appended at the end of the sheet, so these win equal-specificity ties (rule
+           10b) — scoped to their own classes so nothing else is touched. */
+        .cal-sb-newev { width: 100%; }
+        .cal-wk-createghost {
+            position: absolute; left: 2px; right: 4px; z-index: 6;
+            border: 1px dashed var(--accent); border-radius: 8px;
+            background: rgba(79, 70, 229, 0.14); color: #4f46e5;
+            font-size: 0.62rem; font-weight: 700; padding: 2px 6px;
+            overflow: hidden; pointer-events: none; white-space: nowrap;
+        }
+        @media screen and (max-width: 768px) {
+            .cal-newev-btn { display: none !important; }
+        }
