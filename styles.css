@@ -4629,3 +4629,10 @@
         @media screen and (max-width: 768px) {
             .cal-newev-btn { display: none !important; }
         }
+        /* v4.39.0 — Custom recurrence weekday circles (S M T W T F S). */
+        .cal-recur-dow {
+            width: 34px; height: 34px; border-radius: 50%; flex: 0 0 auto;
+            border: 1px solid var(--gray-300); background: #fff; color: var(--gray-700);
+            font-size: 0.78rem; font-weight: 700; cursor: pointer; padding: 0;
+        }
+        .cal-recur-dow-on { background: var(--accent); border-color: var(--accent); color: #fff; }
