@@ -4629,6 +4629,14 @@
         @media screen and (max-width: 768px) {
             .cal-newev-btn { display: none !important; }
         }
+        /* v4.40.0 — a 15-minute event was an unreadable sliver on the desktop week grid
+           (round 20). Short blocks lay the time and title on ONE line, tighten the padding,
+           and drop the line-height so both stay legible inside ~22px. */
+        .cal-wk-ev-short {
+            padding: 1px 5px; display: flex; align-items: baseline; gap: 5px; line-height: 1.1;
+        }
+        .cal-wk-ev-short .cal-wk-ev-time { display: inline; font-size: 0.6rem; flex: 0 0 auto; }
+        .cal-wk-ev-short .cal-wk-ev-title { display: inline; font-size: 0.66rem; white-space: nowrap; }
         /* v4.39.0 — Custom recurrence weekday circles (S M T W T F S). */
         .cal-recur-dow {
             width: 34px; height: 34px; border-radius: 50%; flex: 0 0 auto;
