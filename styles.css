@@ -4618,7 +4618,11 @@
            which is already display:none at 768 and below, so it needs no rule of its own.
            Appended at the end of the sheet, so these win equal-specificity ties (rule
            10b) — scoped to their own classes so nothing else is touched. */
-        .cal-sb-newev { width: 100%; }
+        /* v4.41.0: two buttons stack here now ("+ New event" and "Block time"), so the
+           class that sized one has to space the pair. margin-bottom rather than a gap on
+           the parent — #calSidebar's other children set their own spacing and a parent
+           gap would have moved all of them. */
+        .cal-sb-newev { width: 100%; margin-bottom: 6px; }
         .cal-wk-createghost {
             position: absolute; left: 2px; right: 4px; z-index: 6;
             border: 1px dashed var(--accent); border-radius: 8px;
