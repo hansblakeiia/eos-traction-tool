@@ -13,7 +13,7 @@
          Marketing tab; the rest of the app is untouched by this. -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%231a365d' width='100' height='100' rx='15'/%3E%3Ctext x='50' y='50' font-family='Arial, sans-serif' font-size='45' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='central'%3EEOS%3C/text%3E%3Ccircle cx='85' cy='15' r='8' fill='%233182ce'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="styles.css?v=4.47.0">
+    <link rel="stylesheet" href="styles.css?v=4.48.0">
 </head>
 <body>
     <div class="container">
@@ -3378,9 +3378,10 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '4.47.0';
-        const EOS_BUILD_DATE = '2026-08-17';
-        const EOS_BUILD_TIME = '23:59'; // v4.47.0: ADDING AN EVENT ON THE PHONE, from the Calendar page's FAB — a RECORDED REVERSAL. The Calendar v1 design §6 deliberately left this out and Hans has now asked for it twice, so it is written down as a reversal rather than quietly built. HIS INSTRUCTION ON PLACEMENT IS THE DESIGN: the FAB, NOT the mobile toolbar. v4.41.0 kept "+ New event" and "Block time" desktop-only behind `.cal-newev-btn` precisely because that phone toolbar is already tight, and round-20 item 12 says it needs MORE room — so the way in had to cost that row nothing. 'calendar' joins FAB_PAGES with its own FAB_LABELS entry ("Add an event", and the mic "Add an event by voice"), and the branch routes to calOpenNewEvent() — the page's OWN opener, the same one the desktop button calls, so the capability re-probe (rule 51), the known-old-backend refusal, the write-calendar default and the whole recurrence builder behave identically however you got there. Nothing about creating an event is re-implemented for the phone. TWO THINGS THIS RELEASE HAD TO SOLVE THAT THE OTHER FAB PAGES NEVER DID. (1) THE COMPOSER WAS COVERING THE FORM, and the probe's hit-test found it rather than any amount of reading: `calOpenNewEvent` ended with `titleEl.focus()`, and on a COARSE pointer the composer opens on ANY focus — that gate is fine-pointer-only by v4.19.0's deliberate choice — so pressing "Add an event" threw the full-screen writing surface over the form the instant it appeared, with `TEXTAREA.cmp-input` sitting on top of the Create button. That is v4.19.0's own finding on a new surface ("the + gave a writing box instead of a cursor"), and the reason it is worse here is that A FORM IS NOT A SINGLE TEXT FIELD: the first thing you need to see is the date, the time and the calendar, not a blank box. The auto-focus is now fine-pointer only. The desktop keeps it — no composer is lifted there and landing in the title is the head start it has always given. On a phone you tap the title yourself, which is a real gesture, and the composer opens because you asked. (2) THE ASYNC-REFUSAL PATH MUST NOT LIE. Every other fabQuickAdd branch is synchronous, so fabVoiceAdd can fire its field-wait straight after and be certain the add happened. calOpenNewEvent is async AND is allowed to REFUSE (capability off, backend below 3.56.0), in which case it has already toasted the reason and no field will ever appear — the shared wait would then time out into "Added it — but there is no text box to dictate into on this page yet", false twice over. So the Calendar branch starts the wait ITSELF, only once the form is genuinely open, and returns `true` to tell fabVoiceAdd to stand down; every other branch still returns undefined and is untouched. That branch also focuses the title itself for the mic, since the opener no longer does on a phone — pressing the MIC is an explicit request to write, v4.22.0's opt-in shape. Probe probe-v4.47.0.js 48/48 at 375 AND 412, 20/48 on deployed v4.46.0, driving a real mouse click on the FAB after hit-testing it and running the form end to end so a real createCalendarEvent payload is asserted on the wire with the picked day and local times. Rule 51 is asserted in the negative too: with the capability probed OFF the FAB still EXISTS and refuses with a sentence, and the voice route repeats that sentence instead of claiming an add. `.cal-newev-btn` is untouched — the phone toolbar gains nothing. Clearance checked by PARITY with an existing FAB page rather than an invented number (`.page { padding-bottom: 84px }` is app-wide since v3.66.2), after the first version of that assertion failed against correct code. Client-only, no clasp round.
+        const EOS_VERSION = '4.48.0';
+        const EOS_BUILD_DATE = '2026-08-18';
+        const EOS_BUILD_TIME = '01:20'; // v4.48.0: THE ROUND-20 BUG-FIX RELEASE — items 7, 11, 12, 13 and 14, plus one defect the battery found that was on nobody's list. ITEM 16 IS DELIBERATELY NOT IN HERE; it needs Hans, and the reason is in §5.37. **ITEM 7 — a drag is not a request to write.** A `.repo-item` is `draggable="true"` AND contains a `contenteditable="true"` `.item-text`, so starting a drag focuses that text, and a focus is all the composer has ever needed. The v4.19.0 gesture guard does not help: a drag OPENS with a real pointerdown on the field, which is exactly what that guard looks for. Fixed with `_cmpDragging`, set on a capture-phase `dragstart` and cleared on `dragend`/`drop` — document-level, no per-element wiring, the same reason rule 24 exists. Asserted in BOTH directions: the drag no longer opens it, a real click into a field still does. **ITEM 11 — "the Today button doesn't reliably return to today", and `reliably` was the clue.** It worked whenever today was still inside the loaded 29-day window and failed whenever it was not: `calSelectDate` attempts the scroll BEFORE the data exists, `_calScrollToDay` finds no `[data-cal-day]` element and returns false, we re-anchor and refetch — and when the answer lands `_calFetch` re-renders and NOTHING EVER SCROLLS. The button had done its real work (the anchor moved) while leaving the view parked, which reads exactly like "the button did nothing". `_calPendingScrollYmd` now carries the request across the round trip and is consumed once, after the render, and deliberately NOT before a queued refetch — that run owns it. **ITEM 12 — measured first, and the stated cause did not hold.** "Needs more top margin like other pages": at 375 and 412 the Calendar page's top spacing is IDENTICAL to Weekly Meeting, Today and Marketing — page top 59px, title top 71px, padding-top 12px on all four. There was no missing margin. The SCREENSHOTS showed the real difference: every other page gives the title its own row, while here `.cal-topbar .page-title { flex: 1 1 auto }` let it share one line with the month toggle, Today and the gear, squeezing its underline and leaving the header cramped rather than under-padded. On a phone the title now takes the whole first line and the controls wrap beneath — the shape the rest of the app already uses, and the "more room" item 12 asked for, which is the same room v4.47.0 refused to spend by putting add-event on the FAB. Desktop untouched. **ITEM 13 — the dictation seam, and it is the exact mirror of v4.21.0.** Android Chrome does not honour `continuous`, so it ends the session at each utterance and `onend` restarts it. When a session ends with interim text on screen that was never finalised, `onend` folds it into `base` so the words are not lost — and Android then RE-REPORTS that same speech as the next session's first final, which is appended on top of the copy already there: "I recently I recently taught taught". Desktop never sees it because one session spans the pauses, so there is no seam. `absorbedTail` remembers WHAT was folded in, `_cmpDropAbsorbed` compares WORDS ONLY (an interim guess and the final differ in case and punctuation every time, so a raw string compare would never fire), and the guard is spent on the first final of the next session so it can never go on silently eating real repetition later. `painted` distinguishes hand-typed text, which no engine will re-report. **ITEM 14 — NOT FIXED, EXPLAINED, and saying so is the point.** A bare "Failed to fetch" is a TypeError from `fetch()` itself: no status code was ever received, so the request never left the machine — not an API error, not a key, not a quota. The manual rewrite and the post-dictation cleanup reach the SAME callAI('taskAssist') and produce the identical toast, nothing in that path branches on device, and there is no CSP. `_aiFailureSentence` now names the cause and the 20-second test (open generativelanguage.googleapis.com in a tab), matches the shape across Chrome/Firefox/Safari wordings, and passes a real HTTP error through untouched so a 429 is never dressed up as a network block. **THE ONE NOBODY REPORTED:** `cal-addevent-probe` scored 57/57 yesterday and 56/57 today against UNCHANGED builds — confirmed by re-running v4.45.0 and v4.46.0 today, both 56/57. `_calRebuildRepeat` restores the previous selection, which is right when the date changes mid-form and wrong on a form just opened: choose "Weekly", cancel, reopen — still Weekly, and creating from there made a repeating event nobody asked for. It hid because the preset LABELS are date-derived, so on a different weekday the restore failed and quietly did the right thing; a guard that works only while the weekday changes is not a guard. `calOpenNewEvent` clears the dropdown before the rebuild reads it. Probe probe-v4.48.0.js 36/36, 8/36 on deployed v4.47.0 — and item 7's assertion FAILS there with `during: true`, which is his symptom reproduced mechanically. TWO-FILE deploy, `?v=4.48.0`.
+        // v4.47.0: ADDING AN EVENT ON THE PHONE, from the Calendar page's FAB — a RECORDED REVERSAL. The Calendar v1 design §6 deliberately left this out and Hans has now asked for it twice, so it is written down as a reversal rather than quietly built. HIS INSTRUCTION ON PLACEMENT IS THE DESIGN: the FAB, NOT the mobile toolbar. v4.41.0 kept "+ New event" and "Block time" desktop-only behind `.cal-newev-btn` precisely because that phone toolbar is already tight, and round-20 item 12 says it needs MORE room — so the way in had to cost that row nothing. 'calendar' joins FAB_PAGES with its own FAB_LABELS entry ("Add an event", and the mic "Add an event by voice"), and the branch routes to calOpenNewEvent() — the page's OWN opener, the same one the desktop button calls, so the capability re-probe (rule 51), the known-old-backend refusal, the write-calendar default and the whole recurrence builder behave identically however you got there. Nothing about creating an event is re-implemented for the phone. TWO THINGS THIS RELEASE HAD TO SOLVE THAT THE OTHER FAB PAGES NEVER DID. (1) THE COMPOSER WAS COVERING THE FORM, and the probe's hit-test found it rather than any amount of reading: `calOpenNewEvent` ended with `titleEl.focus()`, and on a COARSE pointer the composer opens on ANY focus — that gate is fine-pointer-only by v4.19.0's deliberate choice — so pressing "Add an event" threw the full-screen writing surface over the form the instant it appeared, with `TEXTAREA.cmp-input` sitting on top of the Create button. That is v4.19.0's own finding on a new surface ("the + gave a writing box instead of a cursor"), and the reason it is worse here is that A FORM IS NOT A SINGLE TEXT FIELD: the first thing you need to see is the date, the time and the calendar, not a blank box. The auto-focus is now fine-pointer only. The desktop keeps it — no composer is lifted there and landing in the title is the head start it has always given. On a phone you tap the title yourself, which is a real gesture, and the composer opens because you asked. (2) THE ASYNC-REFUSAL PATH MUST NOT LIE. Every other fabQuickAdd branch is synchronous, so fabVoiceAdd can fire its field-wait straight after and be certain the add happened. calOpenNewEvent is async AND is allowed to REFUSE (capability off, backend below 3.56.0), in which case it has already toasted the reason and no field will ever appear — the shared wait would then time out into "Added it — but there is no text box to dictate into on this page yet", false twice over. So the Calendar branch starts the wait ITSELF, only once the form is genuinely open, and returns `true` to tell fabVoiceAdd to stand down; every other branch still returns undefined and is untouched. That branch also focuses the title itself for the mic, since the opener no longer does on a phone — pressing the MIC is an explicit request to write, v4.22.0's opt-in shape. Probe probe-v4.47.0.js 48/48 at 375 AND 412, 20/48 on deployed v4.46.0, driving a real mouse click on the FAB after hit-testing it and running the form end to end so a real createCalendarEvent payload is asserted on the wire with the picked day and local times. Rule 51 is asserted in the negative too: with the capability probed OFF the FAB still EXISTS and refuses with a sentence, and the voice route repeats that sentence instead of claiming an add. `.cal-newev-btn` is untouched — the phone toolbar gains nothing. Clearance checked by PARITY with an existing FAB page rather than an invented number (`.page { padding-bottom: 84px }` is app-wide since v3.66.2), after the first version of that assertion failed against correct code. Client-only, no clasp round.
         // v4.46.0: ROUND 20 ITEM 10 — the Weekly Meeting To-Dos are too wide on desktop (his screenshot S1: "hard to see which icons relate to which task"). TWO changes, and only one of them is a preference. (1) THE ICONS COME TO THE TEXT, for everyone, no switch. `.todo-item .tr-main` was `flex: 1 1 auto`, so it FILLED the row however short the task was and `.tr-actions` was pushed to the far right edge. It is `flex: 0 1 auto` now, so the cluster sits just after the words and the row goes ragged-right — which is the point, because adjacency is the thing that ties an icon to its task. THE MEASUREMENT IS THE WHOLE STORY AND THE FIRST ONE WAS WRONG: measuring the text ELEMENT reported a 6-8px gap at every width, because `.todo-text` is a block that fills `.tr-main` — the box was never the gap, the INK was. Measured with a Range over the text node, median last-glyph-to-icon distance was 804px at 1280 and 1444px at 1920; it is 13px at both now. Rule 1 in a costume: the number you take is a claim about what you measured, not about what he can see. (2) THE 1/2/3-COLUMN SWITCHER, device-local in `eos_ui_prefs` (rule 30), DEFAULT 1 = exactly today's layout, because a preference must not arrive as a redesign for a firm that did not ask. CSS multi-column rather than a grid, deliberately: column flow preserves the list's ORDER, so a parent task and the subtasks indented under it stay adjacent in one stream, where a grid would scatter them into cells; `break-inside: avoid` keeps a row from being cut at a column boundary and `break-after: avoid` stops a list heading being stranded at the foot of one. THE MEDIA QUERIES ARE THE AUTHORITY, not the attribute: `data-cols` records what the person CHOSE, and 2 columns need >=900px and 3 need >=1200px, so a narrow window silently gives one column instead of three unreadable ones — asserted by counting distinct row x-positions, never by reading back the class we just wrote. That threshold is mirrored in JS as TODO_COLS_MIN_W for one reason: the wrench must not OFFER a choice that would do nothing on the device in your hand, which is this project's most expensive shape. That needed a new optional `when` predicate on a PAGE_PREFS group, re-evaluated on every open, so rotating a tablet makes the group appear; a group without one is unaffected. The wrapper goes around the LIST and never around the "N to-do(s) / Archive / Uncheck / Delete" strip — that strip is one control for the whole list and flowing it into a column beside the tasks would make it look like it belonged to that column's tasks alone. Two surfaces, one value (the v3.84.0 contract): the Weekly Meeting wrench and Settings › Task rows both go through setTodoCols(). THE PHONE IS DELIBERATELY UNTOUCHED and the probe says so in its own words after getting it wrong once: below 768px `.tr-main { flex: 1 1 0 }` from the v3.82.0 media block outranks the base rule, and at cozy density that release put the icons back ON the title line — HANS'S OWN PICK when asked. S1 is a wide-desktop screenshot; re-tuning a phone layout he already ruled on is not this release's business. `.todo-item` is rendered by exactly one function (renderTodoItem, reached only from renderTodos), so the row change cannot reach any other page — verified, not assumed. Probe probe-v4.46.0.js 37/37, 0/1 on deployed v4.45.0. TWO-FILE deploy, `?v=4.46.0`.
         // v4.45.0: ROUND 20 ITEM 8 — press an occupied Rule-of-3 slot or matrix task and REPLACE what is in it. Until now `targetFor` inside initFillSlotGesture opened with `if (el.closest('.matrix-task, .rule-slot:not(.empty), …')) return null` — the picker was strictly an EMPTY-slot picker, so changing your mind about a priority meant removing it through the ⋯ menu and then filling the slot: two gestures and a trip through a menu for the single most-changed thing on the page. THE POINTER SPLIT IS THE DESIGN, and it is not a compromise — it is what each pointer already means here. A FINE pointer must leave the text alone, because clicking the text is Edit (v4.15.0's one-tap edit) and that is a different, more common intent; the rest of the row is Replace. A COARSE pointer gets the WHOLE row, text included, because a 500ms hold is unambiguously not a tap AND because the row leaves it nowhere else to land: MEASURED on a 412 phone, only 31% of a `.matrix-task` is free of its own text and controls (58% of a Rule-of-3 slot, which has the number badge), so restricting the hold to that 31% would have been a gesture that works in the screenshot and fails in the hand — rule 1, applied to a gesture rather than a layout. THE RULE-OF-3 HALF NEEDED NOTHING beyond being allowed: commitRuleEntry already overwrites the slot it is handed. THE MATRIX HALF NEEDED REPLACE-IN-PLACE, because a quadrant holds many tasks and appending the new one at the bottom would read as "added", not "replaced" — a control lying about what it did. Rule 22 says commitMatrixEntry is the ONLY sanctioned writer of a quadrant, so the splice lives INSIDE it behind a new `opts.replaceId`, never in the caller. **replaceId, never replaceIndex**: `_matrixForgetId` runs first and can shift every entry left, so an index captured before that pass points at the wrong task after it; an id survives the shift. THREE BELTS THIS GESTURE HAS NEVER NEEDED UNTIL NOW, and the reason it never needed them is the whole finding: every target it had before this release — an empty slot, an empty quadrant, the hint text — carries NO draggable attribute, while an occupied `.rule-slot` and a `.matrix-task` are BOTH `draggable="true"`. That walks straight into v4.16.1's bug: Chrome Android starts its NATIVE HTML5 drag on a long-press of any draggable element, at the same ~500ms this timer waits, and the browser's drag ghost eats the hold. Same three answers the Kanban move sheet already ships (rule 44): disarm `draggable` for the duration of the touch and restore it ON RELEASE (never when the timer fires — rearming at the 500ms mark puts the attribute back under a finger that is still down, the one moment the browser is looking for it); refuse a `dragstart` that begins while a hold is ARMED; suppress `contextmenu` while armed. A FOURTH belt is new here and belongs to the coarse-pointer decision: the hold may start ON the text, whose onclick is Edit, so the click that follows the release would open the edit prompt on top of the picker — ONE click is eaten, and only within 700ms, because a flag with no expiry sooner or later swallows an unrelated click somewhere else. THE PICKER NOW SAYS IT IS REPLACING and names the outgoing task ("Replace "Finish the Q3 board deck" in slot 1 with…"), which is what makes Close a real cancel: you can see what you would lose. Empty slots keep the old sentence exactly. NO "you picked the one already there" GUARD, deliberately — _fillSlotCandidates drops every id already in a quadrant or a slot, so the outgoing task is not in the list, and fillSlotCreateTask always brings a fresh id; a guard for a case that cannot occur is a dead path that reads as a handled one. Probe probe-v4.45.0.js 40/40 here, 22/42 on the deployed v4.44.0, and it PERFORMS the gesture rather than calling the handler (§5B lesson 37): the desktop half clicks with the MOUSE at coordinates elementFromPoint confirms are really the row, the phone half dispatches a real 500ms touch hold and then fires the click a finger would fire. Its own first run was 18/36 for a HARNESS reason worth keeping: `page.evaluate(STRING, arg)` silently drops the argument — Playwright only forwards args to a FUNCTION — so every helper ran with `sel === undefined` and reported the whole feature dead, including the parts that predate this release. Client-only, no clasp round.
         // v4.44.0: DAILY-PLAN SNAPSHOTS — the undo of last resort, and Hans's own framing of why it goes ahead of the feature queue: "the next bug in this class costs one click, not my Rule of 3." v4.43.0 fixed the cause it found and added a belt against the class, but neither hands back a plan that is ALREADY gone, and his Rule of 3 has now been destroyed three times in a week by one defect FAMILY — the plan stores REFERENCES to tasks, so anything unresolvable gets deleted rather than held (rule 49's ground). Snapshots are the only layer here that does not depend on us having predicted the bug. THE INVARIANT, and it is deliberately one sentence: this device keeps the last 10 DISTINCT NON-EMPTY plans it has ever held, under its own key `eos_dailyPlanSnaps_<initials>`. ONE call site guarantees that — the tail of saveDailyPlan() — because every route by which a plan reaches this device's screen ends in loadDailyPlan() and loadDailyPlan() ends in a save: a local edit, the day rollover, the gid/xt back-fill, and an adopted cloud row (_dpAdopt writes localStorage and then re-enters the loader). THE BRANCH THAT MATTERS IS THE NO-OP ONE: a plan adopted from another device carries THAT device's syncHash, so it arrives at saveDailyPlan as an unchanged save and returns early — a snapshot taken only on the changed branch would never once see a plan this device RECEIVED rather than typed, which is more than half of them. Dedup is on saveDailyPlan's own newHash, passed in rather than recomputed, so the quiet repeat save that runs on every load costs one string compare, and two devices agreeing on content agree on the fingerprint. EMPTY PLANS ARE NEVER SNAPSHOTTED (the v4.43.0 _dpIsEmptyPlan test, reused rather than re-expressed): a blank is not a state anyone wants back, and ten blanks in a row would push the last real plan out of the ring — which is exactly the shape of the bug this exists to survive. SNAPSHOTS ARE DEVICE-LOCAL AND MUST NEVER SYNC; they are not in _dpPayload and must not be added to it, because the whole value of the store is that it is the one copy a remote write cannot reach. TWO ROUTES, deliberately different jobs. (1) The RESTORE BAND above the Today grid is the one-click route and is CONTEXTUAL — rendered only when the plan on screen is empty AND a non-empty snapshot exists, which is the moment of the loss; gated on the information it carries rather than on a flag (rule 37), so no snapshots means no band. (2) "Restore an earlier plan…" in the Today wrench panel is the PERMANENT route, and it exists because the loss Hans has actually been living with is PARTIAL — a Rule of 3 gone while the matrix survives is not an empty plan and shows no band. Both open the same picker, which names each version in his terms ("2 priorities · 7 matrix tasks", "Today 4:12 PM"), never "10 entries". THE RESTORE re-enters loadDailyPlan() rather than repainting by hand — _dpAdopt's choice for _dpAdopt's reason, so the rollover, the six renders and restorePomodoroTimer() run exactly as on a normal visit and a restore can never drift from a load. IT STRIPS savedAt AND syncHash FROM THE COPY BEFORE WRITING, and that is load-bearing rather than tidying: saveDailyPlan dedups by comparing newHash against the STORED blob's syncHash, so a restored plan that kept its old fingerprint would take the no-op branch, carry the blank's stamp forward and never push — the plan would come back on this device and stay lost on every other one, a failure wearing a success face. Probe probe-v4.44.0.js 24/24 here, 0/24 on the deployed v4.43.0, and it drives the WHOLE incident end to end: seed a real plan, blank it the way the cloud blanked it, assert the band appears, click the button with the MOUSE after hit-testing it (v4.42.1's lesson), and assert the Rule of 3 is back AND a push was queued. Client-only, no clasp round, no schema change.
@@ -6678,7 +6679,19 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v4.47.0 &mdash; 2026-08-17 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v4.48.0 &mdash; 2026-08-18 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Five fixes from your round-20 list, plus one you had not seen yet.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Dragging a to-do no longer pops open the typing box.</strong> Clicking into the task text still opens it, as before &mdash; only dragging is exempt.</li>'
+                + '<li><strong>The Calendar&rsquo;s <em>Today</em> button now works after you have browsed to another month.</strong> It was moving to today correctly but leaving the screen where it was, so it looked like nothing happened.</li>'
+                + '<li><strong>The Calendar title has its own line on a phone now</strong>, with the month, Today and settings buttons beneath it &mdash; the same shape as every other page.</li>'
+                + '<li><strong>Dictation on a phone no longer repeats words.</strong> When you paused, the phone re-sent what it had already heard and it got added twice.</li>'
+                + '<li><strong>When the AI rewrite fails, it now tells you why.</strong> &ldquo;Failed to fetch&rdquo; means the request never left your computer &mdash; the message now says so and gives you a 20-second test.</li>'
+                + '<li><strong>Also fixed:</strong> creating a second calendar event in one sitting inherited the first one&rsquo;s repeat setting, so you could make a repeating event without meaning to.</li>'
+                + '</ul>'
+                + '</div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v4.47.0 &mdash; 2026-08-17</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">You can add a calendar event from your phone now.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>The blue + button now appears on the Calendar page.</strong> Tap it to add an event &mdash; same form as on the computer, with the date, times, calendar and repeat options.</li>'
@@ -21633,6 +21646,9 @@ Make sure your suggestions directly address the specific root cause and discussi
         // QUEUES one re-run instead of losing it. Bounded: the flag is cleared before the
         // re-run, so this can never become a fetch loop.
         let _calRefetchQueued = false;
+        // v4.48.0 (round 20 item 11): a day someone asked to see whose events had not been
+        // fetched yet. Survives the round trip so the scroll happens once they exist.
+        let _calPendingScrollYmd = '';
         async function _calFetch(mode) {
             if (_calState.fetching) { _calRefetchQueued = true; return; }
             const startDate = _calState.anchor;
@@ -21737,7 +21753,10 @@ Make sure your suggestions directly address the specific root cause and discussi
             if (_calRefetchQueued) {
                 _calRefetchQueued = false;
                 setTimeout(function () { _calFetch('replace'); }, 0);
+                return;   // the queued run owns the pending scroll — do not spend it early
             }
+            // v4.48.0 (item 11): the day someone asked to see, now that its events exist.
+            _calFlushPendingScroll();
         }
 
         // ---- page entry -------------------------------------------------------------
@@ -22134,11 +22153,34 @@ Make sure your suggestions directly address the specific root cause and discussi
                 return;
             }
             // Outside the loaded window: re-anchor the agenda on that date and refetch.
+            // v4.48.0 — ROUND 20 ITEM 11, "the Today button doesn't reliably return to
+            // today after navigating to another day". THIS is the unreliability, and the
+            // word `reliably` was the clue: it worked whenever today was still inside the
+            // loaded 29-day window and failed whenever it was not. The scroll is attempted
+            // ABOVE, before the data exists — `_calScrollToDay` finds no `[data-cal-day]`
+            // element, returns false, and we land here. `_calRenderAll()` then paints the
+            // OLD window's events (the fetch is async and has not answered), and when the
+            // answer does arrive `_calFetch` re-renders and NOTHING EVER SCROLLS. The
+            // button had done its real work — the anchor moved — while leaving the view
+            // parked wherever it was, which reads exactly like "the button did nothing".
+            // So the request survives the round trip: _calFetch consumes this after its
+            // final render, including after a queued refetch.
+            _calPendingScrollYmd = ymd;
             const parts = ymd.split('-');
             _calState.anchor = new Date(+parts[0], +parts[1] - 1, +parts[2]);
             _calState.days = 29;
             _calRenderAll();
             _calFetch('replace');
+        }
+        // Consumed once and cleared, so a stale request can never hijack a later fetch that
+        // had nothing to do with it.
+        function _calFlushPendingScroll() {
+            const ymd = _calPendingScrollYmd;
+            if (!ymd) return;
+            _calPendingScrollYmd = '';
+            if (_calView() === 'week') return;   // the week grid has nothing to scroll
+            // One frame, so the render this follows has actually laid out.
+            setTimeout(function () { _calScrollToDay(ymd, 'auto'); }, 0);
         }
         // v4.31.0 (round 18 item 6): ONE builder, two surfaces — the toolbar dropdown
         // (the phone's Month toggle) and the always-visible desktop sidebar month. In
@@ -23348,6 +23390,23 @@ Make sure your suggestions directly address the specific root cause and discussi
             titleEl.value = ''; locEl.value = ''; notesEl.value = '';
             allDayEl.checked = false;
             _calCustomRRule = null;                 // each new form starts with no custom rule
+            // v4.48.0 — FOUND BY THE BATTERY, not reported: `cal-addevent-probe` scored
+            // 57/57 yesterday and 56/57 today against THE SAME unchanged builds, which is
+            // the signature of a date-dependent fault rather than a regression (confirmed by
+            // re-running v4.45.0 and v4.46.0 today: both 56/57).
+            // THE BUG: `_calRebuildRepeat` deliberately RESTORES the previous selection,
+            // which is right when the date changes mid-form — moving the date must not wipe
+            // the repeat you chose. But this function calls it on a FRESH form, where
+            // "previous" is whatever the last event left in the dropdown. So opening the
+            // form, choosing "Weekly", cancelling and opening it again gave you Weekly
+            // again, and creating from there made a repeating event nobody asked for.
+            // It hid until today because the preset LABELS are derived from the date: on a
+            // Monday "Weekly on Monday" no longer matches a Tuesday's option list, so the
+            // restore failed and quietly did the right thing. A guard that works only while
+            // the weekday changes is not a guard.
+            // A fresh form has no previous choice, so say so before the rebuild reads it.
+            const repEl0 = document.getElementById('calNewRepeat');
+            if (repEl0) repEl0.value = '';
             const todayYmd = _calState.todayYmd || _calYmd(_startOfToday());
             let dateStr = prefill.dateStr || _calState.selYmd || todayYmd;
             if (dateStr < todayYmd) dateStr = todayYmd;
@@ -25060,6 +25119,36 @@ Make sure your suggestions directly address the specific root cause and discussi
         // instead of the plain string so callers can detect a finish-reason cutoff and
         // decide whether to retry at a larger token budget. Every existing caller omits
         // it and keeps getting the plain string unchanged.
+        // v4.48.0 — ROUND 20 ITEM 14. Hans, on his laptop: composer AI says "Rewrite failed
+        // to fetch". THIS RELEASE DOES NOT CLAIM TO FIX IT, and saying so is the point: the
+        // investigation is exhausted on this machine. The manual rewrite and the
+        // post-dictation auto-cleanup reach the SAME callAI('taskAssist') → the same Gemini
+        // endpoint with the same arguments and produce the identical toast; nothing in the
+        // AI path branches on device, pointer or viewport; and there is no CSP. A bare
+        // "Failed to fetch" is a TypeError thrown by `fetch()` ITSELF, which means the
+        // request never left the machine — no status code was ever received, so it is not
+        // an API error, a key problem or a quota. That leaves an extension, an enterprise
+        // policy, or DNS//proxy filtering blocking generativelanguage.googleapis.com.
+        //
+        // What IS fixed is the message. "Rewrite failed: Failed to fetch" told him nothing
+        // and cost a round trip to diagnose; this names the cause and the 20-second test
+        // that settles it, so the next occurrence answers itself. Rule 25's principle
+        // applied to an error rather than a blocker: a sentence fit to show a person.
+        function _aiFailureSentence(e) {
+            const msg = (e && e.message) ? String(e.message) : String(e || 'Unknown error');
+            // The browser's wording differs (Chrome "Failed to fetch", Firefox
+            // "NetworkError when attempting to fetch resource", Safari "Load failed"), so
+            // match the SHAPE — a TypeError with no HTTP status anywhere in it.
+            const isNetwork = /failed to fetch|networkerror|load failed|network request failed/i.test(msg)
+                && !/\b[45]\d\d\b/.test(msg);
+            if (!isNetwork) return msg;
+            return 'the request never left this device, so this is not an API key or quota problem. '
+                + 'Something on this machine is blocking generativelanguage.googleapis.com — usually a browser '
+                + 'extension, a work policy, or DNS filtering. Quickest test: open that address in a new tab. '
+                + 'If it does not load there either, it is the machine and not the app; try an incognito window '
+                + 'with extensions off, or another network.';
+        }
+
         async function callAIText(provider, apiKey, model, promptText, opts) {
             opts = opts || {};
             if (provider === 'gemini') {
@@ -32154,6 +32243,9 @@ Return ONLY the JSON array:`;
         let _cmpTapTargetEl = null;   // what the pointer actually came down on
         let _cmpTapTargetAt = 0;
         let _cmpTabNavAt = 0;         // Tab moves focus into a field, and that IS deliberate
+        // v4.48.0 (round 20 item 7): a drag is in progress. A drag is never a request to
+        // write, and dragging a repository row focuses its contenteditable title.
+        let _cmpDragging = false;
         function _cmpCoarsePointer() {
             try { return window.matchMedia('(hover: none) and (pointer: coarse)').matches; }
             catch (e) { return false; }
@@ -32681,7 +32773,7 @@ Return ONLY the JSON array:`;
                 // callAI already told him about a missing key; only a call failure
                 // needs a voice here. Either way the text is untouched.
                 if (!e || e.aiCode !== AI_ERR_NO_KEY) {
-                    showToast('Rewrite failed: ' + ((e && e.message) || e), 'error');
+                    showToast('Rewrite failed: ' + _aiFailureSentence(e), 'error', 12000);
                 }
             } finally {
                 if (btn) { btn.disabled = false; btn.classList.remove('cmp-ai-busy'); }
@@ -32920,6 +33012,40 @@ Return ONLY the JSON array:`;
             if (a && !/\s$/.test(a)) return a + ' ' + t;
             return a + t;
         }
+        // v4.48.0 — ROUND 20 ITEM 13. Hans, on a phone: "I recently I recently taught
+        // taught…". Every word arriving twice, in place.
+        //
+        // THE CAUSE IS THE SEAM BETWEEN TWO SESSIONS, which is why it is a phone-only bug:
+        // Android Chrome does not honour `continuous`, so it ends the recognition session
+        // at each utterance and `onend` restarts it. When a session ends while interim text
+        // is on screen and never finalised, `onend` folds that interim into `base` so the
+        // words are not lost — and Android then RE-REPORTS the very same speech as the new
+        // session's first final result, which gets appended on top of the copy already
+        // there. Desktop never sees it because one `continuous` session spans the pauses,
+        // so there is no seam. This is the exact mirror of v4.21.0's desktop bug: that one
+        // LOST the words at the seam, this one DUPLICATES them.
+        //
+        // Returns the part of a re-reported final that is genuinely new. Comparison is on
+        // words only — case, punctuation and spacing all differ between an interim guess
+        // and the final the engine settles on ("i recently" vs "I recently,"), so comparing
+        // raw strings would match almost nothing and the guard would never fire.
+        function _cmpDropAbsorbed(tail, text) {
+            const norm = function (s) {
+                return String(s == null ? '' : s).toLowerCase()
+                    .replace(/[^\p{L}\p{N}\s]/gu, '').replace(/\s+/g, ' ').trim();
+            };
+            const nt = norm(tail);
+            if (!nt) return text;
+            const nx = norm(text);
+            if (nx === nt) return '';                       // the whole thing again
+            if (nx.indexOf(nt + ' ') === 0) {
+                // The re-report carries on past what we absorbed — keep only the new words,
+                // counted off the ORIGINAL text so its own casing and punctuation survive.
+                const words = String(text).trim().split(/\s+/);
+                return words.slice(nt.split(' ').length).join(' ');
+            }
+            return text;                                    // unrelated speech: keep it all
+        }
         // v4.8.0 (Hans): "if I do record with microphone, I'd want it to automatically
         // clean up my words - add punctuation properly, fix grammar." Dictation arrives
         // as one unpunctuated run, so the cleanup is not a nicety, it is what makes the
@@ -32961,6 +33087,13 @@ Return ONLY the JSON array:`;
             // How many of THIS session's results are already folded into `base`.
             // Reset on every restart, because a new session numbers from zero again.
             let finalUpTo = 0;
+            // v4.48.0 (item 13). `painted` is what onResult last wrote to the field, so a
+            // difference means the person typed by hand while the mic was on — that is
+            // theirs and must never be mistaken for speech. `absorbedTail` is the
+            // un-finalised interim the PREVIOUS session folded into `base` on its way out,
+            // held only until the next session's first final answers for it.
+            let painted = ta.value;
+            let absorbedTail = '';
             try {
                 _cmpRecog = new Ctor();
             } catch (e) { showToast('Could not start dictation.', 'error'); _cmpRecog = null; return; }
@@ -32996,13 +33129,23 @@ Return ONLY the JSON array:`;
                     if (res && res.isFinal) {
                         // `i >= finalUpTo` because a browser is free to re-report a result
                         // that is already final; committing it twice would stutter the text.
-                        if (i >= finalUpTo) { base = _cmpAppendSpoken(base, text); finalUpTo = i + 1; }
+                        if (i >= finalUpTo) {
+                            // v4.48.0 (item 13): only the FIRST final of a session can be a
+                            // re-report of the tail the previous one absorbed, so the guard
+                            // is spent either way on the first commit and cannot go on
+                            // silently eating real repetition later in the dictation.
+                            const add = absorbedTail ? _cmpDropAbsorbed(absorbedTail, text) : text;
+                            absorbedTail = '';
+                            if (add) base = _cmpAppendSpoken(base, add);
+                            finalUpTo = i + 1;
+                        }
                         if (text.trim()) heard = true;
                     } else {
                         interim += text;
                     }
                 }
                 ta.value = interim.trim() ? _cmpAppendSpoken(base, interim) : base;
+                painted = ta.value;   // v4.48.0 (item 13) — the baseline a hand edit differs from
                 _cmpSyncGrow();
                 ta.scrollTop = ta.scrollHeight;
                 _cmpMicRestarts = 0;   // words are arriving, so this is not a failing loop
@@ -33038,7 +33181,18 @@ Return ONLY the JSON array:`;
                 // the last one instead of continuing it. Reading the FIELD rather than
                 // `base` also keeps any interim words the ended session never finalised,
                 // and anything he typed by hand while the mic was on.
+                // v4.48.0 (item 13): remember WHAT was absorbed, not just that something
+                // was. Anything in the field beyond `base` is interim this session never
+                // finalised — Android habitually re-reports that same speech as the next
+                // session's first final, and appending it on top of the copy we just kept
+                // is his "I recently I recently". If the field differs from what we last
+                // PAINTED, the extra is something he typed, which no engine will re-report,
+                // so nothing is remembered in that case.
+                absorbedTail = (ta.value === painted && ta.value.length > base.length)
+                    ? ta.value.slice(base.length).trim()
+                    : '';
                 base = ta.value;
+                painted = ta.value;
                 finalUpTo = 0;   // the new session numbers its results from zero
                 try {
                     _cmpRecog = new Ctor();
@@ -33106,8 +33260,24 @@ Return ONLY the JSON array:`;
             document.addEventListener('keydown', function (e) {
                 if (e.key === 'Tab') _cmpTabNavAt = Date.now();
             }, { capture: true, passive: true });
+            // v4.48.0 — ROUND 20 ITEM 7. Hans: "dragging a task from the Repository falsely
+            // triggers the composer text box." A `.repo-item` is `draggable="true"` AND
+            // contains a `contenteditable="true"` `.item-text`, so beginning a drag focuses
+            // that text — and a focus is all the composer has ever needed. On a fine pointer
+            // the v4.19.0 gesture guard does not save us either: the drag opens with a real
+            // pointerdown ON the field, which is exactly what that guard is looking for.
+            // A drag is never a request to write. `dragstart` fires before the focus that
+            // follows it, so a flag set here is already up when focusin arrives; `dragend`
+            // always fires, including on a cancelled drag, and `drop` is belt for engines
+            // that reorder the two. Document-level and capture, so no per-element wiring —
+            // the same reason rule 24 exists.
+            document.addEventListener('dragstart', function () { _cmpDragging = true; }, true);
+            ['dragend', 'drop'].forEach(function (evt) {
+                document.addEventListener(evt, function () { _cmpDragging = false; }, true);
+            });
             document.addEventListener('focusin', function (e) {
                 if (!composerActiveHere()) return;
+                if (_cmpDragging) return;   // v4.48.0, item 7 — see above
                 const el = e.target;
                 if (!composerEligible(el)) return;
                 // v4.19.0, found by the probe for this very release: with the composer now

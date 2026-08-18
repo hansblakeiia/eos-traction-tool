@@ -4252,6 +4252,25 @@
         .cal-topbar > * { min-width: 0; }
         .cal-topbar .page-title { flex: 1 1 auto; }
         .cal-mt-btn { padding: 6px 12px; font-size: 0.85rem; white-space: nowrap; }
+        /* v4.48.0 — ROUND 20 ITEM 12: "mobile Calendar header too clean — needs more top
+           margin like other pages."
+           MEASURED FIRST, and the stated cause did not hold: at 375 and 412 the Calendar
+           page's top spacing is IDENTICAL to Weekly Meeting, Today and Marketing — page top
+           59px, title top 71px, padding-top 12px on all of them. There was no missing
+           margin to add. The SCREENSHOTS are what showed the real difference: on every
+           other page the title owns its row and the controls sit on a row beneath it, while
+           here the title shares one line with the month toggle, Today and the gear, which
+           squeezes the title's underline and leaves the whole header looking cramped rather
+           than under-padded. `.cal-topbar .page-title { flex: 1 1 auto }` is what lets it
+           share.
+           On a phone the title now takes the WHOLE first line and the controls wrap under
+           it, which is the shape the rest of the app already uses — and it is also the
+           "more room" item 12 asks for, which is the same room v4.47.0 refused to spend by
+           putting add-event on the FAB instead of in this row. Desktop is untouched: there
+           the row has space for all of it and sharing a line is the point. */
+        @media screen and (max-width: 768px) {
+            .cal-topbar .page-title { flex: 1 1 100%; margin-bottom: 2px; }
+        }
         /* v4.24.0 (round 17 item 4): the toolbar — and the mini-month, when open — stay
            pinned while the agenda scrolls, so "Today", the month picker and the gear are
            always reachable. Sticky, not fixed: rule 20's "never transform .page" constraint
