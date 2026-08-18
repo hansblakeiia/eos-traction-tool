@@ -4539,10 +4539,32 @@
                which is the v4.26.0 badge trap. */
             body.eos-hdr-collapsed header { display: none; }
         }
+        /* v4.42.0 (round 20 item 9): Print + Settings in the tabs row, shown ONLY while
+           the header is collapsed — which is the default since v4.32.0, so without these
+           a fresh desktop had no route to either. Hidden by default and revealed by the
+           body class, rather than the reverse: the collapsed state is the one that needs
+           them, and a rule that only ADDS a control can never hide the header's own pair. */
+        /* The three header controls travel as ONE group. .tabs is a centred wrapping
+           flex row, so three loose buttons scatter across a second line the moment the
+           tabs fill the first one (measured at 1280: they do). Grouped, they either sit
+           at the right of the tabs line or wrap together as one right-aligned cluster —
+           margin-left:auto still pushes the group right on whichever line it lands on. */
+        .tabs-hdr-group { display: flex; align-items: center; gap: 2px; margin-left: auto; flex: 0 0 auto; }
+        .tabs-hdr-btn { display: none; }
+        body.eos-hdr-collapsed .tabs-hdr-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            border: none; background: none; font-family: inherit; cursor: pointer;
+            color: var(--gray-500); font-size: 0.95rem; padding: 4px 8px; flex: 0 0 auto;
+            align-self: center; line-height: 1;
+        }
+        body.eos-hdr-collapsed .tabs-hdr-btn:hover { color: var(--gray-800); }
         @media screen and (max-width: 768px) {
             /* Belt: the tabs row is already display:none here, but the chevron must
                never surface on a phone whatever later chrome work does to .tabs. */
             .hdr-toggle { display: none !important; }
+            /* Same belt for the pair above — a phone must never grow a second Settings
+               button whatever later chrome work does to .tabs. */
+            .tabs-hdr-btn { display: none !important; }
         }
         /* v4.33.0 (round 19 addendum): "headers perhaps bold and dark blue above the
            tasks" — his words. Shared by the Block-time picker (eosChoose {heading}
