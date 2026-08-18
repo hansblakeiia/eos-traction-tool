@@ -13,7 +13,7 @@
          Marketing tab; the rest of the app is untouched by this. -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%231a365d' width='100' height='100' rx='15'/%3E%3Ctext x='50' y='50' font-family='Arial, sans-serif' font-size='45' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='central'%3EEOS%3C/text%3E%3Ccircle cx='85' cy='15' r='8' fill='%233182ce'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="styles.css?v=4.42.1">
+    <link rel="stylesheet" href="styles.css?v=4.43.0">
 </head>
 <body>
     <div class="container">
@@ -3332,9 +3332,10 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '4.42.1';
+        const EOS_VERSION = '4.43.0';
         const EOS_BUILD_DATE = '2026-08-17';
-        const EOS_BUILD_TIME = '22:25'; // v4.42.1: HOTFIX for all three symptoms Hans hit within minutes of v4.42.0 — "I see the Printer and Gear icon (barely), and they don't do anything, and clicking the down arrow doesn't bring back up the blue header." ONE cause for two of the three, and it is a dead zone that has existed for the entire life of this app: #saveIndicator is `position:fixed; top:20px; right:20px; z-index:1001`, PERMANENTLY MOUNTED, and merely `opacity:0` at rest — and opacity 0 does NOT remove an element from hit-testing. It has therefore always owned roughly a 110x40px hole in the top-right corner of every page. Nothing had ever been placed there, so nothing had ever paid for it. v4.42.0's `margin-left:auto` moved the whole `.tabs-hdr-group` INTO it, so Print, Settings AND the chevron all landed underneath — every real click hit the invisible indicator and did nothing, and the chevron, which had worked fine one release earlier from its old centre-right position, stopped working purely because it moved. Fix: `.save-indicator { pointer-events: none }` — it is an INDICATOR and must never eat a click; that also closes the corner for anything placed there in future. THE THIRD SYMPTOM was contrast, and it was real and separate: the icons inherited `var(--gray-500)` on the dark blue tabs bar, measured at 3:1, hence "(barely)". Now `rgba(255,255,255,0.8)` — 12.1:1 measured — matching the white tab buttons beside them, and the chevron gets the same treatment because it has been that same mid grey on that same dark bar since v4.32.0. THE PROBE LESSON, PAID ONE RELEASE AFTER WRITING IT DOWN: v4.42.0's assertions clicked with `el.click()`, which dispatches straight at the element and CANNOT SEE AN OVERLAY, so all three buttons were reported healthy while every real click was being swallowed. That is §5B lesson 37 — an assertion that calls the handler tests the destination, not the road — violated in the very probe written to honour it. The assertions now hit-test with `elementFromPoint` (the v4.10.1 method) and then click with the MOUSE at real coordinates; the five new ones FAIL on the shipped v4.42.0 (9/14) and pass here (14/14), so the regression is locked rather than merely fixed.
+        const EOS_BUILD_TIME = '23:30'; // v4.43.0: THE DAILY-PLAN DATA-LOSS FIX, and it is the most serious defect this project has shipped. Hans, 2026-08-17: "not sure what happened to the Rule of 3 section, etc.. Everything is missing." His Supabase daily_plans row read ruleOf3 [null,null,null], all four quadrants empty, updated_at 00:34:45Z — minutes earlier, during his own testing on a second device. CAUSE: loadDailyPlan() builds an EMPTY DEFAULT whenever localStorage holds no plan under `eos_dailyPlan_<initials>` for the resolved user — a new device, a new browser profile, cleared storage, or dailyPlanUser resolving to different initials — and v4.35.1 added a saveDailyPlan() at the TAIL of that same function so that gid/xt enrichment and rollover results would travel. Those two are fine apart and catastrophic together: the first-open device persisted the blank default AND pushed it with a fresh savedAt, which being newest won last-write-wins, wiped the real plan out of the cloud, and every other device then dutifully ADOPTED the blank. One device opening Today for the first time destroyed everyone's plan, silently, with the badge honestly reading "Synced". TWO LAYERS, and the second is the one that matters. (1) THE CAUSE: loadDailyPlan records `_dpHadStored = (stored !== null)` and the tail save runs only when true — "I have no plan" and "my plan is empty" are DIFFERENT FACTS and the tail save had been treating them as one; a device with nothing to say must say nothing and let _dpMaybePull populate it. (2) THE BELT, which would have saved him whatever the cause: the push was a BLIND upsert, so any empty local plan with a newer stamp silently replaced a full cloud row. Now, when the outgoing plan is empty (_dpIsEmptyPlan: no Rule-of-3 entry, no task in any quadrant, no Today-only task, no notes — habits and the pomo count deliberately do NOT count as content, or a habit tick would make a blank plan look populated and defeat the guard), it READS the cloud row first and, if that is non-empty, ADOPTS it instead of pushing. Emptiness is never worth propagating: there is no legitimate reason to overwrite three priorities and a populated matrix with nothing, and a person who really did clear their plan loses only that clearing. Rule 49's principle one level up — do not push a deletion you cannot prove was intended — and rule 48's read-then-decide order, applied only to the one case where it matters so the common non-empty push stays a single round trip. A genuinely new person is NOT wedged: an empty push over an absent or empty cloud row still proceeds. Probe probe-v4.43.0.js 15/15 (0/1 on v4.42.1), and its own first run was a FALSE PASS worth recording: `window.mktSupabaseProfile = {...}` does not rebind a `let`, so the real client threw, nothing was written, and "the cloud row was not overwritten" was true because the sync never ran — the positive controls C and D are what exposed it. Client-only, no clasp round, no schema change.
+        // v4.42.1: HOTFIX for all three symptoms Hans hit within minutes of v4.42.0 — "I see the Printer and Gear icon (barely), and they don't do anything, and clicking the down arrow doesn't bring back up the blue header." ONE cause for two of the three, and it is a dead zone that has existed for the entire life of this app: #saveIndicator is `position:fixed; top:20px; right:20px; z-index:1001`, PERMANENTLY MOUNTED, and merely `opacity:0` at rest — and opacity 0 does NOT remove an element from hit-testing. It has therefore always owned roughly a 110x40px hole in the top-right corner of every page. Nothing had ever been placed there, so nothing had ever paid for it. v4.42.0's `margin-left:auto` moved the whole `.tabs-hdr-group` INTO it, so Print, Settings AND the chevron all landed underneath — every real click hit the invisible indicator and did nothing, and the chevron, which had worked fine one release earlier from its old centre-right position, stopped working purely because it moved. Fix: `.save-indicator { pointer-events: none }` — it is an INDICATOR and must never eat a click; that also closes the corner for anything placed there in future. THE THIRD SYMPTOM was contrast, and it was real and separate: the icons inherited `var(--gray-500)` on the dark blue tabs bar, measured at 3:1, hence "(barely)". Now `rgba(255,255,255,0.8)` — 12.1:1 measured — matching the white tab buttons beside them, and the chevron gets the same treatment because it has been that same mid grey on that same dark bar since v4.32.0. THE PROBE LESSON, PAID ONE RELEASE AFTER WRITING IT DOWN: v4.42.0's assertions clicked with `el.click()`, which dispatches straight at the element and CANNOT SEE AN OVERLAY, so all three buttons were reported healthy while every real click was being swallowed. That is §5B lesson 37 — an assertion that calls the handler tests the destination, not the road — violated in the very probe written to honour it. The assertions now hit-test with `elementFromPoint` (the v4.10.1 method) and then click with the MOUSE at real coordinates; the five new ones FAIL on the shipped v4.42.0 (9/14) and pass here (14/14), so the regression is locked rather than merely fixed.
         // v4.42.0: ROUND 20 ITEM 9 — Print and Settings reachable while the desktop header is COLLAPSED, which has been the DEFAULT since v4.32.0. Both controls live inside <header>, and v4.32.0 hides that whole element by one rule (rule 16's shape) — so out of the box a fresh desktop had NO route to Print or Settings at all except expanding the header first, and his screenshot S5 drew two empty boxes at the right of the tabs row where he expected them. This is a SECOND ROUTE to the same two functions (the v3.85.0 two-entry-point precedent), never a move: the header's own pair stays mounted and keeps working when it is expanded, and the tabs-row pair is shown ONLY under body.eos-hdr-collapsed, so the app can never offer two Settings buttons at once — asserted in BOTH directions, because a gate tested one way is half a gate. THE LAYOUT DETAIL THAT NEEDED A SECOND PASS, and it was found by a screenshot rather than by reasoning: .tabs is a CENTRED WRAPPING flex row, so three loose buttons appended to it scattered across a second line the moment the tabs filled the first one (measured at 1280: they did, with Print stranded at the right edge of line 1 and the gear and chevron centred on line 2). Wrapped in one .tabs-hdr-group with margin-left:auto, the three either sit at the right of the tabs line (1440 and 1920, asserted) or wrap together as one compact right-aligned cluster (1280). The phone carries a belt !important rule even though .tabs is already display:none there, matching the chevron's own belt — a phone must never grow a second Settings button whatever later chrome work does to that row. Probe probe-v4.42.0.js 11/11 incl. both gate directions, both clicks reaching masterPrintModal and settingsModal (a control that renders and does nothing is this project's most expensive shape), and 0 overflow. Client-only, no clasp round.
         // v4.41.0: ROUND 20 ITEMS 2/3/19 — the "Block time" button and the Block-it picker REBUILT to the fill-slot picker's shape. His screenshot S4 put "Block time for…" and "What goes in Q1 — Do First?" side by side with a red arrow between them, and the ask was that the first should be the second. It was an eosChoose LIST: no search box, no way to create the task you opened it to find, and a fixed short candidate set — so a to-do due next week could not be blocked at all, however much you wanted to work on it today. Now #calPickModal, built from #fillSlotModal's own markup and classes rather than a near-miss copy, with a search box (delegated 'input' listener + data-no-composer, rule 24, exactly like that picker's) and an add-a-task row that runs createSyncedTodo — the same path the + Add modal uses, so a task made here is a real to-do on the member's PUSH list, not a calendar-only string, and the picker settles with it so one gesture goes task -> block. THE CATEGORIES ARE A PRECEDENCE, not five queries: his order (Rule of 3 -> Matrix -> Rocks -> other lists -> Kanban) only means something if a task appears ONCE, in the highest group that claims it, or a to-do sitting in Q2 would list under Matrix AND again under its Google list. The cap is checked BEFORE the claim so a task squeezed out of a full group falls through to the next instead of vanishing. MATRIX IS OFFERED FOR THE FIRST TIME and rides with the To-dos layer rather than becoming a sixth EOS layer — a matrix entry IS a to-do, and a sidebar checkbox that changed nothing visible on the grid would be a control lying about its scope. TWO FILTERS RELAX WHILE SEARCHING (cap 8->25, and the due-today-or-overdue rule steps aside) because a search box that cannot find a task is worse than no search box; at rest that rule is still the whole point. Kanban claims under its own 'kb:' key so a card can never dedupe against a same-named to-do — round-16 Group B untouched. The BUTTON: toolbar + sidebar, blocking on the DAY IN FOCUS (today when today is in the shown week, else that week's first day) via a new third parameter on calBlockTime — a separate parameter and not a synthesised gap ISO, because the PRESENCE of gapStartISO is what routes between "start exactly here" and the duration-then-tiles flow, so faking one to carry a date would have silently picked the wrong flow. Desktop-only for now via .cal-newev-btn (the phone toolbar is already tight — round 20 item 12 says it needs MORE room; the phone still reaches Block-it through the coaching band and the gap taps). That shared class made _calRenderSidebar's querySelector a latent bug — a single-match read would have left the second button visible on a cleanly-probed-off deployment (Amanda's) while looking like working code; it is querySelectorAll now. Client-only, NO clasp round. Probe cal-blocktime-probe.js 47/47, 0/7 on the deployed v4.40.0 clone; battery 60/60 + 57/57 + 54/54 + 18/18 + 8/8 + 4/4 + 11/11 + 12/12; 0 overflow at 375/412/768/1280 with the picker asserted OPEN during the measurement.
         // Earlier release narratives, newest first, kept verbatim below the live constant.
@@ -6549,7 +6550,16 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v4.42.1 &mdash; 2026-08-17 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v4.43.0 &mdash; 2026-08-17 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Important fix: opening Today on a device that had never held your plan could wipe your Rule of 3 and Eisenhower matrix everywhere.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Fixed: a device seeing your plan for the first time could erase it for every device.</strong> Opening Today on a new phone, a new browser, or after clearing your browser data started you on a blank plan &mdash; and that blank was then saved to the cloud as the newest version, so every other device replaced your real plan with it.</li>'
+                + '<li><strong>A blank plan can no longer overwrite a saved one.</strong> If your device has nothing and the cloud has your plan, your device now takes the cloud copy instead of pushing its blank. Clearing your plan on purpose still works normally.</li>'
+                + '<li>Your <em>tasks</em> were never affected by this &mdash; they live in Google Tasks. What could be lost was the arrangement: which three were today&rsquo;s priorities and which quadrant each sat in.</li>'
+                + '</ul>'
+                + '</div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v4.42.1 &mdash; 2026-08-17</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">The Print and Settings icons now actually work, and you can read them.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Fixed: Print, Settings and the arrow that brings the blue header back did nothing when clicked.</strong> The invisible &ldquo;Saved&rdquo; marker that flashes in the top-right corner sits there permanently, and it was catching every click in that corner. It no longer catches anything.</li>'
@@ -30079,6 +30089,14 @@ Return ONLY the JSON array:`;
             // Load user's daily plan from localStorage
             const storageKey = `eos_dailyPlan_${user}`;
             const stored = localStorage.getItem(storageKey);
+            // v4.43.0 (THE DATA-LOSS FIX): remember whether this device actually HAD a
+            // plan. "I have no plan" and "my plan is empty" are different facts, and the
+            // tail save at the bottom of this function must never confuse them — see the
+            // comment there. A device opening Today for the first time (new device, new
+            // browser profile, cleared storage, or dailyPlanUser resolving to different
+            // initials) lands on the empty default below, and before this flag existed it
+            // then PUSHED that default over everyone's real plan.
+            _dpHadStored = (stored !== null);
             dailyPlanData = stored ? JSON.parse(stored) : {
                 matrix: { q1: [], q2: [], q3: [], q4: [] },
                 ruleOf3: [null, null, null],
@@ -30154,7 +30172,16 @@ Return ONLY the JSON array:`;
             // the other device without waiting for the person's next real edit.
             // (Before this, enrichment only ran inside a save and a quiet load never
             // saved — the portable identity existed but never travelled.)
-            try { saveDailyPlan(); } catch (e) { }
+            // v4.43.0: ...but ONLY when this device actually had a plan to begin with.
+            // If localStorage held nothing, dailyPlanData above is the EMPTY DEFAULT, and
+            // saving it here persisted that default AND pushed it with a fresh savedAt —
+            // which, being newest, won last-write-wins and wiped the real plan out of the
+            // cloud, after which every other device dutifully adopted the blank. One
+            // device opening Today for the first time destroyed everyone's plan. Hans hit
+            // exactly this on 2026-08-17 (cloud row updated_at 00:34:45Z, ruleOf3
+            // [null,null,null], all four quadrants empty). A device with nothing to say
+            // must say nothing and let _dpMaybePull below populate it from the cloud.
+            if (_dpHadStored) { try { saveDailyPlan(); } catch (e) { } }
             // v4.36.0: the renders above counted every portable reference they could
             // not resolve — if there were any, one throttled Google pull heals them
             // (his 2b). Sits AFTER the renders so the count is this load's, and an
@@ -30244,6 +30271,25 @@ Return ONLY the JSON array:`;
         // timestamps (endTime), so the receiving device computes the true remaining
         // time however late the row arrives — only start/stop/pause need to travel.
         let _dpSyncing = false, _dpPushTimer = null, _dpLastPullAt = 0, _dpAdopting = false;
+        // v4.43.0: set by loadDailyPlan — did THIS device actually have a stored plan, or
+        // is it looking at the empty default? Declared false so that anything running
+        // before the first load can never be mistaken for "had a plan".
+        let _dpHadStored = false;
+        // "Empty" means it carries no work a person would miss: no Rule-of-3 entry, no
+        // task in any quadrant, no Today-only task, no notes. Habits and the pomodoro
+        // count are deliberately NOT part of this test — they are settings and a counter,
+        // not content, and letting a habit tick make a blank plan look populated would
+        // defeat the guard entirely.
+        function _dpIsEmptyPlan(plan) {
+            if (!plan || typeof plan !== 'object') return true;
+            const r3 = (plan.ruleOf3 || []).filter(function (e) { return !!e; }).length;
+            if (r3) return false;
+            const m = plan.matrix || {};
+            for (const k of ['q1', 'q2', 'q3', 'q4']) if ((m[k] || []).length) return false;
+            if ((plan.localTasks || []).length) return false;
+            if (String(plan.tomorrowNotes || '').trim()) return false;
+            return true;
+        }
 
         function dailyPlanSyncBlocker() {
             const sb = mktGetSupabaseClient();
@@ -30311,6 +30357,32 @@ Return ONLY the JSON array:`;
                 if (mode === 'push') {
                     const payload = _dpPayload();
                     if (!payload.plan) { setSyncState('daily', 'synced', ''); return true; }
+                    // v4.43.0 — THE BELT, and it is the half that would have saved Hans
+                    // whatever the cause. This upsert was blind: last-write-wins with no
+                    // read, so ANY empty local plan carrying a newer stamp silently
+                    // replaced a full cloud row. Emptiness is never worth propagating —
+                    // there is no legitimate reason to overwrite three priorities and a
+                    // populated matrix with nothing, and a person who really has cleared
+                    // their plan loses only that clearing, which costs seconds to redo.
+                    // Rule 49's principle one level up: do not push a deletion you cannot
+                    // prove was intended. Read-then-decide (rule 48's order) for the one
+                    // case where it matters, so the common non-empty push stays a single
+                    // round trip.
+                    if (_dpIsEmptyPlan(payload.plan)) {
+                        const { data: cur, error: readErr } = await sb.from('daily_plans')
+                            .select('payload, saved_at').eq('user_id', mktSupabaseProfile.id).maybeSingle();
+                        if (readErr) throw readErr;
+                        const cloudPlan = (cur && cur.payload && cur.payload.plan) || null;
+                        if (cloudPlan && !_dpIsEmptyPlan(cloudPlan)) {
+                            // Adopt rather than destroy. The cloud is the only copy of a
+                            // real plan at this moment, so taking it is strictly safer
+                            // than keeping a blank — and it is what the person wants to
+                            // see on a device that simply had not caught up yet.
+                            _dpAdopt(cur.payload);
+                            setSyncState('daily', 'synced', '');
+                            return true;
+                        }
+                    }
                     const { error } = await sb.from('daily_plans').upsert({
                         user_id: mktSupabaseProfile.id,
                         firm_id: mktSupabaseProfile.firm_id,
