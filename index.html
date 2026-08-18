@@ -13,7 +13,7 @@
          Marketing tab; the rest of the app is untouched by this. -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%231a365d' width='100' height='100' rx='15'/%3E%3Ctext x='50' y='50' font-family='Arial, sans-serif' font-size='45' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='central'%3EEOS%3C/text%3E%3Ccircle cx='85' cy='15' r='8' fill='%233182ce'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="styles.css?v=4.44.0">
+    <link rel="stylesheet" href="styles.css?v=4.45.0">
 </head>
 <body>
     <div class="container">
@@ -3368,9 +3368,10 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '4.44.0';
-        const EOS_BUILD_DATE = '2026-08-17';
-        const EOS_BUILD_TIME = '23:55'; // v4.44.0: DAILY-PLAN SNAPSHOTS — the undo of last resort, and Hans's own framing of why it goes ahead of the feature queue: "the next bug in this class costs one click, not my Rule of 3." v4.43.0 fixed the cause it found and added a belt against the class, but neither hands back a plan that is ALREADY gone, and his Rule of 3 has now been destroyed three times in a week by one defect FAMILY — the plan stores REFERENCES to tasks, so anything unresolvable gets deleted rather than held (rule 49's ground). Snapshots are the only layer here that does not depend on us having predicted the bug. THE INVARIANT, and it is deliberately one sentence: this device keeps the last 10 DISTINCT NON-EMPTY plans it has ever held, under its own key `eos_dailyPlanSnaps_<initials>`. ONE call site guarantees that — the tail of saveDailyPlan() — because every route by which a plan reaches this device's screen ends in loadDailyPlan() and loadDailyPlan() ends in a save: a local edit, the day rollover, the gid/xt back-fill, and an adopted cloud row (_dpAdopt writes localStorage and then re-enters the loader). THE BRANCH THAT MATTERS IS THE NO-OP ONE: a plan adopted from another device carries THAT device's syncHash, so it arrives at saveDailyPlan as an unchanged save and returns early — a snapshot taken only on the changed branch would never once see a plan this device RECEIVED rather than typed, which is more than half of them. Dedup is on saveDailyPlan's own newHash, passed in rather than recomputed, so the quiet repeat save that runs on every load costs one string compare, and two devices agreeing on content agree on the fingerprint. EMPTY PLANS ARE NEVER SNAPSHOTTED (the v4.43.0 _dpIsEmptyPlan test, reused rather than re-expressed): a blank is not a state anyone wants back, and ten blanks in a row would push the last real plan out of the ring — which is exactly the shape of the bug this exists to survive. SNAPSHOTS ARE DEVICE-LOCAL AND MUST NEVER SYNC; they are not in _dpPayload and must not be added to it, because the whole value of the store is that it is the one copy a remote write cannot reach. TWO ROUTES, deliberately different jobs. (1) The RESTORE BAND above the Today grid is the one-click route and is CONTEXTUAL — rendered only when the plan on screen is empty AND a non-empty snapshot exists, which is the moment of the loss; gated on the information it carries rather than on a flag (rule 37), so no snapshots means no band. (2) "Restore an earlier plan…" in the Today wrench panel is the PERMANENT route, and it exists because the loss Hans has actually been living with is PARTIAL — a Rule of 3 gone while the matrix survives is not an empty plan and shows no band. Both open the same picker, which names each version in his terms ("2 priorities · 7 matrix tasks", "Today 4:12 PM"), never "10 entries". THE RESTORE re-enters loadDailyPlan() rather than repainting by hand — _dpAdopt's choice for _dpAdopt's reason, so the rollover, the six renders and restorePomodoroTimer() run exactly as on a normal visit and a restore can never drift from a load. IT STRIPS savedAt AND syncHash FROM THE COPY BEFORE WRITING, and that is load-bearing rather than tidying: saveDailyPlan dedups by comparing newHash against the STORED blob's syncHash, so a restored plan that kept its old fingerprint would take the no-op branch, carry the blank's stamp forward and never push — the plan would come back on this device and stay lost on every other one, a failure wearing a success face. Probe probe-v4.44.0.js 24/24 here, 0/24 on the deployed v4.43.0, and it drives the WHOLE incident end to end: seed a real plan, blank it the way the cloud blanked it, assert the band appears, click the button with the MOUSE after hit-testing it (v4.42.1's lesson), and assert the Rule of 3 is back AND a push was queued. Client-only, no clasp round, no schema change.
+        const EOS_VERSION = '4.45.0';
+        const EOS_BUILD_DATE = '2026-08-18';
+        const EOS_BUILD_TIME = '00:40'; // v4.45.0: ROUND 20 ITEM 8 — press an occupied Rule-of-3 slot or matrix task and REPLACE what is in it. Until now `targetFor` inside initFillSlotGesture opened with `if (el.closest('.matrix-task, .rule-slot:not(.empty), …')) return null` — the picker was strictly an EMPTY-slot picker, so changing your mind about a priority meant removing it through the ⋯ menu and then filling the slot: two gestures and a trip through a menu for the single most-changed thing on the page. THE POINTER SPLIT IS THE DESIGN, and it is not a compromise — it is what each pointer already means here. A FINE pointer must leave the text alone, because clicking the text is Edit (v4.15.0's one-tap edit) and that is a different, more common intent; the rest of the row is Replace. A COARSE pointer gets the WHOLE row, text included, because a 500ms hold is unambiguously not a tap AND because the row leaves it nowhere else to land: MEASURED on a 412 phone, only 31% of a `.matrix-task` is free of its own text and controls (58% of a Rule-of-3 slot, which has the number badge), so restricting the hold to that 31% would have been a gesture that works in the screenshot and fails in the hand — rule 1, applied to a gesture rather than a layout. THE RULE-OF-3 HALF NEEDED NOTHING beyond being allowed: commitRuleEntry already overwrites the slot it is handed. THE MATRIX HALF NEEDED REPLACE-IN-PLACE, because a quadrant holds many tasks and appending the new one at the bottom would read as "added", not "replaced" — a control lying about what it did. Rule 22 says commitMatrixEntry is the ONLY sanctioned writer of a quadrant, so the splice lives INSIDE it behind a new `opts.replaceId`, never in the caller. **replaceId, never replaceIndex**: `_matrixForgetId` runs first and can shift every entry left, so an index captured before that pass points at the wrong task after it; an id survives the shift. THREE BELTS THIS GESTURE HAS NEVER NEEDED UNTIL NOW, and the reason it never needed them is the whole finding: every target it had before this release — an empty slot, an empty quadrant, the hint text — carries NO draggable attribute, while an occupied `.rule-slot` and a `.matrix-task` are BOTH `draggable="true"`. That walks straight into v4.16.1's bug: Chrome Android starts its NATIVE HTML5 drag on a long-press of any draggable element, at the same ~500ms this timer waits, and the browser's drag ghost eats the hold. Same three answers the Kanban move sheet already ships (rule 44): disarm `draggable` for the duration of the touch and restore it ON RELEASE (never when the timer fires — rearming at the 500ms mark puts the attribute back under a finger that is still down, the one moment the browser is looking for it); refuse a `dragstart` that begins while a hold is ARMED; suppress `contextmenu` while armed. A FOURTH belt is new here and belongs to the coarse-pointer decision: the hold may start ON the text, whose onclick is Edit, so the click that follows the release would open the edit prompt on top of the picker — ONE click is eaten, and only within 700ms, because a flag with no expiry sooner or later swallows an unrelated click somewhere else. THE PICKER NOW SAYS IT IS REPLACING and names the outgoing task ("Replace "Finish the Q3 board deck" in slot 1 with…"), which is what makes Close a real cancel: you can see what you would lose. Empty slots keep the old sentence exactly. NO "you picked the one already there" GUARD, deliberately — _fillSlotCandidates drops every id already in a quadrant or a slot, so the outgoing task is not in the list, and fillSlotCreateTask always brings a fresh id; a guard for a case that cannot occur is a dead path that reads as a handled one. Probe probe-v4.45.0.js 40/40 here, 22/42 on the deployed v4.44.0, and it PERFORMS the gesture rather than calling the handler (§5B lesson 37): the desktop half clicks with the MOUSE at coordinates elementFromPoint confirms are really the row, the phone half dispatches a real 500ms touch hold and then fires the click a finger would fire. Its own first run was 18/36 for a HARNESS reason worth keeping: `page.evaluate(STRING, arg)` silently drops the argument — Playwright only forwards args to a FUNCTION — so every helper ran with `sel === undefined` and reported the whole feature dead, including the parts that predate this release. Client-only, no clasp round.
+        // v4.44.0: DAILY-PLAN SNAPSHOTS — the undo of last resort, and Hans's own framing of why it goes ahead of the feature queue: "the next bug in this class costs one click, not my Rule of 3." v4.43.0 fixed the cause it found and added a belt against the class, but neither hands back a plan that is ALREADY gone, and his Rule of 3 has now been destroyed three times in a week by one defect FAMILY — the plan stores REFERENCES to tasks, so anything unresolvable gets deleted rather than held (rule 49's ground). Snapshots are the only layer here that does not depend on us having predicted the bug. THE INVARIANT, and it is deliberately one sentence: this device keeps the last 10 DISTINCT NON-EMPTY plans it has ever held, under its own key `eos_dailyPlanSnaps_<initials>`. ONE call site guarantees that — the tail of saveDailyPlan() — because every route by which a plan reaches this device's screen ends in loadDailyPlan() and loadDailyPlan() ends in a save: a local edit, the day rollover, the gid/xt back-fill, and an adopted cloud row (_dpAdopt writes localStorage and then re-enters the loader). THE BRANCH THAT MATTERS IS THE NO-OP ONE: a plan adopted from another device carries THAT device's syncHash, so it arrives at saveDailyPlan as an unchanged save and returns early — a snapshot taken only on the changed branch would never once see a plan this device RECEIVED rather than typed, which is more than half of them. Dedup is on saveDailyPlan's own newHash, passed in rather than recomputed, so the quiet repeat save that runs on every load costs one string compare, and two devices agreeing on content agree on the fingerprint. EMPTY PLANS ARE NEVER SNAPSHOTTED (the v4.43.0 _dpIsEmptyPlan test, reused rather than re-expressed): a blank is not a state anyone wants back, and ten blanks in a row would push the last real plan out of the ring — which is exactly the shape of the bug this exists to survive. SNAPSHOTS ARE DEVICE-LOCAL AND MUST NEVER SYNC; they are not in _dpPayload and must not be added to it, because the whole value of the store is that it is the one copy a remote write cannot reach. TWO ROUTES, deliberately different jobs. (1) The RESTORE BAND above the Today grid is the one-click route and is CONTEXTUAL — rendered only when the plan on screen is empty AND a non-empty snapshot exists, which is the moment of the loss; gated on the information it carries rather than on a flag (rule 37), so no snapshots means no band. (2) "Restore an earlier plan…" in the Today wrench panel is the PERMANENT route, and it exists because the loss Hans has actually been living with is PARTIAL — a Rule of 3 gone while the matrix survives is not an empty plan and shows no band. Both open the same picker, which names each version in his terms ("2 priorities · 7 matrix tasks", "Today 4:12 PM"), never "10 entries". THE RESTORE re-enters loadDailyPlan() rather than repainting by hand — _dpAdopt's choice for _dpAdopt's reason, so the rollover, the six renders and restorePomodoroTimer() run exactly as on a normal visit and a restore can never drift from a load. IT STRIPS savedAt AND syncHash FROM THE COPY BEFORE WRITING, and that is load-bearing rather than tidying: saveDailyPlan dedups by comparing newHash against the STORED blob's syncHash, so a restored plan that kept its old fingerprint would take the no-op branch, carry the blank's stamp forward and never push — the plan would come back on this device and stay lost on every other one, a failure wearing a success face. Probe probe-v4.44.0.js 24/24 here, 0/24 on the deployed v4.43.0, and it drives the WHOLE incident end to end: seed a real plan, blank it the way the cloud blanked it, assert the band appears, click the button with the MOUSE after hit-testing it (v4.42.1's lesson), and assert the Rule of 3 is back AND a push was queued. Client-only, no clasp round, no schema change.
         // v4.43.0: THE DAILY-PLAN DATA-LOSS FIX, and it is the most serious defect this project has shipped. Hans, 2026-08-17: "not sure what happened to the Rule of 3 section, etc.. Everything is missing." His Supabase daily_plans row read ruleOf3 [null,null,null], all four quadrants empty, updated_at 00:34:45Z — minutes earlier, during his own testing on a second device. CAUSE: loadDailyPlan() builds an EMPTY DEFAULT whenever localStorage holds no plan under `eos_dailyPlan_<initials>` for the resolved user — a new device, a new browser profile, cleared storage, or dailyPlanUser resolving to different initials — and v4.35.1 added a saveDailyPlan() at the TAIL of that same function so that gid/xt enrichment and rollover results would travel. Those two are fine apart and catastrophic together: the first-open device persisted the blank default AND pushed it with a fresh savedAt, which being newest won last-write-wins, wiped the real plan out of the cloud, and every other device then dutifully ADOPTED the blank. One device opening Today for the first time destroyed everyone's plan, silently, with the badge honestly reading "Synced". TWO LAYERS, and the second is the one that matters. (1) THE CAUSE: loadDailyPlan records `_dpHadStored = (stored !== null)` and the tail save runs only when true — "I have no plan" and "my plan is empty" are DIFFERENT FACTS and the tail save had been treating them as one; a device with nothing to say must say nothing and let _dpMaybePull populate it. (2) THE BELT, which would have saved him whatever the cause: the push was a BLIND upsert, so any empty local plan with a newer stamp silently replaced a full cloud row. Now, when the outgoing plan is empty (_dpIsEmptyPlan: no Rule-of-3 entry, no task in any quadrant, no Today-only task, no notes — habits and the pomo count deliberately do NOT count as content, or a habit tick would make a blank plan look populated and defeat the guard), it READS the cloud row first and, if that is non-empty, ADOPTS it instead of pushing. Emptiness is never worth propagating: there is no legitimate reason to overwrite three priorities and a populated matrix with nothing, and a person who really did clear their plan loses only that clearing. Rule 49's principle one level up — do not push a deletion you cannot prove was intended — and rule 48's read-then-decide order, applied only to the one case where it matters so the common non-empty push stays a single round trip. A genuinely new person is NOT wedged: an empty push over an absent or empty cloud row still proceeds. Probe probe-v4.43.0.js 15/15 (0/1 on v4.42.1), and its own first run was a FALSE PASS worth recording: `window.mktSupabaseProfile = {...}` does not rebind a `let`, so the real client threw, nothing was written, and "the cloud row was not overwritten" was true because the sync never ran — the positive controls C and D are what exposed it. Client-only, no clasp round, no schema change.
         // v4.42.1: HOTFIX for all three symptoms Hans hit within minutes of v4.42.0 — "I see the Printer and Gear icon (barely), and they don't do anything, and clicking the down arrow doesn't bring back up the blue header." ONE cause for two of the three, and it is a dead zone that has existed for the entire life of this app: #saveIndicator is `position:fixed; top:20px; right:20px; z-index:1001`, PERMANENTLY MOUNTED, and merely `opacity:0` at rest — and opacity 0 does NOT remove an element from hit-testing. It has therefore always owned roughly a 110x40px hole in the top-right corner of every page. Nothing had ever been placed there, so nothing had ever paid for it. v4.42.0's `margin-left:auto` moved the whole `.tabs-hdr-group` INTO it, so Print, Settings AND the chevron all landed underneath — every real click hit the invisible indicator and did nothing, and the chevron, which had worked fine one release earlier from its old centre-right position, stopped working purely because it moved. Fix: `.save-indicator { pointer-events: none }` — it is an INDICATOR and must never eat a click; that also closes the corner for anything placed there in future. THE THIRD SYMPTOM was contrast, and it was real and separate: the icons inherited `var(--gray-500)` on the dark blue tabs bar, measured at 3:1, hence "(barely)". Now `rgba(255,255,255,0.8)` — 12.1:1 measured — matching the white tab buttons beside them, and the chevron gets the same treatment because it has been that same mid grey on that same dark bar since v4.32.0. THE PROBE LESSON, PAID ONE RELEASE AFTER WRITING IT DOWN: v4.42.0's assertions clicked with `el.click()`, which dispatches straight at the element and CANNOT SEE AN OVERLAY, so all three buttons were reported healthy while every real click was being swallowed. That is §5B lesson 37 — an assertion that calls the handler tests the destination, not the road — violated in the very probe written to honour it. The assertions now hit-test with `elementFromPoint` (the v4.10.1 method) and then click with the MOUSE at real coordinates; the five new ones FAIL on the shipped v4.42.0 (9/14) and pass here (14/14), so the regression is locked rather than merely fixed.
         // v4.42.0: ROUND 20 ITEM 9 — Print and Settings reachable while the desktop header is COLLAPSED, which has been the DEFAULT since v4.32.0. Both controls live inside <header>, and v4.32.0 hides that whole element by one rule (rule 16's shape) — so out of the box a fresh desktop had NO route to Print or Settings at all except expanding the header first, and his screenshot S5 drew two empty boxes at the right of the tabs row where he expected them. This is a SECOND ROUTE to the same two functions (the v3.85.0 two-entry-point precedent), never a move: the header's own pair stays mounted and keeps working when it is expanded, and the tabs-row pair is shown ONLY under body.eos-hdr-collapsed, so the app can never offer two Settings buttons at once — asserted in BOTH directions, because a gate tested one way is half a gate. THE LAYOUT DETAIL THAT NEEDED A SECOND PASS, and it was found by a screenshot rather than by reasoning: .tabs is a CENTRED WRAPPING flex row, so three loose buttons appended to it scattered across a second line the moment the tabs filled the first one (measured at 1280: they did, with Print stranded at the right edge of line 1 and the gear and chevron centred on line 2). Wrapped in one .tabs-hdr-group with margin-left:auto, the three either sit at the right of the tabs line (1440 and 1920, asserted) or wrap together as one compact right-aligned cluster (1280). The phone carries a belt !important rule even though .tabs is already display:none there, matching the chevron's own belt — a phone must never grow a second Settings button whatever later chrome work does to that row. Probe probe-v4.42.0.js 11/11 incl. both gate directions, both clicks reaching masterPrintModal and settingsModal (a control that renders and does nothing is this project's most expensive shape), and 0 overflow. Client-only, no clasp round.
@@ -6597,7 +6598,18 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v4.44.0 &mdash; 2026-08-17 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v4.45.0 &mdash; 2026-08-18 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">You can now swap out a Rule of 3 priority or a matrix task without removing it first.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Press a priority or a matrix task you already have, and pick a different one.</strong> Before this you had to remove it from the &#8943; menu first and then fill the empty slot.</li>'
+                + '<li><strong>On a phone:</strong> hold the task for half a second, anywhere on it. <strong>On a computer:</strong> click it anywhere except the task text &mdash; clicking the text still opens it for editing, as it always has.</li>'
+                + '<li>The picker tells you which task you are about to replace, so <em>Close</em> is a real way out if you change your mind. Nothing moves until you choose something.</li>'
+                + '<li>In the matrix, the new task takes the old one&rsquo;s place in the list rather than going to the bottom.</li>'
+                + '<li>Empty slots and empty quadrants work exactly as before.</li>'
+                + '</ul>'
+                + '</div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v4.44.0 &mdash; 2026-08-17</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Your last ten daily plans are now kept on this device, so a lost Rule of 3 is one click to get back.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Your recent plans are saved automatically.</strong> Every time your plan changes, a copy is kept on this device &mdash; the last ten different versions. Blank plans are never kept, so a bad day can never crowd out a good one.</li>'
@@ -33035,8 +33047,21 @@ Return ONLY the JSON array:`;
                     return (e && e.id === entry.id) ? null : e;
                 });
             }
-            dailyPlanData.matrix[quadrant] = dailyPlanData.matrix[quadrant] || [];
-            dailyPlanData.matrix[quadrant].push(entry);
+            const arr = dailyPlanData.matrix[quadrant] = dailyPlanData.matrix[quadrant] || [];
+            // v4.45.0 (round 20 item 8): REPLACE IN PLACE. Pressing an occupied task and
+            // picking another one has to put the new task where the old one was — appending
+            // it at the bottom of the quadrant would read as "added", not "replaced", which
+            // is a control lying about what it did.
+            // opts.replaceId, never an index: _matrixForgetId above can shift every entry
+            // left, so an index captured before that pass points at the wrong task after it.
+            // An id survives the shift, and looking it up here — after the dedup, inside the
+            // one function rule 22 allows to write a quadrant — is what keeps this out of
+            // the "splice the array yourself" trap the caller would otherwise fall into.
+            let at = -1;
+            if (opts.replaceId) {
+                at = arr.findIndex(function (e) { return e && e.id === opts.replaceId; });
+            }
+            if (at >= 0) arr.splice(at, 1, entry); else arr.push(entry);
             saveDailyPlan();
             renderMatrix();
             renderRuleOf3();
@@ -33359,9 +33384,24 @@ Return ONLY the JSON array:`;
             _fillSlotTarget = target;
             const title = document.getElementById('fillSlotTitle');
             if (title) {
-                title.textContent = target.kind === 'rule'
-                    ? 'What goes in slot ' + (target.slot + 1) + '?'
-                    : 'What goes in ' + ((MOVE_QUADRANTS.find(function (q) { return q.key === target.key; }) || {}).label || 'this quadrant') + '?';
+                const where = target.kind === 'rule'
+                    ? 'slot ' + (target.slot + 1)
+                    : ((MOVE_QUADRANTS.find(function (q) { return q.key === target.key; }) || {}).label || 'this quadrant');
+                // v4.45.0 (round 20 item 8): a replace must SAY it is a replace, and name the
+                // task it is about to push out. "What goes in slot 1?" over an occupied slot
+                // is the app describing the wrong action — and it is the sentence that makes
+                // Close a real cancel rather than a shrug, because you can see what you would
+                // lose. The old text is still exactly right for an empty slot.
+                let outgoing = '';
+                if (target.replaceId) {
+                    const r = resolveTaskById(target.replaceId);
+                    outgoing = (r && r.record && r.record.text) ? String(r.record.text) : '';
+                }
+                title.textContent = target.replaceId
+                    ? (outgoing
+                        ? 'Replace “' + (outgoing.length > 44 ? outgoing.slice(0, 43) + '…' : outgoing) + '” in ' + where + ' with…'
+                        : 'Replace what is in ' + where + ' with…')
+                    : 'What goes in ' + where + '?';
             }
             const search = document.getElementById('fillSlotSearch');
             if (search) search.value = '';
@@ -33404,9 +33444,16 @@ Return ONLY the JSON array:`;
             const entry = _moveEntryFor(id);
             if (!entry) { showToast('That task could not be found.', 'error'); return; }
 
+            // v4.45.0: no "you picked the one that is already there" guard, deliberately —
+            // it would be unreachable. _fillSlotCandidates drops every id already sitting in
+            // a quadrant or a slot, so the outgoing task is not in the list this picker just
+            // rendered, and the only other caller (fillSlotCreateTask) always brings a
+            // freshly minted id. A guard for a case that cannot occur is a dead path that
+            // reads as a handled one.
+            const replacing = !!target.replaceId;
             const ok = (target.kind === 'rule')
                 ? commitRuleEntry(entry, target.slot)
-                : commitMatrixEntry(entry, target.key);
+                : commitMatrixEntry(entry, target.key, { replaceId: target.replaceId || null });
             if (!ok) { showToast('Could not place that task.', 'error'); return; }
 
             closeFillSlotModal();
@@ -33414,8 +33461,8 @@ Return ONLY the JSON array:`;
             const where = (target.kind === 'rule')
                 ? 'Rule of 3, slot ' + (target.slot + 1)
                 : ((MOVE_QUADRANTS.find(function (q) { return q.key === target.key; }) || {}).label || target.key);
-            addLogEntry('Placed a task into ' + where + ' from the empty-slot picker');
-            showToast('Added to ' + where, 'success');
+            addLogEntry((replacing ? 'Replaced the task in ' : 'Placed a task into ') + where + ' from the slot picker');
+            showToast((replacing ? 'Replaced in ' : 'Added to ') + where, 'success');
         }
 
         // ---- the gesture ----
@@ -33433,10 +33480,53 @@ Return ONLY the JSON array:`;
         (function initFillSlotGesture() {
             let timer = null, startX = 0, startY = 0, armedTarget = null;
 
-            const targetFor = function (el) {
+            // v4.45.0 (round 20 item 8) — an OCCUPIED slot or matrix task is a target now,
+            // and the picker REPLACES what is there. Until this release `targetFor` bailed on
+            // `.matrix-task, .rule-slot:not(.empty)`, so the only way to change your mind
+            // about a priority was to remove it through the ⋯ menu and then fill the empty
+            // slot: two gestures and a trip through a menu for the single most-changed thing
+            // on the page.
+            //
+            // `coarse` decides how much of the row is a target, and the split is not a
+            // compromise — it is what each pointer already means here. A FINE pointer must
+            // leave the text alone: clicking the text is Edit (v4.15.0's one-tap edit) and
+            // that is a different, more common intent. A COARSE pointer gets the WHOLE row,
+            // because a 500ms hold is unambiguously not a tap, and because the row leaves it
+            // nowhere else to land: measured on a 412 phone, only 31% of a matrix task is
+            // free of its own text and controls (58% of a Rule-of-3 slot, which has the
+            // number badge). Restricting the hold to that 31% would have been a gesture that
+            // works in the screenshot and fails in the hand.
+            const targetFor = function (el, coarse) {
                 if (!el || !el.closest) return null;
-                // Never hijack a press on an existing task, its actions, or a control.
-                if (el.closest('.matrix-task, .rule-slot:not(.empty), button, a, input, select, textarea')) return null;
+                // Controls are always theirs, on both pointers.
+                if (el.closest('button, a, input, select, textarea, .task-action-menu')) return null;
+                // The editable text belongs to Edit on a fine pointer only — see above.
+                if (!coarse && el.closest('.task-text, .task-text-editable')) return null;
+
+                // An occupied Rule-of-3 slot. commitRuleEntry already overwrites the slot it
+                // is given, so the Rule-of-3 half needs nothing beyond being allowed here.
+                const full = el.closest('.rule-slot:not(.empty)');
+                if (full) {
+                    const i = parseInt(full.getAttribute('data-slot'), 10);
+                    if (isNaN(i)) return null;
+                    const cur = (dailyPlanData && Array.isArray(dailyPlanData.ruleOf3)) ? dailyPlanData.ruleOf3[i] : null;
+                    return { kind: 'rule', slot: i, replaceId: (cur && cur.id) || null };
+                }
+                // A matrix task, or a matrix row still waiting for its task to sync. Both
+                // carry data-quadrant/data-idx; the id is read from the DATA at that index,
+                // not from the DOM, because the id is what commitMatrixEntry replaces by and
+                // the DOM index is only a lookup key. `.matrix-pending` is included on
+                // purpose — a slot holding something you cannot see is exactly a slot you
+                // might want to hand to a different task, and this is a deliberate press,
+                // not the automatic prune rule 49 warns about.
+                const task = el.closest('.matrix-task, .matrix-pending');
+                if (task) {
+                    const q = task.getAttribute('data-quadrant');
+                    const i = parseInt(task.getAttribute('data-idx'), 10);
+                    if (!q || isNaN(i)) return null;
+                    const cur = ((dailyPlanData && dailyPlanData.matrix) ? (dailyPlanData.matrix[q] || []) : [])[i];
+                    return { kind: 'quad', key: q, replaceId: (cur && cur.id) || null };
+                }
                 const slot = el.closest('.rule-slot.empty');
                 if (slot) {
                     const idx = parseInt(slot.getAttribute('data-slot'), 10);
@@ -33463,19 +33553,70 @@ Return ONLY the JSON array:`;
 
             const cancel = function () { clearTimeout(timer); timer = null; armedTarget = null; };
 
+            // v4.45.0 — THE THREE BELTS THIS GESTURE DID NOT NEED UNTIL NOW, and it needed
+            // none of them for a reason: every target it had before this release (an empty
+            // slot, an empty quadrant, the hint text) carries NO draggable attribute. An
+            // occupied `.rule-slot` and a `.matrix-task` are both `draggable="true"`, so
+            // allowing them walks straight into v4.16.1's bug — Chrome Android starts its
+            // NATIVE HTML5 drag on a long-press of any draggable element, at the same ~500ms
+            // this timer waits, and the browser's drag ghost eats the hold. Same three
+            // answers the Kanban move sheet already ships (rule 44), applied here:
+            //   1. disarm `draggable` for the duration of the touch, restore on release;
+            //   2. refuse a dragstart that begins while a hold is ARMED — a real mouse drag
+            //      never has one armed;
+            //   3. suppress contextmenu while armed, because some Android builds fire it at
+            //      ~the same duration and whichever fires first cancels the other.
+            let disarmed = null;
+            const disarmDrag = function (el) {
+                const d = (el && el.closest) ? el.closest('[draggable="true"]') : null;
+                if (!d) return;
+                d.draggable = false;
+                disarmed = d;
+            };
+            // Rearm on RELEASE, never when the timer fires: rearming at the 500ms mark puts
+            // the attribute back under a finger that is still down, which is the one moment
+            // the browser is looking for it. A re-render replaces the element with a fresh
+            // draggable one anyway, so a missed rearm cannot strand a row undraggable.
+            const rearmDrag = function () {
+                if (!disarmed) return;
+                try { disarmed.draggable = true; } catch (err) { }
+                disarmed = null;
+            };
+            // Belt 4, and it is about the OTHER half of the gesture: on a coarse pointer the
+            // hold is allowed to start on the task's own text, whose onclick is Edit. The
+            // click that follows the release would open the edit prompt on top of the picker.
+            // One click is eaten, and only within 700ms of the picker opening — a flag with
+            // no expiry would sooner or later swallow an unrelated click somewhere else.
+            let ateAt = 0;
+            document.addEventListener('click', function (e) {
+                if (!ateAt || Date.now() - ateAt > 700) return;
+                ateAt = 0;
+                e.stopPropagation();
+                e.preventDefault();
+            }, true);
+
             document.addEventListener('pointerdown', function (e) {
                 if (e.pointerType !== 'touch') return;          // fine pointers use click, below
-                const t = targetFor(e.target);
+                const t = targetFor(e.target, true);
                 if (!t) return;
                 armedTarget = t; startX = e.clientX; startY = e.clientY;
+                disarmDrag(e.target);
                 clearTimeout(timer);
                 timer = setTimeout(function () {
                     if (!armedTarget) return;
                     const fire = armedTarget; cancel();
                     if (navigator.vibrate) { try { navigator.vibrate(15); } catch (err) {} }
+                    if (fire.replaceId) ateAt = Date.now();
                     openFillSlot(fire);
                 }, 500);
             }, { passive: true });
+
+            document.addEventListener('dragstart', function (e) {
+                if (armedTarget) { e.preventDefault(); e.stopPropagation(); }
+            }, true);
+            document.addEventListener('contextmenu', function (e) {
+                if (armedTarget) e.preventDefault();
+            });
 
             // A drag of more than ~10px is a scroll, not a hold. Never preventDefault here:
             // the page must keep scrolling normally while the finger is down (decision 1's
@@ -33487,10 +33628,14 @@ Return ONLY the JSON array:`;
             ['pointerup', 'pointercancel', 'scroll'].forEach(function (evt) {
                 document.addEventListener(evt, cancel, { passive: true, capture: evt === 'scroll' });
             });
+            // Separate from cancel(), which the timer also calls — see rearmDrag's comment.
+            ['pointerup', 'pointercancel'].forEach(function (evt) {
+                document.addEventListener(evt, rearmDrag, { passive: true });
+            });
 
             document.addEventListener('click', function (e) {
                 if (window.matchMedia && window.matchMedia('(hover:none) and (pointer:coarse)').matches) return;
-                const t = targetFor(e.target);
+                const t = targetFor(e.target, false);
                 if (t) openFillSlot(t);
             });
 
