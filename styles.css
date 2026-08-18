@@ -480,8 +480,42 @@
         /* The one flexible child. min-width:0 is safe again now: with three fixed siblings
            instead of ten there is no shortfall large enough to collapse it, and the 240px
            floor v3.64.1 needed would only reintroduce overflow on a narrow column. */
-        .todo-item .tr-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+        /* v4.46.0 (round 20 item 10, screenshot S1): `flex: 1 1 auto` was `flex-grow: 1`,
+           so .tr-main filled the whole row however short the task was, and .tr-actions was
+           pushed to the far right edge. MEASURED, from the last GLYPH of the task text to
+           the left edge of its icons: median 804px at 1280 and 1444px at 1920. That is
+           Hans's "hard to see which icons relate to which task" in numbers, and it is why
+           measuring the ELEMENT is useless here — .todo-text is a block that fills .tr-main,
+           so its rect always ended ~6px from the icons at every width. The box was never the
+           gap; the ink was.
+           `flex: 0 1 auto` lets .tr-main size to its content and shrink when it must, so the
+           icons sit just after the words. The row goes ragged-right, which is the point:
+           adjacency is what ties an icon to its task. min-width still 0 so a long title
+           wraps inside the row instead of forcing overflow (rule 8's family). */
+        .todo-item .tr-main { flex: 0 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
         .todo-item .tr-actions { display: flex; align-items: center; flex-shrink: 0; }
+
+        /* v4.46.0: the 1/2/3-column To-Dos view (round 20 item 10). CSS multi-column, not a
+           grid, because the column flow keeps the list's ORDER: a parent task and the
+           subtasks indented under it stay adjacent in the same stream, where a grid would
+           scatter them across cells. break-inside on the row is what stops a task being cut
+           in half at a column boundary, and break-after on a list heading stops a heading
+           being stranded alone at the foot of a column.
+           THE MEDIA QUERIES ARE THE AUTHORITY, not the attribute: data-cols records what the
+           person CHOSE, and a window too narrow to honour it silently gives one column
+           rather than three unreadable ones. 900/1200 are where a row still has room for its
+           text after the split. Mirrored in JS as TODO_COLS_MIN_W so the app does not OFFER
+           a choice that would do nothing on the device in your hand. */
+        .todo-cols { column-gap: 18px; }
+        @media (min-width: 900px) {
+            .todo-cols[data-cols="2"], .todo-cols[data-cols="3"] { column-count: 2; }
+        }
+        @media (min-width: 1200px) {
+            .todo-cols[data-cols="3"] { column-count: 3; }
+        }
+        .todo-cols .todo-item,
+        .todo-cols .todo-notes { break-inside: avoid; }
+        .todo-cols .todo-list-group > div:first-child { break-after: avoid; }
 
         /* Title. Was a bordered white input-looking box; it is now plain text that reveals
            its edit affordance on hover/focus, which is what makes a 48px row possible. */
