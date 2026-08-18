@@ -13,7 +13,7 @@
          Marketing tab; the rest of the app is untouched by this. -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%231a365d' width='100' height='100' rx='15'/%3E%3Ctext x='50' y='50' font-family='Arial, sans-serif' font-size='45' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='central'%3EEOS%3C/text%3E%3Ccircle cx='85' cy='15' r='8' fill='%233182ce'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="styles.css?v=4.43.0">
+    <link rel="stylesheet" href="styles.css?v=4.44.0">
 </head>
 <body>
     <div class="container">
@@ -898,6 +898,23 @@
                  contract as the six Settings hubs (3.68.0). Every render function
                  (renderRepository/renderMatrix/renderRuleOf3) keeps finding its nodes by
                  id whichever segment is showing, so none of them needed a change. -->
+            <!-- v4.44.0 — THE RESTORE BAND. Hans's ask after v4.43.0: "the next bug in this
+                 class costs one click, not my Rule of 3." v4.43.0 closed the one cause we
+                 found and added a belt against the whole class, but neither gives back a plan
+                 that is ALREADY gone — and this is the third time in a week his Rule of 3 has
+                 been destroyed by this defect family. Snapshots are the layer that does not
+                 depend on us having predicted the bug.
+                 This band is the ONE-CLICK route and it is deliberately CONTEXTUAL: it renders
+                 only when the plan on screen is empty AND this device holds a non-empty
+                 snapshot, which is exactly the moment of the loss and exactly the moment he
+                 will not want to go looking for a menu. Every other time it is display:none,
+                 so the page grows nothing at rest. The permanent route for a PARTIAL loss (the
+                 case this band cannot see, because a plan missing only its Rule of 3 is not
+                 empty) is "Restore an earlier plan…" in the wrench panel.
+                 Static markup, never unmounted — rule 11's contract, the same one
+                 #syncBadge-daily carries three elements up. -->
+            <div id="dpRestoreBand" style="display:none;"></div>
+
             <div id="dailyPlanSegWrap">
                 <div class="seg-control" id="dailyPlanSegments"></div>
             </div>
@@ -3118,6 +3135,25 @@
 
     <!-- Task Export Modal -->
     <!-- Daily Plan Sync Modal -->
+    <!-- v4.44.0: the daily-plan snapshot picker. Static markup, never unmounted (rule 11);
+         only #dpRestoreList's contents are rendered. No text input anywhere inside it, so
+         the composer's focusin capture (rule 24) has nothing to intercept here. -->
+    <div class="modal-overlay" id="dailyPlanRestoreModal">
+        <div class="modal" style="max-width: 560px;">
+            <h2>&#9198; Restore an earlier plan</h2>
+            <p style="font-size:0.85rem; color: var(--gray-600); margin: 0 0 14px 0;">
+                Your last few saved plans are kept on this device. Restoring replaces what is on
+                screen now and syncs the restored plan to your other devices. Your to-dos
+                themselves are never touched &mdash; only which three are today&rsquo;s
+                priorities and which quadrant each one sits in.
+            </p>
+            <div id="dpRestoreList" style="max-height: 46vh; overflow-y: auto;"></div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('dailyPlanRestoreModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="dailyPlanSyncModal">
         <div class="modal" style="max-width: 550px;">
             <h2>🔄 Sync Tasks for My Daily Plan</h2>
@@ -3332,9 +3368,10 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '4.43.0';
+        const EOS_VERSION = '4.44.0';
         const EOS_BUILD_DATE = '2026-08-17';
-        const EOS_BUILD_TIME = '23:30'; // v4.43.0: THE DAILY-PLAN DATA-LOSS FIX, and it is the most serious defect this project has shipped. Hans, 2026-08-17: "not sure what happened to the Rule of 3 section, etc.. Everything is missing." His Supabase daily_plans row read ruleOf3 [null,null,null], all four quadrants empty, updated_at 00:34:45Z — minutes earlier, during his own testing on a second device. CAUSE: loadDailyPlan() builds an EMPTY DEFAULT whenever localStorage holds no plan under `eos_dailyPlan_<initials>` for the resolved user — a new device, a new browser profile, cleared storage, or dailyPlanUser resolving to different initials — and v4.35.1 added a saveDailyPlan() at the TAIL of that same function so that gid/xt enrichment and rollover results would travel. Those two are fine apart and catastrophic together: the first-open device persisted the blank default AND pushed it with a fresh savedAt, which being newest won last-write-wins, wiped the real plan out of the cloud, and every other device then dutifully ADOPTED the blank. One device opening Today for the first time destroyed everyone's plan, silently, with the badge honestly reading "Synced". TWO LAYERS, and the second is the one that matters. (1) THE CAUSE: loadDailyPlan records `_dpHadStored = (stored !== null)` and the tail save runs only when true — "I have no plan" and "my plan is empty" are DIFFERENT FACTS and the tail save had been treating them as one; a device with nothing to say must say nothing and let _dpMaybePull populate it. (2) THE BELT, which would have saved him whatever the cause: the push was a BLIND upsert, so any empty local plan with a newer stamp silently replaced a full cloud row. Now, when the outgoing plan is empty (_dpIsEmptyPlan: no Rule-of-3 entry, no task in any quadrant, no Today-only task, no notes — habits and the pomo count deliberately do NOT count as content, or a habit tick would make a blank plan look populated and defeat the guard), it READS the cloud row first and, if that is non-empty, ADOPTS it instead of pushing. Emptiness is never worth propagating: there is no legitimate reason to overwrite three priorities and a populated matrix with nothing, and a person who really did clear their plan loses only that clearing. Rule 49's principle one level up — do not push a deletion you cannot prove was intended — and rule 48's read-then-decide order, applied only to the one case where it matters so the common non-empty push stays a single round trip. A genuinely new person is NOT wedged: an empty push over an absent or empty cloud row still proceeds. Probe probe-v4.43.0.js 15/15 (0/1 on v4.42.1), and its own first run was a FALSE PASS worth recording: `window.mktSupabaseProfile = {...}` does not rebind a `let`, so the real client threw, nothing was written, and "the cloud row was not overwritten" was true because the sync never ran — the positive controls C and D are what exposed it. Client-only, no clasp round, no schema change.
+        const EOS_BUILD_TIME = '23:55'; // v4.44.0: DAILY-PLAN SNAPSHOTS — the undo of last resort, and Hans's own framing of why it goes ahead of the feature queue: "the next bug in this class costs one click, not my Rule of 3." v4.43.0 fixed the cause it found and added a belt against the class, but neither hands back a plan that is ALREADY gone, and his Rule of 3 has now been destroyed three times in a week by one defect FAMILY — the plan stores REFERENCES to tasks, so anything unresolvable gets deleted rather than held (rule 49's ground). Snapshots are the only layer here that does not depend on us having predicted the bug. THE INVARIANT, and it is deliberately one sentence: this device keeps the last 10 DISTINCT NON-EMPTY plans it has ever held, under its own key `eos_dailyPlanSnaps_<initials>`. ONE call site guarantees that — the tail of saveDailyPlan() — because every route by which a plan reaches this device's screen ends in loadDailyPlan() and loadDailyPlan() ends in a save: a local edit, the day rollover, the gid/xt back-fill, and an adopted cloud row (_dpAdopt writes localStorage and then re-enters the loader). THE BRANCH THAT MATTERS IS THE NO-OP ONE: a plan adopted from another device carries THAT device's syncHash, so it arrives at saveDailyPlan as an unchanged save and returns early — a snapshot taken only on the changed branch would never once see a plan this device RECEIVED rather than typed, which is more than half of them. Dedup is on saveDailyPlan's own newHash, passed in rather than recomputed, so the quiet repeat save that runs on every load costs one string compare, and two devices agreeing on content agree on the fingerprint. EMPTY PLANS ARE NEVER SNAPSHOTTED (the v4.43.0 _dpIsEmptyPlan test, reused rather than re-expressed): a blank is not a state anyone wants back, and ten blanks in a row would push the last real plan out of the ring — which is exactly the shape of the bug this exists to survive. SNAPSHOTS ARE DEVICE-LOCAL AND MUST NEVER SYNC; they are not in _dpPayload and must not be added to it, because the whole value of the store is that it is the one copy a remote write cannot reach. TWO ROUTES, deliberately different jobs. (1) The RESTORE BAND above the Today grid is the one-click route and is CONTEXTUAL — rendered only when the plan on screen is empty AND a non-empty snapshot exists, which is the moment of the loss; gated on the information it carries rather than on a flag (rule 37), so no snapshots means no band. (2) "Restore an earlier plan…" in the Today wrench panel is the PERMANENT route, and it exists because the loss Hans has actually been living with is PARTIAL — a Rule of 3 gone while the matrix survives is not an empty plan and shows no band. Both open the same picker, which names each version in his terms ("2 priorities · 7 matrix tasks", "Today 4:12 PM"), never "10 entries". THE RESTORE re-enters loadDailyPlan() rather than repainting by hand — _dpAdopt's choice for _dpAdopt's reason, so the rollover, the six renders and restorePomodoroTimer() run exactly as on a normal visit and a restore can never drift from a load. IT STRIPS savedAt AND syncHash FROM THE COPY BEFORE WRITING, and that is load-bearing rather than tidying: saveDailyPlan dedups by comparing newHash against the STORED blob's syncHash, so a restored plan that kept its old fingerprint would take the no-op branch, carry the blank's stamp forward and never push — the plan would come back on this device and stay lost on every other one, a failure wearing a success face. Probe probe-v4.44.0.js 24/24 here, 0/24 on the deployed v4.43.0, and it drives the WHOLE incident end to end: seed a real plan, blank it the way the cloud blanked it, assert the band appears, click the button with the MOUSE after hit-testing it (v4.42.1's lesson), and assert the Rule of 3 is back AND a push was queued. Client-only, no clasp round, no schema change.
+        // v4.43.0: THE DAILY-PLAN DATA-LOSS FIX, and it is the most serious defect this project has shipped. Hans, 2026-08-17: "not sure what happened to the Rule of 3 section, etc.. Everything is missing." His Supabase daily_plans row read ruleOf3 [null,null,null], all four quadrants empty, updated_at 00:34:45Z — minutes earlier, during his own testing on a second device. CAUSE: loadDailyPlan() builds an EMPTY DEFAULT whenever localStorage holds no plan under `eos_dailyPlan_<initials>` for the resolved user — a new device, a new browser profile, cleared storage, or dailyPlanUser resolving to different initials — and v4.35.1 added a saveDailyPlan() at the TAIL of that same function so that gid/xt enrichment and rollover results would travel. Those two are fine apart and catastrophic together: the first-open device persisted the blank default AND pushed it with a fresh savedAt, which being newest won last-write-wins, wiped the real plan out of the cloud, and every other device then dutifully ADOPTED the blank. One device opening Today for the first time destroyed everyone's plan, silently, with the badge honestly reading "Synced". TWO LAYERS, and the second is the one that matters. (1) THE CAUSE: loadDailyPlan records `_dpHadStored = (stored !== null)` and the tail save runs only when true — "I have no plan" and "my plan is empty" are DIFFERENT FACTS and the tail save had been treating them as one; a device with nothing to say must say nothing and let _dpMaybePull populate it. (2) THE BELT, which would have saved him whatever the cause: the push was a BLIND upsert, so any empty local plan with a newer stamp silently replaced a full cloud row. Now, when the outgoing plan is empty (_dpIsEmptyPlan: no Rule-of-3 entry, no task in any quadrant, no Today-only task, no notes — habits and the pomo count deliberately do NOT count as content, or a habit tick would make a blank plan look populated and defeat the guard), it READS the cloud row first and, if that is non-empty, ADOPTS it instead of pushing. Emptiness is never worth propagating: there is no legitimate reason to overwrite three priorities and a populated matrix with nothing, and a person who really did clear their plan loses only that clearing. Rule 49's principle one level up — do not push a deletion you cannot prove was intended — and rule 48's read-then-decide order, applied only to the one case where it matters so the common non-empty push stays a single round trip. A genuinely new person is NOT wedged: an empty push over an absent or empty cloud row still proceeds. Probe probe-v4.43.0.js 15/15 (0/1 on v4.42.1), and its own first run was a FALSE PASS worth recording: `window.mktSupabaseProfile = {...}` does not rebind a `let`, so the real client threw, nothing was written, and "the cloud row was not overwritten" was true because the sync never ran — the positive controls C and D are what exposed it. Client-only, no clasp round, no schema change.
         // v4.42.1: HOTFIX for all three symptoms Hans hit within minutes of v4.42.0 — "I see the Printer and Gear icon (barely), and they don't do anything, and clicking the down arrow doesn't bring back up the blue header." ONE cause for two of the three, and it is a dead zone that has existed for the entire life of this app: #saveIndicator is `position:fixed; top:20px; right:20px; z-index:1001`, PERMANENTLY MOUNTED, and merely `opacity:0` at rest — and opacity 0 does NOT remove an element from hit-testing. It has therefore always owned roughly a 110x40px hole in the top-right corner of every page. Nothing had ever been placed there, so nothing had ever paid for it. v4.42.0's `margin-left:auto` moved the whole `.tabs-hdr-group` INTO it, so Print, Settings AND the chevron all landed underneath — every real click hit the invisible indicator and did nothing, and the chevron, which had worked fine one release earlier from its old centre-right position, stopped working purely because it moved. Fix: `.save-indicator { pointer-events: none }` — it is an INDICATOR and must never eat a click; that also closes the corner for anything placed there in future. THE THIRD SYMPTOM was contrast, and it was real and separate: the icons inherited `var(--gray-500)` on the dark blue tabs bar, measured at 3:1, hence "(barely)". Now `rgba(255,255,255,0.8)` — 12.1:1 measured — matching the white tab buttons beside them, and the chevron gets the same treatment because it has been that same mid grey on that same dark bar since v4.32.0. THE PROBE LESSON, PAID ONE RELEASE AFTER WRITING IT DOWN: v4.42.0's assertions clicked with `el.click()`, which dispatches straight at the element and CANNOT SEE AN OVERLAY, so all three buttons were reported healthy while every real click was being swallowed. That is §5B lesson 37 — an assertion that calls the handler tests the destination, not the road — violated in the very probe written to honour it. The assertions now hit-test with `elementFromPoint` (the v4.10.1 method) and then click with the MOUSE at real coordinates; the five new ones FAIL on the shipped v4.42.0 (9/14) and pass here (14/14), so the regression is locked rather than merely fixed.
         // v4.42.0: ROUND 20 ITEM 9 — Print and Settings reachable while the desktop header is COLLAPSED, which has been the DEFAULT since v4.32.0. Both controls live inside <header>, and v4.32.0 hides that whole element by one rule (rule 16's shape) — so out of the box a fresh desktop had NO route to Print or Settings at all except expanding the header first, and his screenshot S5 drew two empty boxes at the right of the tabs row where he expected them. This is a SECOND ROUTE to the same two functions (the v3.85.0 two-entry-point precedent), never a move: the header's own pair stays mounted and keeps working when it is expanded, and the tabs-row pair is shown ONLY under body.eos-hdr-collapsed, so the app can never offer two Settings buttons at once — asserted in BOTH directions, because a gate tested one way is half a gate. THE LAYOUT DETAIL THAT NEEDED A SECOND PASS, and it was found by a screenshot rather than by reasoning: .tabs is a CENTRED WRAPPING flex row, so three loose buttons appended to it scattered across a second line the moment the tabs filled the first one (measured at 1280: they did, with Print stranded at the right edge of line 1 and the gear and chevron centred on line 2). Wrapped in one .tabs-hdr-group with margin-left:auto, the three either sit at the right of the tabs line (1440 and 1920, asserted) or wrap together as one compact right-aligned cluster (1280). The phone carries a belt !important rule even though .tabs is already display:none there, matching the chevron's own belt — a phone must never grow a second Settings button whatever later chrome work does to that row. Probe probe-v4.42.0.js 11/11 incl. both gate directions, both clicks reaching masterPrintModal and settingsModal (a control that renders and does nothing is this project's most expensive shape), and 0 overflow. Client-only, no clasp round.
         // v4.41.0: ROUND 20 ITEMS 2/3/19 — the "Block time" button and the Block-it picker REBUILT to the fill-slot picker's shape. His screenshot S4 put "Block time for…" and "What goes in Q1 — Do First?" side by side with a red arrow between them, and the ask was that the first should be the second. It was an eosChoose LIST: no search box, no way to create the task you opened it to find, and a fixed short candidate set — so a to-do due next week could not be blocked at all, however much you wanted to work on it today. Now #calPickModal, built from #fillSlotModal's own markup and classes rather than a near-miss copy, with a search box (delegated 'input' listener + data-no-composer, rule 24, exactly like that picker's) and an add-a-task row that runs createSyncedTodo — the same path the + Add modal uses, so a task made here is a real to-do on the member's PUSH list, not a calendar-only string, and the picker settles with it so one gesture goes task -> block. THE CATEGORIES ARE A PRECEDENCE, not five queries: his order (Rule of 3 -> Matrix -> Rocks -> other lists -> Kanban) only means something if a task appears ONCE, in the highest group that claims it, or a to-do sitting in Q2 would list under Matrix AND again under its Google list. The cap is checked BEFORE the claim so a task squeezed out of a full group falls through to the next instead of vanishing. MATRIX IS OFFERED FOR THE FIRST TIME and rides with the To-dos layer rather than becoming a sixth EOS layer — a matrix entry IS a to-do, and a sidebar checkbox that changed nothing visible on the grid would be a control lying about its scope. TWO FILTERS RELAX WHILE SEARCHING (cap 8->25, and the due-today-or-overdue rule steps aside) because a search box that cannot find a task is worse than no search box; at rest that rule is still the whole point. Kanban claims under its own 'kb:' key so a card can never dedupe against a same-named to-do — round-16 Group B untouched. The BUTTON: toolbar + sidebar, blocking on the DAY IN FOCUS (today when today is in the shown week, else that week's first day) via a new third parameter on calBlockTime — a separate parameter and not a synthesised gap ISO, because the PRESENCE of gapStartISO is what routes between "start exactly here" and the duration-then-tiles flow, so faking one to carry a date would have silently picked the wrong flow. Desktop-only for now via .cal-newev-btn (the phone toolbar is already tight — round 20 item 12 says it needs MORE room; the phone still reaches Block-it through the coaching band and the gap taps). That shared class made _calRenderSidebar's querySelector a latent bug — a single-match read would have left the second button visible on a cleanly-probed-off deployment (Amanda's) while looking like working code; it is querySelectorAll now. Client-only, NO clasp round. Probe cal-blocktime-probe.js 47/47, 0/7 on the deployed v4.40.0 clone; battery 60/60 + 57/57 + 54/54 + 18/18 + 8/8 + 4/4 + 11/11 + 12/12; 0 overflow at 375/412/768/1280 with the picker asserted OPEN during the measurement.
@@ -5612,6 +5649,16 @@ Example:
                             + (o.v === cur ? '<span class="pp-tick">&#10003;</span>' : '') + '</button>';
                       }).join('');
             }).join('')
+            // v4.44.0: the PERMANENT route to the snapshot picker, Today only. The restore
+            // band above the grid is the one-click route, but it can only appear when the
+            // plan is EMPTY — and the loss Hans has actually been living with is partial (the
+            // Rule of 3 gone while the matrix survives), which is not an empty plan and so
+            // shows no band. This is where he can reach the same picker at any time. It sits
+            // in the foot beside "All settings ›", which is already an action rather than a
+            // preference, so nothing about the panel's shape changes.
+            + (page === 'dailyPlan'
+                ? '<div class="pp-foot"><button type="button" class="pp-link" onclick="closePagePrefs(); openDailyPlanRestore();">Restore an earlier plan&hellip;</button></div>'
+                : '')
             + '<div class="pp-foot"><button type="button" class="pp-link" onclick="closePagePrefs(); openSettings(&quot;'
             + (PAGE_PREFS_SETTINGS_BAND[page] || 'taskRows') + '&quot;);">All settings&nbsp;&rsaquo;</button></div>'
         }
@@ -6550,7 +6597,18 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v4.43.0 &mdash; 2026-08-17 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v4.44.0 &mdash; 2026-08-17 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Your last ten daily plans are now kept on this device, so a lost Rule of 3 is one click to get back.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Your recent plans are saved automatically.</strong> Every time your plan changes, a copy is kept on this device &mdash; the last ten different versions. Blank plans are never kept, so a bad day can never crowd out a good one.</li>'
+                + '<li><strong>If your plan turns up empty, Today now offers it straight back.</strong> A band appears above the columns saying what the last saved version held and when, with a <em>Restore it</em> button.</li>'
+                + '<li><strong>You can also reach it any time</strong> from the wrench (&#128295;) at the top of Today &rarr; &ldquo;Restore an earlier plan&hellip;&rdquo;. Useful when only part of the plan went missing, which is not empty enough for the band to notice.</li>'
+                + '<li>Restoring puts the plan back on this device <em>and</em> syncs it to your others, so one restore fixes all of them.</li>'
+                + '<li>These copies never leave this device &mdash; that is the point of them.</li>'
+                + '</ul>'
+                + '</div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v4.43.0 &mdash; 2026-08-17</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Important fix: opening Today on a device that had never held your plan could wipe your Rule of 3 and Eisenhower matrix everywhere.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Fixed: a device seeing your plan for the first time could erase it for every device.</strong> Opening Today on a new phone, a new browser, or after clearing your browser data started you on a blank plan &mdash; and that blank was then saved to the cloud as the newest version, so every other device replaced your real plan with it.</li>'
@@ -30182,6 +30240,12 @@ Return ONLY the JSON array:`;
             // [null,null,null], all four quadrants empty). A device with nothing to say
             // must say nothing and let _dpMaybePull below populate it from the cloud.
             if (_dpHadStored) { try { saveDailyPlan(); } catch (e) { } }
+            // v4.44.0: the restore band, painted AFTER that save so it reads the plan this
+            // load actually settled on rather than the one it started with — the rollover
+            // above can empty a plan (every priority finished, matrix already cleared) and a
+            // band drawn earlier would have judged the wrong state. Every route that changes
+            // the plan re-enters this loader, so this one site keeps the band honest.
+            try { _dpRenderRestoreBand(); } catch (e) { }
             // v4.36.0: the renders above counted every portable reference they could
             // not resolve — if there were any, one throttled Google pull heals them
             // (his 2b). Sits AFTER the renders so the count is this load's, and an
@@ -30246,11 +30310,19 @@ Return ONLY the JSON array:`;
                 dailyPlanData.savedAt = prev.savedAt || 0;
                 dailyPlanData.syncHash = newHash;
                 localStorage.setItem(key, JSON.stringify(dailyPlanData));
+                // v4.44.0: snapshot on THIS branch too, and it is the branch that matters
+                // most. A plan adopted from another device carries that device's syncHash,
+                // so it arrives here as a no-op save — a snapshot taken only on the changed
+                // branch below would never see a plan this device received rather than
+                // typed. The ring dedups on the same hash, so the quiet repeat save that
+                // runs on every load costs one string compare.
+                _dpSnapshot(dailyPlanData, newHash);
                 return;
             }
             dailyPlanData.savedAt = Date.now();
             dailyPlanData.syncHash = newHash;
             localStorage.setItem(key, JSON.stringify(dailyPlanData));
+            _dpSnapshot(dailyPlanData, newHash);
             dailyPlanQueuePush();
         }
 
@@ -30289,6 +30361,167 @@ Return ONLY the JSON array:`;
             if ((plan.localTasks || []).length) return false;
             if (String(plan.tomorrowNotes || '').trim()) return false;
             return true;
+        }
+
+        // ==================== v4.44.0 — DAILY-PLAN SNAPSHOTS (the undo of last resort) ====================
+        // Hans, after v4.43.0: "the next bug in this class costs one click, not my Rule of 3."
+        // v4.43.0 fixed the cause it found and added a belt against the class; this is the
+        // layer that does NOT depend on having predicted the bug. His Rule of 3 has been
+        // destroyed three times in a week by one defect family — the plan stores REFERENCES
+        // to tasks, so anything unresolvable gets deleted rather than held (rule 49's ground)
+        // — and every one of those was recoverable in principle and unrecoverable in fact.
+        //
+        // THE INVARIANT, stated once: this device keeps the last DP_SNAP_MAX distinct
+        // NON-EMPTY plans it has ever held. One call site is enough to guarantee that, and it
+        // is the tail of saveDailyPlan(), because every route by which a plan reaches this
+        // device's screen ends in loadDailyPlan() and loadDailyPlan() ends in a save — a local
+        // edit, a day rollover, a gid/xt back-fill, and an adopted cloud row (_dpAdopt writes
+        // localStorage and then re-enters the loader) all pass through it. Snapshotting on
+        // BOTH branches of that save matters: an adopted plan carries the other device's
+        // syncHash, so it takes the unchanged/no-op branch, and a snapshot taken only on the
+        // changed branch would never see a plan that arrived from another device.
+        //
+        // SNAPSHOTS ARE DEVICE-LOCAL AND MUST NEVER SYNC. They are not in _dpPayload and must
+        // not be added to it. The whole value of this store is that it is the one copy a
+        // remote write cannot reach — putting it in the row that gets overwritten would
+        // recreate the failure it exists to survive.
+        //
+        // EMPTY PLANS ARE NEVER SNAPSHOTTED, by the same _dpIsEmptyPlan test the v4.43.0 belt
+        // uses. A blank is not a state anyone wants back, and ten blanks would push the last
+        // real plan out of the ring — which is precisely the shape of the bug.
+        const DP_SNAP_MAX = 10;
+        function _dpSnapKey() { return 'eos_dailyPlanSnaps_' + _dpUser(); }
+        function _dpReadSnaps() {
+            try {
+                const a = JSON.parse(localStorage.getItem(_dpSnapKey()) || '[]');
+                return Array.isArray(a) ? a : [];
+            } catch (e) { return []; }
+        }
+        // `hash` is saveDailyPlan's own newHash, passed in rather than recomputed: dedup is
+        // then O(1) on the hot path (the no-op save runs on every quiet load) and, more
+        // importantly, two devices that agree on content agree on the hash, so an adopted
+        // plan does not enter the ring a second time under a different fingerprint.
+        function _dpSnapshot(plan, hash) {
+            try {
+                if (!_dpUser() || _dpIsEmptyPlan(plan)) return;
+                const snaps = _dpReadSnaps();
+                if (snaps.length && snaps[0].hash === hash) return;   // newest is identical
+                snaps.unshift({ at: Date.now(), hash: hash, plan: JSON.parse(JSON.stringify(plan)) });
+                let keep = snaps.slice(0, DP_SNAP_MAX);
+                try {
+                    localStorage.setItem(_dpSnapKey(), JSON.stringify(keep));
+                } catch (e) {
+                    // Quota. Halve the ring and try once — a smaller history beats no
+                    // history, and a throw here must never reach saveDailyPlan's caller.
+                    keep = keep.slice(0, Math.max(2, Math.floor(DP_SNAP_MAX / 2)));
+                    try { localStorage.setItem(_dpSnapKey(), JSON.stringify(keep)); } catch (e2) { }
+                }
+            } catch (e) { /* a recovery log must never be able to break a save */ }
+        }
+        // What a person needs to recognise the version they want, in their own terms — never
+        // "10 entries". The Rule of 3 is what he loses and what he looks for, so it leads.
+        function _dpSnapSummary(plan) {
+            const r3 = (plan.ruleOf3 || []).filter(function (e) { return !!e; }).length;
+            const m = plan.matrix || {};
+            const mx = ['q1', 'q2', 'q3', 'q4'].reduce(function (n, k) { return n + ((m[k] || []).length); }, 0);
+            const bits = [];
+            bits.push(r3 === 1 ? '1 priority' : r3 + ' priorities');
+            bits.push(mx === 1 ? '1 matrix task' : mx + ' matrix tasks');
+            const lt = (plan.localTasks || []).length;
+            if (lt) bits.push(lt === 1 ? '1 today-only task' : lt + ' today-only tasks');
+            if (String(plan.tomorrowNotes || '').trim()) bits.push('notes');
+            return bits.join(' · ');
+        }
+        function _dpSnapWhen(ts) {
+            const d = new Date(ts);
+            const today = new Date().toDateString();
+            const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+            if (d.toDateString() === today) return 'Today ' + time;
+            const y = new Date(Date.now() - 86400000).toDateString();
+            if (d.toDateString() === y) return 'Yesterday ' + time;
+            return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) + ' ' + time;
+        }
+
+        // THE RESTORE ITSELF. It deliberately re-enters loadDailyPlan() rather than repainting
+        // by hand — the same choice _dpAdopt makes and for the same reason: the rollover, the
+        // six renders and restorePomodoroTimer() then run exactly as on a normal visit, and a
+        // restore can never drift from a load.
+        // savedAt and syncHash are STRIPPED from the copy before it is written. That is not
+        // tidying: saveDailyPlan dedups by comparing newHash against the STORED blob's
+        // syncHash, so a restored plan that kept its old fingerprint would take the no-op
+        // branch, carry the blank's stamp forward, and never push — the plan would come back
+        // on this device and stay lost on every other one, which is the failure wearing a
+        // success face. Stripped, the tail save sees a genuine change, stamps a fresh savedAt
+        // and queues the push that heals the other devices.
+        function _dpRestoreSnapshot(idx) {
+            const snaps = _dpReadSnaps();
+            const snap = snaps[Number(idx)];
+            const user = _dpUser();
+            if (!snap || !snap.plan || !user) { showToast('That snapshot is no longer available.', 'error'); return; }
+            let copy;
+            try { copy = JSON.parse(JSON.stringify(snap.plan)); } catch (e) { showToast('That snapshot could not be read.', 'error'); return; }
+            delete copy.savedAt;
+            delete copy.syncHash;
+            try { localStorage.setItem('eos_dailyPlan_' + user, JSON.stringify(copy)); }
+            catch (e) { showToast('Could not write the restored plan to this device.', 'error'); return; }
+            // _dpAdopting suppresses the loader's tail pull for this pass. The pull could not
+            // clobber us anyway — the tail save stamps a savedAt newer than the cloud row's,
+            // and a pull adopts only on STRICTLY newer — but a restore should settle on the
+            // restored plan and then push, not race a read on the way out.
+            _dpAdopting = true;
+            try { loadDailyPlan(); } finally { _dpAdopting = false; }
+            closeModal('dailyPlanRestoreModal');
+            showToast('Restored ' + _dpSnapSummary(copy) + ' from ' + _dpSnapWhen(snap.at) + '.', 'success', 6000);
+        }
+
+        function openDailyPlanRestore() {
+            const snaps = _dpReadSnaps();
+            const list = document.getElementById('dpRestoreList');
+            if (!list) return;
+            if (!snaps.length) {
+                // Rule 25's shape for a panel rather than a badge: a sentence fit to show a
+                // person, never an empty box that reads as a broken feature.
+                list.innerHTML = '<div style="padding:14px; background:#f9fafb; border:1px solid var(--gray-200);'
+                    + ' border-radius:8px; font-size:0.85rem; color: var(--gray-600);">'
+                    + 'No earlier plans are saved on this device yet. A copy is kept every time your plan'
+                    + ' changes, so this fills up as you use Today.</div>';
+            } else {
+                list.innerHTML = snaps.map(function (s, i) {
+                    return '<div style="display:flex; align-items:center; gap:12px; padding:10px 12px;'
+                        + ' border:1px solid var(--gray-200); border-radius:8px; margin-bottom:8px;">'
+                        + '<div style="flex:1; min-width:0;">'
+                        + '<div style="font-weight:600; font-size:0.88rem;">' + escapeHtml(_dpSnapWhen(s.at)) + '</div>'
+                        + '<div style="font-size:0.78rem; color: var(--gray-600);">' + escapeHtml(_dpSnapSummary(s.plan || {})) + '</div>'
+                        + '</div>'
+                        + '<button type="button" class="btn btn-secondary" style="padding:6px 12px; flex:0 0 auto;"'
+                        + ' onclick="_dpRestoreSnapshot(' + i + ')">Restore</button>'
+                        + '</div>';
+                }).join('');
+            }
+            openModal('dailyPlanRestoreModal');
+        }
+
+        // The one-click route, and the reason it is a band rather than a menu item: it is
+        // shown ONLY when the plan on screen is empty and a non-empty snapshot exists, which
+        // is the moment of the loss. Gated on the INFORMATION it carries, not on a flag
+        // (rule 37) — no snapshots means nothing to offer, so it stays hidden.
+        function _dpRenderRestoreBand() {
+            const band = document.getElementById('dpRestoreBand');
+            if (!band) return;
+            const snaps = _dpReadSnaps();
+            if (!_dpIsEmptyPlan(dailyPlanData) || !snaps.length) { band.style.display = 'none'; band.innerHTML = ''; return; }
+            const s = snaps[0];
+            band.innerHTML = '<div style="background:#fffbeb; border:1px solid #fcd34d; border-radius:10px;'
+                + ' padding:12px 14px; margin-bottom:14px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">'
+                + '<div style="flex:1 1 240px; min-width:0;">'
+                + '<div style="font-weight:700; font-size:0.9rem; color:#92400e;">Your plan is empty on this device.</div>'
+                + '<div style="font-size:0.8rem; color:#92400e; opacity:0.9;">The last version saved here was '
+                + escapeHtml(_dpSnapSummary(s.plan || {})) + ' &mdash; ' + escapeHtml(_dpSnapWhen(s.at)) + '.</div>'
+                + '</div>'
+                + '<button type="button" class="btn btn-primary" style="flex:0 0 auto;" onclick="_dpRestoreSnapshot(0)">Restore it</button>'
+                + '<button type="button" class="btn btn-secondary" style="flex:0 0 auto;" onclick="openDailyPlanRestore()">Choose&hellip;</button>'
+                + '</div>';
+            band.style.display = 'block';
         }
 
         function dailyPlanSyncBlocker() {
