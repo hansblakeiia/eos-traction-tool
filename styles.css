@@ -515,7 +515,24 @@
         }
         .todo-cols .todo-item,
         .todo-cols .todo-notes { break-inside: avoid; }
-        .todo-cols .todo-list-group > div:first-child { break-after: avoid; }
+        /* v4.49.0 — ORPHAN/WIDOW CONTROL, his words, from the first live test of the
+           3-column view: "I want tasks (like this one from Prospects/Marketing) to stay
+           with the others". His screenshot had one task alone at the top of column 3 while
+           its own list heading sat at the foot of column 2 — the reader has no way to tell
+           what list that task belongs to, which is the whole point of grouping them.
+           v4.46.0 only kept a HEADING from being stranded (break-after on the first child).
+           That is half the problem: it stops "heading alone at the bottom" and does nothing
+           about "one row alone at the top". Keeping the whole GROUP together is the honest
+           answer, and it is what he asked for.
+           `break-inside: avoid` is a REQUEST, not a guarantee — the spec has browsers drop
+           it when the content cannot fit a column, so a list longer than the column still
+           breaks rather than overflowing. That degenerate case is measured, not assumed. */
+        .todo-cols .todo-list-group { break-inside: avoid; }
+        /* The heading rule stays, and it is not redundant: with ONE list `renderTodos` emits
+           a bare heading and the rows as siblings, with no .todo-list-group wrapper at all,
+           so the group rule above cannot match. Both selectors, one for each shape. */
+        .todo-cols .todo-list-group > div:first-child,
+        .todo-cols > div:first-child { break-after: avoid; }
 
         /* Title. Was a bordered white input-looking box; it is now plain text that reveals
            its edit affordance on hover/focus, which is what makes a 48px row possible. */
