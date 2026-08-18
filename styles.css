@@ -1148,6 +1148,15 @@
         }
         
         .save-indicator.show { opacity: 1; transform: translateY(0); }
+        /* v4.42.1: it is an INDICATOR, and it must never eat a click. It is permanently
+           mounted, position:fixed at top-right, z-index 1001, and merely opacity:0 at
+           rest — and opacity 0 does NOT remove an element from hit-testing. So it has
+           always owned a ~110x40px dead zone in the top-right corner of every page;
+           nothing had been placed there until v4.42.0 put Print, Settings and the
+           header chevron in it, and all three then did nothing when clicked while
+           looking perfectly healthy in the DOM. Diagnosed by elementFromPoint, the
+           v4.10.1 method, because a click handler that never fires leaves no trace. */
+        .save-indicator { pointer-events: none; }
         
         /* Daily Plan Styles */
         .daily-plan-grid {
@@ -4529,10 +4538,13 @@
            .cal-wk-gap block (item 2). */
         .hdr-toggle {
             border: none; background: none; font-family: inherit; cursor: pointer;
-            color: var(--gray-500); font-size: 0.7rem; padding: 4px 10px; flex: 0 0 auto;
+            /* v4.42.1: same contrast fix as .tabs-hdr-btn beside it — this chevron has
+               always sat on the dark blue bar in a mid grey, and it is now the control
+               that brings the header back, so it has to be findable. */
+            color: rgba(255, 255, 255, 0.8); font-size: 0.8rem; padding: 4px 10px; flex: 0 0 auto;
             align-self: center;
         }
-        .hdr-toggle:hover { color: var(--gray-800); }
+        .hdr-toggle:hover { color: #fff; }
         @media screen and (min-width: 769px) {
             /* ONE rule hides the whole header (rule 16 — everything stays mounted).
                Hiding the parent is immune to inline display writes on its children,
@@ -4554,10 +4566,14 @@
         body.eos-hdr-collapsed .tabs-hdr-btn {
             display: inline-flex; align-items: center; justify-content: center;
             border: none; background: none; font-family: inherit; cursor: pointer;
-            color: var(--gray-500); font-size: 0.95rem; padding: 4px 8px; flex: 0 0 auto;
+            /* v4.42.1: these sit ON the dark blue tabs bar, so var(--gray-500) was very
+               nearly invisible against it — Hans could see them "(barely)". The tab
+               buttons beside them are white; these match at 0.8 so they read as chrome
+               rather than as a tenth tab, and go full white on hover. */
+            color: rgba(255, 255, 255, 0.8); font-size: 1rem; padding: 4px 9px; flex: 0 0 auto;
             align-self: center; line-height: 1;
         }
-        body.eos-hdr-collapsed .tabs-hdr-btn:hover { color: var(--gray-800); }
+        body.eos-hdr-collapsed .tabs-hdr-btn:hover { color: #fff; }
         @media screen and (max-width: 768px) {
             /* Belt: the tabs row is already display:none here, but the chevron must
                never surface on a phone whatever later chrome work does to .tabs. */
