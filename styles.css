@@ -4347,8 +4347,25 @@
         .cal-ev { border-left: 4px solid #d1d5db; border-radius: 10px; padding: 8px 12px; cursor: pointer; }
         .cal-ev-main { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
         .cal-ev-main > * { min-width: 0; }
-        .cal-ev-time { font-size: 0.75rem; font-weight: 600; color: var(--gray-500); white-space: nowrap; flex: 0 0 auto; }
-        .cal-ev-title { font-size: 0.9rem; color: var(--gray-800); font-weight: 500; overflow-wrap: anywhere; }
+        .cal-ev-time { font-size: 0.75rem; font-weight: 600; color: var(--cal-ink-soft, var(--gray-500)); white-space: nowrap; flex: 0 0 auto; }
+        .cal-ev-title { font-size: 0.9rem; color: inherit; font-weight: 500; overflow-wrap: anywhere; }
+        /* v4.52.0 (round 21 items 4/6) — the agenda bubble goes solid to match the week
+           grid, but ONLY while collapsed. Opening it reveals grey meta text, a Join chip and
+           the action buttons, none of which can sit on a solid navy; the expanded state is a
+           working surface, not the thing being compared to Google. `--cal-ev-tint` is the
+           old 10% fill, carried inline beside the solid one for exactly this swap. The EOS
+           bubbles (.cal-ev-eos and friends) are unaffected: they set their own white
+           background AFTER this rule and never receive the custom properties. */
+        /* Both !important on purpose: the solid fill AND its ink are written as INLINE
+           styles (they are per-event values), and an inline declaration beats a stylesheet
+           one without it — rule 10's third clause, checked rather than assumed. */
+        .cal-ev-open { background: var(--cal-ev-tint, #fff) !important; color: var(--gray-800) !important; }
+        .cal-ev-open .cal-ev-time { color: var(--gray-500); }
+        .cal-ev-open .cal-ev-title { color: var(--gray-800); }
+        /* The EOS bubbles (to-do / Rock / Kanban / meeting) never receive the inline fill or
+           ink, so `.cal-ev-title { color: inherit }` would leave them inheriting from the
+           page instead of the explicit grey they had. Say it here rather than let it drift. */
+        .cal-ev-eos, .cal-ev-eos .cal-ev-title { color: var(--gray-800); }
         .cal-ev-declined { opacity: 0.55; }
         .cal-ev-declined .cal-ev-title { text-decoration: line-through; }
         .cal-ev-join {
@@ -4444,7 +4461,16 @@
         .cal-wk-inner { min-width: 720px; }
         /* v4.30.0 (round 18 item 3): the day is ALWAYS 24h; this scroller is what makes
            that livable — it opens at 8 AM and the head + all-day strip stay above it. */
-        .cal-wk-vscroll { max-height: calc(100vh - 360px); min-height: 430px; overflow-y: auto; }
+        /* v4.52.0 (round 21 item 5b): the `calc(100vh - 360px)` cap is now only the FIRST
+           PAINT's guess — _calFitWeekHeight() replaces it with the element's measured
+           distance from the bottom of the viewport on every render, because 360 was a
+           hardcoded assumption about the chrome above and was wrong in both header states
+           (measured 376px collapsed / 516px expanded on Hans's 1893x923, so the grid
+           overflowed by 16px and 156px and the PAGE scrolled as well as the grid — his two
+           scrollbars). min-height 430 -> 320 for the same reason: a `min-height` BEATS a
+           smaller `max-height` in CSS, so 430 was silently re-imposing the overflow with the
+           header expanded (395 wanted, 430 forced). 320px is still ~6.7 hours of grid. */
+        .cal-wk-vscroll { max-height: calc(100vh - 360px); min-height: 320px; overflow-y: auto; }
         /* v4.30.0 (round 18 item 5): the calendar page always uses the whole width —
            :has() keys the cap off the ACTIVE page. v4.30.1 raised the shell cap to
            1920 for every page, so this now only matters on ultrawide monitors, where
@@ -4506,12 +4532,36 @@
             position: absolute; border-radius: 8px; border-left: 3px solid #d1d5db;
             padding: 2px 6px; font-size: 0.72rem; overflow: hidden; user-select: none;
             -webkit-user-select: none; touch-action: manipulation; cursor: pointer;
+            /* v4.52.0 (round 21 item 3): the stacked time-over-title layout measured 47px
+               of content at the inherited line-height, so nothing an hour long or shorter
+               could ever hold two lines — a 60-minute box is 46px. Tightening to 1.25 takes
+               the stacked layout to 31px, which is what lets a 45- and a 60-minute event
+               look like Google's instead of falling back to the one-line treatment meant
+               for slivers. CAL_EV_STACK_MIN_PX in index.html is derived from this number
+               and was re-measured after the change, not guessed. */
+            line-height: 1.25;
         }
         .cal-wk-ev > * { min-width: 0; }
         .cal-wk-ev-drag { cursor: grab; }
         .cal-wk-dragging { opacity: 0.8; cursor: grabbing; z-index: 6; box-shadow: 0 4px 14px rgba(0,0,0,0.18); }
-        .cal-wk-ev-time { display: block; font-weight: 700; font-size: 0.62rem; color: var(--gray-500); white-space: nowrap; }
-        .cal-wk-ev-title { display: block; overflow: hidden; text-overflow: ellipsis; }
+        /* v4.52.0 (round 21 items 4/6): the fill is SOLID now and its text colour is chosen
+           per event by luminance in _calTextOn(), so the secondary line can no longer be a
+           fixed grey — var(--gray-500) is invisible on a solid navy and shouty on a solid
+           yellow. --cal-ink-soft is set inline beside the fill and is the same ink at
+           reduced strength. The var() fallback keeps any element that has not been given
+           one (a future caller, a half-rendered row) on the old grey rather than on
+           `inherit`, which would be full-strength. */
+        .cal-wk-ev-time { display: block; font-weight: 700; font-size: 0.62rem; color: var(--cal-ink-soft, var(--gray-500)); white-space: nowrap; }
+        /* v4.52.0: -webkit-box + line-clamp so a stacked title ends with an ellipsis on the
+           last line that FITS, instead of being sliced through the middle of the next one.
+           The clamp COUNT is written inline per event from the box height (index.html), so
+           a 45-minute box keeps one line and a 90-minute box keeps three. `display:block`
+           is gone from here on purpose — line-clamp needs -webkit-box — and
+           `.cal-wk-ev-short` overrides it back for the one-line branch. */
+        .cal-wk-ev-title {
+            display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1;
+            overflow: hidden; text-overflow: ellipsis; color: inherit;
+        }
         .cal-wk-gap {
             position: absolute; left: 4px; right: 4px; border: 1px dashed #a5b4fc; border-radius: 8px;
             background: rgba(238, 242, 255, 0.55); color: #4f46e5; font-size: 0.7rem; font-weight: 600;
