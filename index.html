@@ -1445,10 +1445,21 @@
         <div class="modal-overlay" id="calNewEventModal">
             <div class="modal" style="max-width:520px;">
                 <div class="modal-header">
-                    <h2 style="margin:0;">New event</h2>
-                    <button onclick="closeModal('calNewEventModal')" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray-500);">&times;</button>
+                    <h2 style="margin:0;" id="calEventFormTitle">New event</h2>
+                    <button onclick="calCloseEventForm()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray-500);">&times;</button>
                 </div>
                 <div class="modal-body">
+                    <!-- v4.51.0 (EDIT AN EVENT): this ONE modal is now BOTH forms. A separate
+                         #calEditEventModal would have had to duplicate _calRebuildRepeat,
+                         _calSyncNewEnds, _calApplyEndsTo and the whole Custom-recurrence box -
+                         every one of which addresses #calNewDate / #calNewRepeat / #calNewAllday
+                         BY ID - so the copy would drift the first time either form was touched.
+                         Same reasoning as v4.41.0's Block-it picker, which was rebuilt to the
+                         fill-slot picker's own shape rather than copied near it.
+                         This note row is where the edit form says out loud what it cannot show
+                         in a field: which occurrences a change applies to, that the detail read
+                         failed, that an all-day event cannot be turned back into a timed one. -->
+                    <div id="calEventFormNote" style="display:none; margin:-2px 0 12px; padding:9px 11px; background:var(--gray-50, #f9fafb); border:1px solid var(--gray-200); border-radius:8px; font-size:0.82rem; line-height:1.45; color:var(--gray-700);"></div>
                     <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--gray-600); margin-bottom:4px;">Title</label>
                     <input type="text" id="calNewTitle" maxlength="200" placeholder="What is it?" style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; box-sizing:border-box; margin-bottom:12px;">
 
@@ -1478,7 +1489,7 @@
                     <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--gray-600); margin-bottom:4px;">Calendar</label>
                     <select id="calNewCal" style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; box-sizing:border-box; margin-bottom:12px;"></select>
 
-                    <label style="display:block; font-size:0.8rem; font-weight:600; color:var(--gray-600); margin-bottom:4px;">Repeat</label>
+                    <label id="calNewRepeatLabel" style="display:block; font-size:0.8rem; font-weight:600; color:var(--gray-600); margin-bottom:4px;">Repeat</label>
                     <select id="calNewRepeat" style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; box-sizing:border-box; margin-bottom:12px;"></select>
 
                     <!-- v4.40.0 (round 20 live test): Google hides "Ends" inside its Custom
@@ -1507,8 +1518,8 @@
                     <textarea id="calNewNotes" rows="3" placeholder="Add details..." style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; box-sizing:border-box; resize:vertical;"></textarea>
                 </div>
                 <div class="modal-actions">
-                    <button class="btn btn-secondary" onclick="closeModal('calNewEventModal')">Cancel</button>
-                    <button class="btn btn-primary" onclick="calSubmitNewEvent(this)">Create event</button>
+                    <button class="btn btn-secondary" onclick="calCloseEventForm()">Cancel</button>
+                    <button class="btn btn-primary" id="calEventSubmitBtn" onclick="calEventFormSubmit(this)">Create event</button>
                 </div>
             </div>
         </div>
@@ -3378,9 +3389,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '4.50.0';
+        const EOS_VERSION = '4.51.0';
         const EOS_BUILD_DATE = '2026-08-18';
-        const EOS_BUILD_TIME = '17:10'; // v4.50.0: THE THREE LYING DIAGNOSTICS, all found by USING the app rather than by reading it — Amanda's onboarding on 2026-08-18, where each one gave Hans a confident, specific, WRONG cause and sent him chasing it. A diagnostic that is wrong is worse than none, because it is trusted and acted on; that is this release's whole thesis. (1) THE DEPLOYMENT-MISMATCH WARNING WAS WRONG FOR EVERY MEMBER EXCEPT ONE. `mismatch = usedId && bootId && usedId !== bootId` compares the signed-in member's saved Web App URL against config.js's bootstrapWebAppUrl — which belongs to whoever first set the app up. Under the per-user `executeAs: USER_DEPLOYING` model EVERY OTHER MEMBER HAS THEIR OWN DEPLOYMENT BY DESIGN; that is exactly what lets the backend read their mailbox and nobody else's. So a difference is the EXPECTED state for a second member, and the panel told Amanda in amber, repeatedly, that her correct configuration was wrong. Now gated on `_configured.length <= 1`: the comparison is only meaningful when the firm has ONE configured deployment, which is the single-user setup the bootstrap describes. With several, per-member URLs ARE the design and there is nothing for the bootstrap to be "expected" against. The case the check exists for — a lone deployment that has drifted from config.js — still fires, and is asserted. (2) "COULD NOT REACH THE BACKEND ... USUALLY A NETWORK BLIP" WAS TOLD TO A BACKEND THAT ANSWERED PERFECTLY. Her v3.14.7 replied `Unknown action: getCapabilities` — a complete, well-formed answer meaning the action did not exist yet (it arrived in .gs v3.39.0). The panel called that a network blip and demoted the real reason to a "Details:" line, so the one message that could have said "your backend is too old, update it" pointed at the network instead — on a machine that genuinely DID have network problems, which made the wrong answer look corroborated. Now detects `unknown action` and says "This backend is too old to answer", names v3.39.0, and says what to do. A genuinely unreachable backend still gets the original wording — asserted both ways, because a fix that reworded everything would just be a different lie. (3) THE CALENDAR BLAMED AN OLD DEPLOYMENT FOR A KEY MISMATCH, and this was the most convincing of the three: minutes after her backend reached 3.57.0 the page reported "your deployment does not include the Calendar backend (it answered like a pre-3.55 version)", i.e. redo the round we had just finished. "Invalid secret key" HAS TWO CAUSES and the code knew one: `getCalendarEvents` is token-gated, so a backend that does not know the action falls through to the older secretKey gate and reports exactly this (the v4.7.1 lesson, correctly applied) — but so does a backend that DOES know it and simply has the wrong key. SECRET_KEY lives in Script Properties PER GOOGLE ACCOUNT, must match that member's row in Settings › Team Members, and is the single easiest thing to miss when onboarding — it is in no numbered step of the deployment guide. We already know which case we are in, because the capability probe reports the real version: `_calGsAtLeast('3.55.0') === true` means the action exists and the KEY is the problem, and the message now says so and names the property and where it lives. Gated on `=== true` so an UNKNOWN version (null) can never be mistaken for "new enough". Probe probe-v4.50.0.js 15/15, 8/15 on deployed v4.49.0. ITS OWN FIRST RUN WAS A FALSE PASS WORTH RECORDING: it rendered the panel into an invented `#googleAccessOut` instead of the app's real `#googleAccessStatus`, so `textContent` was empty and both "the warning is absent" assertions passed against nothing — the negative-space shape again (rule 53's harness note, v4.44.0's positive controls). Reading the element id out of the app fixed it and the details now carry real panel text. Client-only, no clasp round.
+        const EOS_BUILD_TIME = '21:40'; // v4.51.0: EDIT AN EVENT — the client half of a backend that had been live, consented and deployed for a day with nothing calling it. `eosEditEvent_` and `getCalendarEventDetails` shipped in .gs v3.57.0 on 2026-08-17; `calOpenEditEvent` and `#calEditEventModal` were 0 occurrences in this file, so clicking an event opened a read-only card and Hans's own round-20 question — "when I click into a created event, shouldn't it pop up with the window where I can edit the event?" — was still unanswered. THE PREMISE OF THE SESSION PROMPT WAS FALSE AND THAT MATTERED: the question to ask was "title/time only now, or bundle a .gs v3.58.0 round for location and notes?" — but v3.57.0 ALREADY carries location, notes and the recurrence rule, so there was no round to bundle and no trade to make. Reading the deployed backend before asking turned a decision into a non-question. THE FORM IS THE NEW-EVENT MODAL, NOT A COPY OF IT. `#calNewEventModal` is now both forms behind `_calEventFormMode('create'|'edit')`, because `_calRebuildRepeat`, `_calSyncNewEnds`, `_calApplyEndsTo` and the whole Custom-recurrence box address `#calNewDate`/`#calNewRepeat`/`#calNewAllday` BY ID — a near-miss copy would have had to duplicate every one and would drift the first time either form was touched. Same reasoning as v4.41.0's Block-it picker. FOUR THINGS THE .GS CONTRACT DICTATED, none of them optional. (1) SEND ONLY WHAT CHANGED: `eosEditEvent_` patches by hasOwnProperty and refuses a no-op, and its own comments warn that a form always posting its all-day checkbox would trip the backend's timed→all-day assertion on an edit that never touched the time — a false accusation from the mechanism built to prevent false claims. So the open takes a baseline through `_calEditReadForm()` and the save diffs against it with the SAME function, and a title-only edit sends `title` and nothing else. (2) THE DESCRIPTION IS SPLIT: `getCalendarEventDetails` returns the notes with the Block-it "[EOS Tool link: id]" marker stripped plus a separate `eosTaskId`, and the save sends both back so the backend re-appends it. Prefilling notes from the cached agenda row instead would put the raw marker in the box and saving it would destroy the only proof the tool created that time block — in-tool delete would then refuse it forever, silently. So notes are DISABLED until the detail read lands and stay disabled if it fails. (3) FOR A SERIES THE RESOURCE IS THE MASTER, NOT THE OCCURRENCE YOU CLICKED: under "All events" the date and time are the series' FIRST occurrence (the .gs says `isSeriesMaster` out loud for exactly this reason), so those two fields wait for the read and the form says which they are — prefilling from the clicked row and saving would drag the whole series onto whatever day was tapped. (4) TWO SCOPES, NOT THREE: the backend declines "this and following" for a FIELD edit because splitting a series to change a title leaves two series nobody asked for, so offering that button would be offering a refusal; and under "This event" the Repeat control is HIDDEN, because an instance cannot carry a rule. Rule 51 is honoured where v4.38.0's Delete still is not: the "Edit event" button is NOT gated on `capabilityReady` — `calOpenEditEvent` re-probes and explains, so a pending or failed probe costs a sentence rather than the feature. Rule 57 too: no auto-focus on a coarse pointer, hit-tested at 412. A failed detail read DEGRADES rather than closing — title, time and location still save, notes and repeat are withdrawn with a sentence naming what was left alone. A `_calEditSeq` counter, not the event id, decides whether a late answer belongs to the form on screen: cancel and reopen the same event and every field you could compare by still matches. Probe `cal-editevent-probe.js` 61/61 here, 0/2 on the deployed v4.50.0 clone. Measured at 375/412/768/1280 with two note lines, a long title and a URL location: 0 overflow, and the CREATE form's page height is byte-identical to the clone's at all four. Its own first run recorded rule 63's shape one more time — an assertion reading `.cmp-input` tested a permanently-mounted element's EXISTENCE, not the composer's `.active` state, and failed correct code. Client-only, no clasp round, `styles.css` untouched. all found by USING the app rather than by reading it — Amanda's onboarding on 2026-08-18, where each one gave Hans a confident, specific, WRONG cause and sent him chasing it. A diagnostic that is wrong is worse than none, because it is trusted and acted on; that is this release's whole thesis. (1) THE DEPLOYMENT-MISMATCH WARNING WAS WRONG FOR EVERY MEMBER EXCEPT ONE. `mismatch = usedId && bootId && usedId !== bootId` compares the signed-in member's saved Web App URL against config.js's bootstrapWebAppUrl — which belongs to whoever first set the app up. Under the per-user `executeAs: USER_DEPLOYING` model EVERY OTHER MEMBER HAS THEIR OWN DEPLOYMENT BY DESIGN; that is exactly what lets the backend read their mailbox and nobody else's. So a difference is the EXPECTED state for a second member, and the panel told Amanda in amber, repeatedly, that her correct configuration was wrong. Now gated on `_configured.length <= 1`: the comparison is only meaningful when the firm has ONE configured deployment, which is the single-user setup the bootstrap describes. With several, per-member URLs ARE the design and there is nothing for the bootstrap to be "expected" against. The case the check exists for — a lone deployment that has drifted from config.js — still fires, and is asserted. (2) "COULD NOT REACH THE BACKEND ... USUALLY A NETWORK BLIP" WAS TOLD TO A BACKEND THAT ANSWERED PERFECTLY. Her v3.14.7 replied `Unknown action: getCapabilities` — a complete, well-formed answer meaning the action did not exist yet (it arrived in .gs v3.39.0). The panel called that a network blip and demoted the real reason to a "Details:" line, so the one message that could have said "your backend is too old, update it" pointed at the network instead — on a machine that genuinely DID have network problems, which made the wrong answer look corroborated. Now detects `unknown action` and says "This backend is too old to answer", names v3.39.0, and says what to do. A genuinely unreachable backend still gets the original wording — asserted both ways, because a fix that reworded everything would just be a different lie. (3) THE CALENDAR BLAMED AN OLD DEPLOYMENT FOR A KEY MISMATCH, and this was the most convincing of the three: minutes after her backend reached 3.57.0 the page reported "your deployment does not include the Calendar backend (it answered like a pre-3.55 version)", i.e. redo the round we had just finished. "Invalid secret key" HAS TWO CAUSES and the code knew one: `getCalendarEvents` is token-gated, so a backend that does not know the action falls through to the older secretKey gate and reports exactly this (the v4.7.1 lesson, correctly applied) — but so does a backend that DOES know it and simply has the wrong key. SECRET_KEY lives in Script Properties PER GOOGLE ACCOUNT, must match that member's row in Settings › Team Members, and is the single easiest thing to miss when onboarding — it is in no numbered step of the deployment guide. We already know which case we are in, because the capability probe reports the real version: `_calGsAtLeast('3.55.0') === true` means the action exists and the KEY is the problem, and the message now says so and names the property and where it lives. Gated on `=== true` so an UNKNOWN version (null) can never be mistaken for "new enough". Probe probe-v4.50.0.js 15/15, 8/15 on deployed v4.49.0. ITS OWN FIRST RUN WAS A FALSE PASS WORTH RECORDING: it rendered the panel into an invented `#googleAccessOut` instead of the app's real `#googleAccessStatus`, so `textContent` was empty and both "the warning is absent" assertions passed against nothing — the negative-space shape again (rule 53's harness note, v4.44.0's positive controls). Reading the element id out of the app fixed it and the details now carry real panel text. Client-only, no clasp round.
         // v4.49.0: FOUR DEFECTS FROM HANS'S LIVE TEST, and two of them are mine from v4.46.0. **THE `⋯` MENU FRAGMENTED ACROSS COLUMNS** (his annotated shot: "it rolled over to the next column, which is not how it should work" — the menu's top half in one column and "Add subtask / Open source email" stranded at the foot of the next). A CSS MULTI-COLUMN CONTAINER DOES NOT CLIP, IT FRAGMENTS, and an absolutely-positioned descendant is fragmented with everything else — so rule 19's detector, which tests only `overflow`, was blind to it: nothing there has overflow anything but visible, and the menu was escaping nothing because it was never trapped, it was cut in half. Same symptom, different physics. Extending THAT detector rather than adding a second mechanism is rule 19's own instruction, and `position:fixed` takes a box out of a fragmentation context exactly as it takes it out of a scroller. **ORPHAN/WIDOW CONTROL** — his words: "I want tasks (like this one from Prospects/Marketing) to stay with the others". v4.46.0 only stopped a HEADING being stranded (`break-after` on the first child), which is half the problem and does nothing about one row alone at the top of the next column. `break-inside: avoid` on `.todo-list-group` keeps the group together; it is a REQUEST the spec lets a browser drop when the content cannot fit, so a list longer than a column still breaks rather than overflowing — measured, not assumed, and the cost is that four uneven lists may settle into two columns instead of three, which is the trade he asked for. **THE REPOSITORY `⋯` — "sometimes the popup box doesn't show" — WAS TWO FAULTS COMPOUNDING, and the second is the one that hid it.** (1) `.repo-items` is a 350px scroller, so clicking a partly-visible row makes the browser scroll it into view, and that scroll landed in the capture-phase close-on-scroll listener and shut the menu the click had just opened. The close-on-scroll rule is right and stays — a fixed menu does not travel with the scroller it escaped — but the OPENING click's own scroll is not one of those, so inside a 400ms grace window the menu is RE-PLACED against its anchor instead of closed. (2) THE REAL HIDER: `position: fixed` is viewport-relative only while NO ancestor establishes a containing block, and **a `transform` does exactly that**. The swipe engine leaves one on the row it is tracking (`matrix(1,0,0,1,3,0)` — a 3px nudge from the click itself), so the menu's correctly-clamped `top: 414px` was measured from the ROW at y=675 and painted at **1089 in a 900px viewport**: open, correct, and off the bottom of the screen. That is rule 20's warning ("a transform on .page makes it a containing block for position:fixed descendants") landing on a different element, and **it cannot be found by reading the styles at rest** — the transform exists only while the row is being touched, so a chain scan before the click reports nothing. `_fixedContainingBlock` finds such an ancestor and the placement converts its viewport answer into that box's coordinates at the very end, so every decision above it still reasons in viewport space where it is easy to be right. Compensating beats fighting the swipe engine for ownership of that transform, and beats reparenting into `<body>` (which the next re-render would orphan). Swept every row of a 14-row repository, clicking each with a real mouse after scrolling it into view: **0/14 failures here, 14/14 on the deployed v4.48.0.** **THE GMAIL MARK IS BACK ON THE REPOSITORY ROW, and the reversal is deliberately narrow:** v3.72.0 put 'repository' in `minimalCard` on his own instruction — he would "forgo the star and the AI sparkle there in exchange for the ⋯" — and he has now asked for the Gmail icon back, "exact function on how it works in the Weekly Meeting page". So only the EMAIL glyph is restored; the star and sparkle stay in the menu because that half of the trade is still his. "Permanent" means always there when there is an email TO open: the row he named as the reference shows the mark only for a task that actually came from one (rule 37), and copying a reference means copying its gate, not just its icon. Probe probe-v4.49.0.js 17/17, 13/17 on deployed v4.48.0 — and its orphan assertion names **Prospects/Marketing**, the very group from his screenshot. TWO-FILE deploy, `?v=4.49.0`.
         // v4.48.0: THE ROUND-20 BUG-FIX RELEASE — items 7, 11, 12, 13 and 14, plus one defect the battery found that was on nobody's list. ITEM 16 IS DELIBERATELY NOT IN HERE; it needs Hans, and the reason is in §5.37. **ITEM 7 — a drag is not a request to write.** A `.repo-item` is `draggable="true"` AND contains a `contenteditable="true"` `.item-text`, so starting a drag focuses that text, and a focus is all the composer has ever needed. The v4.19.0 gesture guard does not help: a drag OPENS with a real pointerdown on the field, which is exactly what that guard looks for. Fixed with `_cmpDragging`, set on a capture-phase `dragstart` and cleared on `dragend`/`drop` — document-level, no per-element wiring, the same reason rule 24 exists. Asserted in BOTH directions: the drag no longer opens it, a real click into a field still does. **ITEM 11 — "the Today button doesn't reliably return to today", and `reliably` was the clue.** It worked whenever today was still inside the loaded 29-day window and failed whenever it was not: `calSelectDate` attempts the scroll BEFORE the data exists, `_calScrollToDay` finds no `[data-cal-day]` element and returns false, we re-anchor and refetch — and when the answer lands `_calFetch` re-renders and NOTHING EVER SCROLLS. The button had done its real work (the anchor moved) while leaving the view parked, which reads exactly like "the button did nothing". `_calPendingScrollYmd` now carries the request across the round trip and is consumed once, after the render, and deliberately NOT before a queued refetch — that run owns it. **ITEM 12 — measured first, and the stated cause did not hold.** "Needs more top margin like other pages": at 375 and 412 the Calendar page's top spacing is IDENTICAL to Weekly Meeting, Today and Marketing — page top 59px, title top 71px, padding-top 12px on all four. There was no missing margin. The SCREENSHOTS showed the real difference: every other page gives the title its own row, while here `.cal-topbar .page-title { flex: 1 1 auto }` let it share one line with the month toggle, Today and the gear, squeezing its underline and leaving the header cramped rather than under-padded. On a phone the title now takes the whole first line and the controls wrap beneath — the shape the rest of the app already uses, and the "more room" item 12 asked for, which is the same room v4.47.0 refused to spend by putting add-event on the FAB. Desktop untouched. **ITEM 13 — the dictation seam, and it is the exact mirror of v4.21.0.** Android Chrome does not honour `continuous`, so it ends the session at each utterance and `onend` restarts it. When a session ends with interim text on screen that was never finalised, `onend` folds it into `base` so the words are not lost — and Android then RE-REPORTS that same speech as the next session's first final, which is appended on top of the copy already there: "I recently I recently taught taught". Desktop never sees it because one session spans the pauses, so there is no seam. `absorbedTail` remembers WHAT was folded in, `_cmpDropAbsorbed` compares WORDS ONLY (an interim guess and the final differ in case and punctuation every time, so a raw string compare would never fire), and the guard is spent on the first final of the next session so it can never go on silently eating real repetition later. `painted` distinguishes hand-typed text, which no engine will re-report. **ITEM 14 — NOT FIXED, EXPLAINED, and saying so is the point.** A bare "Failed to fetch" is a TypeError from `fetch()` itself: no status code was ever received, so the request never left the machine — not an API error, not a key, not a quota. The manual rewrite and the post-dictation cleanup reach the SAME callAI('taskAssist') and produce the identical toast, nothing in that path branches on device, and there is no CSP. `_aiFailureSentence` now names the cause and the 20-second test (open generativelanguage.googleapis.com in a tab), matches the shape across Chrome/Firefox/Safari wordings, and passes a real HTTP error through untouched so a 429 is never dressed up as a network block. **THE ONE NOBODY REPORTED:** `cal-addevent-probe` scored 57/57 yesterday and 56/57 today against UNCHANGED builds — confirmed by re-running v4.45.0 and v4.46.0 today, both 56/57. `_calRebuildRepeat` restores the previous selection, which is right when the date changes mid-form and wrong on a form just opened: choose "Weekly", cancel, reopen — still Weekly, and creating from there made a repeating event nobody asked for. It hid because the preset LABELS are date-derived, so on a different weekday the restore failed and quietly did the right thing; a guard that works only while the weekday changes is not a guard. `calOpenNewEvent` clears the dropdown before the rebuild reads it. Probe probe-v4.48.0.js 36/36, 8/36 on deployed v4.47.0 — and item 7's assertion FAILS there with `during: true`, which is his symptom reproduced mechanically. TWO-FILE deploy, `?v=4.48.0`.
         // v4.47.0: ADDING AN EVENT ON THE PHONE, from the Calendar page's FAB — a RECORDED REVERSAL. The Calendar v1 design §6 deliberately left this out and Hans has now asked for it twice, so it is written down as a reversal rather than quietly built. HIS INSTRUCTION ON PLACEMENT IS THE DESIGN: the FAB, NOT the mobile toolbar. v4.41.0 kept "+ New event" and "Block time" desktop-only behind `.cal-newev-btn` precisely because that phone toolbar is already tight, and round-20 item 12 says it needs MORE room — so the way in had to cost that row nothing. 'calendar' joins FAB_PAGES with its own FAB_LABELS entry ("Add an event", and the mic "Add an event by voice"), and the branch routes to calOpenNewEvent() — the page's OWN opener, the same one the desktop button calls, so the capability re-probe (rule 51), the known-old-backend refusal, the write-calendar default and the whole recurrence builder behave identically however you got there. Nothing about creating an event is re-implemented for the phone. TWO THINGS THIS RELEASE HAD TO SOLVE THAT THE OTHER FAB PAGES NEVER DID. (1) THE COMPOSER WAS COVERING THE FORM, and the probe's hit-test found it rather than any amount of reading: `calOpenNewEvent` ended with `titleEl.focus()`, and on a COARSE pointer the composer opens on ANY focus — that gate is fine-pointer-only by v4.19.0's deliberate choice — so pressing "Add an event" threw the full-screen writing surface over the form the instant it appeared, with `TEXTAREA.cmp-input` sitting on top of the Create button. That is v4.19.0's own finding on a new surface ("the + gave a writing box instead of a cursor"), and the reason it is worse here is that A FORM IS NOT A SINGLE TEXT FIELD: the first thing you need to see is the date, the time and the calendar, not a blank box. The auto-focus is now fine-pointer only. The desktop keeps it — no composer is lifted there and landing in the title is the head start it has always given. On a phone you tap the title yourself, which is a real gesture, and the composer opens because you asked. (2) THE ASYNC-REFUSAL PATH MUST NOT LIE. Every other fabQuickAdd branch is synchronous, so fabVoiceAdd can fire its field-wait straight after and be certain the add happened. calOpenNewEvent is async AND is allowed to REFUSE (capability off, backend below 3.56.0), in which case it has already toasted the reason and no field will ever appear — the shared wait would then time out into "Added it — but there is no text box to dictate into on this page yet", false twice over. So the Calendar branch starts the wait ITSELF, only once the form is genuinely open, and returns `true` to tell fabVoiceAdd to stand down; every other branch still returns undefined and is untouched. That branch also focuses the title itself for the mic, since the opener no longer does on a phone — pressing the MIC is an explicit request to write, v4.22.0's opt-in shape. Probe probe-v4.47.0.js 48/48 at 375 AND 412, 20/48 on deployed v4.46.0, driving a real mouse click on the FAB after hit-testing it and running the form end to end so a real createCalendarEvent payload is asserted on the wire with the picked day and local times. Rule 51 is asserted in the negative too: with the capability probed OFF the FAB still EXISTS and refuses with a sentence, and the voice route repeats that sentence instead of claiming an add. `.cal-newev-btn` is untouched — the phone toolbar gains nothing. Clearance checked by PARITY with an existing FAB page rather than an invented number (`.page { padding-bottom: 84px }` is app-wide since v3.66.2), after the first version of that assertion failed against correct code. Client-only, no clasp round.
@@ -6781,7 +6792,19 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v4.50.0 &mdash; 2026-08-18 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v4.51.0 &mdash; 2026-08-18 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">You can edit an event now, not just look at it.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Tap an event on the Calendar and there is an &ldquo;Edit event&rdquo; button.</strong> It opens the same form you create events with &mdash; title, date, time, all day, location, notes and the repeat rule &mdash; filled in with what the event actually says.</li>'
+                + '<li><strong>Only what you changed is saved.</strong> Change the title and nothing else about the event is touched, so nothing can be overwritten by a field you never looked at.</li>'
+                + '<li><strong>A repeating event asks first:</strong> this event, or all of them. Changing how it repeats needs &ldquo;All events&rdquo;, because a repeat rule belongs to the whole series &mdash; the form says so rather than letting you try.</li>'
+                + '<li>Under &ldquo;All events&rdquo; the date and time shown are the <em>first</em> event in the series, not the one you tapped. It says so, because saving the one you tapped would move the whole series onto that day.</li>'
+                + '<li>An all-day event can be moved to different days here, but turning it back into a timed event still has to be done in Google Calendar.</li>'
+                + '<li>If the app cannot read an event&rsquo;s notes, the form stays open and lets you change the title, time and location &mdash; and leaves the notes and the repeat exactly as they are rather than blanking them.</li>'
+                + '</ul>'
+                + '</div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v4.50.0 &mdash; 2026-08-18</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Three error messages were confidently telling you the wrong cause.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Settings &rarr; Google &rarr; Access no longer tells a second team member their setup is wrong.</strong> Everyone after the first person has their own Google backend &mdash; that is the design, and the check was flagging it as a fault.</li>'
@@ -23146,7 +23169,15 @@ Make sure your suggestions directly address the specific root cause and discussi
         }
         function _calEvActionsHtml(ev) {
             const canWrite = capabilityReady('calendar.createEvent');
+            // v4.51.0: "Edit event" leads, and it is DELIBERATELY NOT gated on canWrite —
+            // rule 51. `capabilityReady` is a cached sync read that is false while the probe
+            // is pending or failed, not only when the capability is genuinely off, so gating
+            // the button's existence on it would delete the feature on a blip with nothing
+            // to read. calOpenEditEvent re-probes and explains. (The Delete button below
+            // keeps its existing gate; that is v4.38.0's shape and out of this release's
+            // scope, but it is the same defect waiting to be reported.)
             let h = '<div class="cal-ev-actions">'
+                + '<button type="button" class="cal-ev-act" onclick="event.stopPropagation();calOpenEditEvent(this)">Edit event</button>'
                 + '<button type="button" class="cal-ev-act" onclick="event.stopPropagation();calEventToTodo(this)">Make this a to-do</button>'
                 + '<button type="button" class="cal-ev-act" onclick="event.stopPropagation();calEventToRule(this)">Add to Rule of 3</button>';
             if (ev.eosTaskId && !ev.isRecurring && canWrite) {
@@ -23162,7 +23193,7 @@ Make sure your suggestions directly address the specific root cause and discussi
             if (ev.isRecurring) {
                 // v4.38.0 (add-event): recurring is no longer view-only — delete and drag
                 // both raise Google's This / this-and-following / all chooser.
-                h += '<span class="cal-ev-recur-note">Repeats — delete or drag asks: this event, this and following, or all.</span>';
+                h += '<span class="cal-ev-recur-note">Repeats — edit, delete or drag asks which occurrences it applies to. (Editing the details offers this event or all events; “this and following” splits a series, which Google itself only does on a time change.)</span>';
             }
             return h + '</div>';
         }
@@ -23521,6 +23552,11 @@ Make sure your suggestions directly address the specific root cause and discussi
                 showToast(_calAddEventBackendMsg(), 'error');
                 return;
             }
+            // v4.51.0: the modal is shared with the EDIT form, so every open must state
+            // which one it is. Create mode is the reset — title, button label, and the
+            // Repeat control back on — and it runs BEFORE any field is written, so an
+            // edit that was cancelled cannot leave its chrome behind.
+            _calEventFormMode('create');
             prefill = prefill || {};
             const titleEl = document.getElementById('calNewTitle');
             const dateEl = document.getElementById('calNewDate');
@@ -23588,15 +23624,10 @@ Make sure your suggestions directly address the specific root cause and discussi
             const endsUntil = document.getElementById('calNewEndsUntil');
             if (endsUntil && !endsUntil.value) { const u = new Date(); u.setMonth(u.getMonth() + 3); endsUntil.value = _calYmd(u); }
             _calSyncNewEnds();
-            if (!calOpenNewEvent._bound) {
-                dateEl.addEventListener('change', function () { _calRebuildRepeat(); if (endDateEl.value < dateEl.value) endDateEl.value = dateEl.value; endDateEl.min = dateEl.value; });
-                allDayEl.addEventListener('change', _calSyncAlldayRows);
-                document.getElementById('calNewRepeat').addEventListener('change', function () {
-                    if (this.value === '__custom__') { _calOpenRecurCustom(); return; }
-                    _calSyncNewEnds();
-                });
-                calOpenNewEvent._bound = true;
-            }
+            // v4.51.0: extracted, because the EDIT form opens the same modal and may be the
+            // FIRST thing that ever opens it in a session. Left here, a session that only
+            // ever edited would have had an unbound date/all-day/repeat trio.
+            _calBindEventForm();
             openModal('calNewEventModal');
             // v4.47.0 — NO AUTO-FOCUS ON A COARSE POINTER, and this was found by the probe
             // for the phone FAB rather than by reading the code. On a phone the composer
@@ -23703,6 +23734,574 @@ Make sure your suggestions directly address the specific root cause and discussi
             } else {
                 showToast('Could not create the event: ' + ((res && res.error) || 'unknown error'), 'error');
             }
+        }
+                // ---- EDIT AN EVENT (v4.51.0) ------------------------------------------------
+        // Hans's round-20 live test, verbatim: "when I click into a created event, shouldn't
+        // it pop up with the window where I can edit the event?" The backend half has been
+        // live since .gs v3.57.0 (2026-08-17) — getCalendarEventDetails + eosEditEvent_ —
+        // and until now nothing on the client called either, so clicking an event gave a
+        // read-only card.
+        //
+        // THE THREE THINGS THIS FORM MUST GET RIGHT, all of them from the .gs contract:
+        //
+        //  1. SEND ONLY WHAT CHANGED. eosEditEvent_ patches by hasOwnProperty, not
+        //     truthiness, and refuses an edit that changes nothing. So the open takes a
+        //     BASELINE and the save diffs against it. This is not tidiness: a form that
+        //     always posts its all-day checkbox would trip the backend's own timed→all-day
+        //     assertion on an edit that never touched the time (the .gs says so in as many
+        //     words), and always posting `description` would rewrite the notes of every
+        //     event whose details we failed to read.
+        //
+        //  2. THE DESCRIPTION IS SPLIT. getCalendarEventDetails returns `description` with
+        //     the Block-it "[EOS Tool link: id]" marker stripped and `eosTaskId` beside it;
+        //     the save sends both back and the backend re-appends the marker. Prefilling
+        //     notes from the CACHED AGENDA ROW instead would put the raw marker in the box,
+        //     and saving the box would destroy the only proof the tool created that time
+        //     block — in-tool delete would then refuse it forever. So notes stay DISABLED
+        //     until the detail read lands, and stay disabled forever if it fails.
+        //
+        //  3. FOR A SERIES, THE RESOURCE IS THE MASTER, NOT THE OCCURRENCE YOU CLICKED.
+        //     Under "All events" the date and time shown are the series' FIRST occurrence
+        //     (the .gs says isSeriesMaster out loud for exactly this reason), so those two
+        //     fields wait for the detail read too — prefilling them from the clicked row
+        //     and saving would drag the whole series onto the day you happened to click.
+        //     Under "This event" the clicked occurrence IS the target, so the row is right.
+        //
+        // The scope question is asked BEFORE the form opens, like delete and move already
+        // do, because it changes what the form may offer: the repeat rule belongs to the
+        // series, so "This event" hides the Repeat control rather than offering a change
+        // the backend will refuse. Only two options are offered — the backend declines
+        // "this and following" for a FIELD edit (splitting a series to change a title
+        // leaves two series nobody asked for), so offering it would be offering a refusal.
+        let _calEdit = null;   // { seq, eventId, calendarId, isRecurring, scope, instanceStartISO,
+                               //   base:{...}, notesReady, repeatReady, timesReady, eosTaskId }
+        // A monotonic open counter, because comparing the event id is NOT enough to tell a
+        // late answer from a current one: cancel the form and reopen the SAME event and the
+        // in-flight detail read matches on every field you could compare it by, then fills
+        // the new form with the old form's answer. The counter is the only thing that
+        // distinguishes two opens of one event.
+        let _calEditSeq = 0;
+
+        // Create vs edit chrome. One place, so a cancelled edit cannot leave "Save changes"
+        // sitting on the new-event form (rule 16's rebuild corollary in spirit: a shared
+        // control has to be re-resolved on every open, never assumed).
+        function _calEventFormMode(mode) {
+            const isEdit = (mode === 'edit');
+            if (!isEdit) _calEdit = null;
+            const h = document.getElementById('calEventFormTitle');
+            const b = document.getElementById('calEventSubmitBtn');
+            const note = document.getElementById('calEventFormNote');
+            if (h) h.textContent = isEdit ? 'Edit event' : 'New event';
+            if (b) { b.textContent = isEdit ? 'Save changes' : 'Create event'; b.disabled = false; }
+            if (note) { note.innerHTML = ''; note.style.display = 'none'; }
+            // Everything the edit form may switch off comes back on for a new event.
+            const repLabel = document.getElementById('calNewRepeatLabel');
+            const repEl = document.getElementById('calNewRepeat');
+            if (repLabel) repLabel.style.display = '';
+            if (repEl) repEl.style.display = '';
+            ['calNewTitle', 'calNewDate', 'calNewAllday', 'calNewStart', 'calNewEnd',
+             'calNewEndDate', 'calNewCal', 'calNewRepeat', 'calNewLoc', 'calNewNotes']
+                .forEach(function (id) { const el = document.getElementById(id); if (el) el.disabled = false; });
+            // The calendar cannot be moved by an edit (that is a Google "move to calendar"
+            // operation, not a patch), so the edit form shows it read-only rather than
+            // offering a control that would silently do nothing.
+            const calEl = document.getElementById('calNewCal');
+            if (calEl) calEl.disabled = isEdit;
+        }
+
+        // The date / all-day / repeat wiring, extracted from calOpenNewEvent in v4.51.0 so
+        // the edit form gets it too even when it is the first form opened this session.
+        function _calBindEventForm() {
+            if (_calBindEventForm._done) return;
+            const dateEl = document.getElementById('calNewDate');
+            const endDateEl = document.getElementById('calNewEndDate');
+            const allDayEl = document.getElementById('calNewAllday');
+            const repEl = document.getElementById('calNewRepeat');
+            if (!dateEl || !endDateEl || !allDayEl || !repEl) return;
+            dateEl.addEventListener('change', function () { _calRebuildRepeat(); if (endDateEl.value < dateEl.value) endDateEl.value = dateEl.value; endDateEl.min = dateEl.value; });
+            allDayEl.addEventListener('change', _calSyncAlldayRows);
+            repEl.addEventListener('change', function () {
+                if (this.value === '__custom__') { _calOpenRecurCustom(); return; }
+                _calSyncNewEnds();
+            });
+            _calBindEventForm._done = true;
+            calOpenNewEvent._bound = true;   // kept: the add-event probe reads this flag
+        }
+
+        // A human sentence for an RRULE body we did not build. The Repeat dropdown is
+        // generated from the picked DATE, so an existing rule will very often match no
+        // option in it — "Every 2 weeks on Mon, Wed, 10 times" carries no preset. Showing
+        // the raw RRULE would be honest but unreadable; showing "Does not repeat" would be
+        // a lie, and the person would then save that lie over a real series. So an
+        // unmatched rule is injected as the selected option with this label.
+        function _calRRuleSummary(body) {
+            const s = String(body || '');
+            if (!s) return '';
+            const get = function (k) { const m = new RegExp('(?:^|;)' + k + '=([^;]*)').exec(s); return m ? m[1] : ''; };
+            const freq = get('FREQ'), n = parseInt(get('INTERVAL'), 10) || 1;
+            const unit = { DAILY: 'day', WEEKLY: 'week', MONTHLY: 'month', YEARLY: 'year' }[freq];
+            if (!unit) return s;                                   // an unparseable rule: say it verbatim
+            let out = 'Every ' + (n > 1 ? n + ' ' + unit + 's' : unit);
+            const byday = get('BYDAY'), bymd = get('BYMONTHDAY');
+            const nameOf = function (code) { const i = _calDOW_.indexOf(code); return i >= 0 ? _calDOWNAME_[i] : code; };
+            if (byday) {
+                if (freq === 'WEEKLY') {
+                    out += ' on ' + byday.split(',').map(function (c) { return nameOf(c).slice(0, 3); }).join(', ');
+                } else {
+                    const m = /^(-?\d+)([A-Z]{2})$/.exec(byday);
+                    if (m) out += (m[1] === '-1') ? ' on the last ' + nameOf(m[2])
+                        : ' on the ' + (_calORD_[(+m[1]) - 1] || (m[1] + 'th')) + ' ' + nameOf(m[2]);
+                }
+            } else if (bymd) {
+                out += ' on day ' + bymd;
+            }
+            const count = get('COUNT'), until = get('UNTIL');
+            if (count) out += ', ' + count + ' times';
+            else if (until) out += ', until ' + until.slice(0, 4) + '-' + until.slice(4, 6) + '-' + until.slice(6, 8);
+            return out;
+        }
+
+        function _calEditBackendMsg() {
+            return 'Your Apps Script backend is v' + ((_capabilityProbeState && _capabilityProbeState.gsVersion) || '?')
+                + ', and editing an event needs v3.57.0. The deployment this app calls has not received it — open '
+                + 'Settings › Google › “Check Google access” to see which deployment it asked.';
+        }
+
+        function _calEditSetNote(lines) {
+            const el = document.getElementById('calEventFormNote');
+            if (!el) return;
+            const list = (lines || []).filter(Boolean);
+            if (!list.length) { el.innerHTML = ''; el.style.display = 'none'; return; }
+            el.innerHTML = list.map(function (t) { return '<div style="margin:2px 0;">' + escapeHtml(t) + '</div>'; }).join('');
+            el.style.display = 'block';
+        }
+
+        // Read the form as it stands. The SAME function produces the baseline at open and
+        // the comparison at save, so a field can never be diffed against a differently
+        // computed version of itself. `rrule` is the FINAL body (Ends row applied), which
+        // is what makes changing only "Ends → after 8 times" count as a change.
+        function _calEditReadForm() {
+            const rrBody = String(document.getElementById('calNewRepeat').value || '');
+            const rule = (rrBody && rrBody !== '__custom__') ? _calApplyEndsTo(rrBody) : '';
+            return {
+                title: String(document.getElementById('calNewTitle').value || '').trim(),
+                location: String(document.getElementById('calNewLoc').value || '').trim(),
+                notes: String(document.getElementById('calNewNotes').value || ''),
+                allDay: !!document.getElementById('calNewAllday').checked,
+                dateStr: String(document.getElementById('calNewDate').value || ''),
+                endDate: String(document.getElementById('calNewEndDate').value || ''),
+                start: String(document.getElementById('calNewStart').value || ''),
+                end: String(document.getElementById('calNewEnd').value || ''),
+                rrule: rule
+            };
+        }
+
+        // "HH:MM" and "YYYY-MM-DD" from an ISO instant, in the DEVICE's zone — the same
+        // local-wall-clock reasoning calSubmitNewEvent uses when it builds the ISO back.
+        function _calHm(iso) {
+            const d = new Date(String(iso || ''));
+            if (isNaN(d.getTime())) return '';
+            return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+        }
+        function _calYmdOf(iso) {
+            const s = String(iso || '');
+            if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;           // an all-day date value
+            const d = new Date(s);
+            return isNaN(d.getTime()) ? '' : _calYmd(d);
+        }
+
+        async function calOpenEditEvent(btnOrNode) {
+            const ev = _calEvFromNode(btnOrNode);
+            if (!ev) { showToast('That event could not be found.', 'error'); return; }
+            // Rule 51: the BUTTON is never gated on capabilityReady — a pending or failed
+            // probe must cost a re-probe and a sentence, not the feature. Only a genuinely
+            // "probed and off" answer refuses here, and it says which of the two it is.
+            if (!(await capabilityReadyChecked('calendar.createEvent'))) {
+                showToast('Calendar write is not available for this sign-in yet. Check Settings › Google › Access — if it cannot reach the backend, sync is down rather than the feature being off.', 'info');
+                return;
+            }
+            // v4.39.2's guard, one version up: editing needs 3.57.0, not 3.56.0. Refuse UP
+            // FRONT rather than letting someone fill in a form the backend will bounce.
+            // `=== false` on purpose (rule 63c) — an unknown version is not "too old".
+            if (_calGsAtLeast('3.57.0') === false) {
+                showToast(_calEditBackendMsg(), 'error');
+                return;
+            }
+            // A calendar we KNOW is read-only cannot take a patch. Unknown still proceeds:
+            // "we never found out" is not "no", and Google refuses on its own if we are wrong.
+            const owner = (_calState.calendars || []).filter(function (c) { return c.id === ev.calendarId; })[0];
+            if (owner && !owner.isOwned) {
+                showToast('“' + String(owner.name || 'That calendar') + '” is one you can only read — open the event in Google Calendar to change it.', 'info');
+                return;
+            }
+
+            let scope = '';
+            if (ev.isRecurring) {
+                // Two options, not three. The backend declines 'following' for a FIELD edit
+                // (Google itself only splits a series on a time change), so a third button
+                // here would be a button that always fails.
+                scope = await eosChoose({
+                    title: 'Edit recurring event',
+                    message: '“' + String(ev.title || '').substring(0, 60) + '” repeats. Which events should the change apply to?',
+                    options: [
+                        { label: 'This event', value: 'this', recommended: true },
+                        { label: 'All events', value: 'all' }
+                    ]
+                });
+                if (scope === null || scope === undefined) return;
+            }
+            calCloseEvCard();
+
+            _calEventFormMode('edit');
+            _calBindEventForm();
+            const titleEl = document.getElementById('calNewTitle');
+            const dateEl = document.getElementById('calNewDate');
+            const allDayEl = document.getElementById('calNewAllday');
+            const startEl = document.getElementById('calNewStart');
+            const endEl = document.getElementById('calNewEnd');
+            const endDateEl = document.getElementById('calNewEndDate');
+            const calEl = document.getElementById('calNewCal');
+            const repEl = document.getElementById('calNewRepeat');
+            const repLabel = document.getElementById('calNewRepeatLabel');
+            const locEl = document.getElementById('calNewLoc');
+            const notesEl = document.getElementById('calNewNotes');
+            const btn = document.getElementById('calEventSubmitBtn');
+            if (!titleEl || !dateEl || !calEl) return;
+
+            const seriesTimes = (!!ev.isRecurring && scope === 'all');   // times must come from the master
+            const seq = ++_calEditSeq;
+            _calEdit = {
+                seq: seq,
+                eventId: ev.id, calendarId: ev.calendarId || '',
+                isRecurring: !!ev.isRecurring, scope: scope,
+                instanceStartISO: ev.start || '',
+                wasAllDay: !!ev.allDay,
+                seriesTimes: seriesTimes,
+                notesReady: false, repeatReady: false, timesReady: !seriesTimes,
+                eosTaskId: '', base: null, title: String(ev.title || '')
+            };
+
+            // A new form must not inherit the last one's repeat selection (rule 60 / the
+            // v4.48.0 date-dependent bug) — say "no previous choice" before the rebuild.
+            _calCustomRRule = null;
+            repEl.value = '';
+
+            titleEl.value = String(ev.title || '');
+            locEl.value = String(ev.location || '');
+            notesEl.value = '';
+            notesEl.disabled = true;                 // until the detail read lands (see (2) above)
+            notesEl.placeholder = 'Loading…';
+            allDayEl.checked = !!ev.allDay;
+            // The past is a legal place for an existing event; the create form's
+            // today-forward floor must not follow it here.
+            dateEl.min = ''; endDateEl.min = '';
+
+            // The calendar list, read-only: the person can see WHERE the event lives even
+            // though an edit cannot move it.
+            let optHtml = '';
+            const cals = _calState.calendars || [];
+            const known = cals.filter(function (c) { return c.id === ev.calendarId; })[0];
+            if (known) optHtml = '<option value="' + escapeHtml(known.id) + '">' + escapeHtml(known.name || 'Calendar') + '</option>';
+            else optHtml = '<option value="' + escapeHtml(String(ev.calendarId || '')) + '">' + escapeHtml(ev.calendarName || 'This calendar') + '</option>';
+            calEl.innerHTML = optHtml;
+            calEl.value = String(ev.calendarId || '');
+
+            if (seriesTimes) {
+                // Under "All events" the target is the series master, whose start is the
+                // FIRST occurrence — not the row that was clicked. Blank and disabled until
+                // the detail read supplies the real one.
+                dateEl.value = ''; startEl.value = ''; endEl.value = ''; endDateEl.value = '';
+                dateEl.disabled = true; startEl.disabled = true; endEl.disabled = true; endDateEl.disabled = true;
+                allDayEl.disabled = true;
+            } else {
+                const ymd = _calYmdOf(ev.start);
+                dateEl.value = ymd;
+                if (ev.allDay) {
+                    // The feed's all-day `end` is Google's EXCLUSIVE end; the form asks for
+                    // the last day, inclusive — the same convention calSubmitNewEvent writes.
+                    const endEx = _calYmdOf(ev.end) || ymd;
+                    const d = new Date(endEx + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - 1);
+                    const inc = isNaN(d.getTime()) ? ymd : (d.toISOString().slice(0, 10));
+                    endDateEl.value = (inc < ymd) ? ymd : inc;
+                } else {
+                    startEl.value = _calHm(ev.start);
+                    endEl.value = _calHm(ev.end || ev.start);
+                    endDateEl.value = ymd;
+                }
+            }
+            _calSyncAlldayRows();
+            _calRebuildRepeat();
+            const endsNever = document.querySelector('input[name="calNewEnds"][value="never"]');
+            if (endsNever) endsNever.checked = true;
+            _calSyncNewEnds();
+
+            // The repeat rule is unknown until the detail read lands, and a control that
+            // shows "Does not repeat" for a series is worse than no control — save it and
+            // the series stops repeating. Hidden under "This event" for good (an instance
+            // cannot carry a rule); disabled-until-known otherwise.
+            const repeatEditable = !ev.isRecurring || scope === 'all';
+            if (!repeatEditable) { repLabel.style.display = 'none'; repEl.style.display = 'none'; }
+            else { repEl.disabled = true; }
+
+            if (btn) btn.disabled = true;            // no save until we know what we are saving
+            _calEditSetNote([
+                ev.isRecurring ? (scope === 'all'
+                    ? 'This event repeats. Your changes will apply to EVERY event in the series.'
+                    : 'This event repeats. Your changes will apply to THIS event only — its repeat rule belongs to the whole series.') : '',
+                'Reading this event’s notes' + (repeatEditable ? ' and repeat rule' : '') + '…'
+            ]);
+            openModal('calNewEventModal');
+            // Rule 57: NO auto-focus on a coarse pointer — the composer opens on any focus
+            // there and would cover the form. Desktop keeps the head start.
+            if (!(typeof _cmpCoarsePointer === 'function' && _cmpCoarsePointer())) {
+                setTimeout(function () { try { titleEl.focus(); } catch (e) {} }, 30);
+            }
+
+            const det = await _calPost({ action: 'getCalendarEventDetails', eventId: ev.id, calendarId: ev.calendarId || '' });
+            // The person may have closed the form, or opened a different event, while the
+            // round trip was out. Either way this answer is no longer about what is on screen.
+            if (!_calEdit || _calEdit.seq !== seq) return;
+            if (!det || !det.success || !det.event) {
+                // DEGRADE, do not close. Title, location and (where they were prefilled from
+                // the clicked row) the times are still safely editable, because none of them
+                // depends on the read that failed. Notes and repeat stay off: saving either
+                // without the read would overwrite real content with a blank.
+                _calEditSetNote([
+                    _calEdit.isRecurring ? (scope === 'all'
+                        ? 'Changes apply to EVERY event in the series.'
+                        : 'Changes apply to THIS event only.') : '',
+                    'Could not read this event’s notes or repeat rule: ' + ((det && det.error) || 'the backend did not answer')
+                        + '. You can still change the title' + (seriesTimes ? '' : ', time') + ' and location — the notes and the repeat are left exactly as they are.'
+                ]);
+                notesEl.placeholder = 'Unavailable — the detail read failed';
+                if (repeatEditable) { repLabel.style.display = 'none'; repEl.style.display = 'none'; }
+                if (seriesTimes) {
+                    // Nothing supplied the series' own times, so there is nothing honest to
+                    // show or to save. Leave them off rather than guess.
+                    _calEditSetNote([
+                        'Changes apply to EVERY event in the series.',
+                        'Could not read the series: ' + ((det && det.error) || 'the backend did not answer')
+                            + '. Only the title and location can be changed from here.'
+                    ]);
+                }
+                _calEdit.base = _calEditReadForm();
+                if (btn) btn.disabled = false;
+                return;
+            }
+
+            const d = det.event;
+            _calEdit.eosTaskId = String(d.eosTaskId || '');
+            notesEl.value = String(d.description || '');
+            notesEl.disabled = false;
+            notesEl.placeholder = 'Add details...';
+            _calEdit.notesReady = true;
+            if (String(d.title || '') && titleEl.value === String(ev.title || '')) titleEl.value = String(d.title || '');
+            if (locEl.value === String(ev.location || '')) locEl.value = String(d.location || '');
+
+            if (seriesTimes) {
+                const ymd = _calYmdOf(d.start);
+                dateEl.value = ymd;
+                dateEl.disabled = false;
+                if (d.allDay) {
+                    const endEx = _calYmdOf(d.end) || ymd;
+                    const x = new Date(endEx + 'T00:00:00Z'); x.setUTCDate(x.getUTCDate() - 1);
+                    const inc = isNaN(x.getTime()) ? ymd : x.toISOString().slice(0, 10);
+                    endDateEl.value = (inc < ymd) ? ymd : inc;
+                    allDayEl.checked = true;
+                    endDateEl.disabled = false;
+                } else {
+                    startEl.value = _calHm(d.start);
+                    endEl.value = _calHm(d.end || d.start);
+                    endDateEl.value = ymd;
+                    allDayEl.checked = false;
+                    startEl.disabled = false; endEl.disabled = false; endDateEl.disabled = false;
+                }
+                _calEdit.wasAllDay = !!d.allDay;
+                _calEdit.timesReady = true;
+                _calSyncAlldayRows();
+                _calRebuildRepeat();
+            }
+
+            if (repeatEditable) {
+                const body = (d.recurrence && d.recurrence.length)
+                    ? String(d.recurrence[0]).replace(/^RRULE:/i, '') : '';
+                if (body) {
+                    // Select it if it happens to match one of the date-derived presets,
+                    // otherwise inject it as the selected option with a readable summary —
+                    // never let a real rule render as "Does not repeat".
+                    const opts = Array.prototype.map.call(document.getElementById('calNewRepeat').options, function (o) { return o.value; });
+                    if (opts.indexOf(body) >= 0) { repEl.value = body; }
+                    else {
+                        _calCustomRRule = { rrule: body, label: _calRRuleSummary(body) };
+                        _calRebuildRepeat();
+                        repEl.value = body;
+                    }
+                }
+                repEl.disabled = false;
+                _calEdit.repeatReady = true;
+                _calSyncNewEnds();
+            }
+
+            // All-day is a one-way street here, by the backend's own rule: timed → all-day
+            // is attempted and verified, all-day → timed is refused outright because a
+            // silent coercion changes what KIND of event it is. Say so instead of offering
+            // a checkbox whose only outcome is a refusal.
+            const nowAllDay = !!allDayEl.checked;
+            allDayEl.disabled = nowAllDay;
+
+            _calEdit.base = _calEditReadForm();
+            _calEditSetNote([
+                _calEdit.isRecurring ? (scope === 'all'
+                    ? 'Changes apply to EVERY event in the series.' + (seriesTimes ? ' The date and time below are the FIRST event in the series.' : '')
+                    : 'Changes apply to THIS event only. To change how it repeats, reopen it and choose “All events”.') : '',
+                nowAllDay ? 'This is an all-day event. Turning that off has to be done in Google Calendar.' : '',
+                d.eosCreated ? 'The EOS Tool created this event.' : ''
+            ]);
+            if (btn) btn.disabled = false;
+        }
+
+        // Cancel / × for the shared modal. It exists so that abandoning an EDIT drops the
+        // edit state on the way out rather than on the next open — an in-flight detail read
+        // that lands after a cancel then has nothing to write into, which is one less way
+        // for a closed form to change what is on screen.
+        function calCloseEventForm() {
+            _calEdit = null;
+            _calEditSeq++;
+            closeModal('calNewEventModal');
+        }
+
+        // The Create / Save dispatcher. One button, two forms — and the mode is read from
+        // _calEdit rather than from the label, so a half-restored chrome can never route a
+        // save into a create.
+        function calEventFormSubmit(btn) {
+            if (_calEdit) return calSubmitEditEvent(btn);
+            return calSubmitNewEvent(btn);
+        }
+
+        async function calSubmitEditEvent(btn) {
+            const st = _calEdit;
+            if (!st || !st.base) { showToast('This form is still loading — give it a moment.', 'info'); return; }
+            const cur = _calEditReadForm();
+            if (!cur.title) { showToast('Give the event a title.', 'info'); return; }
+
+            const tz = (Intl.DateTimeFormat().resolvedOptions().timeZone) || _calState.timeZone || '';
+            const payload = { action: 'updateCalendarEvent', editFields: true, eventId: st.eventId, calendarId: st.calendarId, timeZone: tz };
+            // editFields:true is EXPLICIT routing, never inferred from a field being present
+            // — the .gs refuses location/notes/recurrence without it, precisely so a future
+            // payload cannot slip past the drag-move path's stale-guard by accident.
+            if (st.isRecurring) { payload.recurringScope = st.scope; payload.instanceStartISO = st.instanceStartISO; }
+            const changed = [];
+
+            if (cur.title !== st.base.title) { payload.title = cur.title.substring(0, 200); changed.push('title'); }
+            if (cur.location !== st.base.location) { payload.location = cur.location.substring(0, 300); changed.push('location'); }
+            if (st.notesReady && cur.notes !== st.base.notes) {
+                payload.description = cur.notes;
+                if (st.eosTaskId) payload.eosTaskId = st.eosTaskId;   // the backend re-appends the marker
+                changed.push('notes');
+            }
+            if (st.repeatReady && cur.rrule !== st.base.rrule) {
+                payload.recurrence = cur.rrule ? ['RRULE:' + cur.rrule] : [];   // [] clears the repeat
+                changed.push('repeat');
+            }
+
+            if (st.timesReady) {
+                if (cur.allDay) {
+                    const endStr = cur.endDate || cur.dateStr;
+                    if (!/^\d{4}-\d{2}-\d{2}$/.test(cur.dateStr)) { showToast('Pick a date.', 'info'); return; }
+                    if (endStr < cur.dateStr) { showToast('The end date is before the start date.', 'info'); return; }
+                    if (!st.base.allDay || cur.dateStr !== st.base.dateStr || endStr !== st.base.endDate) {
+                        payload.allDay = true; payload.startDate = cur.dateStr; payload.endDate = endStr;
+                        changed.push('time');
+                    }
+                } else {
+                    if (!/^\d{4}-\d{2}-\d{2}$/.test(cur.dateStr)) { showToast('Pick a date.', 'info'); return; }
+                    if (!/^\d{2}:\d{2}/.test(cur.start) || !/^\d{2}:\d{2}/.test(cur.end)) { showToast('Set a start and end time.', 'info'); return; }
+                    if (cur.dateStr !== st.base.dateStr || cur.start !== st.base.start || cur.end !== st.base.end || cur.allDay !== st.base.allDay) {
+                        // Built from the picked LOCAL date+time, exactly as the create form
+                        // does, so a device timezone can never shift the day.
+                        const dp = cur.dateStr.split('-').map(Number);
+                        const sp = cur.start.split(':').map(Number), ep = cur.end.split(':').map(Number);
+                        const s = new Date(dp[0], dp[1] - 1, dp[2], sp[0], sp[1], 0, 0);
+                        const e = new Date(dp[0], dp[1] - 1, dp[2], ep[0], ep[1], 0, 0);
+                        if (e <= s) { showToast('The event ends before it starts.', 'info'); return; }
+                        payload.startISO = s.toISOString(); payload.endISO = e.toISOString();
+                        changed.push('time');
+                        // The stale-guard, on the one shape the backend enforces it for: a
+                        // single timed event. Sent ONLY when the time actually changed —
+                        // making a title edit refusable because the event moved elsewhere
+                        // would be a conflict nobody caused.
+                        if (!st.isRecurring && !st.wasAllDay) payload.expectedStartISO = st.instanceStartISO;
+                    }
+                }
+            }
+
+            if (!changed.length) { showToast('Nothing has changed yet.', 'info'); return; }
+
+            const btnLabel = btn ? btn.textContent : '';
+            if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+            const res = await _calPost(payload);
+            if (btn) { btn.disabled = false; btn.textContent = btnLabel; }
+
+            if (res && res.success && res.event) {
+                _calState.lastWriteAt = Date.now();
+                _calEventFormMode('create');           // clears _calEdit; the modal is shared
+                closeModal('calNewEventModal');
+                // Optimistic paint for the one case whose identity cannot shift under us: a
+                // single, non-recurring event. A series edit re-keys occurrences (and "all"
+                // can move every one of them), so the honest repaint there is the refetch.
+                if (!payload.recurringScope) {
+                    const live = _calEvByKey(String(st.eventId || '') + '|' + String(st.instanceStartISO || ''));
+                    if (live) {
+                        if (Object.prototype.hasOwnProperty.call(payload, 'title')) live.title = res.event.title || live.title;
+                        if (Object.prototype.hasOwnProperty.call(payload, 'location')) live.location = res.event.location || '';
+                        if (res.event.start) live.start = res.event.start;
+                        if (res.event.end) live.end = res.event.end;
+                        live.allDay = !!res.event.allDay;
+                        live.isRecurring = !!res.event.recurring;
+                        _calWriteCache();
+                    }
+                }
+                _calRenderAll();
+                showToast('Saved “' + String(res.event.title || st.title || '').substring(0, 40) + '”'
+                    + (payload.recurringScope === 'all' ? ' for every event in the series.' : '.'), 'success');
+                _calFetch('replace');
+                // A series or an all-day change needs a second look for the same reason the
+                // create path takes one: Google does not always have the new instances
+                // queryable by the time the first refetch runs.
+                if (payload.recurringScope || payload.allDay || payload.recurrence) {
+                    setTimeout(function () { _calFetch('replace'); }, 4000);
+                }
+                return;
+            }
+
+            if (res && res.partialWrite) {
+                // The patch DID commit the other fields. Refetching is not optional here —
+                // assuming nothing was written is how a half-saved event goes unnoticed.
+                showToast((res && res.error) || 'Part of that change did not apply.', 'error');
+                _calFetch('replace');
+                return;
+            }
+            if (res && res.conflict) {
+                showToast('That event changed since your last refresh — reloading the calendar. Open it and try again.', 'error');
+                _calEventFormMode('create');
+                closeModal('calNewEventModal');
+                _calFetch('replace');
+                return;
+            }
+            if (res && res.notFound) {
+                showToast((res && res.error) || 'That event could not be found any more.', 'error');
+                _calEventFormMode('create');
+                closeModal('calNewEventModal');
+                _calFetch('replace');
+                return;
+            }
+            if (res && res.needsScope) {
+                // Should be unreachable — a recurring edit always carries a scope — but the
+                // backend's refusal is a sentence fit to show a person, so show it.
+                showToast((res && res.error) || 'This event repeats — say which events the change applies to.', 'info');
+                return;
+            }
+            showToast('Could not save it: ' + ((res && res.error) || 'unknown error'), 'error');
         }
         // ---- delete (tag-gated backend) + recurring This/following/all chooser -------
         async function calEventDelete(btnOrNode) {
