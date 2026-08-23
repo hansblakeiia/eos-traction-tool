@@ -4928,3 +4928,28 @@
             .mb-quote { margin-top: 10px; padding-top: 10px; }
             .mb-links { margin-top: 10px; }
         }
+
+        /* SCREENSHOT FINDINGS, v4.56.0 — both caught by looking at the render, not by any
+           assertion, which is why the shots are part of the release and not decoration.
+
+           (1) THE HINT WAS STARVING THE TITLE. `.mb-item-hint` is flex:0 0 auto, so a long
+           hint takes what it wants and the ellipsis lands on the TEXT instead. On the Kanban
+           rows the hint is "Intelligrations Kanban Board · Backlog" — the same 30-odd
+           characters on every row, and the least valuable text there — which cut the card
+           titles to "Calendly l…", "Need a cris…", "Kitces + …". The title is the thing you
+           are reading; the board is context. Cap the hint and let IT ellipsize first. */
+        .mb-item-hint {
+            max-width: 42%;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+
+        /* (2) THE QUOTE RAN UNDER THE FAB on a phone. The band opens at the top of Today and
+           is ~660px tall, so its last line sits exactly where the fixed mic/+ pair lives —
+           rule 12's "two fixed overlays means two clearances", on a surface that did not
+           exist when that rule was written. The FAB is 56px across with a 16px margin, so
+           72px of right-hand clearance on the last block clears it. Scoped to the phone,
+           because above 768 the FAB pair and the quote are nowhere near each other. */
+        @media (max-width: 768px) {
+            .mb-quote blockquote { padding-right: 72px; }
+            .mb-quote figcaption { padding-right: 72px; }
+        }
