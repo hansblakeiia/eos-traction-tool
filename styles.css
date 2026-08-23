@@ -4806,3 +4806,125 @@
             font-size: 0.78rem; font-weight: 700; cursor: pointer; padding: 0;
         }
         .cal-recur-dow-on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+        /* ==================== THE MORNING BRIEF (v4.56.0) ====================
+           Appended at the END of styles.css, which per rule 10b means every rule here WINS
+           an equal-specificity tie against everything above it. That is fine because every
+           selector below is `mb-`-prefixed and shares no class with an existing component —
+           the trap 10b describes is a NEW base class colliding with an EXISTING modifier,
+           and there is no such pairing here. Checked, not assumed.
+
+           The band is deliberately quieter than #goodMorningBanner's purple gradient, which
+           it replaces: this thing appears every morning, and a full-bleed gradient that
+           shouts once is a gradient that annoys on day three. */
+        .mb-band {
+            background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+            border: 1px solid #c7d2fe;
+            border-left: 4px solid var(--accent);
+            border-radius: 10px;
+            padding: 16px 18px;
+            margin-bottom: 16px;
+        }
+        .mb-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+        .mb-greet h3 { margin: 0; font-size: 1.15rem; color: var(--gray-800); }
+        .mb-date { font-size: 0.82rem; color: var(--gray-500); margin-top: 2px; }
+        .mb-collapse {
+            background: #fff; border: 1px solid var(--gray-300); color: var(--gray-600);
+            border-radius: 6px; padding: 5px 12px; font-size: 0.78rem; cursor: pointer;
+            flex: 0 0 auto;
+        }
+        .mb-collapse:hover { background: var(--gray-100); }
+        .mb-headline {
+            margin: 10px 0 14px; font-size: 0.92rem; color: var(--gray-700); line-height: 1.45;
+        }
+
+        /* Columns, not rows: five short lists stacked vertically is a very tall band on a
+           desktop and the whole point is that it fits above the Rule of 3. `auto-fit` with a
+           min track means the count falls to one on a phone with no media query and no JS
+           mirror to keep in step (rule 56a's lesson, avoided by not having a JS half). */
+        .mb-body {
+            display: grid; gap: 12px 20px;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        }
+        .mb-body > * { min-width: 0; }          /* rule 8, on creation */
+        .mb-sec { min-width: 0; }
+        .mb-sec-head {
+            margin: 0 0 6px; font-size: 0.74rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.04em; color: var(--gray-500);
+            display: flex; align-items: center; gap: 6px;
+        }
+        .mb-count {
+            background: var(--accent); color: #fff; border-radius: 10px;
+            padding: 0 7px; font-size: 0.7rem; font-weight: 700; letter-spacing: 0;
+        }
+        .mb-list { list-style: none; margin: 0; padding: 0; }
+        .mb-list li {
+            display: flex; align-items: baseline; gap: 8px;
+            font-size: 0.86rem; color: var(--gray-800); padding: 2px 0; min-width: 0;
+        }
+        .mb-item-text {
+            flex: 1 1 0; min-width: 0;                    /* rule 9: 1 1 0, never 1 1 auto */
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .mb-item-hint { flex: 0 0 auto; font-size: 0.72rem; color: var(--gray-500); }
+        .mb-empty { font-size: 0.82rem; color: var(--gray-400); }
+        .mb-notes {
+            font-size: 0.86rem; color: var(--gray-700); background: #fff;
+            border: 1px solid var(--gray-200); border-radius: 6px; padding: 8px 10px;
+            overflow-wrap: anywhere;                       /* rule 8: `anywhere`, not break-word */
+        }
+
+        .mb-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+        .mb-link {
+            background: #fff; border: 1px solid var(--gray-300); border-radius: 999px;
+            padding: 5px 12px; font-size: 0.8rem; color: var(--gray-700);
+            text-decoration: none; white-space: nowrap;
+        }
+        .mb-link:hover { border-color: var(--accent); color: var(--accent); }
+
+        .mb-quote { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid #c7d2fe; }
+        .mb-quote blockquote {
+            margin: 0; font-size: 0.9rem; font-style: italic; color: var(--gray-700);
+            line-height: 1.5; overflow-wrap: anywhere;
+        }
+        .mb-quote figcaption {
+            margin-top: 5px; font-size: 0.78rem; color: var(--gray-500);
+            display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline;
+        }
+        .mb-quote-src { font-size: 0.7rem; color: var(--gray-400); }
+
+        /* The collapsed state. Full-width and tappable rather than a small "x" — it is the
+           way back INTO the brief, so it has to be findable, and rule 5's 44px floor applies
+           on a phone. */
+        .mb-chip { margin-bottom: 14px; }
+        .mb-chip-btn {
+            width: 100%; display: flex; align-items: center; gap: 8px;
+            background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 8px;
+            padding: 9px 14px; font-size: 0.85rem; color: var(--gray-700);
+            cursor: pointer; text-align: left;
+        }
+        .mb-chip-btn span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .mb-chip-more { margin-left: auto; flex: 0 0 auto; font-size: 0.78rem; color: var(--accent); font-weight: 600; }
+
+        @media (max-width: 768px) {
+            .mb-band { padding: 14px; }
+            .mb-greet h3 { font-size: 1.05rem; }
+            /* One column on a phone. auto-fit already collapses it, but the explicit rule
+               keeps a 220px track from surviving on a 240px-wide content box. */
+            .mb-body { grid-template-columns: 1fr; }
+        }
+
+        /* The narrowest phones only. MEASURED: at 375 the band's bottom edge landed at
+           831px against an 812px viewport — 19px of the brief below the fold on a full
+           day, which defeats the point of a surface you are meant to read in one look.
+           412 and 1280 already fit, so this is scoped to where the problem is rather than
+           tightened everywhere (v3.69.0's lesson: a breakpoint set below the device
+           population is invisible to a test at the low end — 400 covers 375 and 390 and
+           leaves 412 alone deliberately). */
+        @media (max-width: 400px) {
+            .mb-band { padding: 12px; }
+            .mb-headline { margin: 6px 0 10px; }
+            .mb-body { gap: 10px 16px; }
+            .mb-quote { margin-top: 10px; padding-top: 10px; }
+            .mb-links { margin-top: 10px; }
+        }

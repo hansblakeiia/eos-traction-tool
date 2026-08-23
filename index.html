@@ -13,7 +13,7 @@
          Marketing tab; the rest of the app is untouched by this. -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%231a365d' width='100' height='100' rx='15'/%3E%3Ctext x='50' y='50' font-family='Arial, sans-serif' font-size='45' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='central'%3EEOS%3C/text%3E%3Ccircle cx='85' cy='15' r='8' fill='%233182ce'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="styles.css?v=4.52.0">
+    <link rel="stylesheet" href="styles.css?v=4.56.0">
 </head>
 <body>
     <div class="container">
@@ -866,6 +866,15 @@
                 </div>
             </div>
             
+            <!-- THE MORNING BRIEF (v4.56.0). Both nodes are STATIC and never unmounted,
+                 exactly so #morningBrief and #morningBriefChip cannot join this file's
+                 dead-selector list (rules 11 and 15) — renderMorningBrief() only ever
+                 toggles display and writes innerHTML. The chip is the collapsed state:
+                 the brief is never GONE for the day, it is one tap away, because a
+                 morning surface you cannot get back to is worse than none. -->
+            <div id="morningBrief" class="mb-band" style="display:none;"></div>
+            <div id="morningBriefChip" class="mb-chip" style="display:none;"></div>
+
             <!-- Good Morning Banner -->
             <div id="goodMorningBanner" style="display: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 20px; border-radius: 10px; margin-bottom: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: start;">
@@ -3389,9 +3398,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '4.55.1';
+        const EOS_VERSION = '4.56.0';
         const EOS_BUILD_DATE = '2026-08-23';
-        const EOS_BUILD_TIME = '10:35'; // v4.55.1: THE SIGN-IN RETRY THAT NEVER GAVE UP — found while probing something else entirely, and it is the second time this week a probe's ARTIFICIAL condition turned out to be a real person's REAL one. `initGoogleSignIn` ends with `if (typeof google === 'undefined') setTimeout(initGoogleSignIn, 500)` and had NO CAP, so whenever Google's Identity Services script fails to load the app polled twice a second FOREVER — and because the retry re-enters at the top of the function, every one of those ticks also re-ran `await checkAppWideSupabaseSession()`, a network call. Nothing on screen ever said so: the app sat on its boot gate looking slow, indefinitely, on battery. NOT HYPOTHETICAL — Amanda's laptop ECONNRESETs `accounts.google.com/gsi/client`, which is exactly this state and is recorded in her onboarding notes; the probe blocks every non-file:// request, so it reproduces her machine by accident, and that is the only reason anyone saw this. Fixed with a 20-try budget (ten seconds — long enough for a slow connection, short enough that a blocked one gets an answer), after which the gate OPENS and says what happened: the script did not load, this is almost always the network on this device blocking accounts.google.com rather than anything wrong with your account, plus a "Try again" that resets the budget. The gate is OPENED rather than skipped past on purpose — revealing the app would look like sign-in had succeeded, and this person is not signed in. The pre-existing "Skip for now" is still the escape hatch and is asserted to still be there. Rule 25: degrade with a sentence, never a disappearance — and never an unbounded poll, which is a disappearance that also costs battery. All three states are asserted per rule 73, because a fix that stops the poll but breaks the normal path is indistinguishable from a regression: script missing → stops and explains; script present → ZERO retries and no message shown to someone whose sign-in is fine; escape hatch intact. Probe `.claude/probes/gsi-retry-bound-probe.js` 9/9 here, 3/9 on the deployed v4.55.0, where the baseline reads at16=32 / at20=40 and is still climbing. *** THIS IS NOT THE JITTER HANS REPORTED. *** That was measured separately (`matrix-drop-jitter-probe.js`): the matrix drop does byte-identical work on v4.55.0 and v4.54.1 and the idle window is silent on both, so it is NOT REPRODUCED and no cause has been claimed. This retry loop was the probe's first candidate and was REJECTED because it is false on his machine, where he is signed in — rule 63, applied before shipping the diagnosis rather than after. Client-only, `styles.css` untouched. PREVIOUS — v4.55.0: A "+ LOCAL" TASK WAS INVISIBLE TO THE TASK REGISTRY, AND DRAGGING ONE INTO A QUADRANT DESTROYED IT. Nobody reported this; it was found while reading _fillSlotCandidates for the queued Kanban-in-pickers build, and it is the same shape as Hans's standing complaint that "my inputs are not being saved from version to version". ONE CAUSE: resolveTaskById() searches q.todos, q.completedTodos and q.rocks and has never searched dailyPlanData.localTasks — while addLocalTask wrote {text,done} with no id at all. FOUR CONSEQUENCES, measured, 3/20 on deployed v4.54.1: (A) drag a Today-only row into an Eisenhower quadrant and _repoDragEntry stamps an id and returns {id,type:'local'}; renderMatrix cannot resolve it, it carries no gid/xt so v4.36.0's "pending" holding row does not apply, prunedAny fires and saveDailyPlan() PERSISTS the deletion — and because commitMatrixEntry renders at its own tail the task is destroyed INSIDE THE DROP, measured before=0. (B) the same drop into a Rule-of-3 slot painted the red "Task no longer exists" over a task sitting on screen four inches below. (C) renderRepository's _markInUse resolves by id, so a placed local task never got its badge, stayed draggable and could be dropped in again. (D) _fillSlotCandidates has had a localTasks line since v3.72.0 that has never produced a row, while the picker's OWN EMPTY STATE recommended "+ Local" as the way to fill the slot. FIXED BY ADDING A FOURTH KIND, not by promoting the task: promotion is a different feature that already exists (the ⬆️ button) and silently pushing a today-only note into Google Tasks is not what "prioritise this" means. resolveTaskById returns kind:'local' LAST so no existing precedence moves, and the lookup sits OUTSIDE the quarter guard because a local task belongs to the day's plan, not the quarter. THE STORE IS THE TRAP, and it is the reusable half: local records live in dailyPlanData, so autoSave() — which writes yearData — leaves a tick looking right on screen and gone on the next load. Every registry handler that writes now branches on WHICH STORE holds the record, not on which fields it has: toggleTaskDoneById, toggleStarredById, updateTaskById and toggleNotesById route local through saveDailyPlan(). WHAT A LOCAL TASK CANNOT DO IS AS LOAD-BEARING AS WHAT IT CAN: no Google Tasks record means Snooze (there is no tomorrow to push it to), Assign, Move-to-list, Add-subtask and Draft-email cannot work, so rule 51 removes them from its ⋯ menu — and the handlers refuse them independently, because an inline onclick outlives the render that drew it. Archive goes too: for this kind it would be Delete drawn twice under another name. TWO NEW ORPHAN PATHS OPENED BY THE FIX AND CLOSED IN IT: promoteLocalToTodo now calls _repointPlanRefs so the promoted to-do INHERITS the slot instead of orphaning it, and removeLocalTask clears the slot and quadrant reference BEFORE splicing the record, so a mis-tap on ✕ can never take a Rule-of-3 slot with it. Probe .claude/probes/local-task-namespace-probe.js 20/20 here, 3/20 on the deployed clone; eleven existing batteries re-run green (4.43 15/15, 4.44 30/30, 4.45 40/40, 4.46 37/37, 4.47 48/48, 4.48 36/36, 4.49 17/17, 4.50 15/15, cal-dragmove 30/30, cal-weekgrid 25/25, cal-editevent 61/61); 0 document overflow at 375/412/1280 with the picker open. Client-only, styles.css untouched, no clasp round.
+        const EOS_BUILD_TIME = '12:40'; // v4.56.0: THE MORNING BRIEF, BAND HALF (Brief v1 without the email cards). Hans, 2026-08-23: "I'm still waiting on you to complete the Morning Brief idea I have already shared with you, which is top priority." Design record docs/plans/morning-brief-design.md; his four §11 answers arrived the same day. TWO-FILE DEPLOY (?v=4.56.0). The email half needs scanInbox (.gs v3.58.0, deployed and confirmed) and ships next. WHAT IT IS: a band above the Rule of 3 on Today — greeting + date, a headline composed from the real counts, yesterday's End-Day note, carried-over priorities, overdue-or-undated tasks, starred, Kanban, all-day/birthdays, a links launchpad, and the quote. IT ABSORBS #goodMorningBanner RATHER THAN STACKING ON IT, and that is a deliberate reversal: that banner is yesterday's notes, fires on the same first-open moment and occupies this exact strip, so two purple morning banners would be the "cluttered / wasted space" complaint he has already made twice. The notes become a SECTION; the banner is suppressed ONLY while the brief is on and returns untouched when it is off, which is what makes this reversible rather than a deletion — asserted both ways. THE HEADLINE NEEDS NO AI and that is what makes the feature survive the compliance block on Layer 3: it is assembled from computed counts, so it is never wrong and it reads "One priority carried over" rather than "1 priorities". THE QUOTE PACK IS THE CAREFUL PART. Rule: an LLM never generates or attributes it (design §6) — and a second rule that is mine: NEVER invent a line and put a real person's name under it. Most of his authors are living or recent and circulated quote lists are riddled with misattribution, so every entry carries a source, anything unplaceable was LEFT OUT, and the probe asserts zero unattributed entries. NICK MURRAY AND CHARLES SCHWAB ARE DELIBERATELY ABSENT and need him: Murray is quoted almost entirely secondhand, and "Charles Schwab" is ambiguous between the steel magnate and the broker, which changes the entry. Proverbs uses the WORLD ENGLISH BIBLE — public domain, because this repo is public and NIV/ESV are copyrighted. The quote is DATE-SEEDED, not random, so phone, laptop and a reprint agree. BRIEF_MAX_ROWS = 4 IS MEASURED, NOT CHOSEN: at 8 the band came out 657px at 375, most of a phone screen spent before the Rule of 3; the count badge still shows the true total so four-of-fourteen is honest rather than hidden. A @media (max-width:400px) block trims 19px more, because the band's bottom edge landed at 831px against an 812px viewport and the whole brief must be readable without scrolling. Renders at plan load only, never from rerenderAllTaskSurfaces — a band that re-lays-out under the cursor while you read it is its own defect. Probe .claude/probes/morning-brief-probe.js 25/25. TWO HARNESS FIXES, STATED NOT BURIED (rule 72): the band pushes #matrixQ4 to 1042-1122px in a 900px viewport and #repoTodos to ~843-892, and page.mouse.click below the fold silently no-ops (the v4.29.0 lesson), so probe-v4.45.0 G3 and probe-v4.49.0 D2/D3 began reporting working features as broken. Both now scroll first — and the CORRECTED probes score 40/40 and 17/17 on the DEPLOYED v4.55.1 as well as here, which is what proves a harness fix rather than a hidden regression. The first attempt at that fix scrolled inside FREE_POINT and broke six OTHER assertions, because the fill-slot hold gesture cancels on a scroll event by design; scrolling belongs at the call site, not in a coordinate helper. Battery green: brief 25/25, local-task 20/20, gsi 9/9, jitter 8/8, 4.43 15/15, 4.44 30/30, 4.45 40/40, 4.46 37/37, 4.48 36/36, 4.49 17/17, 4.50 15/15; css-audit 913/913. PREVIOUS — v4.55.1: THE SIGN-IN RETRY THAT NEVER GAVE UP — found while probing something else entirely, and it is the second time this week a probe's ARTIFICIAL condition turned out to be a real person's REAL one. `initGoogleSignIn` ends with `if (typeof google === 'undefined') setTimeout(initGoogleSignIn, 500)` and had NO CAP, so whenever Google's Identity Services script fails to load the app polled twice a second FOREVER — and because the retry re-enters at the top of the function, every one of those ticks also re-ran `await checkAppWideSupabaseSession()`, a network call. Nothing on screen ever said so: the app sat on its boot gate looking slow, indefinitely, on battery. NOT HYPOTHETICAL — Amanda's laptop ECONNRESETs `accounts.google.com/gsi/client`, which is exactly this state and is recorded in her onboarding notes; the probe blocks every non-file:// request, so it reproduces her machine by accident, and that is the only reason anyone saw this. Fixed with a 20-try budget (ten seconds — long enough for a slow connection, short enough that a blocked one gets an answer), after which the gate OPENS and says what happened: the script did not load, this is almost always the network on this device blocking accounts.google.com rather than anything wrong with your account, plus a "Try again" that resets the budget. The gate is OPENED rather than skipped past on purpose — revealing the app would look like sign-in had succeeded, and this person is not signed in. The pre-existing "Skip for now" is still the escape hatch and is asserted to still be there. Rule 25: degrade with a sentence, never a disappearance — and never an unbounded poll, which is a disappearance that also costs battery. All three states are asserted per rule 73, because a fix that stops the poll but breaks the normal path is indistinguishable from a regression: script missing → stops and explains; script present → ZERO retries and no message shown to someone whose sign-in is fine; escape hatch intact. Probe `.claude/probes/gsi-retry-bound-probe.js` 9/9 here, 3/9 on the deployed v4.55.0, where the baseline reads at16=32 / at20=40 and is still climbing. *** THIS IS NOT THE JITTER HANS REPORTED. *** That was measured separately (`matrix-drop-jitter-probe.js`): the matrix drop does byte-identical work on v4.55.0 and v4.54.1 and the idle window is silent on both, so it is NOT REPRODUCED and no cause has been claimed. This retry loop was the probe's first candidate and was REJECTED because it is false on his machine, where he is signed in — rule 63, applied before shipping the diagnosis rather than after. Client-only, `styles.css` untouched. PREVIOUS — v4.55.0: A "+ LOCAL" TASK WAS INVISIBLE TO THE TASK REGISTRY, AND DRAGGING ONE INTO A QUADRANT DESTROYED IT. Nobody reported this; it was found while reading _fillSlotCandidates for the queued Kanban-in-pickers build, and it is the same shape as Hans's standing complaint that "my inputs are not being saved from version to version". ONE CAUSE: resolveTaskById() searches q.todos, q.completedTodos and q.rocks and has never searched dailyPlanData.localTasks — while addLocalTask wrote {text,done} with no id at all. FOUR CONSEQUENCES, measured, 3/20 on deployed v4.54.1: (A) drag a Today-only row into an Eisenhower quadrant and _repoDragEntry stamps an id and returns {id,type:'local'}; renderMatrix cannot resolve it, it carries no gid/xt so v4.36.0's "pending" holding row does not apply, prunedAny fires and saveDailyPlan() PERSISTS the deletion — and because commitMatrixEntry renders at its own tail the task is destroyed INSIDE THE DROP, measured before=0. (B) the same drop into a Rule-of-3 slot painted the red "Task no longer exists" over a task sitting on screen four inches below. (C) renderRepository's _markInUse resolves by id, so a placed local task never got its badge, stayed draggable and could be dropped in again. (D) _fillSlotCandidates has had a localTasks line since v3.72.0 that has never produced a row, while the picker's OWN EMPTY STATE recommended "+ Local" as the way to fill the slot. FIXED BY ADDING A FOURTH KIND, not by promoting the task: promotion is a different feature that already exists (the ⬆️ button) and silently pushing a today-only note into Google Tasks is not what "prioritise this" means. resolveTaskById returns kind:'local' LAST so no existing precedence moves, and the lookup sits OUTSIDE the quarter guard because a local task belongs to the day's plan, not the quarter. THE STORE IS THE TRAP, and it is the reusable half: local records live in dailyPlanData, so autoSave() — which writes yearData — leaves a tick looking right on screen and gone on the next load. Every registry handler that writes now branches on WHICH STORE holds the record, not on which fields it has: toggleTaskDoneById, toggleStarredById, updateTaskById and toggleNotesById route local through saveDailyPlan(). WHAT A LOCAL TASK CANNOT DO IS AS LOAD-BEARING AS WHAT IT CAN: no Google Tasks record means Snooze (there is no tomorrow to push it to), Assign, Move-to-list, Add-subtask and Draft-email cannot work, so rule 51 removes them from its ⋯ menu — and the handlers refuse them independently, because an inline onclick outlives the render that drew it. Archive goes too: for this kind it would be Delete drawn twice under another name. TWO NEW ORPHAN PATHS OPENED BY THE FIX AND CLOSED IN IT: promoteLocalToTodo now calls _repointPlanRefs so the promoted to-do INHERITS the slot instead of orphaning it, and removeLocalTask clears the slot and quadrant reference BEFORE splicing the record, so a mis-tap on ✕ can never take a Rule-of-3 slot with it. Probe .claude/probes/local-task-namespace-probe.js 20/20 here, 3/20 on the deployed clone; eleven existing batteries re-run green (4.43 15/15, 4.44 30/30, 4.45 40/40, 4.46 37/37, 4.47 48/48, 4.48 36/36, 4.49 17/17, 4.50 15/15, cal-dragmove 30/30, cal-weekgrid 25/25, cal-editevent 61/61); 0 document overflow at 375/412/1280 with the picker open. Client-only, styles.css untouched, no clasp round.
         // v4.54.0: DRAGGING AN EVENT TO ANOTHER SPOT IN THE WEEK — and the feature was never missing, it was being deleted. Hans: "on desktop I'm not able to drag and then drop events to other spots in the calendar week, like I can in Google Calendar." A real mouse drag against the shipped build moves the box, posts updateCalendarEvent with the right start, end and expectedStartISO, and honours the recurring-scope chooser: the whole feature works, and has since v4.30.2. What kills it is one word. `_calRenderWeek` decided the drag affordance with a bare `capabilityReady('calendar.createEvent')`, which is a SYNCHRONOUS CACHED READ THAT IS FALSE IN THREE DIFFERENT SITUATIONS and means "off" in only one of them: the probe answered no, the probe never completed, or the probe failed. So a single unreachable-backend moment — the same 404 that confounded his August 11 Today-button screenshot — stripped `cal-wk-ev-drag` off every event, and there was nothing on screen to read, because the sentence that would have explained it lives inside a write path the dead gesture could no longer reach. THIS IS RULE 51 EXACTLY, and rule 51's own last line names this shape: "a dead gesture is the same defect in gesture form — worse than a refusal, because there is nothing to read." v4.39.1 fixed it for the "+ New event" BUTTON and stopped there. THE SAME `canWrite` GOVERNED TWO MORE THINGS NOBODY HAD CONNECTED TO IT: the "+ Block" gaps (measured: 2 of 2 gone on a failed probe) and the coach's "Block time now" button — so a blip quietly removed three features at once, one of which was the only route to the explanation for the other two. The fix is a NAMED FUNCTION rather than a remembered habit: `capabilityDenied(key)` is true only when the probe COMPLETED, did NOT fail, and still says no — the one state in which hiding something is honest — so an affordance reads `!capabilityDenied(k)` and an action reads `await capabilityReadyChecked(k)`, which re-probes and turns a blip into one retry instead of a vanished feature. `_calCommitMove` now asks that question at the drop and, on a genuine no, snaps the block back AND says why in calBlockTime's own words, because a drag that silently undoes itself is the dead gesture wearing a different coat. Proof: `.claude/probes/cal-dragmove-probe.js` drives real page.mouse events at measured coordinates (never el.click(), which cannot see an overlay or prove a gesture) across all three capability states — 19/19 here, 16/19 on the deployed v4.53.0, and the three that flip are precisely the three this fixes.
         // v4.53.0: ROUND 21 ITEMS 2, 9 AND 10 — and item 2 was never a missing feature. Hans asked for "one final question, when would you like to begin", with the constraint that "if there was an event at 1pm and you thought it would take 30 minutes, the last offering would be 12:30pm". THAT STEP AND THAT EXACT CONSTRAINT HAVE EXISTED SINCE v4.32.0 — the `<= g.e.getTime()` in the tile loop — but `calBlockTime` has two branches and `gapStartISO` routes between them: the "Block time" button and the coach got duration-then-tiles, while a clicked "+ Block" gap was treated as "start HERE" and asked duration alone. That gap click is the flow he actually uses and likes, so what he asked to have built was built and simply unreachable from where he was standing. THE FIX IS ROUTING, NOT A FEATURE: the tile builder is extracted into `pickStart(gapList, mins, preferISO)` and the gap branch calls it with THAT GAP ONLY — offering the whole day's slots would throw away the thing the click said — with the gap's own start listed first and `recommended`, so "start here" is still a single press and his answer's "one extra tap" is the ceiling, not the floor. One possible start asks nothing. ITEM 10, the silent cap: the loop stopped at `tiles.length < 12` and said nothing, so a 10-hour day at 30-minute blocks dropped eight possible starts behind a list that looked complete. Raised to 24 with a truncation message — and 24 is the arithmetic maximum a working day can produce (600 minutes ÷ the 25-minute shortest block), so the cap can no longer bite at all, which is the strongest form of "no silent truncation": nothing is left to drop. ITEM 9, and Hans's own answer closed it: his screenshot said "No Rule of 3 set for today — you have 0 min free." over a visibly EMPTY calendar, which looks exactly like the round-19 banner defect returning. He took it at about 10pm, so 0 minutes was literally correct — `_calGapsFor` returns [] for TWO different facts, "fully booked" and "the working day is over", and the coach was saying the first when it meant the second. `_calWorkdayOver()` splits them in both branches that could claim it. A number that is true and reads as a fault is rule 63 one layer up: not a wrong diagnosis, but a right one nobody could interpret. THE MIRROR CASE IS ASSERTED so this is not a blanket reword — a genuinely full day during working hours still says "fully booked". Probe `cal-blockstart-probe.js` 17/17 here, 0/1 on the deployed v4.52.0 clone. ITS OWN FIRST RUN HUNG FOREVER: `calBlockTime` with no task id opens the task PICKER, which is a modal and not an `eosChoose`, so a stub that only answers `eosChoose` waits for a click nobody makes. AND `cal-weekgrid-probe` went 25/25 → 23/25 overnight against unchanged code — rule 60, exactly: its fixture placed events at `today + 4`, which lands outside the displayed Sun–Sat week from Wednesday onward, so two seeded events were simply not on the page. Re-anchored to the week's Sunday and re-verified 25/25 on BOTH this build and the deployed clone, which is what proves it was a harness fault rather than a fix. Battery green: 25/25 + 61/61 + 57/57 + 60/60 + 47/47 + 11/11 + 15/15 + 17/17 + 36/36 + 48/48 + 37/37 + 40/40, dead-selector-sweep 0. Client-only, `styles.css` untouched, no clasp round. Round file docs/rounds/5.11b-21.md — round 21 is now fully closed. Three annotated screenshots, and TWO OF THE FOUR DEFECTS FIXED HERE WERE IN THE PICTURES AND NOT IN THE WORDS (the /phone-round rule: look before you read). (1) "15 MINUTE EVENTS CAN'T BE SEEN" UNDERSTATED ITS OWN BUG BY A FACTOR OF FOUR. Measured per duration on the shipped build: 15 and 20 minute events were the only two that were FINE, because v4.40.0 had given them the one-line layout; EVERY event from 21 to 45 minutes had its title cut through the middle, 30-minute ones — the commonest length a calendar has — included. The threshold was keyed on `durMin <= 20`, and what decides whether two lines fit is the BOX, not the duration. Now `height < CAL_EV_STACK_MIN_PX`, a constant derived from three measured line metrics rather than chosen. THE FIRST DRAFT OF THIS GOT THE NUMBER WRONG AND A SCREENSHOT CAUGHT IT: reading `scrollHeight` off a clipped box returned 47px, but that was the title WRAPPED to three lines in a 90px-wide day column — not the bar. Measuring the ink in a box tall enough that nothing is cut gives 31px; believing the 47 sent 45- and 60-minute events to the sliver layout. Stacked titles are now `-webkit-line-clamp`ed to the whole lines that fit, so a 45-minute box ends in an ellipsis instead of one line plus 3px of the next. (2) SOLID FILLS, HIS ANSWER, AND THE HALF THAT MAKES THEM HONEST. `colour + '1a'` (a 10% tint with fixed grey text) becomes the real colour at full strength — and the ink is chosen per event by relative luminance, because "solid + always white" would have re-created his own complaint inverted: white on Google's Banana (#f6bf26) measures 1.9:1. Where white IS the ink, the fill is DARKENED until white clears 4.5:1 rather than shipping a legible-ish 3.7:1 — hue kept, level moved. All eleven Google palette colours now pass AA, and Banana is the only one taking dark ink, which is exactly where Google puts it. A first cut picked whichever of white/near-black won the raw contrast ratio and chose DARK on a mid-tone blue where the two scores were 3.94 and 3.68 — a rounding error deciding the look, so two similar blues could land on opposite inks; a threshold gives one answer per colour region. Both views, from one `_calFillStyle()`, so they cannot drift; the agenda bubble reverts to the tint under `.cal-ev-open` because the expanded detail carries grey meta text and the action buttons. (3) THE 8 AM OPENING WAS BEING DESTROYED, which is why his screenshot showed 12 AM – 6 AM. v4.30.2's `offsetHeight > 0` guard stops a HIDDEN scroller's 0 being saved and covers only half the failure: a render while `#calendar` is display:none has no layout, so `vs.scrollTop = 384` silently does nothing, and the next visible render harvests that residual 0 past the guard and stores it — `0 >= 0` then opens the grid at midnight for the whole session. Reproduced on five paths; four gave 8 AM and only the hidden-render one failed, which is rule 59's shape exactly. Fixed with `data-cal-positioned` (harvest only from a scroller whose assignment could take) plus `data-cal-auto-at` (only remember a position THE PERSON put it in — otherwise the coach band appearing when the fetch lands freezes the grid at a clamp computed against a box that no longer exists; measured as 12.2h on one path and 13.7h on another from identical input). Outside 8–6 it opens an hour before now, which is what his own Google annotation describes. 24 hours are kept — truncating would have hidden the midnight Discover Card marker that made this grid 24 hours in the first place. (4) TWO SCROLLBARS, IN THE PICTURE AND NOT IN THE TEXT. `.cal-wk-vscroll { max-height: calc(100vh - 360px) }` — 360 is a hardcoded guess about the chrome above, and on his own 1893x923 the real chrome is 376px collapsed and 516px expanded, so the grid overflowed by 16px and 156px and the PAGE scrolled behind a grid that also scrolled. `_calFitWeekHeight()` measures the element's real distance from the bottom on every render, on resize, and on the header toggle; `min-height` 430 -> 320 because a min-height BEATS a smaller max-height and was silently re-imposing the overflow. Both states now end at 911px of 923. This is also item 7 — he answered that "wasted space" meant the 120px header block, and collapsing it now GROWS the grid 379 -> 519px instead of just moving it. (5) Rule 51 finished on this surface: Delete and Remove-from-calendar joined Edit in existing unconditionally, and `calEventUnblock` gained the re-probe it never needed while its button was gated. Probe `cal-weekgrid-probe.js` 25/25 here, 0/2 on the deployed v4.51.0 clone; contrast asserted from what the browser PAINTED, not from the source. Battery green: 61/61 + 57/57 + 60/60 + 47/47 + 11/11 + 15/15 + 17/17 + 36/36 + 48/48 + 37/37 + 40/40. 0 overflow at 375/412/768/1280 over 16–26 seeded events. Round file docs/rounds/5.11b-21.md. TWO FILES — styles.css changed, ?v= bumped. — the client half of a backend that had been live, consented and deployed for a day with nothing calling it. `eosEditEvent_` and `getCalendarEventDetails` shipped in .gs v3.57.0 on 2026-08-17; `calOpenEditEvent` and `#calEditEventModal` were 0 occurrences in this file, so clicking an event opened a read-only card and Hans's own round-20 question — "when I click into a created event, shouldn't it pop up with the window where I can edit the event?" — was still unanswered. THE PREMISE OF THE SESSION PROMPT WAS FALSE AND THAT MATTERED: the question to ask was "title/time only now, or bundle a .gs v3.58.0 round for location and notes?" — but v3.57.0 ALREADY carries location, notes and the recurrence rule, so there was no round to bundle and no trade to make. Reading the deployed backend before asking turned a decision into a non-question. THE FORM IS THE NEW-EVENT MODAL, NOT A COPY OF IT. `#calNewEventModal` is now both forms behind `_calEventFormMode('create'|'edit')`, because `_calRebuildRepeat`, `_calSyncNewEnds`, `_calApplyEndsTo` and the whole Custom-recurrence box address `#calNewDate`/`#calNewRepeat`/`#calNewAllday` BY ID — a near-miss copy would have had to duplicate every one and would drift the first time either form was touched. Same reasoning as v4.41.0's Block-it picker. FOUR THINGS THE .GS CONTRACT DICTATED, none of them optional. (1) SEND ONLY WHAT CHANGED: `eosEditEvent_` patches by hasOwnProperty and refuses a no-op, and its own comments warn that a form always posting its all-day checkbox would trip the backend's timed→all-day assertion on an edit that never touched the time — a false accusation from the mechanism built to prevent false claims. So the open takes a baseline through `_calEditReadForm()` and the save diffs against it with the SAME function, and a title-only edit sends `title` and nothing else. (2) THE DESCRIPTION IS SPLIT: `getCalendarEventDetails` returns the notes with the Block-it "[EOS Tool link: id]" marker stripped plus a separate `eosTaskId`, and the save sends both back so the backend re-appends it. Prefilling notes from the cached agenda row instead would put the raw marker in the box and saving it would destroy the only proof the tool created that time block — in-tool delete would then refuse it forever, silently. So notes are DISABLED until the detail read lands and stay disabled if it fails. (3) FOR A SERIES THE RESOURCE IS THE MASTER, NOT THE OCCURRENCE YOU CLICKED: under "All events" the date and time are the series' FIRST occurrence (the .gs says `isSeriesMaster` out loud for exactly this reason), so those two fields wait for the read and the form says which they are — prefilling from the clicked row and saving would drag the whole series onto whatever day was tapped. (4) TWO SCOPES, NOT THREE: the backend declines "this and following" for a FIELD edit because splitting a series to change a title leaves two series nobody asked for, so offering that button would be offering a refusal; and under "This event" the Repeat control is HIDDEN, because an instance cannot carry a rule. Rule 51 is honoured where v4.38.0's Delete still is not: the "Edit event" button is NOT gated on `capabilityReady` — `calOpenEditEvent` re-probes and explains, so a pending or failed probe costs a sentence rather than the feature. Rule 57 too: no auto-focus on a coarse pointer, hit-tested at 412. A failed detail read DEGRADES rather than closing — title, time and location still save, notes and repeat are withdrawn with a sentence naming what was left alone. A `_calEditSeq` counter, not the event id, decides whether a late answer belongs to the form on screen: cancel and reopen the same event and every field you could compare by still matches. Probe `cal-editevent-probe.js` 61/61 here, 0/2 on the deployed v4.50.0 clone. Measured at 375/412/768/1280 with two note lines, a long title and a URL location: 0 overflow, and the CREATE form's page height is byte-identical to the clone's at all four. Its own first run recorded rule 63's shape one more time — an assertion reading `.cmp-input` tested a permanently-mounted element's EXISTENCE, not the composer's `.active` state, and failed correct code. Client-only, no clasp round, `styles.css` untouched. all found by USING the app rather than by reading it — Amanda's onboarding on 2026-08-18, where each one gave Hans a confident, specific, WRONG cause and sent him chasing it. A diagnostic that is wrong is worse than none, because it is trusted and acted on; that is this release's whole thesis. (1) THE DEPLOYMENT-MISMATCH WARNING WAS WRONG FOR EVERY MEMBER EXCEPT ONE. `mismatch = usedId && bootId && usedId !== bootId` compares the signed-in member's saved Web App URL against config.js's bootstrapWebAppUrl — which belongs to whoever first set the app up. Under the per-user `executeAs: USER_DEPLOYING` model EVERY OTHER MEMBER HAS THEIR OWN DEPLOYMENT BY DESIGN; that is exactly what lets the backend read their mailbox and nobody else's. So a difference is the EXPECTED state for a second member, and the panel told Amanda in amber, repeatedly, that her correct configuration was wrong. Now gated on `_configured.length <= 1`: the comparison is only meaningful when the firm has ONE configured deployment, which is the single-user setup the bootstrap describes. With several, per-member URLs ARE the design and there is nothing for the bootstrap to be "expected" against. The case the check exists for — a lone deployment that has drifted from config.js — still fires, and is asserted. (2) "COULD NOT REACH THE BACKEND ... USUALLY A NETWORK BLIP" WAS TOLD TO A BACKEND THAT ANSWERED PERFECTLY. Her v3.14.7 replied `Unknown action: getCapabilities` — a complete, well-formed answer meaning the action did not exist yet (it arrived in .gs v3.39.0). The panel called that a network blip and demoted the real reason to a "Details:" line, so the one message that could have said "your backend is too old, update it" pointed at the network instead — on a machine that genuinely DID have network problems, which made the wrong answer look corroborated. Now detects `unknown action` and says "This backend is too old to answer", names v3.39.0, and says what to do. A genuinely unreachable backend still gets the original wording — asserted both ways, because a fix that reworded everything would just be a different lie. (3) THE CALENDAR BLAMED AN OLD DEPLOYMENT FOR A KEY MISMATCH, and this was the most convincing of the three: minutes after her backend reached 3.57.0 the page reported "your deployment does not include the Calendar backend (it answered like a pre-3.55 version)", i.e. redo the round we had just finished. "Invalid secret key" HAS TWO CAUSES and the code knew one: `getCalendarEvents` is token-gated, so a backend that does not know the action falls through to the older secretKey gate and reports exactly this (the v4.7.1 lesson, correctly applied) — but so does a backend that DOES know it and simply has the wrong key. SECRET_KEY lives in Script Properties PER GOOGLE ACCOUNT, must match that member's row in Settings › Team Members, and is the single easiest thing to miss when onboarding — it is in no numbered step of the deployment guide. We already know which case we are in, because the capability probe reports the real version: `_calGsAtLeast('3.55.0') === true` means the action exists and the KEY is the problem, and the message now says so and names the property and where it lives. Gated on `=== true` so an UNKNOWN version (null) can never be mistaken for "new enough". Probe probe-v4.50.0.js 15/15, 8/15 on deployed v4.49.0. ITS OWN FIRST RUN WAS A FALSE PASS WORTH RECORDING: it rendered the panel into an invented `#googleAccessOut` instead of the app's real `#googleAccessStatus`, so `textContent` was empty and both "the warning is absent" assertions passed against nothing — the negative-space shape again (rule 53's harness note, v4.44.0's positive controls). Reading the element id out of the app fixed it and the details now carry real panel text. Client-only, no clasp round.
         // v4.49.0: FOUR DEFECTS FROM HANS'S LIVE TEST, and two of them are mine from v4.46.0. **THE `⋯` MENU FRAGMENTED ACROSS COLUMNS** (his annotated shot: "it rolled over to the next column, which is not how it should work" — the menu's top half in one column and "Add subtask / Open source email" stranded at the foot of the next). A CSS MULTI-COLUMN CONTAINER DOES NOT CLIP, IT FRAGMENTS, and an absolutely-positioned descendant is fragmented with everything else — so rule 19's detector, which tests only `overflow`, was blind to it: nothing there has overflow anything but visible, and the menu was escaping nothing because it was never trapped, it was cut in half. Same symptom, different physics. Extending THAT detector rather than adding a second mechanism is rule 19's own instruction, and `position:fixed` takes a box out of a fragmentation context exactly as it takes it out of a scroller. **ORPHAN/WIDOW CONTROL** — his words: "I want tasks (like this one from Prospects/Marketing) to stay with the others". v4.46.0 only stopped a HEADING being stranded (`break-after` on the first child), which is half the problem and does nothing about one row alone at the top of the next column. `break-inside: avoid` on `.todo-list-group` keeps the group together; it is a REQUEST the spec lets a browser drop when the content cannot fit, so a list longer than a column still breaks rather than overflowing — measured, not assumed, and the cost is that four uneven lists may settle into two columns instead of three, which is the trade he asked for. **THE REPOSITORY `⋯` — "sometimes the popup box doesn't show" — WAS TWO FAULTS COMPOUNDING, and the second is the one that hid it.** (1) `.repo-items` is a 350px scroller, so clicking a partly-visible row makes the browser scroll it into view, and that scroll landed in the capture-phase close-on-scroll listener and shut the menu the click had just opened. The close-on-scroll rule is right and stays — a fixed menu does not travel with the scroller it escaped — but the OPENING click's own scroll is not one of those, so inside a 400ms grace window the menu is RE-PLACED against its anchor instead of closed. (2) THE REAL HIDER: `position: fixed` is viewport-relative only while NO ancestor establishes a containing block, and **a `transform` does exactly that**. The swipe engine leaves one on the row it is tracking (`matrix(1,0,0,1,3,0)` — a 3px nudge from the click itself), so the menu's correctly-clamped `top: 414px` was measured from the ROW at y=675 and painted at **1089 in a 900px viewport**: open, correct, and off the bottom of the screen. That is rule 20's warning ("a transform on .page makes it a containing block for position:fixed descendants") landing on a different element, and **it cannot be found by reading the styles at rest** — the transform exists only while the row is being touched, so a chain scan before the click reports nothing. `_fixedContainingBlock` finds such an ancestor and the placement converts its viewport answer into that box's coordinates at the very end, so every decision above it still reasons in viewport space where it is easy to be right. Compensating beats fighting the swipe engine for ownership of that transform, and beats reparenting into `<body>` (which the next re-render would orphan). Swept every row of a 14-row repository, clicking each with a real mouse after scrolling it into view: **0/14 failures here, 14/14 on the deployed v4.48.0.** **THE GMAIL MARK IS BACK ON THE REPOSITORY ROW, and the reversal is deliberately narrow:** v3.72.0 put 'repository' in `minimalCard` on his own instruction — he would "forgo the star and the AI sparkle there in exchange for the ⋯" — and he has now asked for the Gmail icon back, "exact function on how it works in the Weekly Meeting page". So only the EMAIL glyph is restored; the star and sparkle stay in the menu because that half of the trade is still his. "Permanent" means always there when there is an email TO open: the row he named as the reference shows the mark only for a task that actually came from one (rule 37), and copying a reference means copying its gate, not just its icon. Probe probe-v4.49.0.js 17/17, 13/17 on deployed v4.48.0 — and its orphan assertion names **Prospects/Marketing**, the very group from his screenshot. TWO-FILE deploy, `?v=4.49.0`.
@@ -6903,7 +6912,20 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v4.55.1 &mdash; 2026-08-23 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v4.56.0 &mdash; 2026-08-23 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">The Morning Brief &mdash; your day in one band at the top of Today.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Today opens with a brief.</strong> A greeting, the date, and one sentence telling you what kind of day it is &mdash; how much carried over, what&rsquo;s overdue, what you starred.</li>'
+                + '<li><strong>Five sections underneath:</strong> the note you left yourself at End Day, yesterday&rsquo;s unfinished priorities, tasks that are overdue or have no date, starred items, your Kanban cards, and anything all-day on the calendar (birthdays included).</li>'
+                + '<li><strong>Your links.</strong> A row of shortcuts you choose &mdash; Claude, Gmail, Tasks, Calendar to start &mdash; for the things you open every morning anyway.</li>'
+                + '<li><strong>A quote, chosen by the date</strong> so it&rsquo;s the same on your phone, your laptop and anything you print. Every quote has a named source; nothing is generated, and nothing is attributed to anyone unless it can be sourced.</li>'
+                + '<li>Press <strong>Done</strong> and it collapses to a single line. It never disappears &mdash; tap the line to bring it back.</li>'
+                + '<li>The old purple &ldquo;Good Morning&rdquo; banner is now part of the brief rather than sitting above it. Turn the brief off in settings and the old banner comes straight back.</li>'
+                + '<li><em>Coming next:</em> the emails that actually need you, with one tap to open, turn into a task, or block time for.</li>'
+                + '</ul>'
+                + '</div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v4.55.1 &mdash; 2026-08-23</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">If Google&rsquo;s sign-in can&rsquo;t load, the app now says so instead of waiting forever.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>The app used to retry Google sign-in twice a second, indefinitely,</strong> whenever Google&rsquo;s sign-in script failed to load &mdash; with nothing on screen to say why. It just looked slow, forever, and kept using the network the whole time.</li>'
@@ -15758,6 +15780,490 @@ Example:
 
         // Both containers are STATIC markup (never unmounted), precisely so these two
         // ids cannot join this file's dead-selector list. Cheap enough to run blind.
+
+
+        // ==================== THE MORNING BRIEF QUOTE PACK (v4.56.0) ====================
+        //
+        // Hans's author list, 2026-08-23: English; Nick Murray, Warren Buffett, Peter Lynch,
+        // Jack Bogle, Morgan Housel, Ben Franklin, Proverbs, Charlie Munger, Richard Thaler,
+        // Ray Dalio, Dale Carnegie, JP Morgan, Charles Schwab, Daniel Kahneman.
+        //
+        // *** AN LLM MUST NEVER GENERATE OR ATTRIBUTE THE QUOTE. *** Design §6, and it is a
+        // compliance question rather than a style one: models confabulate citations
+        // routinely, and an invented line under Buffett's name in the daily brief of a
+        // supervised advisory firm is a real problem. This pack is finite, curated, offline,
+        // deterministic and reviewable. It cannot fabricate because it cannot generate.
+        //
+        // *** THE SECOND RULE, WHICH IS MINE AND NOT IN THE DESIGN: never invent a line and
+        // put a real person's name under it. *** Most of these people are living or recent,
+        // and circulated quote lists are riddled with misattribution — several of the
+        // "famous" lines for these very authors are demonstrably wrong or unsourceable.
+        // So: every entry carries a `source`, anything that could not be placed was left
+        // OUT rather than softened, and HANS READS THE PACK BEFORE IT GOES LIVE. A short
+        // honest pack beats a long doubtful one; entries are easy to add, retractions are not.
+        //
+        // TWO AUTHORS ARE DELIBERATELY ABSENT AND NEED HIM:
+        //   • NICK MURRAY — heavily quoted in advisor circles, but almost always secondhand
+        //     and paraphrased. I could not place a verbatim line to a specific book/page
+        //     with confidence, and he is exactly the author Hans would notice getting wrong.
+        //     Hans has the books; a few lines with page references and they go straight in.
+        //   • CHARLES SCHWAB — ambiguous, and the ambiguity changes the meaning. Charles M.
+        //     Schwab (1862–1939, the steel magnate, and the "Schwab" quoted in Dale
+        //     Carnegie) is a different person from Charles R. Schwab (b. 1937, the broker).
+        //     Which one he means decides the entry, so it is a question, not a guess.
+        //
+        // PROVERBS USES THE WORLD ENGLISH BIBLE (WEB), which is PUBLIC DOMAIN. NIV and ESV
+        // are copyrighted and this app is served from a PUBLIC GitHub repo — shipping them
+        // would put licensed text in a public repository. KJV is the other safe option if he
+        // prefers its cadence; it is a one-line swap of this block's `source` and text.
+        //
+        // Shape: { text, author, source, tags[] }. `tags` exist so the allow/deny lists in
+        // Settings can filter on theme as well as author (design §6).
+        const MORNING_BRIEF_QUOTES = [
+            // ---- Proverbs (World English Bible, public domain) ----
+            { text: 'Commit your deeds to Yahweh, and your plans shall succeed.', author: 'Proverbs', source: 'Proverbs 16:3 (WEB)', tags: ['scripture', 'planning'] },
+            { text: 'The plans of the diligent surely lead to profit; and everyone who is hasty surely rushes to poverty.', author: 'Proverbs', source: 'Proverbs 21:5 (WEB)', tags: ['scripture', 'patience', 'planning'] },
+            { text: 'In all hard work there is profit, but the talk of the lips leads only to poverty.', author: 'Proverbs', source: 'Proverbs 14:23 (WEB)', tags: ['scripture', 'work'] },
+            { text: 'A good man leaves an inheritance to his children’s children.', author: 'Proverbs', source: 'Proverbs 13:22 (WEB)', tags: ['scripture', 'legacy'] },
+            { text: 'Wealth gained dishonestly dwindles away, but he who gathers by hand makes it grow.', author: 'Proverbs', source: 'Proverbs 13:11 (WEB)', tags: ['scripture', 'patience'] },
+            { text: 'Where there is no counsel, plans fail; but in a multitude of counselors they are established.', author: 'Proverbs', source: 'Proverbs 15:22 (WEB)', tags: ['scripture', 'advice'] },
+
+            // ---- Warren Buffett ----
+            { text: 'Price is what you pay. Value is what you get.', author: 'Warren Buffett', source: 'Berkshire Hathaway shareholder letter, 2008', tags: ['investing', 'value'] },
+            { text: 'It’s far better to buy a wonderful company at a fair price than a fair company at a wonderful price.', author: 'Warren Buffett', source: 'Berkshire Hathaway shareholder letter, 1989', tags: ['investing', 'quality'] },
+            { text: 'Someone’s sitting in the shade today because someone planted a tree a long time ago.', author: 'Warren Buffett', source: 'Widely reported; Buffett’s standard formulation on long-term thinking', tags: ['patience', 'legacy'] },
+            { text: 'Risk comes from not knowing what you’re doing.', author: 'Warren Buffett', source: 'Widely reported remark on risk', tags: ['risk', 'investing'] },
+
+            // ---- Charlie Munger ----
+            { text: 'The big money is not in the buying and the selling, but in the waiting.', author: 'Charlie Munger', source: 'Widely reported; Munger’s standard formulation on patience', tags: ['patience', 'investing'] },
+            { text: 'Show me the incentive and I will show you the outcome.', author: 'Charlie Munger', source: 'Widely reported; Munger on incentive-caused bias', tags: ['incentives', 'behaviour'] },
+            { text: 'Take a simple idea and take it seriously.', author: 'Charlie Munger', source: 'Widely reported; Munger on his own method', tags: ['simplicity', 'discipline'] },
+
+            // ---- Peter Lynch ----
+            { text: 'Know what you own, and know why you own it.', author: 'Peter Lynch', source: 'Lynch’s recurring principle; One Up on Wall Street', tags: ['investing', 'discipline'] },
+            { text: 'Far more money has been lost by investors preparing for corrections, or trying to anticipate corrections, than has been lost in corrections themselves.', author: 'Peter Lynch', source: 'Widely reported; Lynch on market timing', tags: ['timing', 'behaviour'] },
+            { text: 'The real key to making money in stocks is not to get scared out of them.', author: 'Peter Lynch', source: 'One Up on Wall Street', tags: ['behaviour', 'patience'] },
+
+            // ---- John C. "Jack" Bogle ----
+            { text: 'Don’t look for the needle in the haystack. Just buy the haystack.', author: 'Jack Bogle', source: 'The Little Book of Common Sense Investing', tags: ['investing', 'indexing'] },
+            { text: 'Time is your friend; impulse is your enemy.', author: 'Jack Bogle', source: 'The Little Book of Common Sense Investing', tags: ['patience', 'behaviour'] },
+            { text: 'The stock market is a giant distraction from the business of investing.', author: 'Jack Bogle', source: 'The Little Book of Common Sense Investing', tags: ['focus', 'investing'] },
+
+            // ---- Morgan Housel ----
+            { text: 'Doing well with money has a little to do with how smart you are and a lot to do with how you behave.', author: 'Morgan Housel', source: 'The Psychology of Money', tags: ['behaviour'] },
+            { text: 'Wealth is what you don’t see.', author: 'Morgan Housel', source: 'The Psychology of Money', tags: ['wealth', 'behaviour'] },
+            { text: 'Saving is the gap between your ego and your income.', author: 'Morgan Housel', source: 'The Psychology of Money', tags: ['saving', 'behaviour'] },
+
+            // ---- Benjamin Franklin (Poor Richard's Almanack — public domain) ----
+            { text: 'Well done is better than well said.', author: 'Benjamin Franklin', source: 'Poor Richard’s Almanack, 1737', tags: ['work', 'discipline'] },
+            { text: 'Lost time is never found again.', author: 'Benjamin Franklin', source: 'Poor Richard’s Almanack, 1747', tags: ['time', 'discipline'] },
+            { text: 'Diligence is the mother of good luck.', author: 'Benjamin Franklin', source: 'Poor Richard’s Almanack, 1736', tags: ['work', 'luck'] },
+            { text: 'Early to bed and early to rise, makes a man healthy, wealthy, and wise.', author: 'Benjamin Franklin', source: 'Poor Richard’s Almanack, 1735', tags: ['discipline', 'morning'] },
+
+            // ---- Ray Dalio ----
+            { text: 'Pain plus reflection equals progress.', author: 'Ray Dalio', source: 'Principles: Life and Work', tags: ['growth', 'reflection'] },
+            { text: 'He who lives by the crystal ball will eat shattered glass.', author: 'Ray Dalio', source: 'Widely reported; Dalio on forecasting', tags: ['forecasting', 'humility'] },
+
+            // ---- Daniel Kahneman ----
+            { text: 'Nothing in life is as important as you think it is while you are thinking about it.', author: 'Daniel Kahneman', source: 'Thinking, Fast and Slow (the focusing illusion)', tags: ['perspective', 'behaviour'] },
+            { text: 'We can be blind to the obvious, and we are also blind to our blindness.', author: 'Daniel Kahneman', source: 'Thinking, Fast and Slow', tags: ['humility', 'behaviour'] },
+
+            // ---- Dale Carnegie ----
+            { text: 'You can make more friends in two months by becoming interested in other people than you can in two years by trying to get other people interested in you.', author: 'Dale Carnegie', source: 'How to Win Friends and Influence People', tags: ['relationships'] },
+            { text: 'A person’s name is to that person the sweetest and most important sound in any language.', author: 'Dale Carnegie', source: 'How to Win Friends and Influence People', tags: ['relationships'] },
+
+            // ---- J. P. Morgan ----
+            // His Pujo Committee testimony is on the record verbatim, which is why this one
+            // is here and the several breezier "J.P. Morgan said" lines in circulation are not.
+            { text: 'The first thing is character, before money or anything else. Money cannot buy it.', author: 'J. P. Morgan', source: 'Testimony to the Pujo Committee, 1912', tags: ['character', 'trust'] },
+
+            // ---- Richard Thaler ----
+            { text: 'If you want to encourage some activity, make it easy.', author: 'Richard Thaler', source: 'Nudge (with Cass Sunstein); Thaler’s standard formulation', tags: ['behaviour', 'design'] }
+        ];
+
+        // ==================== THE MORNING BRIEF (v4.56.0) ====================
+        //
+        // Design record: docs/plans/morning-brief-design.md. Hans's seven answers are locked
+        // in §10 and his four build answers arrived 2026-08-23. This is Brief v1 WITHOUT the
+        // email cards — those need `scanInbox` (.gs v3.58.0, deployed) and land next release.
+        //
+        // *** IT ABSORBS #goodMorningBanner RATHER THAN STACKING ON IT, and that is a
+        // deliberate reversal worth naming. *** That banner is yesterday's End-Day notes, it
+        // is triggered on the same first-open-of-the-day moment, and it occupies exactly this
+        // strip of the Today page. Two purple morning banners one above the other is the
+        // "cluttered / wasted space" complaint he has already made twice about other
+        // surfaces. So the notes become a SECTION of the brief, and the old banner is
+        // suppressed only while the brief is enabled — turn the brief off and the banner
+        // comes back untouched, which is what makes this reversible rather than a deletion.
+        //
+        // WHAT THE BRIEF DOES NOT DO: it does not restate the calendar. Client C's Today
+        // strip lands directly beneath it (design §5), so the headline carries the day's
+        // SHAPE in one sentence and the strip carries the event detail. Do not grow this
+        // into a second agenda.
+        //
+        // THE HEADLINE NEEDS NO AI, and that is what makes the whole feature survive the
+        // compliance block on Layer 3: it is composed from computed facts against a small
+        // template set keyed by the shape of the day. A sentence assembled from real numbers is
+        // warmer than a generated one anyway, because it is never wrong.
+
+        // MEASURED, not chosen. At 8 rows a section the band came out 657px tall at 375 and
+        // 620px at 412 — most of a phone screen spent before the Rule of 3 even begins,
+        // which is precisely the "wasted space" complaint Hans has already made about two
+        // other surfaces. The count badge beside each heading carries the FULL number, so
+        // showing four and saying twelve is honest and short; showing twelve is neither.
+        // Rule 1: this is the number the phone produced, not the number that looked right.
+        const BRIEF_MAX_ROWS = 4;
+
+        const BRIEF_SECTIONS = [
+            { key: 'notes',   label: 'What you left yourself' },
+            { key: 'rule3',   label: 'Yesterday’s unfinished priorities' },
+            { key: 'pending', label: 'Pending tasks' },
+            { key: 'starred', label: 'Starred' },
+            { key: 'kanban',  label: 'Kanban backlog' },
+            { key: 'events',  label: 'Birthdays & all-day' },
+            { key: 'links',   label: 'My links' },
+            { key: 'quote',   label: 'Quote' }
+        ];
+
+        // Device-local, per rule 30 — never in `_settings`, never in the shared sheet.
+        // The firm-scope half of design §5 (tone, quote policy) ships as ordinary settings
+        // for now, per that section's own "practical v1": gating them owner-only BEFORE they
+        // are actually shared would strand an employee on their local default with no owner
+        // able to set it, which is rule 31's regression-dressed-as-a-feature.
+        const BRIEF_PREFS_DEFAULTS = {
+            on: true,
+            sections: BRIEF_SECTIONS.map(function (s) { return s.key; }),
+            quotes: 'all',          // 'off' | 'scripture' | 'all'
+            quoteAllow: [],         // author allow-list; empty = everyone
+            quoteDeny: [],          // author deny-list, applied after the allow-list
+            // His answer, 2026-08-23: "Every Day".
+            everyDay: true,
+            links: [
+                { label: 'Claude', url: 'https://claude.ai' },
+                { label: 'Gmail', url: 'https://mail.google.com' },
+                { label: 'Google Tasks', url: 'https://tasks.google.com' },
+                { label: 'Calendar', url: 'https://calendar.google.com' }
+            ]
+        };
+
+        function briefPrefs() {
+            const raw = getUiPrefs().brief || {};
+            const p = Object.assign({}, BRIEF_PREFS_DEFAULTS, raw);
+            // Whitelist the section keys the same way getUiPrefs whitelists rowDensity: a
+            // stale key from an older build must never reach a renderer that no longer has
+            // a branch for it.
+            const allowed = BRIEF_SECTIONS.map(function (s) { return s.key; });
+            p.sections = (Array.isArray(p.sections) ? p.sections : allowed)
+                .filter(function (k) { return allowed.indexOf(k) !== -1; });
+            if (['off', 'scripture', 'all'].indexOf(p.quotes) === -1) p.quotes = 'all';
+            if (!Array.isArray(p.links)) p.links = BRIEF_PREFS_DEFAULTS.links.slice();
+            return p;
+        }
+        function saveBriefPrefs(patch) {
+            saveUiPrefs({ brief: Object.assign({}, briefPrefs(), patch || {}) });
+            return briefPrefs();
+        }
+        function briefWants(key) { return briefPrefs().sections.indexOf(key) !== -1; }
+
+        // ---- the quote of the day -------------------------------------------------
+        // Seeded by the DATE, not by Math.random: the same day must show the same quote on
+        // his phone, on his laptop, and on a reprint. A random pick per render would change
+        // under him mid-morning and make the printed page disagree with the screen.
+        function briefQuoteOfDay(ymd) {
+            const p = briefPrefs();
+            if (p.quotes === 'off') return null;
+            let pool = MORNING_BRIEF_QUOTES.slice();
+            if (p.quotes === 'scripture') {
+                pool = pool.filter(function (q) { return (q.tags || []).indexOf('scripture') !== -1; });
+            }
+            if (p.quoteAllow.length) {
+                pool = pool.filter(function (q) { return p.quoteAllow.indexOf(q.author) !== -1; });
+            }
+            if (p.quoteDeny.length) {
+                pool = pool.filter(function (q) { return p.quoteDeny.indexOf(q.author) === -1; });
+            }
+            if (!pool.length) return null;
+            // A stable hash of the date string. Deterministic across devices and reloads.
+            const key = String(ymd || _briefTodayYmd());
+            let h = 0;
+            for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+            return pool[h % pool.length];
+        }
+
+        function _briefTodayYmd() {
+            const d = new Date();
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        }
+
+        // ---- the sections ---------------------------------------------------------
+        // Every one of these reads the app's OWN definitions rather than inventing a second
+        // one. Where a definition already exists (starred = "needs attention now",
+        // isOverdue, resolveRuleEntry, kanbanRowsForMe) it is called, not copied — a second
+        // copy is the drift this project has paid for repeatedly.
+
+        function _briefMyTodos() {
+            const q = (yearData.quarters && yearData.quarters[currentQuarter]) || {};
+            const me = document.getElementById('dailyPlanUser')?.value;
+            const today = _briefTodayYmd();
+            return (q.todos || []).filter(function (t) {
+                return t && t.text && t.owner === me && !t.done
+                    && (!t.snoozedUntil || t.snoozedUntil <= today);
+            });
+        }
+
+        // Round 17 item 5's definition, and it is SHARED with Client C's strip when that
+        // lands so the two cannot drift: overdue OR undated.
+        function briefPendingTasks() {
+            return _briefMyTodos().filter(function (t) {
+                return !t.dueDate || isOverdue(t.dueDate);
+            });
+        }
+
+        function briefStarred() {
+            const out = _briefMyTodos().filter(function (t) { return !!t.starred; })
+                .map(function (t) { return { text: t.text, hint: t.googleListName || '', id: t.id }; });
+            // Kanban cards carry their own star, and the app already treats both as the same
+            // idea. kanbanRowsForMe() is the single reader of "my cards" — reuse it.
+            try {
+                (kanbanRowsForMe() || []).forEach(function (r) {
+                    if (r && r.card && r.card.starred) {
+                        out.push({ text: r.card.title || '', hint: r.board.name || 'Kanban', id: '' });
+                    }
+                });
+            } catch (e) { /* board module not booted; to-dos alone are still a valid section */ }
+            return out.filter(function (x) { return x.text; });
+        }
+
+        // v4.16.2 already CARRIES unfinished priorities into the new day; the brief's job is
+        // to NAME them rather than leave him to notice they are yesterday's.
+        function briefCarriedRule3() {
+            if (!dailyPlanData || !Array.isArray(dailyPlanData.ruleOf3)) return [];
+            const out = [];
+            dailyPlanData.ruleOf3.forEach(function (e, i) {
+                if (!e) return;
+                const rec = resolveRuleEntry(e);
+                if (rec && !rec.done) out.push({ text: rec.text || '', slot: i + 1 });
+            });
+            return out.filter(function (x) { return x.text; });
+        }
+
+        // 🚨 "Backlog" is a user-editable column NAME, not a structural thing — matching the
+        // literal string would silently show nothing on any renamed or custom board, which
+        // is this project's most expensive defect class (rules 11/39/43) wearing an empty
+        // list as a disguise. Hans's answer, 2026-08-23, settles it: the columns that feed
+        // the brief are the ones that already feed the Weekly Meeting and Today, which is
+        // `col.actionable` via kanbanColumnFeedsTaskSurfaces — per-board, any number of
+        // columns, stored by column ID. So this is kanbanRowsForMe() and nothing new. One
+        // setting, one meaning, three surfaces.
+        function briefKanbanBacklog() {
+            try {
+                return (kanbanRowsForMe() || []).filter(function (r) { return r && r.card && !r.card.archived; })
+                    .map(function (r) { return { text: r.card.title || '', hint: r.board.name + ' · ' + r.col.name }; })
+                    .filter(function (x) { return x.text; });
+            } catch (e) { return []; }
+        }
+
+        // Birthdays and all-day events are already in the agenda feed; the brief reads the
+        // cache rather than triggering its own fetch, so opening Today never costs a
+        // calendar round trip it did not already owe.
+        function briefAllDayToday() {
+            try {
+                if (typeof _calEventsByDay !== 'function') return [];
+                const ymd = _briefTodayYmd();
+                // _calEventsByDay() and _calIsMidnightBanner() are the AGENDA's own
+                // definitions of "which day" and "what counts as a banner". Reused rather
+                // than re-derived, so a birthday the agenda shows and the brief does not is
+                // impossible by construction — v4.32.0 made one definition on both surfaces
+                // and this is the third reader of it, not a fourth definition.
+                const byDay = _calEventsByDay() || {};
+                return (byDay[ymd] || [])
+                    .filter(function (e) { return e && (e.allDay || _calIsMidnightBanner(e)); })
+                    .map(function (e) { return { text: e.title || '(untitled)', hint: e.calendarName || '' }; });
+            } catch (e) { return []; }
+        }
+
+        // ---- the headline ---------------------------------------------------------
+        // Composed from the counts, never generated. Each branch is a fact he can check.
+        function briefHeadline(facts) {
+            const bits = [];
+            if (facts.carried) {
+                bits.push(facts.carried === 1
+                    ? 'One priority carried over from yesterday'
+                    : facts.carried + ' priorities carried over from yesterday');
+            }
+            if (facts.pending) {
+                bits.push(facts.pending === 1 ? 'one task is overdue or undated'
+                                              : facts.pending + ' tasks are overdue or undated');
+            }
+            if (facts.starred) bits.push(facts.starred + ' starred');
+            if (!bits.length) return 'Nothing is carried over and nothing is overdue. A clean start.';
+            return bits.join(' · ') + '.';
+        }
+
+        function _briefGreeting() {
+            const me = (typeof meMember === 'function') ? meMember() : null;
+            const first = ((me && (me.name || me.initials)) || '').split(/\s+/)[0] || '';
+            const h = new Date().getHours();
+            const part = h < 12 ? 'Good morning' : (h < 18 ? 'Good afternoon' : 'Good evening');
+            return first ? (part + ', ' + first) : part;
+        }
+
+        // ---- render ---------------------------------------------------------------
+        // #morningBrief and #morningBriefChip are STATIC markup, never unmounted, exactly so
+        // these ids cannot join this file's dead-selector list (rule 11 / rule 15).
+
+        // "Seen today" is per DEVICE and per DAY. It decides collapsed-vs-open, never
+        // whether the brief EXISTS — a collapsed brief is still one tap away, and a brief
+        // that vanishes for the rest of the day is a feature you cannot get back to.
+        const BRIEF_SEEN_KEY = 'eos_brief_seen';
+
+        function _briefSeenToday() {
+            try { return localStorage.getItem(BRIEF_SEEN_KEY) === _briefTodayYmd(); }
+            catch (e) { return false; }
+        }
+        function _briefMarkSeen() {
+            try { localStorage.setItem(BRIEF_SEEN_KEY, _briefTodayYmd()); } catch (e) { }
+        }
+
+        function briefCollapse() {
+            _briefMarkSeen();
+            renderMorningBrief();
+        }
+        function briefExpand() {
+            try { localStorage.removeItem(BRIEF_SEEN_KEY); } catch (e) { }
+            renderMorningBrief();
+        }
+
+        function _briefList(items, empty) {
+            const esc = escapeHtml;
+            if (!items.length) return empty ? '<div class="mb-empty">' + esc(empty) + '</div>' : '';
+            return '<ul class="mb-list">' + items.map(function (it) {
+                return '<li><span class="mb-item-text">' + esc(String(it.text).substring(0, 140)) + '</span>'
+                    + (it.hint ? '<span class="mb-item-hint">' + esc(String(it.hint).substring(0, 40)) + '</span>' : '')
+                    + '</li>';
+            }).join('') + '</ul>';
+        }
+
+        function _briefSection(key, label, body, count) {
+            if (!body) return '';
+            const esc = escapeHtml;
+            return '<section class="mb-sec" data-mb-sec="' + key + '">'
+                + '<h4 class="mb-sec-head">' + esc(label)
+                + (count ? '<span class="mb-count">' + count + '</span>' : '') + '</h4>'
+                + body + '</section>';
+        }
+
+        function renderMorningBrief() {
+            const band = document.getElementById('morningBrief');
+            const chip = document.getElementById('morningBriefChip');
+            if (!band || !chip) return;
+            const p = briefPrefs();
+
+            // Off, or a plan this device has not loaded yet — the same guard openFillSlot
+            // uses, and for the same reason: every section below reads dailyPlanData.
+            const planReady = !!(dailyPlanData && dailyPlanData.matrix && Array.isArray(dailyPlanData.ruleOf3));
+            if (!p.on || !planReady) {
+                band.style.display = 'none';
+                chip.style.display = 'none';
+                _briefSyncLegacyBanner(false);
+                return;
+            }
+            // The brief owns this strip now, so the old notes banner stands down while it
+            // is on. Turn the brief off and the banner returns untouched.
+            _briefSyncLegacyBanner(true);
+
+            if (_briefSeenToday()) {
+                band.style.display = 'none';
+                chip.style.display = '';
+                chip.innerHTML = '<button type="button" class="mb-chip-btn" onclick="briefExpand()">'
+                    + '☀️ <span>' + escapeHtml(_briefGreeting()) + '</span>'
+                    + '<span class="mb-chip-more">Show brief</span></button>';
+                return;
+            }
+            chip.style.display = 'none';
+            band.style.display = '';
+
+            const esc = escapeHtml;
+            const carried = briefWants('rule3') ? briefCarriedRule3() : [];
+            const pending = briefWants('pending') ? briefPendingTasks() : [];
+            const starred = briefWants('starred') ? briefStarred() : [];
+            const kanban = briefWants('kanban') ? briefKanbanBacklog() : [];
+            const events = briefWants('events') ? briefAllDayToday() : [];
+            const notes = (briefWants('notes') && dailyPlanData.tomorrowNotes) ? String(dailyPlanData.tomorrowNotes) : '';
+
+            const dateStr = new Date().toLocaleDateString('en-US',
+                { weekday: 'long', month: 'long', day: 'numeric' });
+
+            let html = '<div class="mb-top">'
+                + '<div class="mb-greet"><h3>' + esc(_briefGreeting()) + '</h3>'
+                + '<div class="mb-date">' + esc(dateStr) + '</div></div>'
+                + '<button type="button" class="mb-collapse" onclick="briefCollapse()" '
+                + 'title="Collapse the brief" aria-label="Collapse the brief">Done</button></div>';
+
+            html += '<p class="mb-headline">' + esc(briefHeadline({
+                carried: carried.length, pending: pending.length, starred: starred.length
+            })) + '</p>';
+
+            html += '<div class="mb-body">';
+            if (notes) {
+                html += _briefSection('notes', 'What you left yourself',
+                    '<div class="mb-notes">' + esc(notes) + '</div>');
+            }
+            html += _briefSection('rule3', 'Yesterday’s unfinished priorities',
+                carried.length ? _briefList(carried.map(function (c) {
+                    return { text: c.text, hint: 'slot ' + c.slot };
+                })) : '', carried.length);
+            html += _briefSection('pending', 'Overdue or undated',
+                pending.length ? _briefList(pending.map(function (t) {
+                    return { text: t.text, hint: t.dueDate ? ('due ' + t.dueDate) : 'no date' };
+                }).slice(0, BRIEF_MAX_ROWS)) : '', pending.length);
+            html += _briefSection('starred', 'Starred',
+                starred.length ? _briefList(starred.slice(0, BRIEF_MAX_ROWS)) : '', starred.length);
+            html += _briefSection('kanban', 'Kanban',
+                kanban.length ? _briefList(kanban.slice(0, BRIEF_MAX_ROWS)) : '', kanban.length);
+            html += _briefSection('events', 'All day today',
+                events.length ? _briefList(events) : '', events.length);
+            html += '</div>';
+
+            if (briefWants('links') && p.links.length) {
+                html += '<div class="mb-links">' + p.links.map(function (l) {
+                    if (!l || !l.url) return '';
+                    // rel=noopener on every one: these are the deliberate, narrow exception
+                    // to "stay inside the tool" (design §8) and they open a new tab.
+                    return '<a class="mb-link" href="' + esc(l.url) + '" target="_blank" rel="noopener">'
+                        + esc(l.label || l.url) + '</a>';
+                }).join('') + '</div>';
+            }
+
+            if (briefWants('quote')) {
+                const q = briefQuoteOfDay();
+                if (q) {
+                    html += '<figure class="mb-quote"><blockquote>' + esc(q.text) + '</blockquote>'
+                        + '<figcaption>&mdash; ' + esc(q.author)
+                        + (q.source ? '<span class="mb-quote-src">' + esc(q.source) + '</span>' : '')
+                        + '</figcaption></figure>';
+                }
+            }
+
+            band.innerHTML = html;
+        }
+
+        // The old banner and the brief must never both be on screen. This is the ONLY place
+        // that decides it, so the two cannot drift — and it reads the brief's own pref
+        // rather than a second flag.
+        function _briefSyncLegacyBanner(briefOwnsIt) {
+            const b = document.getElementById('goodMorningBanner');
+            if (!b) return;
+            if (briefOwnsIt) {
+                b.style.display = 'none';
+                b.setAttribute('data-mb-suppressed', '1');
+            } else if (b.getAttribute('data-mb-suppressed')) {
+                // Only un-suppress what WE suppressed. If the brief was never on, the
+                // banner's own show/hide logic is untouched and must stay that way.
+                b.removeAttribute('data-mb-suppressed');
+            }
+        }
+
         function rerenderKanbanTaskSections() {
             renderKanbanTaskSection('kanbanTaskRowsToday');
             renderKanbanTaskSection('kanbanTaskRowsMeeting');
@@ -31873,6 +32379,12 @@ Return ONLY the JSON array:`;
             renderRuleOf3();
             renderSnoozedSection();
             renderDailyHabits();
+            // v4.56.0: the brief renders HERE and only here — at plan load, plus its own
+            // expand/collapse. Deliberately NOT in rerenderAllTaskSurfaces(): that fires on
+            // every tick, star and edit, and a band that silently re-lays-out under the
+            // cursor while you are reading it is its own defect. The counts are a snapshot
+            // of the morning, which is what a brief IS.
+            try { renderMorningBrief(); } catch (e) { console.warn('Morning brief skipped:', e); }
             document.getElementById('tomorrowNotes').value = dailyPlanData.tomorrowNotes || '';
             document.getElementById('pomoCount').textContent = dailyPlanData.pomoCount || 0;
             
