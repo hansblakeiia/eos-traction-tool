@@ -4952,6 +4952,19 @@
         @media (max-width: 768px) {
             .mb-quote blockquote { padding-right: 72px; }
             .mb-quote figcaption { padding-right: 72px; }
+            /* NOT PADDED, and the reason is worth writing down because the screenshot said to
+               pad it. At a 900px-tall shot the launchpad sits under the FAB with "Calendar"
+               half covered — but the band is 848px on a full morning, so on the 812px phone
+               this ships to, the links row is BELOW THE FOLD at scroll zero and something
+               else is under the FAB instead. Giving it `padding-right: 72px` fixed one
+               viewport height and cost 35px of wrapped row on EVERY phone, including the
+               no-mail band that v4.56.1 measured to fit exactly.
+               The general fact: the FAB is `position: fixed` and this band now scrolls, so
+               SOMETHING is under it at every scroll position — the same standing condition
+               `.tr-actions` and every other right-edge control in this app already lives
+               with (rule 12). v4.56.1's quote padding worked because that band always ENDED
+               beside the FAB; that is no longer true, and a fix aimed at one scroll offset
+               is not a fix. */
         }
 
         /* WORST-CASE HEIGHT, v4.56.1. The quote is DATE-SEEDED, so the band's height changes
@@ -4988,4 +5001,183 @@
             .mb-notes { padding: 6px 9px; }
             .mb-headline { margin: 6px 0 9px; }
             .mb-links { margin-top: 9px; gap: 6px; }
+        }
+
+        /* ============ THE MORNING BRIEF, EMAIL HALF (v4.57.0) ============
+           Design record docs/plans/morning-brief-design.md §4. Appended at the END of the
+           sheet, so per rule 10b every selector here wins an equal-specificity tie against
+           everything above it — checked rather than assumed: every class below is new and
+           `mb-mail`-prefixed, and the two that are not (`.mb-why`, `.brief-addr`) share no
+           name with any existing rule. The trap 10b describes is a NEW base class colliding
+           with an EXISTING modifier, and there is no such pairing here.
+
+           The section sits ABOVE the .mb-body grid and spans the full width, because a card
+           is a paragraph and a paragraph in a 220px column is unreadable. */
+        .mb-mailhost { display: block; }
+        .mb-mailhost .mb-sec { margin-bottom: 12px; }
+
+        /* A GRID, not a column, and it is worth 250px on a desktop: measured, three stacked
+           cards ran the mail section to 518px at 1280 and 200px laid side by side, which is
+           the difference between the whole brief fitting above the fold on a laptop and not.
+           `auto-fit` means the count falls to one on a narrow screen with no JS mirror —
+           v4.56.0 made the same choice for `.mb-body` and for the same reason. */
+        .mb-mail-cards {
+            display: grid; gap: 8px;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        }
+        .mb-mail-cards > * { min-width: 0; }     /* rule 8: guard a new grid on creation */
+        .mb-mail-card {
+            background: #fff; border: 1px solid var(--gray-200); border-radius: 8px;
+            padding: 9px 11px; min-width: 0;                 /* rule 8, on creation */
+        }
+        .mb-mail-head { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+        .mb-mail-from {
+            flex: 1 1 0; min-width: 0;                       /* rule 9: 1 1 0, never 1 1 auto */
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            font-size: 0.85rem; font-weight: 600; color: var(--gray-800);
+        }
+        .mb-mail-age { flex: 0 0 auto; font-size: 0.72rem; color: var(--gray-400); }
+        .mb-mail-subj {
+            font-size: 0.85rem; color: var(--gray-800); margin-top: 1px;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        /* The snippet is the one piece of message CONTENT that crosses the backend boundary,
+           and it is clamped to whole lines rather than cut mid-line — rule 66's "one line
+           plus 3px of the next" is the same defect in a subtler dress. */
+        .mb-mail-snip {
+            font-size: 0.78rem; color: var(--gray-500); line-height: 1.35; margin-top: 3px;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+            overflow: hidden; overflow-wrap: anywhere;       /* rule 8: `anywhere`, never break-word */
+        }
+        .mb-mail-acts {
+            display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 7px;
+        }
+        /* "Why it surfaced" (§4) is a label on the action row rather than a badge in the
+           corner, because it is the thing that justifies the two buttons beside it. */
+        .mb-why {
+            flex: 1 1 0; min-width: 0;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            font-size: 0.7rem; color: var(--gray-500);
+        }
+        .mb-why-vip { color: var(--accent); font-weight: 700; }
+        .mb-mail-btn {
+            flex: 0 0 auto; background: #fff; border: 1px solid var(--gray-300);
+            border-radius: 6px; padding: 4px 10px; font-size: 0.76rem;
+            color: var(--gray-700); cursor: pointer; white-space: nowrap;
+        }
+        .mb-mail-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .mb-mail-more { font-weight: 700; letter-spacing: 1px; }
+
+        /* The honesty rail. Deliberately a plain, quiet line rather than a warning — it is
+           the normal state of a working filter, not a problem report. */
+        .mb-mail-rail {
+            display: block; width: 100%; text-align: left; margin-top: 8px;
+            background: none; border: none; padding: 4px 0;
+            font-size: 0.78rem; color: var(--accent); cursor: pointer; text-decoration: underline;
+        }
+        .mb-mail-filtered { list-style: none; margin: 4px 0 0; padding: 0; }
+        .mb-mail-filtered li {
+            display: flex; align-items: baseline; gap: 8px; min-width: 0;
+            font-size: 0.78rem; color: var(--gray-600); padding: 2px 0;
+        }
+        .mb-mail-filtered .mb-item-text { flex: 1 1 0; min-width: 0; }
+        .mb-mail-reason {
+            flex: 0 0 auto; max-width: 38%; font-size: 0.7rem; color: var(--gray-400);
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .mb-mail-link {
+            flex: 0 0 auto; background: none; border: none; padding: 0;
+            font-size: 0.74rem; color: var(--accent); cursor: pointer; text-decoration: underline;
+        }
+        /* One row for every text control the section offers. Each is a <button>, and rule 5
+           gives every button a 44px floor on a coarse pointer — correct for a tap target and
+           expensive when they stack, which is how three text links came to be worth 132px of
+           a phone screen. Side by side they cost one row and stay just as tappable. */
+        .mb-mail-links { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+        .mb-mail-links:empty { display: none; }
+        .mb-mail-note { font-size: 0.78rem; color: var(--gray-500); line-height: 1.4; }
+        /* The standing-condition state: one line closed, the whole reason open. Measured —
+           the paragraph version cost 82px of a band that had 47px of slack at 375. */
+        .mb-mail-blocked { margin-bottom: 6px; }
+        .mb-mail-blocked > summary {
+            font-size: 0.74rem; line-height: 1.3; color: var(--gray-500); cursor: pointer;
+            list-style: none; text-decoration: underline; padding: 0;
+        }
+        .mb-mail-blocked > summary::-webkit-details-marker { display: none; }
+        .mb-mail-blocked > .mb-mail-note { margin-top: 4px; }
+        .mb-mail-err { color: #b91c1c; }
+        .mb-mail-foot {
+            margin-top: 8px; font-size: 0.7rem; color: var(--gray-400);
+            display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline;
+        }
+
+        /* Settings › Me › Morning Brief mail — the address chips. */
+        .brief-addr {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: var(--gray-100); border: 1px solid var(--gray-200); border-radius: 999px;
+            padding: 3px 6px 3px 10px; font-size: 0.78rem; color: var(--gray-700); max-width: 100%;
+        }
+        .brief-addr > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+        .brief-addr button {
+            background: none; border: none; cursor: pointer; color: var(--gray-500);
+            font-size: 1rem; line-height: 1; padding: 0 4px;
+        }
+        .brief-addr button:hover { color: #b91c1c; }
+
+        /* PHONE HEIGHT, and it is the same argument v4.56.1 settled for the rest of the band:
+           the brief has to be readable in one look on the shortest screen it ships to, and it
+           was already 765px at 375 on its worst day with NO mail in it. So the phone shows
+           two cards where the desktop shows three — hiding WHOLE cards (rule 66), never a
+           clipped one — while the count badge beside the heading carries the true total and
+           "Show all N" is one tap. `.mb-mail-all` is the class that expander sets; it is a
+           STATE class reflecting a fact the JS already knows, not a JS mirror of a measured
+           number, so rule 56a is honoured. */
+        /* The toggle is a phone-only affordance. It is RENDERED always (so there is no JS
+           deciding what the viewport is) and shown only where the rows it reveals are the
+           rows the phone actually hid. */
+        .mb-ctx-toggle { display: none; }
+
+        @media (max-width: 768px) {
+            .mb-mail-cards { grid-template-columns: 1fr; }
+            .mb-mail-cards:not(.mb-mail-all) > .mb-mail-card:nth-child(n+3) { display: none; }
+            .mb-mail-card { padding: 8px 10px; }
+            .mb-mail-snip { -webkit-line-clamp: 1; }
+            .mb-mailhost .mb-sec { margin-bottom: 10px; }
+            /* Rule 5: a 44px floor on a coarse pointer already applies to every button, so
+               these read taller on a real phone than they measure in a desktop browser at a
+               375 viewport. Nothing here fights it. */
+            .mb-mail-acts { gap: 5px; }
+
+            /* *** THE TRADE, AND IT IS MEASURED RATHER THAN PREFERRED. *** Without mail the
+               band runs 607px at 375 against ~682px of screen above the fold — 75px of slack.
+               One email card is 126px. So the moment mail is on screen SOMETHING has to give,
+               and the honest thing to give up is the half the headline has already said in
+               words: "5 tasks are overdue or undated · 3 starred" is the same information as
+               five rows of task titles, in one line instead of twenty.
+
+               So on a phone WITH MAIL the context sections keep their headings and their
+               count badges and give up their rows — worth 212px measured — and one button
+               brings every row back. Nothing is hidden without its count still on screen and
+               a control that reverses it; that is the difference between this and the "wasted
+               space" complaint that produced BRIEF_MAX_ROWS in the first place. Turn the mail
+               section off, or have a morning with no mail that needs you, and v4.56.1's band
+               comes back exactly as it was. */
+            .mb-has-mail:not(.mb-ctx-open) .mb-body .mb-sec:not([data-mb-sec="mail"]) .mb-list {
+                display: none;
+            }
+            /* SCREENSHOT FINDING: hiding the note left "WHAT YOU LEFT YOURSELF" as a heading
+               with nothing under it and no count badge to stand in for the missing content —
+               a heading pointing at an absence. Every other section has a number; this one
+               has a sentence, so the sentence is what stays, clamped to one line. */
+            .mb-has-mail:not(.mb-ctx-open) .mb-body .mb-notes {
+                display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical;
+                overflow: hidden; padding: 3px 7px; font-size: 0.78rem;
+            }
+            .mb-has-mail:not(.mb-ctx-open) .mb-body { gap: 4px 16px; }
+            .mb-has-mail:not(.mb-ctx-open) .mb-body .mb-sec-head { margin-bottom: 0; }
+            .mb-has-mail .mb-ctx-toggle {
+                display: block; width: 100%; text-align: left; margin-top: 6px;
+                background: none; border: none; padding: 4px 0;
+                font-size: 0.78rem; color: var(--accent); cursor: pointer; text-decoration: underline;
+            }
         }
