@@ -4953,3 +4953,39 @@
             .mb-quote blockquote { padding-right: 72px; }
             .mb-quote figcaption { padding-right: 72px; }
         }
+
+        /* WORST-CASE HEIGHT, v4.56.1. The quote is DATE-SEEDED, so the band's height changes
+           with the calendar and not with the code — the day after this shipped, a longer
+           quote pushed it 12px past the fold and the probe failed with nothing changed
+           (rule 60). Measured against the LONGEST entry in the pack (Dale Carnegie, 153
+           chars) the band ran to 889px at 375 and 860px at 412, against an 812px viewport.
+           Two levers, both CSS-only so there is no JS mirror to keep in step (rule 56a):
+
+           (1) THREE ROWS ON A PHONE, not four. nth-child hides WHOLE rows — never a clipped
+               one, which is rule 66's "one line plus 3px of the next" defect. The count
+               badge beside each heading still carries the true total, so three-of-fourteen
+               is as honest as four-of-fourteen. */
+        @media (max-width: 768px) {
+            .mb-list li:nth-child(n+4) { display: none; }
+        }
+
+        /*  (2) A TIGHTER QUOTE on a phone. It is the one block whose length the app does not
+               control — a curated pack can hold a 40-character proverb or a 153-character
+               Carnegie sentence, and the layout has to survive the longest one it ships. */
+        @media (max-width: 768px) {
+            .mb-quote blockquote { font-size: 0.84rem; line-height: 1.42; }
+            .mb-quote figcaption { margin-top: 4px; }
+        }
+
+        /* The last 22px, and the reason it is spread across five small values rather than
+           taken out of one: the band is six stacked sections on a phone, so a pixel removed
+           from a per-section or per-row value is multiplied by six or by ten, while a pixel
+           taken off the band's own padding is worth exactly one. Cheapest place to find
+           height in a repeating layout is always the repeating part. */
+        @media (max-width: 768px) {
+            .mb-sec-head { margin-bottom: 4px; }
+            .mb-list li { padding: 1px 0; }
+            .mb-notes { padding: 6px 9px; }
+            .mb-headline { margin: 6px 0 9px; }
+            .mb-links { margin-top: 9px; gap: 6px; }
+        }
