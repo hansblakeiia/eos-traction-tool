@@ -5181,3 +5181,41 @@
                 font-size: 0.78rem; color: var(--accent); cursor: pointer; text-decoration: underline;
             }
         }
+
+        /* ==================== MEETINGS — MEETING PROCESSOR (v4.58.0) ====================
+           Appended at the END of the sheet, so every equal-specificity tie against older
+           rules goes to this block (rule 10b) — which is why every selector here is
+           #meetings- or id-scoped and declares ONLY properties this page owns. */
+        #meetings .mtg-controls {
+            display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin-top: 10px;
+        }
+        #meetings .mtg-controls > * { min-width: 0; }   /* rule 8's guard, on creation */
+        #meetings .mtg-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 16px; margin-top: 16px;
+        }
+        #meetings .mtg-grid > * { min-width: 0; }       /* rule 8's guard, on creation */
+        #meetings .mtg-card-head {
+            display: flex; justify-content: space-between; align-items: center;
+            gap: 8px; margin-bottom: 8px;
+        }
+        #meetings .mtg-card-head h3 { font-size: 0.95rem; margin: 0; }
+        #meetings .mtg-copy { padding: 4px 10px; font-size: 0.78rem; }
+        #meetings .mtg-card textarea {
+            width: 100%; min-height: 220px; font-size: 0.85rem; line-height: 1.45;
+            overflow-wrap: anywhere;                     /* rule 8's second half */
+        }
+        #meetings .mtg-card .mtg-tasks-failsafe { min-height: 90px; }
+        #meetings .mtg-card-foot { font-size: 0.72rem; color: var(--gray-500); margin: 6px 0 0; }
+        #meetings .mtg-tasks { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+        #meetings .mtg-tasks th, #meetings .mtg-tasks td {
+            text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--gray-200);
+            vertical-align: top; overflow-wrap: anywhere;
+        }
+        #meetings .mtg-task-resolve td { background: #fef3c7; }
+        #meetings .mtg-resolve-flag { font-size: 0.72rem; color: #92400e; font-weight: 600; }
+        @media screen and (max-width: 768px) {
+            #meetings .mtg-grid { grid-template-columns: 1fr; }
+            #meetings .mtg-controls { align-items: stretch; }
+            #meetings .mtg-controls .btn { width: 100%; }
+        }

@@ -13,7 +13,7 @@
          Marketing tab; the rest of the app is untouched by this. -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%231a365d' width='100' height='100' rx='15'/%3E%3Ctext x='50' y='50' font-family='Arial, sans-serif' font-size='45' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='central'%3EEOS%3C/text%3E%3Ccircle cx='85' cy='15' r='8' fill='%233182ce'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="styles.css?v=4.57.0">
+    <link rel="stylesheet" href="styles.css?v=4.58.0">
 </head>
 <body>
     <div class="container">
@@ -49,7 +49,16 @@
             <button class="tab-btn active" onclick="showPage('vision')">Vision</button>
             <button class="tab-btn" onclick="showPage('plan')">1-Year Plan</button>
             <button class="tab-btn quarter-tab" onclick="showPage('quarterly')">Quarterly Rocks, Scorecard, and IDS</button>
-            <button class="tab-btn" onclick="showPage('meeting')">Weekly Meeting</button>
+            <!-- v4.58.0: "Weekly Meeting" reads "Weekly Pulse" now (Hans, 2026-08-27,
+                 alongside the new Meetings page). LABEL ONLY — the page id stays
+                 'meeting' and the stored defaultTab value stays 'weeklyMeeting';
+                 renaming either would break the showPage alias and every saved
+                 setting for zero behavioural gain. -->
+            <button class="tab-btn" onclick="showPage('meeting')">Weekly Pulse</button>
+            <!-- v4.58.0: the Meeting Processor (client meetings → CRM note / coaching /
+                 email / tasks). New page, so THREE nav touches (rule 27): this row,
+                 NAV_ITEMS, and the page div itself. -->
+            <button class="tab-btn" onclick="showPage('meetings')">🤝 Meetings</button>
             <button class="tab-btn daily-plan-tab" onclick="showPage('dailyPlan')">📅 Today</button>
             <!-- v4.23.0: Calendar leads the Focus group (Calendar, Kanban, Marketing) in
                  Hans's v3.84.0 drawer order. Until now the page only existed as a reserved
@@ -1981,6 +1990,94 @@
             </div>
         </div>
 
+        <!-- ==================== MEETINGS — MEETING PROCESSOR (v4.58.0, Phase 1) ====================
+             Paste an Otter transcript/summary → the AI backend (generateOutputs, .gs v3.59.0)
+             returns six formatted outputs, rendered into the STATICALLY MOUNTED cards below
+             (rule 15 — hidden with display:none, never unmounted, so every id the JS reads
+             exists here and the dead-selector hook can see all of them).
+             Phase 2 (Redtail client picker + note push) and Phase 3 (Gmail draft + tasks into
+             the sync) render into this same page; the deferral is named in the footer, not
+             silently omitted. -->
+        <div id="meetings" class="page">
+            <h2 class="page-title">🤝 Meetings</h2>
+            <div class="section" id="mtgInputSection">
+                <label for="mtgTranscript" style="font-weight:600;">Paste the Otter transcript or meeting summary</label>
+                <p style="font-size:0.8rem; color: var(--gray-500); margin: 2px 0 8px;">
+                    Everything stays on this device until you press Process — the text is then sent
+                    once to the AI provider chosen in Settings &rsaquo; AI Tools to produce the CRM note,
+                    coaching, follow-up email and task suggestions.
+                </p>
+                <textarea id="mtgTranscript" placeholder="Paste the transcript or summary here…" style="width:100%; min-height:180px;"></textarea>
+                <div class="mtg-controls">
+                    <div>
+                        <label for="mtgMeetingType" style="font-size:0.8rem;">Meeting type</label>
+                        <select id="mtgMeetingType">
+                            <option value="auto" selected>Auto-detect</option>
+                            <option value="Prospect Discovery">Prospect Discovery</option>
+                            <option value="Client Review">Client Review</option>
+                            <option value="Planning Session">Planning Session</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div id="mtgModelLine" style="font-size:0.75rem; color: var(--gray-500); align-self:center;"></div>
+                    <button class="btn btn-primary" id="mtgGenerateBtn" onclick="mtgGenerate()">Process meeting</button>
+                    <button class="btn btn-secondary" onclick="mtgClearAll()">Clear</button>
+                </div>
+                <div id="mtgStatus" style="font-size:0.82rem; margin-top:8px;"></div>
+            </div>
+            <div id="mtgResults" style="display:none;">
+                <div class="section">
+                    <div id="mtgMetaLine" style="font-size:0.82rem; color: var(--gray-600); margin-bottom:6px;"></div>
+                    <div id="mtgUsageLine" style="font-size:0.75rem; color: var(--gray-500);"></div>
+                    <div id="mtgTruncWarn" style="display:none; margin-top:8px; padding:8px 10px; border-radius:6px; background:#fef3c7; color:#92400e; font-size:0.82rem;"></div>
+                </div>
+                <div class="mtg-grid">
+                    <div class="section mtg-card" id="mtgCardNote">
+                        <div class="mtg-card-head"><h3>1 &middot; CRM Note (Redtail)</h3><button class="btn btn-secondary mtg-copy" onclick="mtgCopy('mtgTxtNote')">Copy</button></div>
+                        <textarea id="mtgTxtNote"></textarea>
+                        <p class="mtg-card-foot">Phase 2 adds the client picker and a &ldquo;Push to Redtail&rdquo; button here.</p>
+                    </div>
+                    <div class="section mtg-card" id="mtgCardCoach">
+                        <div class="mtg-card-head"><h3>2 &middot; Communication &amp; Sales Coaching</h3><button class="btn btn-secondary mtg-copy" onclick="mtgCopy('mtgTxtCoach')">Copy</button></div>
+                        <textarea id="mtgTxtCoach"></textarea>
+                    </div>
+                    <div class="section mtg-card" id="mtgCardRoleplay">
+                        <div class="mtg-card-head"><h3>3 &middot; Objection Role-Play</h3><button class="btn btn-secondary mtg-copy" onclick="mtgCopy('mtgTxtRoleplay')">Copy</button></div>
+                        <textarea id="mtgTxtRoleplay"></textarea>
+                    </div>
+                    <div class="section mtg-card" id="mtgCardMsg">
+                        <div class="mtg-card-head"><h3>4 &middot; Messaging &amp; Efficiency Review</h3><button class="btn btn-secondary mtg-copy" onclick="mtgCopy('mtgTxtMsg')">Copy</button></div>
+                        <textarea id="mtgTxtMsg"></textarea>
+                    </div>
+                    <div class="section mtg-card" id="mtgCardEmail">
+                        <div class="mtg-card-head"><h3>5 &middot; Follow-Up Email (for Gmail)</h3>
+                            <span>
+                                <button class="btn btn-secondary mtg-copy" onclick="mtgCopy('mtgEmailSubject')">Copy subject</button>
+                                <button class="btn btn-secondary mtg-copy" onclick="mtgCopy('mtgTxtEmail')">Copy body</button>
+                            </span>
+                        </div>
+                        <label for="mtgEmailSubject" style="font-size:0.75rem;">Subject</label>
+                        <input type="text" id="mtgEmailSubject" style="width:100%; margin-bottom:6px;">
+                        <label for="mtgTxtEmail" style="font-size:0.75rem;">Body (plain text &mdash; pastes clean into Gmail)</label>
+                        <textarea id="mtgTxtEmail"></textarea>
+                        <p class="mtg-card-foot">You send this yourself from Gmail. Phase 3 adds a &ldquo;Create Gmail draft&rdquo; button.</p>
+                    </div>
+                    <div class="section mtg-card" id="mtgCardTasks">
+                        <div class="mtg-card-head"><h3>6 &middot; Google Tasks Suggestions</h3><button class="btn btn-secondary mtg-copy" onclick="mtgCopy('mtgTxtTasks')">Copy list</button></div>
+                        <div id="mtgTasksTable"></div>
+                        <label for="mtgTxtTasks" style="font-size:0.75rem; margin-top:8px; display:block;">Copy-paste failsafe (ticked tasks)</label>
+                        <textarea id="mtgTxtTasks" class="mtg-tasks-failsafe"></textarea>
+                        <p class="mtg-card-foot">Phase 3 sends ticked tasks straight into the Google Tasks sync.</p>
+                    </div>
+                </div>
+                <div class="section mtg-card" id="mtgCardRaw" style="display:none;">
+                    <div class="mtg-card-head"><h3>Raw AI output</h3><button class="btn btn-secondary mtg-copy" onclick="mtgCopy('mtgTxtRaw')">Copy</button></div>
+                    <p style="font-size:0.8rem; color:#92400e;">The response could not be split into the six sections, so here it is whole — nothing was thrown away.</p>
+                    <textarea id="mtgTxtRaw"></textarea>
+                </div>
+            </div>
+        </div>
+
         <div id="history" class="page">
             <h2 class="page-title">Compare Years</h2>
             
@@ -2433,8 +2530,11 @@
                             <option value="vision">Vision/Traction Organizer</option>
                             <option value="quarterlyRocks">Quarterly Rocks</option>
                             <option value="scorecard">Scorecard</option>
-                            <option value="weeklyMeeting" selected>Weekly Meeting (Default)</option>
+                            <!-- v4.58.0: label follows the Weekly Pulse rename; the stored
+                                 value stays 'weeklyMeeting' (showPage aliases it). -->
+                            <option value="weeklyMeeting" selected>Weekly Pulse (Default)</option>
                             <option value="dailyPlan">Today</option>
+                            <option value="meetings">Meetings</option>
                         </select>
                     </div>
                     </div>
@@ -2572,6 +2672,33 @@
                             </select>
                             <div style="font-size: 0.72rem; color: var(--gray-500); margin-top: 4px;">
                                 Sets your preferred provider now so it's ready when card-assignment execution ships.
+                            </div>
+                            <!-- v4.58.0: the Meeting Processor's provider+model pair. DIFFERENT
+                                 ANIMAL from the rows above: those route CLIENT-side calls using
+                                 the keys in this Settings hub; this one routes the BACKEND call
+                                 (generateOutputs, .gs v3.59.0) whose keys live in Apps Script
+                                 Script Properties and never reach the browser. The model list is
+                                 fetched LIVE from the chosen provider (listAIModels), so a model
+                                 released tomorrow appears here tomorrow. Stored as an object in
+                                 aiRouting.meetingProcessor {provider, model} — aiRouting already
+                                 rides the synced settings payload (rule 31), so this choice
+                                 travels to every device with no payload change. -->
+                            <div style="border-top: 1px dashed var(--gray-300); margin-top: 12px; padding-top: 10px;">
+                                <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">Meeting transcripts (Meetings page)</div>
+                                <div style="font-size: 0.72rem; color: var(--gray-500); margin-bottom: 6px;">
+                                    Runs on the Apps Script backend &mdash; its API keys live in Script Properties, not here.
+                                </div>
+                                <label style="font-size: 0.8rem; margin-top: 0;">Provider</label>
+                                <select id="aiRouteMeetingProcessor" onchange="mtgProviderChanged()">
+                                    <option value="anthropic" selected>Claude (Anthropic)</option>
+                                    <option value="openai">OpenAI</option>
+                                    <option value="gemini">Gemini</option>
+                                    <option value="grok">Grok (xAI)</option>
+                                </select>
+                                <label style="font-size: 0.8rem;">Model</label>
+                                <select id="aiRouteMeetingProcessorModel"></select>
+                                <button type="button" class="btn btn-secondary" onclick="mtgLoadModels()" style="margin-top: 6px; padding: 5px 10px; font-size: 0.8rem;">Load available models</button>
+                                <div id="mtgModelStatus" style="font-size: 0.72rem; color: var(--gray-500); margin-top: 4px;"></div>
                             </div>
                     </div>
                     <div class="set-band" id="setBand-aiTokens">
@@ -3439,9 +3566,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '4.57.2';
-        const EOS_BUILD_DATE = '2026-08-25';
-        const EOS_BUILD_TIME = '11:40'; // v4.57.2: "I ALREADY HANDLED THIS" NOW STAYS HANDLED — Hans, 2026-08-25, about two real emails (Gerrit Roska, Emilio Rivera) that came back after he cleared them: "This should NEVER happen. There is nothing worse than reduplicating work." He was right, and it was mine. THE CAUSE, REPRODUCED BEFORE ANYTHING WAS CHANGED (.claude/probes/brief-triage-merge-probe.js, 6/10 on v4.57.1 and 10/10 here): the triage document — handled, snoozed, pinned, dismissals, vip, muted — was synced as ONE BLOB under blind last-write-wins. `saveBriefTriage()` upserted with no read, so whichever device wrote last replaced every decision every other device had made. AND briefScanInbox() CALLED IT ON THE FIRST SCAN OF EVERY DAY, ON EVERY DEVICE, purely to record `lastBriefAt` — so a second device that opened Today before its own pull landed wrote its empty `handled` map over the cloud, WITH NOBODY TOUCHING IT, and the first device then adopted that row and re-surfaced mail its owner had already dealt with. Rule 53's defect one feature over: a blind upsert carrying emptiness over content. There it destroyed a daily plan; here it duplicates work. TWO FIXES, AND THE SECOND IS THE STRUCTURAL ONE. (1) `lastBriefAt` IS DEVICE-LOCAL NOW (`eos_brief_lastrun`) — "when did the brief last run HERE" is a fact about a device and never belonged in a document shared between them; that one misplacement is what turned a rare merge conflict into a daily one. (2) READ-THEN-MERGE-THEN-PUSH on both directions (rule 48's order), because THIS DOCUMENT HOLDS TWO KINDS OF THING AND THEY DO NOT MERGE THE SAME WAY. ACCUMULATED FACTS — handled/snoozed/pinned/dismissals — are keyed per message or per sender, each entry was a separate decision made at a moment, and two devices can hold different ones that are BOTH TRUE: they UNION, and there is no such thing as a conflict, only two halves of one history (handled keeps the EARLIER date because it answers "when did he first deal with this"; snoozed and pinned keep the LATER, because there the most recent instruction is the live one; dismissals take the MAX, because a tally counts things that really happened). DELIBERATE LISTS — vip/muted/showFiltered — are short lists he edits on purpose and REMOVING someone has to travel, so they stay last-write-wins on savedAt. "Merge everything" is the obvious wrong fix: it makes un-setting impossible, which is its own silent defect, and E2 asserts a VIP removal still propagates. THE HARNESS IS THE OTHER HALF OF THIS RELEASE, and it was wrong twice in ways that would have shipped a false all-clear. FIRST: two writes landing in the same millisecond made the merge key (`savedAt`, compared STRICTLY greater) decide nothing, and D/D2 passed on the broken build — a result that depends on the scheduler is sampled, not measured (rule 60's family), so every write is now explicitly stamped and monotonic. SECOND, and worse: the probe clock started at Date.now(), which ran AHEAD of the writes that go through real code and stamp themselves — so the phone's copy was silently the newer one and assertion C, the reported defect itself, PASSED ON THE BUILD THAT HAS THE BUG. Anchoring the clock a minute in the past makes every real write land later, which is the ordering the report actually describes. THIRD, from the same file: B originally ran my own copy of the line I thought the scanner ran, and B0 — the positive control asking whether a scan happened AT ALL — caught that it had not, because v4.57.1's cross-mailbox guard was refusing a fixture whose profile and member row disagreed. An assertion about a hazard passes just as well when the hazard was never created. Client-only, styles.css untouched, no clasp round. PREVIOUS — v4.57.1: THE BRIEF ONLY EVER READS THE MAILBOX OF THE PERSON SIGNED IN — found by answering Hans's question "will Amanda be getting briefs geared to her inbox and mine to mine?" rather than by a probe or a report, which is the third time this project has learned more from one plain question than from reading the code. THE ANSWER IS YES, AND THE MECHANISM IS SOUND: resolveDailyPlanInitials() resolves the SIGNED-IN EMAIL to a team-member row at init, myMailBackendUrl() takes that row's Web App URL, and every member's deployment runs executeAs USER_DEPLOYING — so a URL is effectively a mailbox address and each person's deployment can only read their own mail. There is deliberately NO fallback to config.js's bootstrap URL (the v4.6.0 reasoning: silently redirecting Amanda's request to Hans's deployment would show her HIS email, and a wrong mailbox is worse than an error). THE GAP WAS THE DIVERGENCE CASE. myMailBackendUrl() reads whichever row #dailyPlanUser currently names, and that selector is resolved from the sign-in ONLY at init — anything that moves it afterwards points the brief at another member's deployment while the same person stays signed in. THE BACKEND CANNOT CATCH THIS AND SHOULD NOT BE EXPECTED TO: requireTeamMemberFromToken_ proves the caller is *a* team member, not that they own *this* deployment, deliberately, because that gate is shared with actions where any member is legitimate. So Hans's token against Amanda's URL passes and her morning's mail comes back on his screen. *** AND THE GUARD THE DAILY PLAN ALREADY HAS FOR THIS CANNOT FIRE. *** dailyPlanSyncBlocker() compares meMember().initials with #dailyPlanUser — and meMember() READS #dailyPlanUser, so it is a value compared with itself and has never once returned "this device is viewing a different member's plan". Rule 11's dead-guard shape in identity form: a guard that looks like protection, reads plausibly, and is structurally incapable of triggering. The ONLY identity that can actually disagree is the signed-in one — mktSupabaseProfile.email, the same identity the backend verifies the token against — so that is what briefMailBlocker() now compares the row's email to. A row whose email does not match refuses and NAMES BOTH PEOPLE; a row carrying no email at all also refuses, because absence cannot be proved to be a match and the consequence of guessing wrong is someone else's inbox on your screen (the backend already requires every working member row to carry an email, so this costs nothing real). ASSERTED IN BOTH DIRECTIONS per rule 73, because a guard that refuses everything is indistinguishable from an off switch: the ordinary same-person case must still be ALLOWED (B6), the mismatch must refuse (B7), and B7b proves the Web App URL genuinely moved to the other member first — WHICH IS THE ASSERTION THAT FAILED ON ITS FIRST RUN AND WAS RIGHT TO. myMailBackendUrl had been stubbed at the top of that same block, so B7 was passing while the URL never moved at all: the refusal was real but the danger it was refusing had not been reproduced. An assertion about a hazard passes just as well when the hazard is absent (rule 63's harness note), which is exactly why the positive control was written beside it. Probe 63/63. Client-only, styles.css untouched, no clasp round. PREVIOUS — v4.57.0: THE MORNING BRIEF, EMAIL HALF — the emails that actually need him, on the Today band, with the whole triage decided client-side. Design record docs/plans/morning-brief-design.md §3 and §4; the backend half has been live as .gs v3.58.0 on BOTH deployments since 2026-08-24. GATED ON gsVersion >= 3.58.0, NOT ON THE CAPABILITY KEY ALONE (rule 12), and that distinction is the whole difference between an honest message and a dishonest one: `mail.scanInbox` is a NEW key, so on a 3.57.0 deployment the probe never returns it and capabilityReady() is false for exactly the same reason it is false when the scope is genuinely revoked. The version guard is what lets the brief say "your backend is v3.57.0 and this needs v3.58.0" instead of "reading your inbox is switched off". _calGsAtLeast is REUSED rather than copied — it returns true/false/null and NULL IS NOT TREATED AS TOO OLD (rule 51), because "we never found out" is not "no". THE BACKEND RANKS NOTHING AND THAT IS THE ARCHITECTURE: scanInbox returns the candidate set plus seven deterministic signals and no order, so every judgement — VIP, muted, dismissal counts, what counts as "needs you" — is made client-side, because every one of them is one person's private preference. LAYER 1 is signals (important +3, direct-To +2, already-in-thread +2, starred +2, unread +1, cc-only -1, List-Unsubscribe -4) with two absolutes: VIP always surfaces, muted never does. LAYER 2 is him: every Dismiss increments a per-sender counter that pushes that sender down, capped at -3 so a sender he has dismissed twenty times can still climb back with a genuinely important message rather than being muted by arithmetic he never agreed to, and at the third dismissal the brief ASKS whether to mute rather than deciding. LAYER 3 (the AI pass) IS NOT BUILT — it is blocked on his compliance team, and design §3 required v1 to be a complete product if that answer is permanently no. NO MESSAGE BODY EXISTS ON THIS SIDE TO LEAK: scanInbox reads format:"metadata" with a header whitelist, so the text is not in the response at all; Gmail's own snippet is the one piece of content that crosses and it is displayed to him and passed to nothing. THE HONESTY RAIL IS NOT DECORATION — "N others filtered — review" lists every suppressed message WITH THE RULE THAT SUPPRESSED IT, and "Show me" PINS that message above the score, the dismissal counter and even a mute, because a filter that can argue back with the person auditing it is not auditable. FIVE OUTCOMES, all reusing existing single writers: Open goes through eosOpenSourceEmail (the in-tool viewer, never a Gmail deep link — that investigation closed in §5.18); + Task calls createSyncedTodo (rule 22) and stamps emailLink/emailSubject in the same shape a Gmail-origin task has carried since v3.42.0, so the envelope chip and the viewer light up with no new code; Dismiss/Snooze/Done-already sit behind ⋯ via eosChoose, because five buttons on a card is a card nobody can use on a phone. AUTO-RESOLVE IS THE CHEAP HONEST VERSION: we cannot know he replied without a sent-mail scan per thread, but a message that was unread when the brief showed it and is read now, or that has left the primary inbox, was dealt with elsewhere — the card clears itself and lands in the review rail with a reason. WE NEVER MODIFY HIS MAILBOX and the section says so once, in words, because a list that looks like an inbox invites the assumption that Dismiss deletes; gmail.readonly makes it structurally true rather than a promise. THE VIP AND MUTED LISTS SYNC THROUGH SUPABASE, NOT THE TEAM SHEET, and that reverses design §5 and his own answer 5 ON TRANSPORT ONLY: both said to bundle them into the settings payload, which writes to the FIRM'S shared TeamSettings sheet that every member can read (rule 31) — his "probably yes" was about syncing across HIS devices, not about publishing to the firm which clients he treats as VIPs and whose mail he mutes. New table brief_triage, RLS'd to user_id = auth.uid() exactly like daily_plans, schema.sql PART 6, and it DEGRADES TO LOCAL-ONLY WITH A SENTENCE if the table is not there yet (rule 25) — a fifth sync surface, badge #syncBadge-brief in static markup per that rule. THE WINDOW IS after:<last brief>, NEVER newer_than:1d, so a skipped day catches up; a refresh later the same morning reuses the window the day opened with, so refreshing is always a superset and never drops a card he has been looking at since breakfast. THE SECTION REPAINTS ALONE (_briefPaintMail), never through renderMorningBrief — the scan is asynchronous and v4.56.0's rule about a band re-laying-out under the cursor applies most of all to the part that arrives four seconds late. PHONE GEOMETRY IS MEASURED, NOT REASONED: the band was already 765px at 375 on its worst day with no mail in it, so cards are capped at 3 and CSS drops that to 2 on a phone by hiding WHOLE cards (rule 66) with the count badge still carrying the true total and "Show all N" one tap away. TWO-FILE deploy (?v=4.57.0). PREVIOUS — v4.56.1: THE BRIEF FITS THE PHONE ON ITS WORST DAY, NOT ITS AVERAGE ONE — and it was rule 60 that caught it, one day after v4.56.0 shipped. The quote is DATE-SEEDED (deliberately: phone, laptop and reprint must agree), so the band's height changes with THE CALENDAR AND NOT WITH THE CODE. v4.56.0's geometry assertions drew a short Peter Lynch line and passed at bottom=801 against an 812px viewport; the next morning drew a longer one and the same unchanged build failed at 824. "It fits" had been true of ONE QUOTE, not of the pack — a layout whose pass/fail depends on the day is not measured, it is SAMPLED. The probe now pins the LONGEST entry in the pack (Dale Carnegie, 153 chars) for the whole geometry block, which is the worst case the pack can actually produce; against it the band ran 889px at 375 and 860px at 412. THREE CSS LEVERS, all media-query only so there is no JS mirror to keep in step (rule 56a): three rows per section on a phone instead of four — nth-child hides WHOLE rows, never a clipped one (rule 66's "one line plus 3px of the next" defect), and the count badge still carries the true total so three-of-fourteen is exactly as honest as four; a tighter quote block, because it is the one element whose length the app does not control and a curated pack holds anything from a 40-character proverb to a 153-character Carnegie sentence; and a spread of small per-section and per-row trims. THE LAST ONE IS THE REUSABLE BIT: the band is six stacked sections on a phone, so a pixel off a REPEATING value is worth six or ten, while a pixel off the band's own padding is worth one — in a repeating layout the cheapest height is always in the repeating part. Worst case now 765px at 375 and 783px at 412, both inside the fold with headroom. Probe 25/25. Also CLOSED, do not re-ask: Hans dropped Nick Murray and Charles Schwab from the quote pack ("we have enough people to quote from"); the probe's assertion that neither appears STAYS, as a guard against a future session adding them from a circulated list, because the reason they were excluded — unsourceable and ambiguous — did not change when the question was withdrawn. TWO-FILE deploy (?v=4.56.1): styles.css changed, and shipping it without the link bump serves new CSS behind an old cached one. PREVIOUS — v4.56.0: THE MORNING BRIEF, BAND HALF (Brief v1 without the email cards). Hans, 2026-08-23: "I'm still waiting on you to complete the Morning Brief idea I have already shared with you, which is top priority." Design record docs/plans/morning-brief-design.md; his four §11 answers arrived the same day. TWO-FILE DEPLOY (?v=4.56.0). The email half needs scanInbox (.gs v3.58.0, deployed and confirmed) and ships next. WHAT IT IS: a band above the Rule of 3 on Today — greeting + date, a headline composed from the real counts, yesterday's End-Day note, carried-over priorities, overdue-or-undated tasks, starred, Kanban, all-day/birthdays, a links launchpad, and the quote. IT ABSORBS #goodMorningBanner RATHER THAN STACKING ON IT, and that is a deliberate reversal: that banner is yesterday's notes, fires on the same first-open moment and occupies this exact strip, so two purple morning banners would be the "cluttered / wasted space" complaint he has already made twice. The notes become a SECTION; the banner is suppressed ONLY while the brief is on and returns untouched when it is off, which is what makes this reversible rather than a deletion — asserted both ways. THE HEADLINE NEEDS NO AI and that is what makes the feature survive the compliance block on Layer 3: it is assembled from computed counts, so it is never wrong and it reads "One priority carried over" rather than "1 priorities". THE QUOTE PACK IS THE CAREFUL PART. Rule: an LLM never generates or attributes it (design §6) — and a second rule that is mine: NEVER invent a line and put a real person's name under it. Most of his authors are living or recent and circulated quote lists are riddled with misattribution, so every entry carries a source, anything unplaceable was LEFT OUT, and the probe asserts zero unattributed entries. NICK MURRAY AND CHARLES SCHWAB ARE DELIBERATELY ABSENT and need him: Murray is quoted almost entirely secondhand, and "Charles Schwab" is ambiguous between the steel magnate and the broker, which changes the entry. Proverbs uses the WORLD ENGLISH BIBLE — public domain, because this repo is public and NIV/ESV are copyrighted. The quote is DATE-SEEDED, not random, so phone, laptop and a reprint agree. BRIEF_MAX_ROWS = 4 IS MEASURED, NOT CHOSEN: at 8 the band came out 657px at 375, most of a phone screen spent before the Rule of 3; the count badge still shows the true total so four-of-fourteen is honest rather than hidden. A @media (max-width:400px) block trims 19px more, because the band's bottom edge landed at 831px against an 812px viewport and the whole brief must be readable without scrolling. Renders at plan load only, never from rerenderAllTaskSurfaces — a band that re-lays-out under the cursor while you read it is its own defect. Probe .claude/probes/morning-brief-probe.js 25/25. TWO HARNESS FIXES, STATED NOT BURIED (rule 72): the band pushes #matrixQ4 to 1042-1122px in a 900px viewport and #repoTodos to ~843-892, and page.mouse.click below the fold silently no-ops (the v4.29.0 lesson), so probe-v4.45.0 G3 and probe-v4.49.0 D2/D3 began reporting working features as broken. Both now scroll first — and the CORRECTED probes score 40/40 and 17/17 on the DEPLOYED v4.55.1 as well as here, which is what proves a harness fix rather than a hidden regression. The first attempt at that fix scrolled inside FREE_POINT and broke six OTHER assertions, because the fill-slot hold gesture cancels on a scroll event by design; scrolling belongs at the call site, not in a coordinate helper. Battery green: brief 25/25, local-task 20/20, gsi 9/9, jitter 8/8, 4.43 15/15, 4.44 30/30, 4.45 40/40, 4.46 37/37, 4.48 36/36, 4.49 17/17, 4.50 15/15; css-audit 913/913. PREVIOUS — v4.55.1: THE SIGN-IN RETRY THAT NEVER GAVE UP — found while probing something else entirely, and it is the second time this week a probe's ARTIFICIAL condition turned out to be a real person's REAL one. `initGoogleSignIn` ends with `if (typeof google === 'undefined') setTimeout(initGoogleSignIn, 500)` and had NO CAP, so whenever Google's Identity Services script fails to load the app polled twice a second FOREVER — and because the retry re-enters at the top of the function, every one of those ticks also re-ran `await checkAppWideSupabaseSession()`, a network call. Nothing on screen ever said so: the app sat on its boot gate looking slow, indefinitely, on battery. NOT HYPOTHETICAL — Amanda's laptop ECONNRESETs `accounts.google.com/gsi/client`, which is exactly this state and is recorded in her onboarding notes; the probe blocks every non-file:// request, so it reproduces her machine by accident, and that is the only reason anyone saw this. Fixed with a 20-try budget (ten seconds — long enough for a slow connection, short enough that a blocked one gets an answer), after which the gate OPENS and says what happened: the script did not load, this is almost always the network on this device blocking accounts.google.com rather than anything wrong with your account, plus a "Try again" that resets the budget. The gate is OPENED rather than skipped past on purpose — revealing the app would look like sign-in had succeeded, and this person is not signed in. The pre-existing "Skip for now" is still the escape hatch and is asserted to still be there. Rule 25: degrade with a sentence, never a disappearance — and never an unbounded poll, which is a disappearance that also costs battery. All three states are asserted per rule 73, because a fix that stops the poll but breaks the normal path is indistinguishable from a regression: script missing → stops and explains; script present → ZERO retries and no message shown to someone whose sign-in is fine; escape hatch intact. Probe `.claude/probes/gsi-retry-bound-probe.js` 9/9 here, 3/9 on the deployed v4.55.0, where the baseline reads at16=32 / at20=40 and is still climbing. *** THIS IS NOT THE JITTER HANS REPORTED. *** That was measured separately (`matrix-drop-jitter-probe.js`): the matrix drop does byte-identical work on v4.55.0 and v4.54.1 and the idle window is silent on both, so it is NOT REPRODUCED and no cause has been claimed. This retry loop was the probe's first candidate and was REJECTED because it is false on his machine, where he is signed in — rule 63, applied before shipping the diagnosis rather than after. Client-only, `styles.css` untouched. PREVIOUS — v4.55.0: A "+ LOCAL" TASK WAS INVISIBLE TO THE TASK REGISTRY, AND DRAGGING ONE INTO A QUADRANT DESTROYED IT. Nobody reported this; it was found while reading _fillSlotCandidates for the queued Kanban-in-pickers build, and it is the same shape as Hans's standing complaint that "my inputs are not being saved from version to version". ONE CAUSE: resolveTaskById() searches q.todos, q.completedTodos and q.rocks and has never searched dailyPlanData.localTasks — while addLocalTask wrote {text,done} with no id at all. FOUR CONSEQUENCES, measured, 3/20 on deployed v4.54.1: (A) drag a Today-only row into an Eisenhower quadrant and _repoDragEntry stamps an id and returns {id,type:'local'}; renderMatrix cannot resolve it, it carries no gid/xt so v4.36.0's "pending" holding row does not apply, prunedAny fires and saveDailyPlan() PERSISTS the deletion — and because commitMatrixEntry renders at its own tail the task is destroyed INSIDE THE DROP, measured before=0. (B) the same drop into a Rule-of-3 slot painted the red "Task no longer exists" over a task sitting on screen four inches below. (C) renderRepository's _markInUse resolves by id, so a placed local task never got its badge, stayed draggable and could be dropped in again. (D) _fillSlotCandidates has had a localTasks line since v3.72.0 that has never produced a row, while the picker's OWN EMPTY STATE recommended "+ Local" as the way to fill the slot. FIXED BY ADDING A FOURTH KIND, not by promoting the task: promotion is a different feature that already exists (the ⬆️ button) and silently pushing a today-only note into Google Tasks is not what "prioritise this" means. resolveTaskById returns kind:'local' LAST so no existing precedence moves, and the lookup sits OUTSIDE the quarter guard because a local task belongs to the day's plan, not the quarter. THE STORE IS THE TRAP, and it is the reusable half: local records live in dailyPlanData, so autoSave() — which writes yearData — leaves a tick looking right on screen and gone on the next load. Every registry handler that writes now branches on WHICH STORE holds the record, not on which fields it has: toggleTaskDoneById, toggleStarredById, updateTaskById and toggleNotesById route local through saveDailyPlan(). WHAT A LOCAL TASK CANNOT DO IS AS LOAD-BEARING AS WHAT IT CAN: no Google Tasks record means Snooze (there is no tomorrow to push it to), Assign, Move-to-list, Add-subtask and Draft-email cannot work, so rule 51 removes them from its ⋯ menu — and the handlers refuse them independently, because an inline onclick outlives the render that drew it. Archive goes too: for this kind it would be Delete drawn twice under another name. TWO NEW ORPHAN PATHS OPENED BY THE FIX AND CLOSED IN IT: promoteLocalToTodo now calls _repointPlanRefs so the promoted to-do INHERITS the slot instead of orphaning it, and removeLocalTask clears the slot and quadrant reference BEFORE splicing the record, so a mis-tap on ✕ can never take a Rule-of-3 slot with it. Probe .claude/probes/local-task-namespace-probe.js 20/20 here, 3/20 on the deployed clone; eleven existing batteries re-run green (4.43 15/15, 4.44 30/30, 4.45 40/40, 4.46 37/37, 4.47 48/48, 4.48 36/36, 4.49 17/17, 4.50 15/15, cal-dragmove 30/30, cal-weekgrid 25/25, cal-editevent 61/61); 0 document overflow at 375/412/1280 with the picker open. Client-only, styles.css untouched, no clasp round.
+        const EOS_VERSION = '4.58.0';
+        const EOS_BUILD_DATE = '2026-08-27';
+        const EOS_BUILD_TIME = '11:59'; // v4.58.0: THE MEETING PROCESSOR, PHASE 1 — Hans's 2026-08-27 kickoff, and the first client surface for the multi-provider AI seam. Paste an Otter transcript (or a typed summary) into a new Meetings page and get six formatted outputs back: a Redtail-shaped CRM note (YYYY.MM.DD prefix), Communication & Sales Coaching, an Objection Role-Play card that HIDES ITSELF for a client meeting (prospects only — the meeting-type override decides, defaulting to Auto-detect), a Messaging & Efficiency Review, a Follow-Up Email with its own Subject field and a plain-text Body, and a Google Tasks Suggestions table with checkboxes. EVERY CARD IS AN EDITABLE TEXTAREA WITH ITS OWN COPY BUTTON — an AI draft of a CRM note or a client email is a first draft, not a final one. A task the model could not confidently name a client for gets the RESOLVE: prefix and renders with an amber "needs the full legal name — edit before using" flag rather than a plausible-looking guess; ticked tasks also get a copy-paste failsafe list so nothing is trapped behind a checkbox UI before Phase 3's Google Tasks push exists. TRUNCATION IS NEVER SILENT: if the model hit its output cap the amber warning says so, and a reply that fails to parse as JSON lands WHOLE in a "Raw AI output" card rather than being discarded — lesson 9 applied to a brand-new failure mode; backend errors surface verbatim for the same reason. THE PART B PROCESSING SPEC (MTG_SYSTEM_PROMPT) LIVES IN THE CLIENT and is passed on every call — so tuning the prompt is a client-only git push forever, never a clasp round. Draft state (transcript, every edited output, every task tick) is DEVICE-LOCAL in localStorage.eos_meeting_processor, autosaved as-you-type via addEventListener (rule 40 — never an inline oninput, or the field silently opts out of the composer) and survives a reload. A usage line reports the model, input/output tokens, and an ESTIMATED cost from a client-side price table; an unrecognised model reports tokens only rather than inventing a dollar figure. SETTINGS ROUTING IS WHAT MAKES THIS EXTENSIBLE WITHOUT A CLASP ROUND: Settings > AI Tools grew a Meeting transcripts block — a provider dropdown and a "Load available models" button that asks the CHOSEN PROVIDER, LIVE, via the backend's new listAIModels, so a model a provider ships tomorrow appears the day it ships. Stored as aiRouting.meetingProcessor = {provider, model} — DELIBERATELY an object among aiRouting's string keys, because aiRouting already rides the synced settings payload (rule 31), so the choice travels to every device free. Default is Claude claude-sonnet-5, roughly 10-20 cents a meeting. AN EMPTY MODEL STRING CAN NEVER SILENTLY PAIR THE CLAUDE DEFAULT WITH A DIFFERENT PROVIDER — Settings Save keeps the empty string, and Generate refuses with a sentence naming the exact Settings path; the probe caught the un-guarded version as a real bug before ship. "Weekly Meeting" is relabelled "Weekly Pulse" on Hans's own ask — LABEL ONLY: page id still 'meeting', stored defaultTab still 'weeklyMeeting', NAV_ITEMS key unchanged. A "Meetings" option joined Default Landing Tab (a real page id, nothing to do with the rename). Two capability keys, ai.generateOutputs and redtail.crm, are registered ahead of their own UI — the calendar.readEvents pattern. *** BACKEND Google_Tasks_Sync.gs v3.59.0 IS STAGED AND NOT YET DEPLOYED — REQUIRES HANS'S CLASP ROUND BEFORE ANY OF THIS WORKS. *** Until he runs it, the Meetings page refuses outright naming both versions ("backend is v3.58.0, needs v3.59.0") — nothing else in the app is touched, this release is purely additive, so index.html ships first and safely. The backend is the provider seam itself: one thin token-gated generateOutputs dispatching to one small adapter per provider, all four shipped (Anthropic live; OpenAI/Gemini/Grok wait only on their Script Property key, never on more code) — a provider switch is Script-Property-plus-Settings, never another clasp round. redtailApi is a WHITELISTED thin proxy to Redtail CRM v1 (GET contacts, POST a note, POST an activity), thin ON PURPOSE because the exact Redtail contract is unconfirmed and every Phase-2 correction should cost a client-only push; dot-segment/%2e path-traversal rejection closes the whitelist properly. Every generateOutputs call appends a fact-only row (timestamp, account, feature, provider, model, in/out tokens — NO cost column; prices move, the client prices at render time) to an auto-created 'AIUsage' tab on the shared Sheet. All three new actions sit in the TOKEN_GATED family, never secretKey — AI spends the deployer's own money and Redtail carries client PII. NO NEW SCOPE AND NO CONSENT RUN — everything is UrlFetchApp, consented since the WordPress days; ordinary two-command round. GS-AUDITOR RAN TWICE (rule 36) and pass 1 earned its keep: GS_VERSION still read 3.58.0 (the exact rule-12 trap — the release's OWN version gate would have refused a live backend), a path-traversal hole in the Redtail GET whitelist, the Grok adapter's token-cap FIELD NAME (a silent-failure stake — wrong field, no error, uncapped paid output), and the Gemini key riding in the URL instead of a header; pass 2 confirmed all four fixed. NEW SCRIPT PROPERTIES HANS SETS ONCE, same screen as the WP_ ones: ANTHROPIC_API_KEY, REDTAIL_API_KEY, REDTAIL_USER_KEY (OpenAI/Gemini/Grok keys only if ever selected). ONE CLASP ROUND COVERS ALL THREE PHASES: Phase 2 (Redtail client picker defaulting to Active Clients, Push to Redtail, deep-link https://smf.crm3.redtailtechnology.com/contacts/{id} — contact 83 is Hans's own test target) and Phase 3 ("Create Gmail draft" via already-consented gmail.compose, plus ticked tasks into the existing Google Tasks sync) are ALREADY BUILT into this same v3.59.0 backend — git pushes from here, not more clasp rounds. AMANDA GETS CODE PARITY, NOT FUNCTION PARITY, YET: her deployment takes the usual two commands from Hans's PC, but her Script Properties do not carry the three new keys, so her Meetings page shows the honest "not configured" sentence. Deliberate deferral. COMPLIANCE, one line: this feature sends full client meeting transcripts to the Anthropic API (does not train on API data by default) — approved by Hans in the kickoff, worth a line in his compliance file, next to the reason Morning Brief Layer 3 is still blocked. PROOF: probe .claude/probes/meeting-processor-probe.js 34/34 (caught a bare `settings` reference in mtgGetAI and the falsy-fallback model-pairing bug before ship); ui-shoot 0 overflow at 375/412/768/1280 with a seeded full draft; regression green: gsi-retry 9/9, morning-brief 25/25, brief-mail 63/63, local-task-namespace 20/20, probe-v4.50.0 15/15, cal-addevent 57/57, brief-triage-merge 10/10, matrix-drop-jitter 8/8. TWO-FILE deploy — styles.css changed, link bumped to ?v=4.58.0. // v4.57.2: "I ALREADY HANDLED THIS" NOW STAYS HANDLED — Hans, 2026-08-25, about two real emails (Gerrit Roska, Emilio Rivera) that came back after he cleared them: "This should NEVER happen. There is nothing worse than reduplicating work." He was right, and it was mine. THE CAUSE, REPRODUCED BEFORE ANYTHING WAS CHANGED (.claude/probes/brief-triage-merge-probe.js, 6/10 on v4.57.1 and 10/10 here): the triage document — handled, snoozed, pinned, dismissals, vip, muted — was synced as ONE BLOB under blind last-write-wins. `saveBriefTriage()` upserted with no read, so whichever device wrote last replaced every decision every other device had made. AND briefScanInbox() CALLED IT ON THE FIRST SCAN OF EVERY DAY, ON EVERY DEVICE, purely to record `lastBriefAt` — so a second device that opened Today before its own pull landed wrote its empty `handled` map over the cloud, WITH NOBODY TOUCHING IT, and the first device then adopted that row and re-surfaced mail its owner had already dealt with. Rule 53's defect one feature over: a blind upsert carrying emptiness over content. There it destroyed a daily plan; here it duplicates work. TWO FIXES, AND THE SECOND IS THE STRUCTURAL ONE. (1) `lastBriefAt` IS DEVICE-LOCAL NOW (`eos_brief_lastrun`) — "when did the brief last run HERE" is a fact about a device and never belonged in a document shared between them; that one misplacement is what turned a rare merge conflict into a daily one. (2) READ-THEN-MERGE-THEN-PUSH on both directions (rule 48's order), because THIS DOCUMENT HOLDS TWO KINDS OF THING AND THEY DO NOT MERGE THE SAME WAY. ACCUMULATED FACTS — handled/snoozed/pinned/dismissals — are keyed per message or per sender, each entry was a separate decision made at a moment, and two devices can hold different ones that are BOTH TRUE: they UNION, and there is no such thing as a conflict, only two halves of one history (handled keeps the EARLIER date because it answers "when did he first deal with this"; snoozed and pinned keep the LATER, because there the most recent instruction is the live one; dismissals take the MAX, because a tally counts things that really happened). DELIBERATE LISTS — vip/muted/showFiltered — are short lists he edits on purpose and REMOVING someone has to travel, so they stay last-write-wins on savedAt. "Merge everything" is the obvious wrong fix: it makes un-setting impossible, which is its own silent defect, and E2 asserts a VIP removal still propagates. THE HARNESS IS THE OTHER HALF OF THIS RELEASE, and it was wrong twice in ways that would have shipped a false all-clear. FIRST: two writes landing in the same millisecond made the merge key (`savedAt`, compared STRICTLY greater) decide nothing, and D/D2 passed on the broken build — a result that depends on the scheduler is sampled, not measured (rule 60's family), so every write is now explicitly stamped and monotonic. SECOND, and worse: the probe clock started at Date.now(), which ran AHEAD of the writes that go through real code and stamp themselves — so the phone's copy was silently the newer one and assertion C, the reported defect itself, PASSED ON THE BUILD THAT HAS THE BUG. Anchoring the clock a minute in the past makes every real write land later, which is the ordering the report actually describes. THIRD, from the same file: B originally ran my own copy of the line I thought the scanner ran, and B0 — the positive control asking whether a scan happened AT ALL — caught that it had not, because v4.57.1's cross-mailbox guard was refusing a fixture whose profile and member row disagreed. An assertion about a hazard passes just as well when the hazard was never created. Client-only, styles.css untouched, no clasp round. PREVIOUS — v4.57.1: THE BRIEF ONLY EVER READS THE MAILBOX OF THE PERSON SIGNED IN — found by answering Hans's question "will Amanda be getting briefs geared to her inbox and mine to mine?" rather than by a probe or a report, which is the third time this project has learned more from one plain question than from reading the code. THE ANSWER IS YES, AND THE MECHANISM IS SOUND: resolveDailyPlanInitials() resolves the SIGNED-IN EMAIL to a team-member row at init, myMailBackendUrl() takes that row's Web App URL, and every member's deployment runs executeAs USER_DEPLOYING — so a URL is effectively a mailbox address and each person's deployment can only read their own mail. There is deliberately NO fallback to config.js's bootstrap URL (the v4.6.0 reasoning: silently redirecting Amanda's request to Hans's deployment would show her HIS email, and a wrong mailbox is worse than an error). THE GAP WAS THE DIVERGENCE CASE. myMailBackendUrl() reads whichever row #dailyPlanUser currently names, and that selector is resolved from the sign-in ONLY at init — anything that moves it afterwards points the brief at another member's deployment while the same person stays signed in. THE BACKEND CANNOT CATCH THIS AND SHOULD NOT BE EXPECTED TO: requireTeamMemberFromToken_ proves the caller is *a* team member, not that they own *this* deployment, deliberately, because that gate is shared with actions where any member is legitimate. So Hans's token against Amanda's URL passes and her morning's mail comes back on his screen. *** AND THE GUARD THE DAILY PLAN ALREADY HAS FOR THIS CANNOT FIRE. *** dailyPlanSyncBlocker() compares meMember().initials with #dailyPlanUser — and meMember() READS #dailyPlanUser, so it is a value compared with itself and has never once returned "this device is viewing a different member's plan". Rule 11's dead-guard shape in identity form: a guard that looks like protection, reads plausibly, and is structurally incapable of triggering. The ONLY identity that can actually disagree is the signed-in one — mktSupabaseProfile.email, the same identity the backend verifies the token against — so that is what briefMailBlocker() now compares the row's email to. A row whose email does not match refuses and NAMES BOTH PEOPLE; a row carrying no email at all also refuses, because absence cannot be proved to be a match and the consequence of guessing wrong is someone else's inbox on your screen (the backend already requires every working member row to carry an email, so this costs nothing real). ASSERTED IN BOTH DIRECTIONS per rule 73, because a guard that refuses everything is indistinguishable from an off switch: the ordinary same-person case must still be ALLOWED (B6), the mismatch must refuse (B7), and B7b proves the Web App URL genuinely moved to the other member first — WHICH IS THE ASSERTION THAT FAILED ON ITS FIRST RUN AND WAS RIGHT TO. myMailBackendUrl had been stubbed at the top of that same block, so B7 was passing while the URL never moved at all: the refusal was real but the danger it was refusing had not been reproduced. An assertion about a hazard passes just as well when the hazard is absent (rule 63's harness note), which is exactly why the positive control was written beside it. Probe 63/63. Client-only, styles.css untouched, no clasp round. PREVIOUS — v4.57.0: THE MORNING BRIEF, EMAIL HALF — the emails that actually need him, on the Today band, with the whole triage decided client-side. Design record docs/plans/morning-brief-design.md §3 and §4; the backend half has been live as .gs v3.58.0 on BOTH deployments since 2026-08-24. GATED ON gsVersion >= 3.58.0, NOT ON THE CAPABILITY KEY ALONE (rule 12), and that distinction is the whole difference between an honest message and a dishonest one: `mail.scanInbox` is a NEW key, so on a 3.57.0 deployment the probe never returns it and capabilityReady() is false for exactly the same reason it is false when the scope is genuinely revoked. The version guard is what lets the brief say "your backend is v3.57.0 and this needs v3.58.0" instead of "reading your inbox is switched off". _calGsAtLeast is REUSED rather than copied — it returns true/false/null and NULL IS NOT TREATED AS TOO OLD (rule 51), because "we never found out" is not "no". THE BACKEND RANKS NOTHING AND THAT IS THE ARCHITECTURE: scanInbox returns the candidate set plus seven deterministic signals and no order, so every judgement — VIP, muted, dismissal counts, what counts as "needs you" — is made client-side, because every one of them is one person's private preference. LAYER 1 is signals (important +3, direct-To +2, already-in-thread +2, starred +2, unread +1, cc-only -1, List-Unsubscribe -4) with two absolutes: VIP always surfaces, muted never does. LAYER 2 is him: every Dismiss increments a per-sender counter that pushes that sender down, capped at -3 so a sender he has dismissed twenty times can still climb back with a genuinely important message rather than being muted by arithmetic he never agreed to, and at the third dismissal the brief ASKS whether to mute rather than deciding. LAYER 3 (the AI pass) IS NOT BUILT — it is blocked on his compliance team, and design §3 required v1 to be a complete product if that answer is permanently no. NO MESSAGE BODY EXISTS ON THIS SIDE TO LEAK: scanInbox reads format:"metadata" with a header whitelist, so the text is not in the response at all; Gmail's own snippet is the one piece of content that crosses and it is displayed to him and passed to nothing. THE HONESTY RAIL IS NOT DECORATION — "N others filtered — review" lists every suppressed message WITH THE RULE THAT SUPPRESSED IT, and "Show me" PINS that message above the score, the dismissal counter and even a mute, because a filter that can argue back with the person auditing it is not auditable. FIVE OUTCOMES, all reusing existing single writers: Open goes through eosOpenSourceEmail (the in-tool viewer, never a Gmail deep link — that investigation closed in §5.18); + Task calls createSyncedTodo (rule 22) and stamps emailLink/emailSubject in the same shape a Gmail-origin task has carried since v3.42.0, so the envelope chip and the viewer light up with no new code; Dismiss/Snooze/Done-already sit behind ⋯ via eosChoose, because five buttons on a card is a card nobody can use on a phone. AUTO-RESOLVE IS THE CHEAP HONEST VERSION: we cannot know he replied without a sent-mail scan per thread, but a message that was unread when the brief showed it and is read now, or that has left the primary inbox, was dealt with elsewhere — the card clears itself and lands in the review rail with a reason. WE NEVER MODIFY HIS MAILBOX and the section says so once, in words, because a list that looks like an inbox invites the assumption that Dismiss deletes; gmail.readonly makes it structurally true rather than a promise. THE VIP AND MUTED LISTS SYNC THROUGH SUPABASE, NOT THE TEAM SHEET, and that reverses design §5 and his own answer 5 ON TRANSPORT ONLY: both said to bundle them into the settings payload, which writes to the FIRM'S shared TeamSettings sheet that every member can read (rule 31) — his "probably yes" was about syncing across HIS devices, not about publishing to the firm which clients he treats as VIPs and whose mail he mutes. New table brief_triage, RLS'd to user_id = auth.uid() exactly like daily_plans, schema.sql PART 6, and it DEGRADES TO LOCAL-ONLY WITH A SENTENCE if the table is not there yet (rule 25) — a fifth sync surface, badge #syncBadge-brief in static markup per that rule. THE WINDOW IS after:<last brief>, NEVER newer_than:1d, so a skipped day catches up; a refresh later the same morning reuses the window the day opened with, so refreshing is always a superset and never drops a card he has been looking at since breakfast. THE SECTION REPAINTS ALONE (_briefPaintMail), never through renderMorningBrief — the scan is asynchronous and v4.56.0's rule about a band re-laying-out under the cursor applies most of all to the part that arrives four seconds late. PHONE GEOMETRY IS MEASURED, NOT REASONED: the band was already 765px at 375 on its worst day with no mail in it, so cards are capped at 3 and CSS drops that to 2 on a phone by hiding WHOLE cards (rule 66) with the count badge still carrying the true total and "Show all N" one tap away. TWO-FILE deploy (?v=4.57.0). PREVIOUS — v4.56.1: THE BRIEF FITS THE PHONE ON ITS WORST DAY, NOT ITS AVERAGE ONE — and it was rule 60 that caught it, one day after v4.56.0 shipped. The quote is DATE-SEEDED (deliberately: phone, laptop and reprint must agree), so the band's height changes with THE CALENDAR AND NOT WITH THE CODE. v4.56.0's geometry assertions drew a short Peter Lynch line and passed at bottom=801 against an 812px viewport; the next morning drew a longer one and the same unchanged build failed at 824. "It fits" had been true of ONE QUOTE, not of the pack — a layout whose pass/fail depends on the day is not measured, it is SAMPLED. The probe now pins the LONGEST entry in the pack (Dale Carnegie, 153 chars) for the whole geometry block, which is the worst case the pack can actually produce; against it the band ran 889px at 375 and 860px at 412. THREE CSS LEVERS, all media-query only so there is no JS mirror to keep in step (rule 56a): three rows per section on a phone instead of four — nth-child hides WHOLE rows, never a clipped one (rule 66's "one line plus 3px of the next" defect), and the count badge still carries the true total so three-of-fourteen is exactly as honest as four; a tighter quote block, because it is the one element whose length the app does not control and a curated pack holds anything from a 40-character proverb to a 153-character Carnegie sentence; and a spread of small per-section and per-row trims. THE LAST ONE IS THE REUSABLE BIT: the band is six stacked sections on a phone, so a pixel off a REPEATING value is worth six or ten, while a pixel off the band's own padding is worth one — in a repeating layout the cheapest height is always in the repeating part. Worst case now 765px at 375 and 783px at 412, both inside the fold with headroom. Probe 25/25. Also CLOSED, do not re-ask: Hans dropped Nick Murray and Charles Schwab from the quote pack ("we have enough people to quote from"); the probe's assertion that neither appears STAYS, as a guard against a future session adding them from a circulated list, because the reason they were excluded — unsourceable and ambiguous — did not change when the question was withdrawn. TWO-FILE deploy (?v=4.56.1): styles.css changed, and shipping it without the link bump serves new CSS behind an old cached one. PREVIOUS — v4.56.0: THE MORNING BRIEF, BAND HALF (Brief v1 without the email cards). Hans, 2026-08-23: "I'm still waiting on you to complete the Morning Brief idea I have already shared with you, which is top priority." Design record docs/plans/morning-brief-design.md; his four §11 answers arrived the same day. TWO-FILE DEPLOY (?v=4.56.0). The email half needs scanInbox (.gs v3.58.0, deployed and confirmed) and ships next. WHAT IT IS: a band above the Rule of 3 on Today — greeting + date, a headline composed from the real counts, yesterday's End-Day note, carried-over priorities, overdue-or-undated tasks, starred, Kanban, all-day/birthdays, a links launchpad, and the quote. IT ABSORBS #goodMorningBanner RATHER THAN STACKING ON IT, and that is a deliberate reversal: that banner is yesterday's notes, fires on the same first-open moment and occupies this exact strip, so two purple morning banners would be the "cluttered / wasted space" complaint he has already made twice. The notes become a SECTION; the banner is suppressed ONLY while the brief is on and returns untouched when it is off, which is what makes this reversible rather than a deletion — asserted both ways. THE HEADLINE NEEDS NO AI and that is what makes the feature survive the compliance block on Layer 3: it is assembled from computed counts, so it is never wrong and it reads "One priority carried over" rather than "1 priorities". THE QUOTE PACK IS THE CAREFUL PART. Rule: an LLM never generates or attributes it (design §6) — and a second rule that is mine: NEVER invent a line and put a real person's name under it. Most of his authors are living or recent and circulated quote lists are riddled with misattribution, so every entry carries a source, anything unplaceable was LEFT OUT, and the probe asserts zero unattributed entries. NICK MURRAY AND CHARLES SCHWAB ARE DELIBERATELY ABSENT and need him: Murray is quoted almost entirely secondhand, and "Charles Schwab" is ambiguous between the steel magnate and the broker, which changes the entry. Proverbs uses the WORLD ENGLISH BIBLE — public domain, because this repo is public and NIV/ESV are copyrighted. The quote is DATE-SEEDED, not random, so phone, laptop and a reprint agree. BRIEF_MAX_ROWS = 4 IS MEASURED, NOT CHOSEN: at 8 the band came out 657px at 375, most of a phone screen spent before the Rule of 3; the count badge still shows the true total so four-of-fourteen is honest rather than hidden. A @media (max-width:400px) block trims 19px more, because the band's bottom edge landed at 831px against an 812px viewport and the whole brief must be readable without scrolling. Renders at plan load only, never from rerenderAllTaskSurfaces — a band that re-lays-out under the cursor while you read it is its own defect. Probe .claude/probes/morning-brief-probe.js 25/25. TWO HARNESS FIXES, STATED NOT BURIED (rule 72): the band pushes #matrixQ4 to 1042-1122px in a 900px viewport and #repoTodos to ~843-892, and page.mouse.click below the fold silently no-ops (the v4.29.0 lesson), so probe-v4.45.0 G3 and probe-v4.49.0 D2/D3 began reporting working features as broken. Both now scroll first — and the CORRECTED probes score 40/40 and 17/17 on the DEPLOYED v4.55.1 as well as here, which is what proves a harness fix rather than a hidden regression. The first attempt at that fix scrolled inside FREE_POINT and broke six OTHER assertions, because the fill-slot hold gesture cancels on a scroll event by design; scrolling belongs at the call site, not in a coordinate helper. Battery green: brief 25/25, local-task 20/20, gsi 9/9, jitter 8/8, 4.43 15/15, 4.44 30/30, 4.45 40/40, 4.46 37/37, 4.48 36/36, 4.49 17/17, 4.50 15/15; css-audit 913/913. PREVIOUS — v4.55.1: THE SIGN-IN RETRY THAT NEVER GAVE UP — found while probing something else entirely, and it is the second time this week a probe's ARTIFICIAL condition turned out to be a real person's REAL one. `initGoogleSignIn` ends with `if (typeof google === 'undefined') setTimeout(initGoogleSignIn, 500)` and had NO CAP, so whenever Google's Identity Services script fails to load the app polled twice a second FOREVER — and because the retry re-enters at the top of the function, every one of those ticks also re-ran `await checkAppWideSupabaseSession()`, a network call. Nothing on screen ever said so: the app sat on its boot gate looking slow, indefinitely, on battery. NOT HYPOTHETICAL — Amanda's laptop ECONNRESETs `accounts.google.com/gsi/client`, which is exactly this state and is recorded in her onboarding notes; the probe blocks every non-file:// request, so it reproduces her machine by accident, and that is the only reason anyone saw this. Fixed with a 20-try budget (ten seconds — long enough for a slow connection, short enough that a blocked one gets an answer), after which the gate OPENS and says what happened: the script did not load, this is almost always the network on this device blocking accounts.google.com rather than anything wrong with your account, plus a "Try again" that resets the budget. The gate is OPENED rather than skipped past on purpose — revealing the app would look like sign-in had succeeded, and this person is not signed in. The pre-existing "Skip for now" is still the escape hatch and is asserted to still be there. Rule 25: degrade with a sentence, never a disappearance — and never an unbounded poll, which is a disappearance that also costs battery. All three states are asserted per rule 73, because a fix that stops the poll but breaks the normal path is indistinguishable from a regression: script missing → stops and explains; script present → ZERO retries and no message shown to someone whose sign-in is fine; escape hatch intact. Probe `.claude/probes/gsi-retry-bound-probe.js` 9/9 here, 3/9 on the deployed v4.55.0, where the baseline reads at16=32 / at20=40 and is still climbing. *** THIS IS NOT THE JITTER HANS REPORTED. *** That was measured separately (`matrix-drop-jitter-probe.js`): the matrix drop does byte-identical work on v4.55.0 and v4.54.1 and the idle window is silent on both, so it is NOT REPRODUCED and no cause has been claimed. This retry loop was the probe's first candidate and was REJECTED because it is false on his machine, where he is signed in — rule 63, applied before shipping the diagnosis rather than after. Client-only, `styles.css` untouched. PREVIOUS — v4.55.0: A "+ LOCAL" TASK WAS INVISIBLE TO THE TASK REGISTRY, AND DRAGGING ONE INTO A QUADRANT DESTROYED IT. Nobody reported this; it was found while reading _fillSlotCandidates for the queued Kanban-in-pickers build, and it is the same shape as Hans's standing complaint that "my inputs are not being saved from version to version". ONE CAUSE: resolveTaskById() searches q.todos, q.completedTodos and q.rocks and has never searched dailyPlanData.localTasks — while addLocalTask wrote {text,done} with no id at all. FOUR CONSEQUENCES, measured, 3/20 on deployed v4.54.1: (A) drag a Today-only row into an Eisenhower quadrant and _repoDragEntry stamps an id and returns {id,type:'local'}; renderMatrix cannot resolve it, it carries no gid/xt so v4.36.0's "pending" holding row does not apply, prunedAny fires and saveDailyPlan() PERSISTS the deletion — and because commitMatrixEntry renders at its own tail the task is destroyed INSIDE THE DROP, measured before=0. (B) the same drop into a Rule-of-3 slot painted the red "Task no longer exists" over a task sitting on screen four inches below. (C) renderRepository's _markInUse resolves by id, so a placed local task never got its badge, stayed draggable and could be dropped in again. (D) _fillSlotCandidates has had a localTasks line since v3.72.0 that has never produced a row, while the picker's OWN EMPTY STATE recommended "+ Local" as the way to fill the slot. FIXED BY ADDING A FOURTH KIND, not by promoting the task: promotion is a different feature that already exists (the ⬆️ button) and silently pushing a today-only note into Google Tasks is not what "prioritise this" means. resolveTaskById returns kind:'local' LAST so no existing precedence moves, and the lookup sits OUTSIDE the quarter guard because a local task belongs to the day's plan, not the quarter. THE STORE IS THE TRAP, and it is the reusable half: local records live in dailyPlanData, so autoSave() — which writes yearData — leaves a tick looking right on screen and gone on the next load. Every registry handler that writes now branches on WHICH STORE holds the record, not on which fields it has: toggleTaskDoneById, toggleStarredById, updateTaskById and toggleNotesById route local through saveDailyPlan(). WHAT A LOCAL TASK CANNOT DO IS AS LOAD-BEARING AS WHAT IT CAN: no Google Tasks record means Snooze (there is no tomorrow to push it to), Assign, Move-to-list, Add-subtask and Draft-email cannot work, so rule 51 removes them from its ⋯ menu — and the handlers refuse them independently, because an inline onclick outlives the render that drew it. Archive goes too: for this kind it would be Delete drawn twice under another name. TWO NEW ORPHAN PATHS OPENED BY THE FIX AND CLOSED IN IT: promoteLocalToTodo now calls _repointPlanRefs so the promoted to-do INHERITS the slot instead of orphaning it, and removeLocalTask clears the slot and quadrant reference BEFORE splicing the record, so a mis-tap on ✕ can never take a Rule-of-3 slot with it. Probe .claude/probes/local-task-namespace-probe.js 20/20 here, 3/20 on the deployed clone; eleven existing batteries re-run green (4.43 15/15, 4.44 30/30, 4.45 40/40, 4.46 37/37, 4.47 48/48, 4.48 36/36, 4.49 17/17, 4.50 15/15, cal-dragmove 30/30, cal-weekgrid 25/25, cal-editevent 61/61); 0 document overflow at 375/412/1280 with the picker open. Client-only, styles.css untouched, no clasp round.
         // v4.54.0: DRAGGING AN EVENT TO ANOTHER SPOT IN THE WEEK — and the feature was never missing, it was being deleted. Hans: "on desktop I'm not able to drag and then drop events to other spots in the calendar week, like I can in Google Calendar." A real mouse drag against the shipped build moves the box, posts updateCalendarEvent with the right start, end and expectedStartISO, and honours the recurring-scope chooser: the whole feature works, and has since v4.30.2. What kills it is one word. `_calRenderWeek` decided the drag affordance with a bare `capabilityReady('calendar.createEvent')`, which is a SYNCHRONOUS CACHED READ THAT IS FALSE IN THREE DIFFERENT SITUATIONS and means "off" in only one of them: the probe answered no, the probe never completed, or the probe failed. So a single unreachable-backend moment — the same 404 that confounded his August 11 Today-button screenshot — stripped `cal-wk-ev-drag` off every event, and there was nothing on screen to read, because the sentence that would have explained it lives inside a write path the dead gesture could no longer reach. THIS IS RULE 51 EXACTLY, and rule 51's own last line names this shape: "a dead gesture is the same defect in gesture form — worse than a refusal, because there is nothing to read." v4.39.1 fixed it for the "+ New event" BUTTON and stopped there. THE SAME `canWrite` GOVERNED TWO MORE THINGS NOBODY HAD CONNECTED TO IT: the "+ Block" gaps (measured: 2 of 2 gone on a failed probe) and the coach's "Block time now" button — so a blip quietly removed three features at once, one of which was the only route to the explanation for the other two. The fix is a NAMED FUNCTION rather than a remembered habit: `capabilityDenied(key)` is true only when the probe COMPLETED, did NOT fail, and still says no — the one state in which hiding something is honest — so an affordance reads `!capabilityDenied(k)` and an action reads `await capabilityReadyChecked(k)`, which re-probes and turns a blip into one retry instead of a vanished feature. `_calCommitMove` now asks that question at the drop and, on a genuine no, snaps the block back AND says why in calBlockTime's own words, because a drag that silently undoes itself is the dead gesture wearing a different coat. Proof: `.claude/probes/cal-dragmove-probe.js` drives real page.mouse events at measured coordinates (never el.click(), which cannot see an overlay or prove a gesture) across all three capability states — 19/19 here, 16/19 on the deployed v4.53.0, and the three that flip are precisely the three this fixes.
         // v4.53.0: ROUND 21 ITEMS 2, 9 AND 10 — and item 2 was never a missing feature. Hans asked for "one final question, when would you like to begin", with the constraint that "if there was an event at 1pm and you thought it would take 30 minutes, the last offering would be 12:30pm". THAT STEP AND THAT EXACT CONSTRAINT HAVE EXISTED SINCE v4.32.0 — the `<= g.e.getTime()` in the tile loop — but `calBlockTime` has two branches and `gapStartISO` routes between them: the "Block time" button and the coach got duration-then-tiles, while a clicked "+ Block" gap was treated as "start HERE" and asked duration alone. That gap click is the flow he actually uses and likes, so what he asked to have built was built and simply unreachable from where he was standing. THE FIX IS ROUTING, NOT A FEATURE: the tile builder is extracted into `pickStart(gapList, mins, preferISO)` and the gap branch calls it with THAT GAP ONLY — offering the whole day's slots would throw away the thing the click said — with the gap's own start listed first and `recommended`, so "start here" is still a single press and his answer's "one extra tap" is the ceiling, not the floor. One possible start asks nothing. ITEM 10, the silent cap: the loop stopped at `tiles.length < 12` and said nothing, so a 10-hour day at 30-minute blocks dropped eight possible starts behind a list that looked complete. Raised to 24 with a truncation message — and 24 is the arithmetic maximum a working day can produce (600 minutes ÷ the 25-minute shortest block), so the cap can no longer bite at all, which is the strongest form of "no silent truncation": nothing is left to drop. ITEM 9, and Hans's own answer closed it: his screenshot said "No Rule of 3 set for today — you have 0 min free." over a visibly EMPTY calendar, which looks exactly like the round-19 banner defect returning. He took it at about 10pm, so 0 minutes was literally correct — `_calGapsFor` returns [] for TWO different facts, "fully booked" and "the working day is over", and the coach was saying the first when it meant the second. `_calWorkdayOver()` splits them in both branches that could claim it. A number that is true and reads as a fault is rule 63 one layer up: not a wrong diagnosis, but a right one nobody could interpret. THE MIRROR CASE IS ASSERTED so this is not a blanket reword — a genuinely full day during working hours still says "fully booked". Probe `cal-blockstart-probe.js` 17/17 here, 0/1 on the deployed v4.52.0 clone. ITS OWN FIRST RUN HUNG FOREVER: `calBlockTime` with no task id opens the task PICKER, which is a modal and not an `eosChoose`, so a stub that only answers `eosChoose` waits for a click nobody makes. AND `cal-weekgrid-probe` went 25/25 → 23/25 overnight against unchanged code — rule 60, exactly: its fixture placed events at `today + 4`, which lands outside the displayed Sun–Sat week from Wednesday onward, so two seeded events were simply not on the page. Re-anchored to the week's Sunday and re-verified 25/25 on BOTH this build and the deployed clone, which is what proves it was a harness fault rather than a fix. Battery green: 25/25 + 61/61 + 57/57 + 60/60 + 47/47 + 11/11 + 15/15 + 17/17 + 36/36 + 48/48 + 37/37 + 40/40, dead-selector-sweep 0. Client-only, `styles.css` untouched, no clasp round. Round file docs/rounds/5.11b-21.md — round 21 is now fully closed. Three annotated screenshots, and TWO OF THE FOUR DEFECTS FIXED HERE WERE IN THE PICTURES AND NOT IN THE WORDS (the /phone-round rule: look before you read). (1) "15 MINUTE EVENTS CAN'T BE SEEN" UNDERSTATED ITS OWN BUG BY A FACTOR OF FOUR. Measured per duration on the shipped build: 15 and 20 minute events were the only two that were FINE, because v4.40.0 had given them the one-line layout; EVERY event from 21 to 45 minutes had its title cut through the middle, 30-minute ones — the commonest length a calendar has — included. The threshold was keyed on `durMin <= 20`, and what decides whether two lines fit is the BOX, not the duration. Now `height < CAL_EV_STACK_MIN_PX`, a constant derived from three measured line metrics rather than chosen. THE FIRST DRAFT OF THIS GOT THE NUMBER WRONG AND A SCREENSHOT CAUGHT IT: reading `scrollHeight` off a clipped box returned 47px, but that was the title WRAPPED to three lines in a 90px-wide day column — not the bar. Measuring the ink in a box tall enough that nothing is cut gives 31px; believing the 47 sent 45- and 60-minute events to the sliver layout. Stacked titles are now `-webkit-line-clamp`ed to the whole lines that fit, so a 45-minute box ends in an ellipsis instead of one line plus 3px of the next. (2) SOLID FILLS, HIS ANSWER, AND THE HALF THAT MAKES THEM HONEST. `colour + '1a'` (a 10% tint with fixed grey text) becomes the real colour at full strength — and the ink is chosen per event by relative luminance, because "solid + always white" would have re-created his own complaint inverted: white on Google's Banana (#f6bf26) measures 1.9:1. Where white IS the ink, the fill is DARKENED until white clears 4.5:1 rather than shipping a legible-ish 3.7:1 — hue kept, level moved. All eleven Google palette colours now pass AA, and Banana is the only one taking dark ink, which is exactly where Google puts it. A first cut picked whichever of white/near-black won the raw contrast ratio and chose DARK on a mid-tone blue where the two scores were 3.94 and 3.68 — a rounding error deciding the look, so two similar blues could land on opposite inks; a threshold gives one answer per colour region. Both views, from one `_calFillStyle()`, so they cannot drift; the agenda bubble reverts to the tint under `.cal-ev-open` because the expanded detail carries grey meta text and the action buttons. (3) THE 8 AM OPENING WAS BEING DESTROYED, which is why his screenshot showed 12 AM – 6 AM. v4.30.2's `offsetHeight > 0` guard stops a HIDDEN scroller's 0 being saved and covers only half the failure: a render while `#calendar` is display:none has no layout, so `vs.scrollTop = 384` silently does nothing, and the next visible render harvests that residual 0 past the guard and stores it — `0 >= 0` then opens the grid at midnight for the whole session. Reproduced on five paths; four gave 8 AM and only the hidden-render one failed, which is rule 59's shape exactly. Fixed with `data-cal-positioned` (harvest only from a scroller whose assignment could take) plus `data-cal-auto-at` (only remember a position THE PERSON put it in — otherwise the coach band appearing when the fetch lands freezes the grid at a clamp computed against a box that no longer exists; measured as 12.2h on one path and 13.7h on another from identical input). Outside 8–6 it opens an hour before now, which is what his own Google annotation describes. 24 hours are kept — truncating would have hidden the midnight Discover Card marker that made this grid 24 hours in the first place. (4) TWO SCROLLBARS, IN THE PICTURE AND NOT IN THE TEXT. `.cal-wk-vscroll { max-height: calc(100vh - 360px) }` — 360 is a hardcoded guess about the chrome above, and on his own 1893x923 the real chrome is 376px collapsed and 516px expanded, so the grid overflowed by 16px and 156px and the PAGE scrolled behind a grid that also scrolled. `_calFitWeekHeight()` measures the element's real distance from the bottom on every render, on resize, and on the header toggle; `min-height` 430 -> 320 because a min-height BEATS a smaller max-height and was silently re-imposing the overflow. Both states now end at 911px of 923. This is also item 7 — he answered that "wasted space" meant the 120px header block, and collapsing it now GROWS the grid 379 -> 519px instead of just moving it. (5) Rule 51 finished on this surface: Delete and Remove-from-calendar joined Edit in existing unconditionally, and `calEventUnblock` gained the re-probe it never needed while its button was gated. Probe `cal-weekgrid-probe.js` 25/25 here, 0/2 on the deployed v4.51.0 clone; contrast asserted from what the browser PAINTED, not from the source. Battery green: 61/61 + 57/57 + 60/60 + 47/47 + 11/11 + 15/15 + 17/17 + 36/36 + 48/48 + 37/37 + 40/40. 0 overflow at 375/412/768/1280 over 16–26 seeded events. Round file docs/rounds/5.11b-21.md. TWO FILES — styles.css changed, ?v= bumped. — the client half of a backend that had been live, consented and deployed for a day with nothing calling it. `eosEditEvent_` and `getCalendarEventDetails` shipped in .gs v3.57.0 on 2026-08-17; `calOpenEditEvent` and `#calEditEventModal` were 0 occurrences in this file, so clicking an event opened a read-only card and Hans's own round-20 question — "when I click into a created event, shouldn't it pop up with the window where I can edit the event?" — was still unanswered. THE PREMISE OF THE SESSION PROMPT WAS FALSE AND THAT MATTERED: the question to ask was "title/time only now, or bundle a .gs v3.58.0 round for location and notes?" — but v3.57.0 ALREADY carries location, notes and the recurrence rule, so there was no round to bundle and no trade to make. Reading the deployed backend before asking turned a decision into a non-question. THE FORM IS THE NEW-EVENT MODAL, NOT A COPY OF IT. `#calNewEventModal` is now both forms behind `_calEventFormMode('create'|'edit')`, because `_calRebuildRepeat`, `_calSyncNewEnds`, `_calApplyEndsTo` and the whole Custom-recurrence box address `#calNewDate`/`#calNewRepeat`/`#calNewAllday` BY ID — a near-miss copy would have had to duplicate every one and would drift the first time either form was touched. Same reasoning as v4.41.0's Block-it picker. FOUR THINGS THE .GS CONTRACT DICTATED, none of them optional. (1) SEND ONLY WHAT CHANGED: `eosEditEvent_` patches by hasOwnProperty and refuses a no-op, and its own comments warn that a form always posting its all-day checkbox would trip the backend's timed→all-day assertion on an edit that never touched the time — a false accusation from the mechanism built to prevent false claims. So the open takes a baseline through `_calEditReadForm()` and the save diffs against it with the SAME function, and a title-only edit sends `title` and nothing else. (2) THE DESCRIPTION IS SPLIT: `getCalendarEventDetails` returns the notes with the Block-it "[EOS Tool link: id]" marker stripped plus a separate `eosTaskId`, and the save sends both back so the backend re-appends it. Prefilling notes from the cached agenda row instead would put the raw marker in the box and saving it would destroy the only proof the tool created that time block — in-tool delete would then refuse it forever, silently. So notes are DISABLED until the detail read lands and stay disabled if it fails. (3) FOR A SERIES THE RESOURCE IS THE MASTER, NOT THE OCCURRENCE YOU CLICKED: under "All events" the date and time are the series' FIRST occurrence (the .gs says `isSeriesMaster` out loud for exactly this reason), so those two fields wait for the read and the form says which they are — prefilling from the clicked row and saving would drag the whole series onto whatever day was tapped. (4) TWO SCOPES, NOT THREE: the backend declines "this and following" for a FIELD edit because splitting a series to change a title leaves two series nobody asked for, so offering that button would be offering a refusal; and under "This event" the Repeat control is HIDDEN, because an instance cannot carry a rule. Rule 51 is honoured where v4.38.0's Delete still is not: the "Edit event" button is NOT gated on `capabilityReady` — `calOpenEditEvent` re-probes and explains, so a pending or failed probe costs a sentence rather than the feature. Rule 57 too: no auto-focus on a coarse pointer, hit-tested at 412. A failed detail read DEGRADES rather than closing — title, time and location still save, notes and repeat are withdrawn with a sentence naming what was left alone. A `_calEditSeq` counter, not the event id, decides whether a late answer belongs to the form on screen: cancel and reopen the same event and every field you could compare by still matches. Probe `cal-editevent-probe.js` 61/61 here, 0/2 on the deployed v4.50.0 clone. Measured at 375/412/768/1280 with two note lines, a long title and a URL location: 0 overflow, and the CREATE form's page height is byte-identical to the clone's at all four. Its own first run recorded rule 63's shape one more time — an assertion reading `.cmp-input` tested a permanently-mounted element's EXISTENCE, not the composer's `.active` state, and failed correct code. Client-only, no clasp round, `styles.css` untouched. all found by USING the app rather than by reading it — Amanda's onboarding on 2026-08-18, where each one gave Hans a confident, specific, WRONG cause and sent him chasing it. A diagnostic that is wrong is worse than none, because it is trusted and acted on; that is this release's whole thesis. (1) THE DEPLOYMENT-MISMATCH WARNING WAS WRONG FOR EVERY MEMBER EXCEPT ONE. `mismatch = usedId && bootId && usedId !== bootId` compares the signed-in member's saved Web App URL against config.js's bootstrapWebAppUrl — which belongs to whoever first set the app up. Under the per-user `executeAs: USER_DEPLOYING` model EVERY OTHER MEMBER HAS THEIR OWN DEPLOYMENT BY DESIGN; that is exactly what lets the backend read their mailbox and nobody else's. So a difference is the EXPECTED state for a second member, and the panel told Amanda in amber, repeatedly, that her correct configuration was wrong. Now gated on `_configured.length <= 1`: the comparison is only meaningful when the firm has ONE configured deployment, which is the single-user setup the bootstrap describes. With several, per-member URLs ARE the design and there is nothing for the bootstrap to be "expected" against. The case the check exists for — a lone deployment that has drifted from config.js — still fires, and is asserted. (2) "COULD NOT REACH THE BACKEND ... USUALLY A NETWORK BLIP" WAS TOLD TO A BACKEND THAT ANSWERED PERFECTLY. Her v3.14.7 replied `Unknown action: getCapabilities` — a complete, well-formed answer meaning the action did not exist yet (it arrived in .gs v3.39.0). The panel called that a network blip and demoted the real reason to a "Details:" line, so the one message that could have said "your backend is too old, update it" pointed at the network instead — on a machine that genuinely DID have network problems, which made the wrong answer look corroborated. Now detects `unknown action` and says "This backend is too old to answer", names v3.39.0, and says what to do. A genuinely unreachable backend still gets the original wording — asserted both ways, because a fix that reworded everything would just be a different lie. (3) THE CALENDAR BLAMED AN OLD DEPLOYMENT FOR A KEY MISMATCH, and this was the most convincing of the three: minutes after her backend reached 3.57.0 the page reported "your deployment does not include the Calendar backend (it answered like a pre-3.55 version)", i.e. redo the round we had just finished. "Invalid secret key" HAS TWO CAUSES and the code knew one: `getCalendarEvents` is token-gated, so a backend that does not know the action falls through to the older secretKey gate and reports exactly this (the v4.7.1 lesson, correctly applied) — but so does a backend that DOES know it and simply has the wrong key. SECRET_KEY lives in Script Properties PER GOOGLE ACCOUNT, must match that member's row in Settings › Team Members, and is the single easiest thing to miss when onboarding — it is in no numbered step of the deployment guide. We already know which case we are in, because the capability probe reports the real version: `_calGsAtLeast('3.55.0') === true` means the action exists and the KEY is the problem, and the message now says so and names the property and where it lives. Gated on `=== true` so an UNKNOWN version (null) can never be mistaken for "new enough". Probe probe-v4.50.0.js 15/15, 8/15 on deployed v4.49.0. ITS OWN FIRST RUN WAS A FALSE PASS WORTH RECORDING: it rendered the panel into an invented `#googleAccessOut` instead of the app's real `#googleAccessStatus`, so `textContent` was empty and both "the warning is absent" assertions passed against nothing — the negative-space shape again (rule 53's harness note, v4.44.0's positive controls). Reading the element id out of the app fixed it and the details now carry real panel text. Client-only, no clasp round.
         // v4.49.0: FOUR DEFECTS FROM HANS'S LIVE TEST, and two of them are mine from v4.46.0. **THE `⋯` MENU FRAGMENTED ACROSS COLUMNS** (his annotated shot: "it rolled over to the next column, which is not how it should work" — the menu's top half in one column and "Add subtask / Open source email" stranded at the foot of the next). A CSS MULTI-COLUMN CONTAINER DOES NOT CLIP, IT FRAGMENTS, and an absolutely-positioned descendant is fragmented with everything else — so rule 19's detector, which tests only `overflow`, was blind to it: nothing there has overflow anything but visible, and the menu was escaping nothing because it was never trapped, it was cut in half. Same symptom, different physics. Extending THAT detector rather than adding a second mechanism is rule 19's own instruction, and `position:fixed` takes a box out of a fragmentation context exactly as it takes it out of a scroller. **ORPHAN/WIDOW CONTROL** — his words: "I want tasks (like this one from Prospects/Marketing) to stay with the others". v4.46.0 only stopped a HEADING being stranded (`break-after` on the first child), which is half the problem and does nothing about one row alone at the top of the next column. `break-inside: avoid` on `.todo-list-group` keeps the group together; it is a REQUEST the spec lets a browser drop when the content cannot fit, so a list longer than a column still breaks rather than overflowing — measured, not assumed, and the cost is that four uneven lists may settle into two columns instead of three, which is the trade he asked for. **THE REPOSITORY `⋯` — "sometimes the popup box doesn't show" — WAS TWO FAULTS COMPOUNDING, and the second is the one that hid it.** (1) `.repo-items` is a 350px scroller, so clicking a partly-visible row makes the browser scroll it into view, and that scroll landed in the capture-phase close-on-scroll listener and shut the menu the click had just opened. The close-on-scroll rule is right and stays — a fixed menu does not travel with the scroller it escaped — but the OPENING click's own scroll is not one of those, so inside a 400ms grace window the menu is RE-PLACED against its anchor instead of closed. (2) THE REAL HIDER: `position: fixed` is viewport-relative only while NO ancestor establishes a containing block, and **a `transform` does exactly that**. The swipe engine leaves one on the row it is tracking (`matrix(1,0,0,1,3,0)` — a 3px nudge from the click itself), so the menu's correctly-clamped `top: 414px` was measured from the ROW at y=675 and painted at **1089 in a 900px viewport**: open, correct, and off the bottom of the screen. That is rule 20's warning ("a transform on .page makes it a containing block for position:fixed descendants") landing on a different element, and **it cannot be found by reading the styles at rest** — the transform exists only while the row is being touched, so a chain scan before the click reports nothing. `_fixedContainingBlock` finds such an ancestor and the placement converts its viewport answer into that box's coordinates at the very end, so every decision above it still reasons in viewport space where it is easy to be right. Compensating beats fighting the swipe engine for ownership of that transform, and beats reparenting into `<body>` (which the next re-render would orphan). Swept every row of a 14-row repository, clicking each with a real mouse after scrolling it into view: **0/14 failures here, 14/14 on the deployed v4.48.0.** **THE GMAIL MARK IS BACK ON THE REPOSITORY ROW, and the reversal is deliberately narrow:** v3.72.0 put 'repository' in `minimalCard` on his own instruction — he would "forgo the star and the AI sparkle there in exchange for the ⋯" — and he has now asked for the Gmail icon back, "exact function on how it works in the Weekly Meeting page". So only the EMAIL glyph is restored; the star and sparkle stay in the menu because that half of the trade is still his. "Permanent" means always there when there is an email TO open: the row he named as the reference shows the mark only for a task that actually came from one (rule 37), and copying a reference means copying its gate, not just its icon. Probe probe-v4.49.0.js 17/17, 13/17 on deployed v4.48.0 — and its orphan assertion names **Prospects/Marketing**, the very group from his screenshot. TWO-FILE deploy, `?v=4.49.0`.
@@ -6953,7 +7080,25 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v4.57.2 &mdash; 2026-08-25 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v4.58.0 &mdash; 2026-08-27 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Paste a meeting transcript in, get a CRM note, coaching, a follow-up email and task suggestions out.</div>'
+                + '<div style="font-size:0.8rem;color:#92400e;background:#fef3c7;border:1px solid #fde68a;border-radius:6px;padding:8px 10px;margin:0 0 8px;"><strong>Needs the Apps Script update.</strong> Until Hans runs the two clasp commands, the new Meetings page will say plainly that it isn&rsquo;t ready yet instead of trying and failing. Nothing else in the app changes.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>A new Meetings page.</strong> Paste in an Otter transcript (or your own summary), pick the meeting type if you want to override the guess, and press Process. You get back a CRM note, coaching notes, an objection role-play (for prospect meetings only), a messaging review, a follow-up email, and a list of suggested Google Tasks &mdash; six cards, all at once.</li>'
+                + '<li><strong>Every card is yours to edit before you use it,</strong> with its own Copy button. Nothing here is meant to be pasted in blind &mdash; the CRM note, the email subject and body, and the task list all open as plain text boxes you can fix up first.</li>'
+                + '<li><strong>A task the AI couldn&rsquo;t confidently name a client for is flagged, not guessed.</strong> It shows up amber with &ldquo;needs the full legal name &mdash; edit before using&rdquo; instead of a made-up name. Tick the tasks you want and you also get a plain copy-paste list of them, in case you&rsquo;d rather paste them into Google Tasks yourself for now.</li>'
+                + '<li><strong>If the AI&rsquo;s answer gets cut off or comes back malformed, you still see all of it.</strong> A warning tells you it may be incomplete, and a raw-output card shows exactly what came back rather than throwing it away.</li>'
+                + '<li>Each run shows you roughly what it cost, based on the tokens used &mdash; useful for keeping an eye on it, not a bill.</li>'
+                + '<li><strong>Settings &rsaquo; AI Tools now lets you choose which AI model handles meetings,</strong> and the list of models is pulled live from whichever provider you pick &mdash; so a brand-new model shows up the day it&rsquo;s released, without waiting on us. Defaults to Claude, roughly 10 to 20 cents a meeting.</li>'
+                + '<li>The &ldquo;Weekly Meeting&rdquo; tab is now called <strong>&ldquo;Weekly Pulse&rdquo;</strong> &mdash; a name change only, nothing about how it works has moved.</li>'
+                + '<li><strong>Your draft is saved on this device as you type</strong> and is still there if you reload the page.</li>'
+                + '<li><strong>Amanda:</strong> your Meetings page will say &ldquo;not configured&rdquo; until your AI keys are set up on your account &mdash; that is expected, and it does not affect anything else you use.</li>'
+                + '<li><em>Coming next:</em> pushing the CRM note straight to Redtail, and turning the suggested tasks into real ones automatically.</li>'
+                + '</ul>'
+                + '</div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v4.57.2 &mdash; 2026-08-25</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">&ldquo;I&rsquo;ve already handled this&rdquo; now stays handled.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Fixes emails coming back after you cleared them.</strong> If you marked something handled, dismissed it, or snoozed it on one device, opening the tool on another device could quietly undo that &mdash; and the email would reappear in your next brief.</li>'
@@ -9512,6 +9657,11 @@ Example:
                 // v4.23.0: renders from cache instantly, revalidates in the background.
                 // Reads state only — never calls another page's persisting render*() (rule 41).
                 renderCalendarPage();
+            } else if (pageId === 'meetings') {
+                // v4.58.0: restores the saved draft (transcript + outputs) and wires
+                // the autosave listeners once. Reads its own device-local store only —
+                // it never touches yearData or dailyPlanData (rule 41).
+                mtgRenderPage();
             }
 
             // v3.66.0: keep the mobile chrome in step. Deliberately at the END of showPage
@@ -9985,7 +10135,12 @@ Example:
             // since v3.66.3). Removing the key is the entire nav wiring: both the drawer
             // and the bottom bar route non-placeholder entries through showPage().
             calendar:  { label: 'Calendar', short: 'Calendar', icon: '🗓️', tint: '#fee2e2', ink: '#b91c1c' },
-            meeting:   { label: 'Weekly Meeting', short: 'Meeting', icon: '📋', tint: '#dbeafe', ink: '#1d4ed8' },
+            // v4.58.0: label renamed "Weekly Pulse" (Hans, 2026-08-27). Key + page id
+            // stay 'meeting' — see the tab-row comment.
+            meeting:   { label: 'Weekly Pulse', short: 'Pulse', icon: '📋', tint: '#dbeafe', ink: '#1d4ed8' },
+            // v4.58.0: the Meeting Processor — paste an Otter transcript, get the six
+            // outputs, route to Redtail (Phase 2) and Gmail (Phase 3).
+            meetings:  { label: 'Meetings', short: 'Meetings', icon: '🤝', tint: '#fef9c3', ink: '#a16207' },
             vision:    { label: 'Vision',    short: 'Vision',  icon: '🧭', tint: '#dcfce7', ink: '#15803d' },
             plan:      { label: '1-Year Plan', short: '1-Year', icon: '🎯', tint: '#fef3c7', ink: '#b45309' },
             quarterly: { label: 'Rocks, Scorecard, and IDS', short: 'Rocks', icon: '🪨', tint: '#d1fae5', ink: '#047857' },
@@ -23042,6 +23197,32 @@ Make sure your suggestions directly address the specific root cause and discussi
                 // reads this capability yet; when that page is designed it finds the
                 // backend already probed and true.
                 degrade: 'No calendar surface exists yet; nothing to degrade.'
+            },
+            // v4.58.0: the Meeting Processor pair (.gs v3.59.0). kind 'external-api'
+            // because the backend probe is a KEY-PRESENCE check (the external-API analog
+            // of a scope check), not a Google consent — see the .gs probes' own comments.
+            'ai.generateOutputs': {
+                key: 'ai.generateOutputs',
+                label: 'AI: process a meeting transcript',
+                backendAction: 'generateOutputs',
+                requiredScope: null,
+                kind: 'external-api',
+                available: false,          // stays false until .gs 3.59.0 is the deployed code
+                enabled: true,
+                degrade: 'The Meetings page explains which Script Property to set; nothing else changes.'
+            },
+            'redtail.crm': {
+                key: 'redtail.crm',
+                label: 'Redtail CRM: search clients, push notes',
+                backendAction: 'redtailApi',
+                requiredScope: null,
+                kind: 'external-api',
+                available: false,
+                enabled: true,
+                // Registered ahead of its UI on purpose (same pattern as
+                // calendar.readEvents above): Phase 2's client picker finds the backend
+                // already probed. Until then nothing reads it.
+                degrade: 'Copy the CRM note and paste it into Redtail by hand.'
             }
         };
 
@@ -23149,6 +23330,509 @@ Make sure your suggestions directly address the specific root cause and discussi
             await probeCapabilities({ attempts: 1 });
             return capabilityReady(key);
         }
+
+        // ==================== MEETINGS — MEETING PROCESSOR (v4.58.0, Phase 1) ====================
+        //
+        // Paste an Otter transcript/summary → one backend AI call (generateOutputs,
+        // .gs v3.59.0) → six outputs rendered into the statically mounted cards on
+        // #meetings. Design record: EOS_MASTER_SUMMARY.md §5.48.
+        //
+        // THE SPEC LIVES HERE, NOT IN THE BACKEND — MTG_SYSTEM_PROMPT below is passed to
+        // the thin backend seam on every call, so tuning the prompt is a client-only
+        // release and never costs a clasp round. It is provider-neutral on purpose.
+        //
+        // Draft state is DEVICE-LOCAL (eos_meeting_processor) and autosaved as-you-type
+        // via addEventListener — never an inline oninput attribute, which would silently
+        // opt the field out of the composer (rule 40). A transcript is one meeting's
+        // working text, not team data; nothing here touches the shared sheet.
+
+        const MTG_STORE_KEY = 'eos_meeting_processor';
+        const MTG_GS_MIN = '3.59.0';
+        const MTG_DEFAULT_AI = { provider: 'anthropic', model: 'claude-sonnet-5' };
+
+        // Price table for the ESTIMATE line only — $ per million tokens, written
+        // 2026-08-27. The usage log in the Sheet stores raw token FACTS; this table is
+        // the display-time guess and says "est." wherever it is shown. An unknown model
+        // shows tokens with no dollar figure rather than a made-up one.
+        const MTG_PRICES = [
+            { re: /claude.*opus/i,    inPerM: 15,   outPerM: 75 },
+            { re: /claude.*sonnet/i,  inPerM: 3,    outPerM: 15 },
+            { re: /claude.*haiku/i,   inPerM: 1,    outPerM: 5 },
+            { re: /gpt-5/i,           inPerM: 1.25, outPerM: 10 },
+            { re: /gpt-4o/i,          inPerM: 2.5,  outPerM: 10 },
+            { re: /gemini.*pro/i,     inPerM: 1.25, outPerM: 10 },
+            { re: /gemini.*flash/i,   inPerM: 0.3,  outPerM: 2.5 },
+            { re: /grok/i,            inPerM: 3,    outPerM: 15 }
+        ];
+
+        // PART B of Hans's kickoff (2026-08-27), adapted for a one-shot JSON contract:
+        // the "always ask" approval step becomes UI (checkboxes + editable cards), and
+        // "ask when unsure of a legal name" becomes the RESOLVE: prefix, because a
+        // one-shot API call has nobody to ask. No backticks or ${ in this literal.
+        const MTG_SYSTEM_PROMPT = [
+            'ROLE: You are an expert Wealth Management Assistant for Hans Blake at Intelligent Investing.',
+            'You process meeting transcripts or summaries (from Otter.ai) into professional CRM documentation, sales coaching, follow-up communications, and task suggestions.',
+            '',
+            'CORE PRINCIPLES AND BRAND VOICE',
+            'Mission: Minimize financial stress to maximize life.',
+            'Values (CLIENT): Compassion, Legacy, Integrity, Excellence, Nimble, Truth.',
+            'The Four Pillars: Minimize fees (and taxes), Save time, Unify families, and Leverage technology.',
+            'Behavioral Coaching: focus on closing the "behavioral gap" between investment returns and investor returns.',
+            'Tone: empathetic, insightful, transparent, and authoritative without being arrogant.',
+            'DO NOT include hyperlinks in any output.',
+            'If the meeting is with CURRENT clients, do not over-sell them on what the firm can do - they are already clients.',
+            '',
+            'INPUT ANALYSIS - identify first:',
+            '- Meeting Type: Prospect Discovery, Client Review, Planning Session, or Other. If the user supplies a type hint, use it; otherwise auto-detect.',
+            '- Attendees: identify Hans, Amanda (if present), and the clients/prospects.',
+            '- Meeting Date: extract from the text; if absent use the TODAY date provided.',
+            '',
+            'OUTPUT FORMAT - THIS IS A MACHINE CONTRACT:',
+            'Return ONLY a single JSON object. No markdown fences, no commentary before or after. Keys:',
+            '{',
+            '  "meetingType": "Prospect Discovery" | "Client Review" | "Planning Session" | "Other",',
+            '  "meetingDate": "YYYY-MM-DD" or "",',
+            '  "attendees": ["name", ...],',
+            '  "crmNote": "...",',
+            '  "coaching": "...",',
+            '  "roleplay": "..." or null,',
+            '  "messaging": "...",',
+            '  "email": { "subject": "...", "body": "..." },',
+            '  "tasks": [ { "description": "...", "assignee": "Hans" | "Amanda", "due": "YYYY-MM-DD" }, ... ]',
+            '}',
+            'Every string value is PLAIN TEXT: simple line breaks, numbered lists as "1. ", bullets as "- " or "* ". NO markdown headers (#), NO horizontal rules (---), NO bold markers unless simple **word** emphasis in the email.',
+            '',
+            'OUTPUT 1 - crmNote (Redtail format), exactly this layout:',
+            'YYYY.MM.DD',
+            'Participants: [Name(s)]',
+            'Content of Call/Text: concise, human-readable summary of key points.',
+            'Discussion Points: numbered list with brief descriptions.',
+            'Action Items for Client: numbered list.',
+            'Action Items for Intelligent Investing: numbered list.',
+            '',
+            'OUTPUT 2 - coaching:',
+            '- Prospect meetings: Closing Assessment (did Hans ask for the business?), Objection Handling Review, Confidence/Expertise Check, Next Steps Clarity.',
+            '- Client meetings: Talk Ratio Assessment (did Hans dominate?), Jargon Check (swap technical terms for plain language), Rapport Building, Value Reinforcement.',
+            '- Always end with: one thing done well, one thing to improve, and a suggested "Power Phrase" for the next meeting.',
+            '',
+            'OUTPUT 3 - roleplay: PROSPECT MEETINGS ONLY, otherwise null.',
+            'Identify up to 3 objections (stated or implied). For each: Objection, how Hans responded, a suggested better response, and a "Try saying this out loud" script.',
+            '',
+            'OUTPUT 4 - messaging:',
+            '- Value Prop Clarity: was the value of being a fee-only fiduciary clear?',
+            '- Efficiency: did the meeting stay on track?',
+            '- Suggested Soundbites: 2-3 memorable phrases.',
+            '',
+            'OUTPUT 5 - email (Hans reviews and sends it himself from Gmail):',
+            '- Professional subject line in "subject".',
+            '- "body": warm opening (congratulate on milestones if applicable); recap the Four Pillars or Intelligrations where relevant; clear bulleted action items for client and firm; plain text only, must paste clean into Gmail with no markdown artifacts.',
+            '',
+            'OUTPUT 6 - tasks. Apply the EOS Tool task-title formatting rules to each "description":',
+            '- Client/prospect task: prefix "Lastname, Firstname- " (dash then space). Example: Whitlatch, Timothy- Confirm $8,500 Roth IRA transfer',
+            '- Amanda task: prefix "AMANDA: " BEFORE the contact prefix. Example: AMANDA: Whitlatch, Timothy- Schedule follow-up call',
+            '- If genuinely unsure of the client full legal name, use "RESOLVE: " with what you have instead of guessing. Example: RESOLVE: Tim- Confirm Roth IRA transfer',
+            '- Internal firm task with no client: no prefix.',
+            'Suggested due dates are business days, realistic, never in the past relative to TODAY.',
+            '',
+            'TECHNICAL GUARDRAILS:',
+            '- Proprietary terms: always write Intelligrations(R) and Intelligent Money Minute(R) with the (R) mark on first use.',
+            '- Compliance: never promise "outperformance"; focus on "real-life results" and "goal-oriented planning".',
+            '- Accuracy: only cite information explicitly found in the transcript/summary. If something needed is missing, write "[not in transcript]" rather than inventing it.'
+        ].join('\n');
+
+        let mtgDraft = null;
+        let _mtgWired = false;
+        let _mtgSaveTimer = null;
+
+        function mtgLoadDraft() {
+            if (mtgDraft) return mtgDraft;
+            try {
+                const raw = localStorage.getItem(MTG_STORE_KEY);
+                if (raw) mtgDraft = JSON.parse(raw);
+            } catch (e) { mtgDraft = null; }
+            if (!mtgDraft || typeof mtgDraft !== 'object') {
+                mtgDraft = { v: 1, transcript: '', meetingType: 'auto', outputs: null, tasks: [], meta: null };
+            }
+            return mtgDraft;
+        }
+        function mtgSaveDraftNow() {
+            try { localStorage.setItem(MTG_STORE_KEY, JSON.stringify(mtgLoadDraft())); } catch (e) { }
+        }
+        function mtgSaveDraftSoon() {
+            clearTimeout(_mtgSaveTimer);
+            _mtgSaveTimer = setTimeout(mtgSaveDraftNow, 800);
+        }
+
+        function mtgGetAI() {
+            // `settings` is never a global in this file — always getSettings() (the
+            // probe caught a bare reference here on its first run).
+            const s = getSettings() || {};
+            const r = (s.aiRouting && s.aiRouting.meetingProcessor) || {};
+            // Nothing stored at all -> the shipped default pair. A stored provider with
+            // no model stays EMPTY (except anthropic, whose default is safe) so a
+            // Claude model id can never be silently paired with another provider.
+            if (!r.provider) return { provider: MTG_DEFAULT_AI.provider, model: MTG_DEFAULT_AI.model };
+            return {
+                provider: r.provider,
+                model: r.model || (r.provider === 'anthropic' ? MTG_DEFAULT_AI.model : '')
+            };
+        }
+
+        const MTG_PROVIDER_LABELS = { anthropic: 'Claude', openai: 'OpenAI', gemini: 'Gemini', grok: 'Grok' };
+
+        // ---- Settings: the model picker ------------------------------------------------
+        function mtgSeedModelSelect(model) {
+            const sel = document.getElementById('aiRouteMeetingProcessorModel');
+            if (!sel) return;
+            // '' means "no model chosen for this provider yet" and must STAY empty —
+            // falling back to the Anthropic default here would silently pair a Claude
+            // model id with a non-Claude provider (the probe's F2 caught exactly that).
+            if (!model) {
+                sel.innerHTML = '<option value="">&mdash; load the list, then pick &mdash;</option>';
+                sel.value = '';
+                return;
+            }
+            sel.innerHTML = '<option value="' + model.replace(/"/g, '&quot;') + '">' + model + '</option>';
+            sel.value = model;
+        }
+        function mtgProviderChanged() {
+            // Keep the saved model if it belongs to the newly picked provider, else fall
+            // back to the default for Anthropic / a blank seed that says "load the list".
+            const provider = document.getElementById('aiRouteMeetingProcessor').value;
+            const saved = mtgGetAI();
+            mtgSeedModelSelect(provider === saved.provider ? saved.model
+                : (provider === 'anthropic' ? MTG_DEFAULT_AI.model : ''));
+            const st = document.getElementById('mtgModelStatus');
+            if (st) st.textContent = 'Press "Load available models" to see what ' +
+                (MTG_PROVIDER_LABELS[provider] || provider) + ' can run.';
+        }
+        async function mtgLoadModels() {
+            const provider = document.getElementById('aiRouteMeetingProcessor').value;
+            const sel = document.getElementById('aiRouteMeetingProcessorModel');
+            const st = document.getElementById('mtgModelStatus');
+            if (!sel || !st) return;
+            st.textContent = 'Asking ' + (MTG_PROVIDER_LABELS[provider] || provider) + ' for its model list…';
+            const r = await _calPost({ action: 'listAIModels', provider: provider });
+            if (!r || !r.success) {
+                st.textContent = (r && r.error) ? r.error : 'Could not reach the backend.';
+                return;
+            }
+            const prev = sel.value;
+            sel.innerHTML = (r.models || []).map(function (m) {
+                return '<option value="' + String(m.id).replace(/"/g, '&quot;') + '">'
+                    + String(m.label || m.id) + '</option>';
+            }).join('');
+            // Re-apply the previous selection after the rebuild (rule 16's trap).
+            if (prev && Array.prototype.some.call(sel.options, function (o) { return o.value === prev; })) {
+                sel.value = prev;
+            }
+            st.textContent = (r.models || []).length + ' models available. Pick one and press Save Settings.';
+        }
+
+        // ---- Page ----------------------------------------------------------------------
+        function mtgRenderPage() {
+            const d = mtgLoadDraft();
+            const ta = document.getElementById('mtgTranscript');
+            if (ta && ta.value !== d.transcript) ta.value = d.transcript || '';
+            const typeSel = document.getElementById('mtgMeetingType');
+            if (typeSel) typeSel.value = d.meetingType || 'auto';
+            const ai = mtgGetAI();
+            const line = document.getElementById('mtgModelLine');
+            if (line) line.textContent = 'AI: ' + (MTG_PROVIDER_LABELS[ai.provider] || ai.provider)
+                + ' · ' + ai.model + ' (change in Settings › AI Tools)';
+            if (d.outputs) mtgShowOutputs(d.outputs, d.meta, d.tasks, { fromDraft: true });
+            else {
+                const res = document.getElementById('mtgResults');
+                if (res) res.style.display = 'none';
+            }
+            mtgWireAutosave();
+        }
+
+        const MTG_FIELD_MAP = [
+            ['mtgTxtNote', 'note'], ['mtgTxtCoach', 'coach'], ['mtgTxtRoleplay', 'roleplay'],
+            ['mtgTxtMsg', 'msg'], ['mtgEmailSubject', 'emailSubject'], ['mtgTxtEmail', 'emailBody'],
+            ['mtgTxtRaw', 'raw']
+        ];
+        function mtgWireAutosave() {
+            if (_mtgWired) return;
+            _mtgWired = true;
+            const ta = document.getElementById('mtgTranscript');
+            if (ta) ta.addEventListener('input', function () {
+                mtgLoadDraft().transcript = ta.value;
+                mtgSaveDraftSoon();
+            });
+            const typeSel = document.getElementById('mtgMeetingType');
+            if (typeSel) typeSel.addEventListener('change', function () {
+                mtgLoadDraft().meetingType = typeSel.value;
+                mtgSaveDraftSoon();
+            });
+            MTG_FIELD_MAP.forEach(function (pair) {
+                const el = document.getElementById(pair[0]);
+                if (!el) return;
+                el.addEventListener('input', function () {
+                    const d = mtgLoadDraft();
+                    if (!d.outputs) d.outputs = {};
+                    d.outputs[pair[1]] = el.value;
+                    mtgSaveDraftSoon();
+                });
+            });
+        }
+
+        // ---- Generate ------------------------------------------------------------------
+        function mtgStatusMsg(text, tone) {
+            const el = document.getElementById('mtgStatus');
+            if (!el) return;
+            el.textContent = text || '';
+            el.style.color = tone === 'err' ? '#b91c1c' : (tone === 'ok' ? '#047857' : 'var(--gray-600)');
+        }
+
+        async function mtgGenerate() {
+            const d = mtgLoadDraft();
+            const ta = document.getElementById('mtgTranscript');
+            const transcript = ta ? ta.value.trim() : '';
+            if (!transcript) { mtgStatusMsg('Paste a transcript or summary first.', 'err'); return; }
+            if (transcript.length < 80) {
+                mtgStatusMsg('That looks too short to be a meeting — paste the whole transcript or summary.', 'err');
+                return;
+            }
+
+            // Version gate BEFORE the capability key (rule 12 / rule 63): on an older
+            // backend the key is absent for exactly the same reason it is absent when no
+            // API key is configured, and only the version tells those apart. null means
+            // UNKNOWN, never "too old" (rule 51) — let the capability check probe.
+            if (_calGsAtLeast(MTG_GS_MIN) === false) {
+                mtgStatusMsg('Your Apps Script backend is v'
+                    + ((_capabilityProbeState && _capabilityProbeState.gsVersion) || '?')
+                    + ' and the Meeting Processor needs v' + MTG_GS_MIN
+                    + '. Run the clasp round for v3.59.0, then check Settings › Google › Check Google access.', 'err');
+                return;
+            }
+            if (!(await capabilityReadyChecked('ai.generateOutputs'))) {
+                mtgStatusMsg('The AI backend is not configured yet. Open Settings › Google › Check Google access — '
+                    + 'if it names a missing Script Property, add ANTHROPIC_API_KEY in the Apps Script editor '
+                    + '(Project Settings › Script Properties) and try again.', 'err');
+                return;
+            }
+
+            const ai = mtgGetAI();
+            if (!ai.model) {
+                mtgStatusMsg('No model is chosen for ' + (MTG_PROVIDER_LABELS[ai.provider] || ai.provider)
+                    + ' yet. Open Settings › AI Tools › Meeting transcripts, press "Load available models", pick one, and save.', 'err');
+                return;
+            }
+            const typeSel = document.getElementById('mtgMeetingType');
+            const typeHint = typeSel ? typeSel.value : 'auto';
+            const todayYmd = new Date().toISOString().slice(0, 10);
+            const userContent =
+                'TODAY: ' + todayYmd + '\n'
+                + 'MEETING TYPE HINT: ' + (typeHint === 'auto' ? 'auto-detect' : typeHint) + '\n\n'
+                + 'TRANSCRIPT OR SUMMARY:\n' + transcript;
+
+            const btn = document.getElementById('mtgGenerateBtn');
+            if (btn) btn.disabled = true;
+            mtgStatusMsg('Processing with ' + ai.model + '… this usually takes 15–45 seconds.');
+            let r = null;
+            try {
+                r = await _calPost({
+                    action: 'generateOutputs',
+                    provider: ai.provider,
+                    model: ai.model,
+                    systemPrompt: MTG_SYSTEM_PROMPT,
+                    userContent: userContent,
+                    maxTokens: 6000,
+                    feature: 'meeting-processor'
+                });
+            } finally {
+                if (btn) btn.disabled = false;
+            }
+            if (!r || !r.success) {
+                mtgStatusMsg((r && r.error) ? r.error : 'The backend did not answer — check your connection and try again.', 'err');
+                return;
+            }
+
+            // A truncated CRM note pasted whole into Redtail is worse than a warning.
+            const cut = ['max_tokens', 'length', 'MAX_TOKENS'].indexOf(String(r.stopReason || '')) !== -1;
+            const warn = document.getElementById('mtgTruncWarn');
+            if (warn) {
+                warn.style.display = cut ? '' : 'none';
+                if (cut) warn.textContent = 'The AI hit its output limit mid-answer, so the sections below may be cut short. '
+                    + 'Try again (results vary), or raise the limit later in Settings.';
+            }
+
+            const parsed = mtgParseOutputs(r.text);
+            const meta = {
+                provider: r.provider, model: r.model,
+                inTok: r.inputTokens || 0, outTok: r.outputTokens || 0,
+                stopReason: r.stopReason || '',
+                type: parsed.ok ? (parsed.data.meetingType || '') : '',
+                date: parsed.ok ? (parsed.data.meetingDate || '') : '',
+                attendees: parsed.ok ? (parsed.data.attendees || []) : []
+            };
+            if (parsed.ok) {
+                const o = {
+                    note: parsed.data.crmNote || '',
+                    coach: parsed.data.coaching || '',
+                    roleplay: parsed.data.roleplay || '',
+                    msg: parsed.data.messaging || '',
+                    emailSubject: (parsed.data.email && parsed.data.email.subject) || '',
+                    emailBody: (parsed.data.email && parsed.data.email.body) || '',
+                    raw: ''
+                };
+                const tasks = (parsed.data.tasks || []).map(function (t) {
+                    return {
+                        description: String((t && t.description) || '').trim(),
+                        assignee: String((t && t.assignee) || 'Hans'),
+                        due: String((t && t.due) || ''),
+                        checked: true
+                    };
+                }).filter(function (t) { return t.description; });
+                d.outputs = o; d.tasks = tasks; d.meta = meta;
+                mtgShowOutputs(o, meta, tasks, {});
+                mtgStatusMsg('Done. Every box below is editable — fix anything, then copy where it goes.', 'ok');
+            } else {
+                // Nothing is thrown away: the whole answer lands in the raw card.
+                d.outputs = { note: '', coach: '', roleplay: '', msg: '', emailSubject: '', emailBody: '', raw: r.text || '' };
+                d.tasks = []; d.meta = meta;
+                mtgShowOutputs(d.outputs, meta, [], { rawOnly: true });
+                mtgStatusMsg('The AI answered, but not in the six-section format — the whole reply is in the Raw card below. Try Process again.', 'err');
+            }
+            mtgSaveDraftNow();
+        }
+
+        // PURE parse — no DOM, no state — so the probe can assert it against fabricated
+        // AI replies (fenced, prefixed, malformed) without a network or a backend.
+        function mtgParseOutputs(text) {
+            try {
+                let t = String(text || '').trim();
+                const fence = t.match(/^```(?:json)?\s*([\s\S]*?)\s*```\s*$/);
+                if (fence) t = fence[1];
+                const first = t.indexOf('{');
+                const last = t.lastIndexOf('}');
+                if (first === -1 || last <= first) return { ok: false };
+                const obj = JSON.parse(t.slice(first, last + 1));
+                if (!obj || typeof obj !== 'object' || typeof obj.crmNote !== 'string') return { ok: false };
+                return { ok: true, data: obj };
+            } catch (e) { return { ok: false }; }
+        }
+
+        function mtgShowOutputs(o, meta, tasks, opts) {
+            const res = document.getElementById('mtgResults');
+            if (res) res.style.display = '';
+            const rawOnly = !!(opts && opts.rawOnly) || (!o.note && !!o.raw);
+
+            const metaEl = document.getElementById('mtgMetaLine');
+            if (metaEl) {
+                metaEl.textContent = rawOnly ? '' : [
+                    meta && meta.type ? meta.type : null,
+                    meta && meta.date ? meta.date : null,
+                    (meta && meta.attendees && meta.attendees.length) ? ('With: ' + meta.attendees.join(', ')) : null
+                ].filter(Boolean).join(' · ');
+            }
+            const usageEl = document.getElementById('mtgUsageLine');
+            if (usageEl) usageEl.textContent = mtgUsageText(meta);
+
+            MTG_FIELD_MAP.forEach(function (pair) {
+                const el = document.getElementById(pair[0]);
+                if (el) el.value = o[pair[1]] || '';
+            });
+
+            // Output 3 is prospects-only by spec — hide the card when the AI returned
+            // null for it rather than showing an empty box that looks broken.
+            const rp = document.getElementById('mtgCardRoleplay');
+            if (rp) rp.style.display = (o.roleplay && String(o.roleplay).trim()) ? '' : 'none';
+            const rawCard = document.getElementById('mtgCardRaw');
+            if (rawCard) rawCard.style.display = rawOnly ? '' : 'none';
+            document.querySelectorAll('#meetings .mtg-grid .mtg-card').forEach(function (card) {
+                if (card.id !== 'mtgCardRoleplay') card.style.display = rawOnly ? 'none' : '';
+            });
+
+            mtgRenderTasks(tasks || []);
+        }
+
+        function mtgUsageText(meta) {
+            if (!meta || (!meta.inTok && !meta.outTok)) return '';
+            let s = (meta.model || '') + ' · ' + (meta.inTok || 0).toLocaleString() + ' in / '
+                + (meta.outTok || 0).toLocaleString() + ' out tokens';
+            const p = MTG_PRICES.find(function (row) { return row.re.test(meta.model || ''); });
+            if (p) {
+                const usd = (meta.inTok || 0) / 1e6 * p.inPerM + (meta.outTok || 0) / 1e6 * p.outPerM;
+                s += ' · est. $' + (usd < 0.005 ? usd.toFixed(4) : usd.toFixed(2));
+            }
+            return s;
+        }
+
+        function mtgRenderTasks(tasks) {
+            const wrap = document.getElementById('mtgTasksTable');
+            if (!wrap) return;
+            if (!tasks.length) {
+                wrap.innerHTML = '<p style="font-size:0.8rem; color: var(--gray-500);">No task suggestions in this meeting.</p>';
+                mtgUpdateTasksFailsafe();
+                return;
+            }
+            wrap.innerHTML = '<table class="mtg-tasks"><thead><tr>'
+                + '<th></th><th>#</th><th>Task</th><th>Who</th><th>Due</th></tr></thead><tbody>'
+                + tasks.map(function (t, i) {
+                    const resolve = /^RESOLVE: /.test(t.description);
+                    return '<tr' + (resolve ? ' class="mtg-task-resolve"' : '') + '>'
+                        + '<td><input type="checkbox" data-mtg-task="' + i + '"' + (t.checked ? ' checked' : '') + '></td>'
+                        + '<td>' + (i + 1) + '</td>'
+                        + '<td>' + mtgEscape(t.description) + (resolve
+                            ? ' <span class="mtg-resolve-flag">needs the full legal name — edit before using</span>' : '') + '</td>'
+                        + '<td>' + mtgEscape(t.assignee) + '</td>'
+                        + '<td>' + mtgEscape(t.due) + '</td>'
+                        + '</tr>';
+                }).join('') + '</tbody></table>';
+            wrap.querySelectorAll('input[data-mtg-task]').forEach(function (cb) {
+                cb.addEventListener('change', function () {
+                    const d = mtgLoadDraft();
+                    const idx = parseInt(cb.getAttribute('data-mtg-task'), 10);
+                    if (d.tasks && d.tasks[idx]) d.tasks[idx].checked = cb.checked;
+                    mtgUpdateTasksFailsafe();
+                    mtgSaveDraftSoon();
+                });
+            });
+            mtgUpdateTasksFailsafe();
+        }
+        function mtgUpdateTasksFailsafe() {
+            const el = document.getElementById('mtgTxtTasks');
+            if (!el) return;
+            const d = mtgLoadDraft();
+            el.value = (d.tasks || []).filter(function (t) { return t.checked; })
+                .map(function (t, i) { return (i + 1) + '. ' + t.description + (t.due ? ' due ' + t.due : ''); })
+                .join('\n');
+        }
+        function mtgEscape(s) {
+            return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        // ---- Copy + clear ---------------------------------------------------------------
+        function mtgCopy(fieldId) {
+            const el = document.getElementById(fieldId);
+            if (!el) return;
+            const text = ('value' in el) ? el.value : el.textContent;
+            if (!text) { showToast('Nothing to copy yet.'); return; }
+            const done = function () { showToast('Copied.'); };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(done, function () { mtgCopyFallback(el, done); });
+            } else {
+                mtgCopyFallback(el, done);
+            }
+        }
+        function mtgCopyFallback(el, done) {
+            try { el.select(); document.execCommand('copy'); done(); }
+            catch (e) { showToast('Copy failed — select the text and copy by hand.'); }
+        }
+        function mtgClearAll() {
+            if (!confirm('Clear the transcript and all generated outputs? This cannot be undone.')) return;
+            mtgDraft = { v: 1, transcript: '', meetingType: 'auto', outputs: null, tasks: [], meta: null };
+            mtgSaveDraftNow();
+            const ta = document.getElementById('mtgTranscript');
+            if (ta) ta.value = '';
+            const res = document.getElementById('mtgResults');
+            if (res) res.style.display = 'none';
+            mtgStatusMsg('');
+        }
+
 
         // ==================== SOURCE EMAIL VIEWER (v4.6.0, Sec 5.18) ====================
         // The envelope stops leaving the app: when the backend capability
@@ -30703,6 +31387,15 @@ Make sure your suggestions directly address the specific root cause and discussi
             document.getElementById('aiRouteMeetingEmail').value = routing.meetingEmail || 'claude';
             document.getElementById('aiRouteTaskAssist').value = routing.taskAssist || 'gemini';
 
+            // v4.58.0: the Meeting Processor pair. The model select is seeded with the
+            // SAVED model as its only option so the saved choice survives an open+save
+            // without a network fetch (rule 16's rebuild trap); "Load available models"
+            // replaces the options with the provider's live list.
+            const mtgAI = (routing.meetingProcessor && routing.meetingProcessor.provider)
+                ? routing.meetingProcessor : MTG_DEFAULT_AI;
+            document.getElementById('aiRouteMeetingProcessor').value = mtgAI.provider;
+            mtgSeedModelSelect(mtgAI.model);
+
             const aiTokens = settings.aiTokens || {};
             document.getElementById('aiTokensBrainstorm').value = aiTokens.brainstorm || AI_TASK_TOKEN_DEFAULTS.brainstorm;
             document.getElementById('aiTokensTopics').value = aiTokens.topics || AI_TASK_TOKEN_DEFAULTS.topics;
@@ -31178,7 +31871,18 @@ Make sure your suggestions directly address the specific root cause and discussi
                 kanbanAgent: document.getElementById('aiRouteKanban').value,
                 marketing: document.getElementById('aiRouteMarketing').value,
                 meetingEmail: document.getElementById('aiRouteMeetingEmail').value,
-                taskAssist: document.getElementById('aiRouteTaskAssist').value
+                taskAssist: document.getElementById('aiRouteTaskAssist').value,
+                // v4.58.0: an OBJECT among strings, deliberately — the Meeting Processor
+                // needs provider AND model, and aiRouting already rides the synced
+                // settings payload so the pair travels with no payload change (rule 31).
+                // Readers of the string keys above are unaffected.
+                // An empty model saves as '' on purpose — falling back to the Anthropic
+                // default here would pair a Claude model id with whatever provider is
+                // selected. mtgGenerate refuses an empty model with a sentence instead.
+                meetingProcessor: {
+                    provider: document.getElementById('aiRouteMeetingProcessor').value,
+                    model: document.getElementById('aiRouteMeetingProcessorModel').value
+                }
             };
             settings.aiTokens = {
                 brainstorm: parseInt(document.getElementById('aiTokensBrainstorm').value, 10) || AI_TASK_TOKEN_DEFAULTS.brainstorm,
