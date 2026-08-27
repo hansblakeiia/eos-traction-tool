@@ -5213,7 +5213,20 @@
             vertical-align: top; overflow-wrap: anywhere;
         }
         #meetings .mtg-task-resolve td { background: #fef3c7; }
-        #meetings .mtg-resolve-flag { font-size: 0.72rem; color: #92400e; font-weight: 600; }
+        #meetings .mtg-resolve-flag { font-size: 0.72rem; color: #92400e; font-weight: 600; display: block; }
+        /* v4.60.0: the editable task rows + referrals card */
+        #meetings .mtg-tasks select, #meetings .mtg-tasks input[type="date"] {
+            font-size: 0.78rem; padding: 3px 4px; max-width: 150px;
+        }
+        #meetings .mtg-task-added { font-size: 0.7rem; color: #047857; font-weight: 700; white-space: nowrap; }
+        #meetings .mtg-ref-row {
+            padding: 8px 0; border-bottom: 1px solid var(--gray-200); font-size: 0.85rem;
+        }
+        #meetings .mtg-ref-row:last-child { border-bottom: none; }
+        #meetings .mtg-ref-confirmed { font-size: 0.8rem; color: #047857; margin-top: 4px; overflow-wrap: anywhere; }
+        #meetings .mtg-ref-unresolved { font-size: 0.8rem; color: #b45309; margin-top: 4px; }
+        #meetings .mtg-ref-candidates { min-width: 0; }
+        #meetings .mtg-ref-candidates .mtg-ref-pick { overflow-wrap: anywhere; }
         @media screen and (max-width: 768px) {
             #meetings .mtg-grid { grid-template-columns: 1fr; }
             #meetings .mtg-controls { align-items: stretch; }
