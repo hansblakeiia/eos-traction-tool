@@ -5278,6 +5278,18 @@
         #meetings .mtg-stage-foot > * { min-width: 0; }
         #meetings .mtg-import-mode { display: flex; flex-wrap: wrap; gap: 14px; margin: 0 0 8px; font-size: 0.82rem; }
         #meetings .mtg-import-mode label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+        /* v4.78.0: the formatted READ view on the three review cards (Hans's ask:
+           bold "Label:" headers, air between sections). Scrolls inside itself past
+           480px so a long coaching block never stretches the whole stage. */
+        #meetings .mtg-read {
+            font-size: 0.88rem; line-height: 1.65; overflow-wrap: anywhere;
+            padding: 2px 2px 4px; max-height: 480px; overflow-y: auto; min-width: 0;
+        }
+        #meetings .mtg-read-h { margin: 12px 0 4px; }
+        #meetings .mtg-read-h:first-child { margin-top: 0; }
+        #meetings .mtg-read-line { margin: 0 0 4px; }
+        #meetings .mtg-read-num { margin: 0 0 6px 16px; }
+        #meetings .mtg-read-gap { height: 10px; }
         @media screen and (max-width: 768px) {
             #meetings .mtg-grid { grid-template-columns: 1fr; }
             #meetings .mtg-controls { align-items: stretch; }
