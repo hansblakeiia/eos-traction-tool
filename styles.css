@@ -5227,8 +5227,62 @@
         #meetings .mtg-ref-unresolved { font-size: 0.8rem; color: #b45309; margin-top: 4px; }
         #meetings .mtg-ref-candidates { min-width: 0; }
         #meetings .mtg-ref-candidates .mtg-ref-pick { overflow-wrap: anywhere; }
+        /* v4.75.0: THE MEETING PIPELINE — drafts bar, stepper, stage accordion.
+           Same contract as the block above: #meetings-scoped, new classes only. */
+        #meetings .mtg-draft-row {
+            display: flex; align-items: center; gap: 8px; padding: 7px 0;
+            border-bottom: 1px solid var(--gray-200); font-size: 0.85rem;
+        }
+        #meetings .mtg-draft-row:last-child { border-bottom: none; }
+        #meetings .mtg-draft-row > * { min-width: 0; }   /* rule 8's guard, on creation */
+        #meetings .mtg-draft-main { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; cursor: pointer; }
+        #meetings .mtg-draft-sub { font-size: 0.74rem; color: var(--gray-500); }
+        #meetings .mtg-draft-row .btn { padding: 4px 10px; font-size: 0.76rem; flex: 0 0 auto; }
+        #meetings .mtg-draft-active .mtg-draft-main { font-weight: 600; }
+        #meetings .mtg-stage-pill {
+            flex: 0 0 auto; font-size: 0.72rem; padding: 2px 8px; border-radius: 10px;
+            background: var(--gray-100); color: var(--gray-700); white-space: nowrap;
+        }
+        #meetings .mtg-stepper { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+        #meetings .mtg-stepper > * { min-width: 0; }
+        #meetings .mtg-step {
+            display: flex; align-items: center; gap: 5px; padding: 5px 10px;
+            border: 1px solid var(--gray-300); border-radius: 16px; background: #fff;
+            font-size: 0.78rem; color: var(--gray-700); cursor: pointer; white-space: nowrap;
+        }
+        #meetings .mtg-step-cur { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+        #meetings .mtg-step-done { background: #ecfdf5; border-color: #a7f3d0; color: #047857; }
+        #meetings .mtg-step-skip { background: var(--gray-100); color: var(--gray-500); text-decoration: line-through; }
+        #meetings .mtg-step-locked { opacity: 0.45; cursor: default; }
+        #meetings .mtg-stage { margin-bottom: 14px; }
+        #meetings .mtg-stage-head {
+            display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+            background: var(--gray-100); border-left: 4px solid var(--gray-300);
+            border-radius: 8px; cursor: pointer;
+        }
+        #meetings .mtg-stage-head > * { min-width: 0; }
+        #meetings .mtg-stage-head h3 { font-size: 0.9rem; margin: 0; }
+        #meetings .mtg-stage-num {
+            flex: 0 0 auto; width: 20px; height: 20px; border-radius: 50%;
+            background: var(--gray-300); color: #fff; font-size: 0.72rem; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+        }
+        #meetings .mtg-stage-cur .mtg-stage-head { border-left-color: var(--accent); }
+        #meetings .mtg-stage-cur .mtg-stage-num { background: var(--accent); }
+        #meetings .mtg-stage-done .mtg-stage-num { background: #047857; }
+        #meetings .mtg-stage-badge { margin-left: auto; flex: 0 0 auto; font-size: 0.74rem; font-weight: 600; white-space: nowrap; }
+        #meetings .mtg-stage-locked .mtg-stage-head { opacity: 0.55; cursor: default; }
+        #meetings .mtg-stage-collapsed .mtg-stage-body { display: none; }
+        #meetings .mtg-stage-body { margin-top: 10px; }
+        #meetings .mtg-stage-foot { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        #meetings .mtg-stage-foot > * { min-width: 0; }
+        #meetings .mtg-import-mode { display: flex; flex-wrap: wrap; gap: 14px; margin: 0 0 8px; font-size: 0.82rem; }
+        #meetings .mtg-import-mode label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
         @media screen and (max-width: 768px) {
             #meetings .mtg-grid { grid-template-columns: 1fr; }
             #meetings .mtg-controls { align-items: stretch; }
             #meetings .mtg-controls .btn { width: 100%; }
+            /* v4.75.0: on a phone the stacked stage heads ARE the stepper (Hans's
+               vertical answer) — the horizontal strip would say the same thing twice. */
+            #meetings .mtg-stepper { display: none; }
         }
