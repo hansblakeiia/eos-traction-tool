@@ -5290,6 +5290,27 @@
         #meetings .mtg-read-line { margin: 0 0 4px; }
         #meetings .mtg-read-num { margin: 0 0 6px 16px; }
         #meetings .mtg-read-gap { height: 10px; }
+        /* v4.80.0: task rows — full-width auto-sizing text (his "can't see the task
+           without clicking into it"), controls on the line beneath. field-sizing is
+           the auto-grow; rows=2 in the markup is the older-browser floor. */
+        #meetings .mtg-task-row { padding: 8px 0; border-bottom: 1px solid var(--gray-200); }
+        #meetings .mtg-task-row:last-child { border-bottom: none; }
+        #meetings .mtg-task-line1 { display: flex; gap: 8px; align-items: flex-start; }
+        #meetings .mtg-task-line1 > * { min-width: 0; }   /* rule 9's guard */
+        #meetings .mtg-task-line1 input[type="checkbox"] { margin-top: 6px; flex: 0 0 auto; }
+        #meetings .mtg-task-line1 textarea {
+            flex: 1 1 auto; font-size: 0.85rem; line-height: 1.4; min-height: 0;
+            field-sizing: content; resize: vertical; overflow-wrap: anywhere;
+        }
+        #meetings .mtg-task-line2 {
+            display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+            margin: 4px 0 0 26px; font-size: 0.78rem;
+        }
+        #meetings .mtg-task-line2 > * { min-width: 0; }
+        #meetings .mtg-task-line2 select, #meetings .mtg-task-line2 input[type="date"] {
+            font-size: 0.78rem; padding: 3px 4px; max-width: 180px;
+        }
+        #meetings .mtg-task-resolve-row { background: #fef3c7; border-radius: 6px; padding: 8px 6px; }
         @media screen and (max-width: 768px) {
             #meetings .mtg-grid { grid-template-columns: 1fr; }
             #meetings .mtg-controls { align-items: stretch; }
