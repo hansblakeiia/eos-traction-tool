@@ -5290,27 +5290,44 @@
         #meetings .mtg-read-line { margin: 0 0 4px; }
         #meetings .mtg-read-num { margin: 0 0 6px 16px; }
         #meetings .mtg-read-gap { height: 10px; }
-        /* v4.80.0: task rows — full-width auto-sizing text (his "can't see the task
-           without clicking into it"), controls on the line beneath. field-sizing is
-           the auto-grow; rows=2 in the markup is the older-browser floor. */
-        #meetings .mtg-task-row { padding: 8px 0; border-bottom: 1px solid var(--gray-200); }
-        #meetings .mtg-task-row:last-child { border-bottom: none; }
-        #meetings .mtg-task-line1 { display: flex; gap: 8px; align-items: flex-start; }
+        /* v4.81.0: task rows — ONE line on desktop (text takes the wide half,
+           owner + due beside it; his "tasks should cover half the page, run to a
+           second row when they need more"); on a narrow screen the controls wrap
+           beneath. field-sizing:content is the auto-grow; rows=1 is the floor. */
+        #meetings .mtg-task-row { padding: 7px 0; border-bottom: 1px solid var(--gray-200); }
+        #meetings .mtg-task-row:last-of-type { border-bottom: none; }
+        #meetings .mtg-task-line1 { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
         #meetings .mtg-task-line1 > * { min-width: 0; }   /* rule 9's guard */
-        #meetings .mtg-task-line1 input[type="checkbox"] { margin-top: 6px; flex: 0 0 auto; }
+        #meetings .mtg-task-line1 input[type="checkbox"] { margin-top: 8px; flex: 0 0 auto; }
         #meetings .mtg-task-line1 textarea {
-            flex: 1 1 auto; font-size: 0.85rem; line-height: 1.4; min-height: 0;
-            field-sizing: content; resize: vertical; overflow-wrap: anywhere;
+            flex: 1 1 320px; min-width: 240px; font-size: 0.85rem; line-height: 1.4;
+            min-height: 0; field-sizing: content; resize: vertical; overflow-wrap: anywhere;
         }
-        #meetings .mtg-task-line2 {
-            display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
-            margin: 4px 0 0 26px; font-size: 0.78rem;
+        #meetings .mtg-task-ctl {
+            /* nowrap INSIDE the cluster: owner + due stay one unit beside the text;
+               the whole cluster wraps beneath only when the row is genuinely narrow */
+            display: flex; flex-wrap: nowrap; gap: 6px; align-items: center;
+            flex: 0 0 auto; font-size: 0.78rem; margin-top: 3px;
         }
-        #meetings .mtg-task-line2 > * { min-width: 0; }
-        #meetings .mtg-task-line2 select, #meetings .mtg-task-line2 input[type="date"] {
-            font-size: 0.78rem; padding: 3px 4px; max-width: 180px;
+        #meetings .mtg-task-ctl > * { min-width: 0; }
+        #meetings .mtg-task-ctl select { font-size: 0.78rem; padding: 3px 4px; max-width: 150px; }
+        #meetings .mtg-task-ctl input[type="date"] {
+            font-size: 0.78rem; padding: 3px 4px; width: 9.2rem; max-width: none; flex: 0 0 auto;
         }
-        #meetings .mtg-task-resolve-row { background: #fef3c7; border-radius: 6px; padding: 8px 6px; }
+        #meetings .mtg-task-resolve-row { background: #fef3c7; border-radius: 6px; padding: 7px 6px; }
+        #meetings .mtg-task-sec { font-size: 0.82rem; font-weight: 700; margin: 4px 0 2px; }
+        #meetings .mtg-task-none { font-size: 0.78rem; color: var(--gray-500); padding: 4px 0; }
+        /* v4.81.0: open-question rows + the AI research answer block */
+        #meetings .mtg-oq-row { padding: 5px 0; border-bottom: 1px solid var(--gray-200); }
+        #meetings .mtg-oq-row:last-child { border-bottom: none; }
+        #meetings .mtg-oq-line { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+        #meetings .mtg-oq-line > * { min-width: 0; }
+        #meetings .mtg-oq-line input[type="text"] { flex: 1 1 280px; min-width: 220px; font-size: 0.85rem; }
+        #meetings .mtg-oq-a {
+            margin: 6px 0 2px 8px; padding: 8px 10px; border-left: 3px solid var(--gray-300);
+            background: var(--gray-50); border-radius: 0 6px 6px 0;
+            font-size: 0.82rem; line-height: 1.55; overflow-wrap: anywhere;
+        }
         @media screen and (max-width: 768px) {
             #meetings .mtg-grid { grid-template-columns: 1fr; }
             #meetings .mtg-controls { align-items: stretch; }
