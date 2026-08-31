@@ -1892,7 +1892,7 @@
                released on :focus, so tapping the title to edit expands it in place - which
                is also how you read a clipped one - and Details holds the full text too. */
             .todo-item.den-cozy .todo-text {
-                display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+                display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;
                 overflow: hidden;
             }
             .todo-item.den-cozy .todo-text:focus {
@@ -5049,6 +5049,16 @@
             display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
             overflow: hidden; overflow-wrap: anywhere;       /* rule 8: `anywhere`, never break-word */
         }
+        /* v4.83.0 (his note 5: "Today’s calendar does not need to span across the
+           entire desktop"). The bubbles were unstyled block children, so each ran the full
+           width of the brief. Two columns from 992px — the same threshold and the same
+           reason as the meeting task grid. */
+        .mb-agenda { display: grid; grid-template-columns: 1fr; gap: 4px; }
+        .mb-agenda > * { min-width: 0; }          /* rule 8: guard a new grid on creation */
+        @media screen and (min-width: 992px) {
+            .mb-agenda { grid-template-columns: 1fr 1fr; column-gap: 14px; }
+        }
+
         .mb-mail-acts {
             display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 7px;
         }
@@ -5141,12 +5151,21 @@
             .mb-mail-cards { grid-template-columns: 1fr; }
             .mb-mail-cards:not(.mb-mail-all) > .mb-mail-card:nth-child(n+3) { display: none; }
             .mb-mail-card { padding: 8px 10px; }
-            .mb-mail-snip { -webkit-line-clamp: 1; }
             .mb-mailhost .mb-sec { margin-bottom: 10px; }
             /* Rule 5: a 44px floor on a coarse pointer already applies to every button, so
                these read taller on a real phone than they measure in a desktop browser at a
                375 viewport. Nothing here fights it. */
-            .mb-mail-acts { gap: 5px; }
+            /* v4.83.0 — HIS SCREENSHOT: six buttons + the dots wrapped into a ragged
+               2-row crush with the ⋯ orphaned on a line of its own. The buttons stay
+               (v4.72.0 was his explicit ask: Dismiss/Snooze/Handled must not hide behind
+               the dots) — what changes is the LAYOUT: a 3-column grid makes exactly two
+               even rows, with the why-line spanning above them. Trash is the one action
+               left to the dots menu here, so the grid stays 2×3 rather than 3×3. */
+            .mb-mail-acts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; align-items: stretch; }
+            .mb-mail-acts .mb-why { grid-column: 1 / -1; white-space: normal; }
+            .mb-mail-acts .mb-mail-btn { width: 100%; text-align: center; padding: 6px 4px; }
+            .mb-mail-acts .mb-mail-trash { display: none; }
+            .mb-mail-snip { -webkit-line-clamp: 2; }
 
             /* *** THE TRADE, AND IT IS MEASURED RATHER THAN PREFERRED. *** Without mail the
                band runs 607px at 375 against ~682px of screen above the fold — 75px of slack.
