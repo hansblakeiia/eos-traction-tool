@@ -5296,6 +5296,13 @@
            beneath. field-sizing:content is the auto-grow; rows=1 is the floor. */
         #meetings .mtg-task-row { padding: 7px 0; border-bottom: 1px solid var(--gray-200); }
         #meetings .mtg-task-row:last-of-type { border-bottom: none; }
+        /* v4.82.0 (his clarification): TWO COLUMNS on a PC — four follow-ups become
+           two rows of two instead of four full-width rows with a whitespace canyon. */
+        #meetings .mtg-task-grid { display: grid; grid-template-columns: 1fr; column-gap: 24px; }
+        #meetings .mtg-task-grid > * { min-width: 0; }   /* rule 8's guard, on creation */
+        @media screen and (min-width: 992px) {
+            #meetings .mtg-task-grid { grid-template-columns: 1fr 1fr; }
+        }
         #meetings .mtg-task-line1 { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
         #meetings .mtg-task-line1 > * { min-width: 0; }   /* rule 9's guard */
         #meetings .mtg-task-line1 input[type="checkbox"] { margin-top: 8px; flex: 0 0 auto; }
