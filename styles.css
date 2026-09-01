@@ -5470,9 +5470,41 @@
     cursor: pointer;
     overflow: hidden;
 }
-.mb-row-from { font-weight: 600; color: #111827; white-space: nowrap; flex: 0 0 auto; max-width: 40%; overflow: hidden; text-overflow: ellipsis; }
-.mb-row-subj { color: #374151; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.mb-row-snip { color: #9ca3af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1 1 auto; }
+/* v4.96.0 — HIS ASK: "make the daily brief mimic Google more in that the header
+   isn't shrunk down, but fully exposed in bold… clean left alignment where there is
+   space between the sender's last name and the header of the email, and then the
+   actual content."
+   Gmail's row is three ranks: sender (bold, fixed column), SUBJECT (bold, full size,
+   the thing you actually read), preview (grey, gives way first). The old row had the
+   subject at the same weight as the preview and no column for the sender, so the
+   three ran together — which is what he was looking at.
+   The sender gets a FIXED-WIDTH column rather than max-width, because "clean left
+   alignment" means the subjects start at the same x down the whole list; a
+   content-sized sender makes every row start somewhere different. */
+.mb-row-from {
+    font-weight: 700;
+    color: #111827;
+    white-space: nowrap;
+    flex: 0 0 15rem;
+    width: 15rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 12px;
+}
+.mb-row-subj {
+    font-weight: 700;
+    color: #111827;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 46%;
+    padding-right: 10px;
+}
+/* The preview is the only part allowed to be eaten by a narrow window — rule 56's
+   flex: 0 1 on the parts that must stay adjacent, 1 1 on the one that may give way. */
+.mb-row-snip { color: #9ca3af; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1 1 auto; }
 .mb-row-why { font-size: 0.72rem; color: #6b7280; white-space: nowrap; max-width: 26ch; overflow: hidden; text-overflow: ellipsis; }
 .mb-row-why.mb-why-vip { color: #b45309; font-weight: 600; }
 .mb-row-acts { display: flex; gap: 2px; flex: 0 0 auto; }
@@ -5533,6 +5565,11 @@
     }
     .mb-row-ck { grid-area: ck; width: 22px; height: 22px; }
     .mb-row-main { grid-area: main; flex-direction: column; align-items: flex-start; gap: 1px; }
+    /* v4.96.0: the desktop sender COLUMN is what gives "clean left alignment" there, but
+       on a stacked phone row it would push the subject off screen — the stack itself is
+       the separation on a phone, so the column is released. */
+    .mb-row-from { flex: 0 0 auto; width: auto; padding-right: 0; }
+    .mb-row-subj { max-width: 100%; padding-right: 0; }
     .mb-row-age { grid-area: age; }
     .mb-row-acts { grid-area: acts; }
     .mb-row-why { display: none; }
