@@ -4007,6 +4007,31 @@
                 flex: 1 1 auto; min-width: 0; margin-top: 0;
                 overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
             }
+            /* v4.94.0 (his screenshot): the sync button sits top-right of the blue block
+               with the "Last sync:" line UNDERNEATH it — "below the sync button should be
+               the Last sync: just now wording", his words. Column, right-aligned, so the
+               status text tracks the button rather than the title. Pulled up by the
+               button's own height so it sits level with the company name instead of
+               adding a third row to the header. */
+            .drawer-head { position: relative; }
+            .drawer-head .dh-syncwrap {
+                position: absolute; top: 12px; right: 14px;
+                display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+                max-width: 46%;
+            }
+            .drawer-head .dh-syncwrap .dh-sub {
+                margin-top: 0; font-size: 0.68rem; text-align: right;
+                max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            }
+            /* The title must not run under the absolutely-positioned sync block. */
+            .drawer-head .dh-title, .drawer-head > .dh-sub { padding-right: 48%; }
+            /* The version chip in the blue header. It is a button (the changelog's only
+               phone route), so it needs the button chrome stripped and the tap target kept. */
+            .drawer-head .dh-verlink {
+                background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.35);
+                color: #fff; font: inherit; font-size: 0.7rem; font-weight: 700;
+                border-radius: 999px; padding: 1px 8px; margin-left: 4px; cursor: pointer;
+            }
             /* 44px deliberately, NOT the ~32px this pill wants visually. `.drawer-head
                .dh-sync` (0,2,0) beats the global `(hover:none) and (pointer:coarse) button
                { min-height:44px }` (0,0,1) on specificity, so a smaller number here would
@@ -4055,6 +4080,32 @@
                which is exactly what his screenshot showed), and every chip is nowrap so
                "Sign out" can never fold into a two-line box again. */
             .drawer-foot > span { min-width: 0; }
+            /* v4.94.0 — HIS ARRANGEMENT, and it is a safety layout, not a tidy one.
+               "Move the Sign out button over to the left, and to the right of Hans with 2FA
+               under Hans, and move the larger Settings button over to the right, so it is
+               easy to access and won't accidentally sign out."
+               So: name (with 2FA beneath it) → Sign out → a spacer that eats all slack →
+               Settings hard against the right edge. Settings is the control he reaches for
+               constantly; Sign out is the one mis-tap that costs him a re-login. Distance is
+               the only thing that actually protects a thumb, so they take opposite ends.
+               The strip dropped from six controls to three, which is why this now fits with
+               room to spare where v4.27.0 had to fight for one line at 375. */
+            .drawer-foot .df-who {
+                display: flex; flex-direction: column; align-items: flex-start;
+                gap: 1px; min-width: 0; flex: 0 1 auto;
+            }
+            .drawer-foot .df-name {
+                min-width: 0; max-width: 100%;
+                overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+                font-weight: 600; color: var(--gray-700);
+            }
+            /* The 2FA chip is reused verbatim from the old row, so it keeps its own
+               styling; it just sits under the name now instead of beside it. */
+            .drawer-foot .df-2fa .dh-ver { font-size: 0.68rem; padding: 0 6px; }
+            /* This is what pushes Settings to the far edge. A spacer rather than
+               margin-left:auto on the button, so the gap is visible in the markup and a
+               later insertion cannot silently land on the wrong side of it. */
+            .drawer-foot .df-spacer { flex: 1 1 auto; min-width: 8px; }
         }
 
         /* ============ QUICK-ADD FAB (v3.66.3, Hans feedback 6) ============
