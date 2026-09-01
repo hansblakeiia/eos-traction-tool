@@ -5382,6 +5382,113 @@
             #meetings .mtg-stepper { display: none; }
         }
 
+/* ── Mail rows + bulk bar (v4.93.0) ───────────────────────────────────────────
+   His fourth screenshot is a Gmail list row, and his complaint about the filtered
+   list was that "the action links are so far away from the wording" — true, and
+   measurable: the sender sat at the left edge and "Show me" at the right edge of a
+   1900px desktop. The actions now ride the row, immediately after the text.
+   Grid, not flex, so every row's columns line up down the list — a flex row would
+   put each row's icons wherever that row's text happened to end.                   */
+.mb-rows { list-style: none; margin: 0; padding: 0; }
+.mb-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px;
+    border-bottom: 1px solid #e5e7eb;
+    border-radius: 6px;
+}
+.mb-row:hover { background: #f9fafb; }
+.mb-row.sel { background: #eff6ff; }
+.mb-row-dim .mb-row-from, .mb-row-dim .mb-row-subj { opacity: 0.75; }
+.mb-row-ck { width: 18px; height: 18px; flex: 0 0 auto; accent-color: #2563eb; cursor: pointer; }
+/* The text block is a BUTTON (the whole row opens the email), so it has to be
+   stripped of button chrome and left-aligned. min-width:0 is what lets it
+   ellipsize instead of inflating the track — rule 8/9, guarded on creation. */
+.mb-row-main {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    background: none;
+    border: 0;
+    padding: 2px 0;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    overflow: hidden;
+}
+.mb-row-from { font-weight: 600; color: #111827; white-space: nowrap; flex: 0 0 auto; max-width: 40%; overflow: hidden; text-overflow: ellipsis; }
+.mb-row-subj { color: #374151; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.mb-row-snip { color: #9ca3af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1 1 auto; }
+.mb-row-why { font-size: 0.72rem; color: #6b7280; white-space: nowrap; max-width: 26ch; overflow: hidden; text-overflow: ellipsis; }
+.mb-row-why.mb-why-vip { color: #b45309; font-weight: 600; }
+.mb-row-acts { display: flex; gap: 2px; flex: 0 0 auto; }
+.mb-row-age { font-size: 0.72rem; color: #9ca3af; white-space: nowrap; min-width: 3ch; text-align: right; }
+.mb-ic {
+    background: none;
+    border: 0;
+    cursor: pointer;
+    padding: 4px 5px;
+    border-radius: 6px;
+    line-height: 1;
+    font-size: 0.95rem;
+    color: #4b5563;
+}
+.mb-ic:hover { background: #e5e7eb; color: #111827; }
+.mb-selbar { display: flex; justify-content: flex-end; padding: 2px 6px; }
+
+/* The bulk bar only exists while something is ticked, so it is allowed to be loud.
+   It is sticky at the foot of the band because a selection made at the top of a
+   long list must stay actionable without scrolling back. */
+.mb-bulk {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    padding: 8px 10px;
+    background: #1e3a8a;
+    border-radius: 8px;
+}
+.mb-bulk-n { color: #fff; font-size: 0.8rem; font-weight: 700; margin-right: 4px; }
+.mb-bulk-btn {
+    background: #fff;
+    border: 0;
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #1e3a8a;
+    cursor: pointer;
+}
+.mb-bulk-btn:hover { background: #dbeafe; }
+.mb-bulk-x { background: transparent; color: #bfdbfe; }
+
+@media (max-width: 768px) {
+    /* On a phone the row goes two-line: text on top, actions beneath, so the icons
+       keep their 44px coarse-pointer targets (rule 5) without squeezing the subject
+       to nothing. The why-text is dropped — on 412px it was winning space from the
+       subject, which is the thing he actually reads. */
+    .mb-row {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-areas: "ck main age" ". acts acts";
+        row-gap: 2px;
+        padding: 6px;
+    }
+    .mb-row-ck { grid-area: ck; width: 22px; height: 22px; }
+    .mb-row-main { grid-area: main; flex-direction: column; align-items: flex-start; gap: 1px; }
+    .mb-row-age { grid-area: age; }
+    .mb-row-acts { grid-area: acts; }
+    .mb-row-why { display: none; }
+    .mb-row-from, .mb-row-subj, .mb-row-snip { max-width: 100%; }
+    .mb-ic { padding: 8px 10px; font-size: 1.05rem; }
+}
+
 /* ── Daily Habits chips (v4.92.0) ─────────────────────────────────────────────
    His item 3: "taking up a lot of space on mobile." These were inline-styled, so
    no stylesheet rule could reach them (rule 11) — the look lives here now and the
