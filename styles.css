@@ -5433,6 +5433,50 @@
             #meetings .mtg-stepper { display: none; }
         }
 
+/* ── The week ahead (v5.0.0) ──────────────────────────────────────────────────
+   Sits above the daily brief on Today, and is deliberately QUIETER than it — the
+   brief is what he acts on every morning; this is context he reads once a week.
+   Same band grammar so the two read as one surface rather than two designs.      */
+.wk-band {
+    border-left: 4px solid #7c3aed;
+    background: linear-gradient(135deg, #faf5ff 0%, #f5f3ff 100%);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+}
+.wk-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.wk-title { font-size: 1.05rem; font-weight: 700; color: #5b21b6; }
+.wk-sub { font-size: 0.82rem; color: var(--gray-600); margin-top: 2px; }
+
+/* One bar per day. Fixed height so the row cannot reflow as the week fills up. */
+.wk-bars { display: flex; align-items: flex-end; gap: 6px; height: 56px; margin: 10px 0 12px; }
+.wk-bar { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; }
+.wk-bar-fill { background: #a78bfa; border-radius: 3px 3px 0 0; }
+.wk-bar-day { font-size: 0.66rem; color: var(--gray-500); text-align: center; margin-top: 3px; }
+
+/* Prep cards. Auto-fit rather than a fixed count, so one meeting is not a lonely
+   third of a row and six do not squeeze — the grid decides from the real width. */
+.wk-people { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 8px; }
+.wk-people > * { min-width: 0; }          /* rule 8 — guard the grid child on creation */
+.wk-person { background: #fff; border: 1px solid #ddd6fe; border-radius: 8px; padding: 8px 10px; }
+.wk-p-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.wk-p-name { font-weight: 700; color: #111827; overflow-wrap: anywhere; }
+.wk-p-when { font-size: 0.72rem; color: #7c3aed; white-space: nowrap; }
+.wk-p-title { font-size: 0.78rem; color: var(--gray-600); margin: 2px 0 4px; overflow-wrap: anywhere; }
+.wk-p-bits { margin: 0; padding-left: 16px; font-size: 0.76rem; color: var(--gray-600); line-height: 1.45; }
+.wk-p-bits li { margin-bottom: 2px; overflow-wrap: anywhere; }
+.wk-acts { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+.wk-ai { font-size: 0.82rem; color: var(--gray-700); margin-top: 8px; }
+.wk-ai-body { background: #fff; border: 1px solid #ddd6fe; border-radius: 8px; padding: 10px 12px; line-height: 1.5; }
+
+@media (max-width: 768px) {
+    .wk-band { padding: 10px 12px; }
+    .wk-bars { height: 44px; }
+    /* One card at a time on a phone: two 230px columns cannot fit 412px, and letting
+       the grid try produces a squeezed pair rather than an honest single. */
+    .wk-people { grid-template-columns: 1fr; }
+}
+
 /* ── Mail rows + bulk bar (v4.93.0) ───────────────────────────────────────────
    His fourth screenshot is a Gmail list row, and his complaint about the filtered
    list was that "the action links are so far away from the wording" — true, and
