@@ -5463,6 +5463,21 @@
 .gm-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }
 .gm-note { font-size: 0.82rem; color: var(--gray-600); }
 .gm-err { color: #991b1b; }
+/* v5.2.2 — the "Search for" box and its candidates. Never a dead end: the name as
+   read is editable, Search re-runs Google Contacts + Redtail on what HE typed, and
+   each candidate is a button that continues the draft. */
+.gm-search { margin-top: 10px; background: #fff; border: 1px solid #fecaca; border-radius: 8px; padding: 10px 12px; }
+.gm-search-row { display: flex; gap: 8px; margin: 8px 0; }
+.gm-search-row input { flex: 1 1 auto; min-width: 0; font: inherit; font-size: 0.9rem; padding: 7px 10px; border: 1px solid var(--gray-300); border-radius: 6px; }
+.gm-cands { display: flex; flex-wrap: wrap; gap: 6px; }
+.gm-cand {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+    background: #f9fafb; border: 1px solid var(--gray-200); border-radius: 8px;
+    padding: 6px 10px; cursor: pointer; font: inherit; text-align: left; min-width: 0;
+}
+.gm-cand:hover { background: #fee2e2; border-color: #fca5a5; }
+.gm-cand-n { font-weight: 600; color: #111827; }
+.gm-cand-s { font-size: 0.72rem; color: var(--gray-500); }
 #gmailInbox { margin-top: 6px; }
 
 /* ── Birthdays in the brief (v5.2.0) ──────────────────────────────────────────── */
