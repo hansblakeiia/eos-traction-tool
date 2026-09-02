@@ -5433,6 +5433,46 @@
             #meetings .mtg-stepper { display: none; }
         }
 
+/* ── The Gmail page, built around the drafter (v5.2.0) ────────────────────────
+   One box he types into; the inbox underneath is the SAME .mb-row the brief uses.  */
+.gm-agent {
+    border-left: 4px solid #b91c1c;
+    background: linear-gradient(135deg, #fff1f2 0%, #fef2f2 100%);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+}
+.gm-agent h3 { margin: 0 0 4px; font-size: 1.05rem; color: #991b1b; }
+.gm-agent-sub { font-size: 0.82rem; color: var(--gray-600); margin-bottom: 8px; }
+.gm-agent textarea {
+    width: 100%; box-sizing: border-box; min-height: 74px; resize: vertical;
+    font: inherit; font-size: 0.92rem; padding: 10px 12px;
+    border: 1px solid #fecaca; border-radius: 8px; background: #fff;
+}
+.gm-agent-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 8px; }
+.gm-status { font-size: 0.8rem; color: #7f1d1d; min-height: 1.2em; }
+.gm-result { background: #fff; border: 1px solid #fecaca; border-radius: 8px; padding: 12px 14px; margin-top: 10px; }
+.gm-ok { font-size: 0.9rem; color: #065f46; margin-bottom: 4px; }
+.gm-via { color: var(--gray-500); font-size: 0.78rem; }
+.gm-ctx { font-size: 0.78rem; color: var(--gray-500); margin-bottom: 8px; }
+.gm-subj { font-weight: 700; color: #111827; margin-bottom: 4px; }
+.gm-body { font-size: 0.9rem; color: #374151; line-height: 1.5; white-space: normal; }
+.gm-todo { margin-top: 10px; padding: 8px 10px; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; }
+.gm-todo-h { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #92400e; margin-bottom: 4px; }
+.gm-todo ul { margin: 0; padding-left: 18px; font-size: 0.85rem; color: #78350f; }
+.gm-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }
+.gm-note { font-size: 0.82rem; color: var(--gray-600); }
+.gm-err { color: #991b1b; }
+#gmailInbox { margin-top: 6px; }
+
+/* ── Birthdays in the brief (v5.2.0) ──────────────────────────────────────────── */
+.mb-bdays { display: flex; flex-direction: column; gap: 4px; }
+.mb-bday { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font-size: 0.88rem; color: #374151; }
+
+@media (max-width: 768px) {
+    .gm-agent { padding: 10px 12px; }
+}
+
 /* ── "You are on an old build" strip (v5.1.0) ─────────────────────────────────
    Static, in the flow, at the very top of .container — deliberately NOT fixed, so
    it needs no clearance from the FAB, the save indicator or the bottom nav (rules
