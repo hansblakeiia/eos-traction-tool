@@ -5433,6 +5433,44 @@
             #meetings .mtg-stepper { display: none; }
         }
 
+/* ── "You are on an old build" strip (v5.1.0) ─────────────────────────────────
+   Static, in the flow, at the very top of .container — deliberately NOT fixed, so
+   it needs no clearance from the FAB, the save indicator or the bottom nav (rules
+   12 and 52). A rare event may push the page down by one strip.                  */
+.stale-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    background: #fef3c7;
+    border: 1px solid #f59e0b;
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin: 8px 0 10px;
+    font-size: 0.85rem;
+    color: #78350f;
+}
+.stale-bar > span { flex: 1 1 260px; min-width: 0; }
+
+/* ── Today-page toggles (v5.1.0) ──────────────────────────────────────────────
+   Classes on #dailyPlanGrid; nothing is unmounted (rule 15). The desktop grid
+   loses the matrix TRACK, not just its content, or the two remaining columns
+   would sit either side of a gap.                                                */
+.daily-plan-grid.dp-hide-matrix { grid-template-columns: 1fr 1fr; }
+.daily-plan-grid.dp-hide-matrix > .dp-col-matrix { display: none; }
+.daily-plan-grid.dp-hide-rule3 .rule-of-3 { display: none; }
+.daily-plan-grid.dp-hide-pomodoro .pomodoro-section { display: none; }
+
+/* ── Mail row: breathing room (v5.1.0) ─────────────────────────────────────────
+   His words: "the icons are all cluttered together". 2px between seven icons
+   read as one smear; 6px plus a hairline before the trailing group separates
+   the mailbox verbs (archive/delete/read) from the tool verbs (snooze/task/mute). */
+/* (gap is set on the base .mb-row-acts rule further DOWN the sheet - an override
+   written here, EARLIER, lost the equal-specificity tie and did nothing: rule 10b.) */
+.mb-row-acts .mb-ic:nth-child(4) { margin-left: 6px; border-left: 1px solid #e5e7eb; padding-left: 9px; border-radius: 0 6px 6px 0; }
+.mb-selbar { justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 2px; }
+.mb-selbar-l { display: flex; gap: 12px; }
+
 /* ── The week ahead (v5.0.0) ──────────────────────────────────────────────────
    Sits above the daily brief on Today, and is deliberately QUIETER than it — the
    brief is what he acts on every morning; this is context he reads once a week.
@@ -5551,7 +5589,7 @@
 .mb-row-snip { color: #9ca3af; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1 1 auto; }
 .mb-row-why { font-size: 0.72rem; color: #6b7280; white-space: nowrap; max-width: 26ch; overflow: hidden; text-overflow: ellipsis; }
 .mb-row-why.mb-why-vip { color: #b45309; font-weight: 600; }
-.mb-row-acts { display: flex; gap: 2px; flex: 0 0 auto; }
+.mb-row-acts { display: flex; gap: 6px; flex: 0 0 auto; }   /* v5.1.0: was 2px - 'the icons are all cluttered together' */
 .mb-row-age { font-size: 0.72rem; color: #9ca3af; white-space: nowrap; min-width: 3ch; text-align: right; }
 .mb-ic {
     background: none;
