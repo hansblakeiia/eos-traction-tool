@@ -13,7 +13,7 @@
          Marketing tab; the rest of the app is untouched by this. -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%231a365d' width='100' height='100' rx='15'/%3E%3Ctext x='50' y='50' font-family='Arial, sans-serif' font-size='45' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='central'%3EEOS%3C/text%3E%3Ccircle cx='85' cy='15' r='8' fill='%233182ce'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="styles.css?v=5.3.1">
+    <link rel="stylesheet" href="styles.css?v=5.5.0">
 </head>
 <body>
     <div class="container">
@@ -4096,9 +4096,10 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '5.4.0';
+        const EOS_VERSION = '5.5.0';
         const EOS_BUILD_DATE = '2026-09-03';
-        const EOS_BUILD_TIME = '14:30'; // v5.4.0: THE DRAFTER SEES THE WHOLE RELATIONSHIP (pairs with .gs v3.72.0, both accounts; styles.css unchanged, link stays ?v=5.3.1). His Rick Ezell draft: "Read: 0 recent messages · no meeting on file" and a generic "Lunch soon?", against Claude Chat's version that knew the March lunch at Kitchen Sync, the six-month standing agreement, Cindy's mother, Employee Care of America — because Chat read 36 threads back to 2022, the full March thread, the calendar (March 24 lunch + the Sept 7 "Set up lunch" reminder), and his sent mail for voice. THREE CUT-OFFS, all ours: searchMail ran 120 days by ADDRESS alone (the March thread was 160 days old; people write from more than one address); _gmLastMeeting read the calendar feed on screen (~a month); four bodies. NOW: name+address (server-composed, name whitelisted to letters), 365 days then 1825 if empty, 30 rows, six bodies, twelve lines of thread in the context with ME/THEM marked, a TODAY line so "six months since" can be computed, the calendar over 24 months back / 12 ahead through the new searchCalendarEvents (newest past = last meeting, soonest future = "NEXT ON YOUR CALENDAR" — the reminder is what makes the email well-timed), and the prompt tells the model to write in HIS voice modelled on the ME messages and to use the people/places/agreements the context records. Both new reads gate on .gs 3.72.0 (GMAIL_AGENT_WIDE_GS_MIN); an older backend gets the old address-only read and the result line SAYS so. Result line now reads "N messages back to <date> · last meeting · next on your calendar · open items". Probe mail-agent A2 upgraded (name allowed, six bodies), A11 (name rides with the address; empty year widens to five), A12 (calendar searched by name; NEXT ON YOUR CALENDAR and the last calendar entry reach the prompt; Meeting Processor note still wins as LAST MEETING).
+        const EOS_BUILD_TIME = '15:40'; // v5.5.0: THE DRAFTER KNOWS WHAT DAY IT IS (client-only, TWO-FILE, ?v=5.5.0). His second Rick Ezell draft on v5.4.0 had the facts (Kitchen Sync, the standing lunch, Employee Care of America, Cindy's mother) and read them as if the March thread had arrived this morning: "Great to hear from you" after six months of silence, "glad our standing lunch is sticking" after ONE lunch, "glad Cindy's mother has settled in" about a move in progress six months earlier, and it threaded as "Re: Time for our six-month lunch?". The model was given the thread's TEXT and never its AGE. NOW: a TIME SINCE LAST CONTACT line (days, who wrote last, when); past GMAIL_AGENT_REPLY_WINDOW_DAYS (45) the email is a FRESH OUTREACH — the prompt says so and forbids thanking them for writing, the draft is NOT threaded onto the old conversation and any leading "Re:" is stripped; a TIME AWARENESS instruction (what was in progress then has moved on; ask in the present; count the meetings — one lunch plus an agreement means this proposes the SECOND, never "sticking"); the JSON gains "briefing" — 3-5 factual bullets FOR HANS with dates and sources — rendered above the draft as "What I found, for you", after a deterministic first line (last met/where, next on the calendar, last email N days ago and therefore outreach vs reply). SPINNER: every _gmStep carries a .gm-spin ring beside the words (his ask: "a loading spinner or throbber so I can tell if AI is working"). Probe mail-agent A13 (a two-day-old thread is a REPLY: threaded, TIME SINCE line, briefing rendered) and A14 (a 200-day-old thread is a FRESH OUTREACH: not threaded, no Re:, the prompt forbids "great to hear from you", the What-I-found box says outreach).
+        // v5.4.0 (14:30): THE DRAFTER SEES THE WHOLE RELATIONSHIP (pairs with .gs v3.72.0, both accounts; styles.css unchanged, link stays ?v=5.3.1). His Rick Ezell draft: "Read: 0 recent messages · no meeting on file" and a generic "Lunch soon?", against Claude Chat's version that knew the March lunch at Kitchen Sync, the six-month standing agreement, Cindy's mother, Employee Care of America — because Chat read 36 threads back to 2022, the full March thread, the calendar (March 24 lunch + the Sept 7 "Set up lunch" reminder), and his sent mail for voice. THREE CUT-OFFS, all ours: searchMail ran 120 days by ADDRESS alone (the March thread was 160 days old; people write from more than one address); _gmLastMeeting read the calendar feed on screen (~a month); four bodies. NOW: name+address (server-composed, name whitelisted to letters), 365 days then 1825 if empty, 30 rows, six bodies, twelve lines of thread in the context with ME/THEM marked, a TODAY line so "six months since" can be computed, the calendar over 24 months back / 12 ahead through the new searchCalendarEvents (newest past = last meeting, soonest future = "NEXT ON YOUR CALENDAR" — the reminder is what makes the email well-timed), and the prompt tells the model to write in HIS voice modelled on the ME messages and to use the people/places/agreements the context records. Both new reads gate on .gs 3.72.0 (GMAIL_AGENT_WIDE_GS_MIN); an older backend gets the old address-only read and the result line SAYS so. Result line now reads "N messages back to <date> · last meeting · next on your calendar · open items". Probe mail-agent A2 upgraded (name allowed, six bodies), A11 (name rides with the address; empty year widens to five), A12 (calendar searched by name; NEXT ON YOUR CALENDAR and the last calendar entry reach the prompt; Meeting Processor note still wins as LAST MEETING).
         // v5.3.1 (13:10): HIS FIRST LIVE DRAFT, TWO REPORTS (TWO-FILE, ?v=5.3.1). (1) 'Unknown AI provider "claude". Expected one of: anthropic, openai, gemini, grok.' — the app has called Anthropic "claude" since the routing table was written and the backend's AI_KEY_PROPS_ only knows "anthropic"; every caller through callAIViaBackend (the drafter, the composer's Rewrite, the birthday greeting) sent the client id verbatim and died on that sentence. ONE translation at the seam, _aiBackendProviderId, never at the call sites. (2) "It is a bit jarring when I click on a typable box and then another window pops open... if the box is already large enough, build in the AI icon and the Microphone icon in the place where you type." THE INLINE STRIP: on a FINE pointer a textarea whose rendered height is >= CMP_INLINE_MIN_H (60px) keeps its focus and gets a zero-height .cmp-inline strip in its bottom-right corner (sparkle + mic) while focused; the mic dictates straight into the box through _cmpDictateInto — the composer's engine REFACTORED to take (ta, mic, opts), composerToggleMic is now a two-line wrapper, so there is ONE recogniser/restart/duplicate-guard, not a copy; the sparkle opens the composer on that box with the AI menu already open (explicit click, not an interruption). Short boxes and every phone behave exactly as before. The strip is checked BEFORE the composer's on/off so it works even with the composer switched off. Probe composer-inline-probe (new) at 1280 fine + 412 coarse.
         // v5.3.0 (11:40): DEALT WITH IN GMAIL MEANS DEALT WITH (pairs with .gs v3.71.0, both accounts). His report: 'I am receiving emails in my Daily Brief that I have already dealt with in my Gmail, so it is causing me to have to double my work.' Two causes, one per file. BACKEND: scanInbox's query was category:primary after:<since> with NO in:inbox, and Gmail keeps the category label on an archived message, so everything he archived came straight back the next morning; v3.71.0 adds in:inbox (exactly the Primary tab) and reports inInbox per row. CLIENT: read was only ever a +1 SCORE SIGNAL, never a verdict, so a message he had opened and finished with surfaced again as 'direct to you'; and the auto-resolve (v4.57.0) only ever compared against the SAME DAY's cache, so on a new day it had nothing to compare. briefTriageRank now has a THIRD bucket, handledInGmail: inInbox:false ('archived in Gmail') or unread:false without a star ('already read in Gmail'), below his pin and mute, above every rule the tool decided on its own. Counted as ONE LINE in the band and on the Gmail page, NO rows, because the review rail exists to undo decisions THIS TOOL made and reading mail in Gmail is his own. Two escapes, both his: a star in Gmail, and Settings › Brief senders › the new switch (skipRead, synced lww like showFiltered, in the fingerprint). ALSO: 'Draft the email' on a Redtail task (v4.91.0) was a task-only draft while the v5.2.0 Gmail-page drafter reads the chain, the last meeting and the open Redtail items — the weaker-private-copy shape for the THIRD time (memory feedback_reuse_before_rebuild), so the modal now hands the task to gmailAgentRun with the person named (Last, First normalised), and keeps the old path only as the fallback for a backend without the drafter. Probe brief-mail R1-R5 (read leaves both lists and is counted; archived leaves both; a star keeps it; the switch off restores read-as-signal but archived never returns; the band draws one line and no row). His item 4 (delete from the viewer) had ALREADY shipped in v4.96.0 — his screenshot predates it.
         // v5.2.2 (20:05): THE DRAFTER NEVER DEAD-ENDS ON A NAME (TWO-FILE, ?v=5.2.2). His screenshot: 'I could not work out who this is for - I read the name as Ruth Di Pascali and found no address for them. Add their email address to your request and try again.' His question: 'Do you honestly think this is helpful and the best thing you could have done? Don't you think there should then be a search for, and it searches within Google Contacts and Redtail for who the email may be for?' HE WAS RIGHT, AND THE APP ALREADY HAD THAT SEARCH: v4.90.0 built it for the Meeting Processor after the DiPasquale miss - Google Contacts AND Redtail, the surname retry, an answer that names which sources it asked. The drafter shipped with a WEAKER private copy (brief cache + Google only, no retry, no box) and dead-ended. The failure to reuse is the lesson, not the search. NOW: contactSearchAll(q) is ONE shared search (extracted from mtgReferralFind's core; both callers run the same code); mtgExtractRedtailContacts keeps the ContactID it used to drop, so a Redtail candidate with no address on api2 (the normal case, §5.64) resolves through the classic contacts/{id}/emails row on pick; the drafter's resolver runs the shared search automatically, auto-continues ONLY when the FULL name matched exactly one person, and shows candidates for confirmation when the match came from the SURNAME retry - a misheard name landing on the one 'Pascali' in Redtail is precisely the draft-to-the-wrong-person case he would hate, and one click to confirm costs less than that. When nothing matches, an editable 'Search for' box prefilled with the name as read, Search re-runs both sources on what HE typed (v4.90.0's contract, 'search the name HE knows'), each candidate is a button that continues the run, and the sentence names the sources it searched. gmailAgentPick RETURNS the run rather than firing it, so a caller can await the whole thing. Probe mail-agent 12/12 (A8: both sources searched, surname retry, candidate with source, box prefilled, no dead end; A9: the Redtail pick fetches her address via classic /emails and continues to a draft addressed to it; A10: typing 'DiPasquale' searches THAT). Three fixture faults on the way, all mine: A8's stub matched the surname inside the full name so the retry never ran; A10's Google stub answered every query so the box never appeared; A9 read the screen mid-run because the pick was fire-and-forget. Battery: meeting-processor 96/96 (the extractor change), ref-search 6/6, client-vip 7/7, brief-mail 63/63, mail-actions 10/10.
@@ -7869,7 +7870,16 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.4.0 &mdash; 2026-09-03 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.5.0 &mdash; 2026-09-03 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">The drafter knows how long it has been, briefs you before the draft, and shows a spinner while it works.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>It knows what day it is.</strong> After a long silence it writes a fresh outreach rather than a reply &mdash; no &ldquo;great to hear from you&rdquo;, no &ldquo;Re:&rdquo;, and it starts a new conversation instead of threading onto a months-old one. It treats what was happening back then as having moved on since.</li>'
+                + '<li><strong>&ldquo;What I found, for you&rdquo;</strong> sits above the draft: when you last met and where, what was discussed and agreed, what is next on your calendar, and how long since the last email &mdash; with dates and sources.</li>'
+                + '<li>A spinner beside each step while it is working.</li>'
+                + '</ul>'
+                + '</div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.4.0 &mdash; 2026-09-03</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">The email drafter reads the whole relationship, not the last four months.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>It reads much further back.</strong> A year of mail with the person first, five years if that finds nothing, searched by their name as well as their address, and it reads more of the messages. The result line says how many it read and how far back.</li>'
@@ -28988,6 +28998,11 @@ Make sure your suggestions directly address the specific root cause and discussi
         const GMAIL_AGENT_DAYS = 365;
         const GMAIL_AGENT_DAYS_WIDE = 1825;
         const GMAIL_AGENT_BODIES = 8;
+        // v5.5.0: past this many days of silence the email is a FRESH OUTREACH, not a reply —
+        // it does not thread onto the old conversation, does not say "Re:", and the model is
+        // told not to thank them for writing. His v5.4.0 draft opened "Great to hear from
+        // you" to a man he had not heard from in six months.
+        const GMAIL_AGENT_REPLY_WINDOW_DAYS = 45;
         let _gmAgentBusy = false;
 
         function gmailAgentGate() {
@@ -29179,9 +29194,12 @@ Make sure your suggestions directly address the specific root cause and discussi
             const el = document.getElementById('gmAgentOut');
             if (el) el.innerHTML = html;
         }
+        // v5.5.0 (his ask: "a loading spinner or throbber so I can tell if AI is working in
+        // the background"): every non-empty step carries a ring spinner beside the words.
         function _gmStep(text) {
             const el = document.getElementById('gmAgentStatus');
-            if (el) el.textContent = text;
+            if (!el) return;
+            el.innerHTML = text ? '<span class="gm-spin" aria-hidden="true"></span>' + escapeHtml(text) : '';
         }
 
         async function gmailAgentRun(chosen) {
@@ -29234,6 +29252,14 @@ Make sure your suggestions directly address the specific root cause and discussi
                     bodies = (br && br.success && Array.isArray(br.bodies)) ? br.bodies : [];
                 }
                 const oldest = threads.length ? threads[threads.length - 1].dateMs : 0;
+                // v5.5.0: HOW LONG AGO. The v5.4.0 draft read the March thread as if it had
+                // arrived this morning — "Great to hear from you", "glad our standing lunch is
+                // sticking" after ONE lunch, "glad Cindy's mother has settled in" about a move
+                // that was in progress six months earlier. The model was never told the date
+                // of the last message, only its text. Now it is, and it decides reply vs. outreach.
+                const newestMs = threads.length ? threads[0].dateMs : 0;
+                const gapDays = newestMs ? Math.max(0, Math.round((Date.now() - newestMs) / 86400000)) : null;
+                const freshOutreach = gapDays === null || gapDays > GMAIL_AGENT_REPLY_WINDOW_DAYS;
 
                 _gmStep('Finding when you last met…');
                 // The Meeting Processor's note is the richest record when it exists, so it
@@ -29255,6 +29281,9 @@ Make sure your suggestions directly address the specific root cause and discussi
                 const ctx = [];
                 ctx.push('RECIPIENT: ' + (who.name ? who.name + ' <' + who.email + '>' : who.email));
                 ctx.push('TODAY: ' + fmtDate(Date.now()));
+                ctx.push('TIME SINCE LAST CONTACT: ' + (gapDays === null
+                    ? 'no email with them on file'
+                    : gapDays + ' days — the last message was ' + (threads[0].sentByMe ? 'from Hans' : 'from them') + ' on ' + fmtDate(newestMs)));
                 if (last) ctx.push('LAST MEETING (' + last.source + ', ' + fmtDate(last.at) + '): ' + last.summary);
                 else ctx.push('LAST MEETING: none on file.');
                 if (calLast && calLast !== last) ctx.push('LAST CALENDAR ENTRY WITH THEM (' + fmtDate(calLast.at) + '): ' + calLast.summary);
@@ -29271,9 +29300,19 @@ Make sure your suggestions directly address the specific root cause and discussi
                     + 'Use the CONTEXT to make it specific — refer to what was actually discussed, the people, places and agreements it records '
                     + '(a standing lunch, a venue, a family detail, an offer he made), and how long ago the last meeting was. Never invent facts. '
                     + 'Write in HIS voice: model the greeting, warmth, paragraph length and phrasing on the messages marked ME. '
+                    + 'KIND OF EMAIL: ' + (freshOutreach
+                        ? 'a FRESH OUTREACH after a gap. Nobody has written recently, so do not thank them for writing, do not say '
+                          + '"great to hear from you", and do not answer anything as if it had just arrived; Hans is the one reaching out. '
+                        : 'a REPLY in an active conversation. ')
+                    + 'TIME AWARENESS: every line of context is as old as its date. Anything that was in progress then has most likely moved on since '
+                    + '(a relative who was settling in has settled; a decision being weighed has probably been made) — ask about it in the present tense, '
+                    + 'never congratulate as if it were news. Count what actually happened: if the context shows ONE meeting and an agreement to repeat it, '
+                    + 'this email proposes the SECOND, so do not call the arrangement established or "sticking". '
                     + 'Warm, brief, direct. Do NOT say "attached" unless the request says something is being attached; '
                     + 'if it does, say it plainly. No sign-off block (his signature is added separately). '
-                    + 'Answer ONLY as JSON: {"subject": "...", "body": "...", "notes": ["anything you could not do or were unsure of"]}\n\n'
+                    + 'Also return "briefing": 3-5 short factual bullets FOR HANS (not for the recipient) of what the context shows — when you last met and where, '
+                    + 'what was discussed, what was agreed, what is next on the calendar — each with its date and its source in brackets (email, Meeting Processor, Calendar). '
+                    + 'Answer ONLY as JSON: {"subject": "...", "body": "...", "briefing": ["..."], "notes": ["anything you could not do or were unsure of"]}\n\n'
                     + 'HIS REQUEST: ' + intent + '\n\nCONTEXT:\n' + ctx.join('\n');
                 const raw = await callAI('meetingEmail', prompt, { featureLabel: 'Email drafter', maxTokens: 1400 });
                 let out = null;
@@ -29281,11 +29320,15 @@ Make sure your suggestions directly address the specific root cause and discussi
                 if (!out || !out.body) throw new Error('The AI did not return a usable draft.');
 
                 _gmStep('Saving to your Gmail Drafts…');
-                const newest = threads[0] || null;
+                // v5.5.0: a fresh outreach is a NEW conversation — no threading onto a
+                // months-old thread, no "Re:" — exactly as a person would start it.
+                const newest = (!freshOutreach && threads[0]) || null;
+                let subject = String(out.subject || (newest ? 'Re: ' + newest.subject : 'Following up'));
+                if (freshOutreach) subject = subject.replace(/^\s*(re|fwd?)\s*:\s*/i, '');
                 const html = '<div>' + esc(String(out.body)).replace(/\n/g, '<br>') + '</div>';
                 const dr = await _briefMailPost({
                     action: 'createReplyDraft', to: who.email,
-                    subject: String(out.subject || (newest ? 'Re: ' + newest.subject : 'Following up')),
+                    subject: subject,
                     htmlBody: html,
                     threadId: newest ? newest.threadId : '',
                     rfc822MessageId: newest ? newest.rfc822MessageId : ''
@@ -29293,6 +29336,18 @@ Make sure your suggestions directly address the specific root cause and discussi
                 if (!dr || !dr.success) throw new Error((dr && dr.error) || 'Could not save the draft.');
 
                 const todo = reminders.concat(Array.isArray(out.notes) ? out.notes.map(String) : []);
+                // v5.5.0: "a bit of context above the email for my sake" — what the run found,
+                // with dates and sources, so he can judge the draft against the facts. The
+                // first line is DETERMINISTIC from the reads themselves; the rest is the
+                // model's briefing of the context it was given.
+                const found = [];
+                if (last) found.push('Last met ' + fmtDate(last.at) + ' (' + last.source + '): ' + String(last.summary || '').slice(0, 160));
+                if (next) found.push('Next on your calendar ' + fmtDate(next.at) + ': ' + String(next.summary || '').slice(0, 160));
+                found.push(gapDays === null
+                    ? 'No email with them on file.'
+                    : 'Last email ' + gapDays + ' days ago (' + fmtDate(newestMs) + ', ' + (threads[0].sentByMe ? 'from you' : 'from them') + ') — '
+                      + (freshOutreach ? 'so this is written as a fresh outreach, not a reply.' : 'so this is written as a reply in that thread.'));
+                (Array.isArray(out.briefing) ? out.briefing : []).slice(0, 6).forEach(function (b) { if (b) found.push(String(b)); });
                 _gmStep('');
                 _gmSay('<div class="gm-result">'
                     + '<div class="gm-ok">Draft saved to Gmail for <strong>' + esc(who.name || who.email) + '</strong>'
@@ -29303,7 +29358,9 @@ Make sure your suggestions directly address the specific root cause and discussi
                     + (next ? ' · next on your calendar ' + esc(fmtDate(next.at)) + ' ' + esc(String(next.title || '').slice(0, 60)) : '')
                     + (open.length ? ' · ' + open.length + ' open Redtail item' + (open.length === 1 ? '' : 's') : '')
                     + (wide ? '' : ' · <em>address-only read: backend v' + esc(GMAIL_AGENT_WIDE_GS_MIN) + ' widens this</em>') + '</div>'
-                    + '<div class="gm-subj">' + esc(String(out.subject || '')) + '</div>'
+                    + '<div class="gm-brief"><div class="gm-brief-h">What I found, for you</div><ul>'
+                    + found.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul></div>'
+                    + '<div class="gm-subj">' + esc(subject) + '</div>'
                     + '<div class="gm-body">' + esc(String(out.body)).replace(/\n/g, '<br>') + '</div>'
                     + (todo.length ? '<div class="gm-todo"><div class="gm-todo-h">Still on you</div><ul>'
                         + todo.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>' : '')
