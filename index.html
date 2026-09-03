@@ -2190,8 +2190,17 @@
                 <h3>Draft an email for me</h3>
                 <div class="gm-agent-sub">Say who it is for and what it should do. I will read your recent mail with them, find when you last met, pull their open Redtail items, and save a draft to your Gmail Drafts &mdash; then tell you what is still on you.</div>
                 <textarea id="gmAgentIntent" placeholder="Draft me an email to Ruth DiPasquale based on our recent meeting and email chain. Let her know I've drafted the amendment to our contracts and would love her to review it, and ask if she and her husband want to come in for a discovery meeting soon."></textarea>
+                <!-- v5.6.0 (his ask: "a way to adjust who the email is to... I can search
+                     manually for who I am wanting to email"). The To box beats the name in
+                     the sentence; Search runs the shared contact search on it and each
+                     candidate continues the run. Blank = worked out from the request. -->
+                <div class="gm-search-row" style="margin-top:6px;">
+                    <input type="text" id="gmAgentTo" data-no-composer placeholder="To (optional): a name or an email address — leave blank and I will work it out" style="flex:1 1 260px; min-width:0;">
+                    <button type="button" class="btn btn-secondary" style="font-size:0.85rem;" onclick="gmailAgentSearchTo()">Search</button>
+                </div>
                 <div class="gm-agent-row">
                     <button type="button" id="gmAgentBtn" class="btn btn-primary" onclick="gmailAgentRun()">Draft it</button>
+                    <button type="button" id="gmAgentStop" class="btn btn-secondary" style="display:none; font-size:0.85rem;" onclick="gmailAgentStop()">Stop</button>
                     <span id="gmAgentStatus" class="gm-status"></span>
                 </div>
                 <div id="gmAgentOut"></div>
@@ -4096,9 +4105,10 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '5.5.0';
+        const EOS_VERSION = '5.6.0';
         const EOS_BUILD_DATE = '2026-09-03';
-        const EOS_BUILD_TIME = '15:40'; // v5.5.0: THE DRAFTER KNOWS WHAT DAY IT IS (client-only, TWO-FILE, ?v=5.5.0). His second Rick Ezell draft on v5.4.0 had the facts (Kitchen Sync, the standing lunch, Employee Care of America, Cindy's mother) and read them as if the March thread had arrived this morning: "Great to hear from you" after six months of silence, "glad our standing lunch is sticking" after ONE lunch, "glad Cindy's mother has settled in" about a move in progress six months earlier, and it threaded as "Re: Time for our six-month lunch?". The model was given the thread's TEXT and never its AGE. NOW: a TIME SINCE LAST CONTACT line (days, who wrote last, when); past GMAIL_AGENT_REPLY_WINDOW_DAYS (45) the email is a FRESH OUTREACH — the prompt says so and forbids thanking them for writing, the draft is NOT threaded onto the old conversation and any leading "Re:" is stripped; a TIME AWARENESS instruction (what was in progress then has moved on; ask in the present; count the meetings — one lunch plus an agreement means this proposes the SECOND, never "sticking"); the JSON gains "briefing" — 3-5 factual bullets FOR HANS with dates and sources — rendered above the draft as "What I found, for you", after a deterministic first line (last met/where, next on the calendar, last email N days ago and therefore outreach vs reply). SPINNER: every _gmStep carries a .gm-spin ring beside the words (his ask: "a loading spinner or throbber so I can tell if AI is working"). Probe mail-agent A13 (a two-day-old thread is a REPLY: threaded, TIME SINCE line, briefing rendered) and A14 (a 200-day-old thread is a FRESH OUTREACH: not threaded, no Re:, the prompt forbids "great to hear from you", the What-I-found box says outreach).
+        const EOS_BUILD_TIME = '17:50'; // v5.6.0: THE EMPTY ANSWER, THE COST, AND THE RECIPIENT (pairs with .gs v3.73.0, both accounts; styles.css unchanged, link stays ?v=5.5.0). (1) "The model returned an empty response" on his v5.5.0 draft: the Anthropic adapter was right; the model wrote nothing because current Claude models run ADAPTIVE THINKING by default, its tokens count against max_tokens, and the drafter's bigger prompt spent all 1,400 on reasoning — HTTP 200, stop_reason max_tokens, no text. The client's own comment above callAI had written this exact warning for Gemini. NOW: callAI takes opts.effort, callAIViaBackend sends it, .gs 3.73.0 passes output_config.effort (thinking stays adaptive — `disabled` is rejected by some current models); the drafter asks for effort:'low' and a 4,000 budget; callAI's empty-answer message names the real cause when the usage proves it (output tokens spent, stop reason max_tokens) instead of "raise the budget". (2) "$1 for every email... an estimator, or cap": MTG_PRICES was Opus-3-era ($15/$75) and Sonnet 4.6 ($3/$15) — every cost the tool showed for a Claude 5 call was 3–5x too high; now the current list, most-specific-first. The drafter shows an ESTIMATE in the step line before the call (chars/4 in, priced from the table), a CAP (GMAIL_AGENT_MAX_PROMPT_CHARS 40,000, oldest thread lines dropped first, the newest three never, the step says how many), and the ACTUAL cost in the result line from the backend's token counts (_aiLastUsage, priced by mtgUsageText). (3) "a way to adjust who the email is to... stopped... search manually": a To box (name or address; beats the sentence; a picked candidate beats both) with Search (the shared contact search, _gmSearchFor, one implementation behind both search boxes), a Stop button visible while a run is busy (checked at every step boundary, never mid-read), and "Not them? Change who it goes to" on the finished draft. Dictation into the request box already works through the v5.3.1 inline mic. Probe mail-agent A15–A18.
+        // v5.5.0 (15:40): THE DRAFTER KNOWS WHAT DAY IT IS (client-only, TWO-FILE, ?v=5.5.0). His second Rick Ezell draft on v5.4.0 had the facts (Kitchen Sync, the standing lunch, Employee Care of America, Cindy's mother) and read them as if the March thread had arrived this morning: "Great to hear from you" after six months of silence, "glad our standing lunch is sticking" after ONE lunch, "glad Cindy's mother has settled in" about a move in progress six months earlier, and it threaded as "Re: Time for our six-month lunch?". The model was given the thread's TEXT and never its AGE. NOW: a TIME SINCE LAST CONTACT line (days, who wrote last, when); past GMAIL_AGENT_REPLY_WINDOW_DAYS (45) the email is a FRESH OUTREACH — the prompt says so and forbids thanking them for writing, the draft is NOT threaded onto the old conversation and any leading "Re:" is stripped; a TIME AWARENESS instruction (what was in progress then has moved on; ask in the present; count the meetings — one lunch plus an agreement means this proposes the SECOND, never "sticking"); the JSON gains "briefing" — 3-5 factual bullets FOR HANS with dates and sources — rendered above the draft as "What I found, for you", after a deterministic first line (last met/where, next on the calendar, last email N days ago and therefore outreach vs reply). SPINNER: every _gmStep carries a .gm-spin ring beside the words (his ask: "a loading spinner or throbber so I can tell if AI is working"). Probe mail-agent A13 (a two-day-old thread is a REPLY: threaded, TIME SINCE line, briefing rendered) and A14 (a 200-day-old thread is a FRESH OUTREACH: not threaded, no Re:, the prompt forbids "great to hear from you", the What-I-found box says outreach).
         // v5.4.0 (14:30): THE DRAFTER SEES THE WHOLE RELATIONSHIP (pairs with .gs v3.72.0, both accounts; styles.css unchanged, link stays ?v=5.3.1). His Rick Ezell draft: "Read: 0 recent messages · no meeting on file" and a generic "Lunch soon?", against Claude Chat's version that knew the March lunch at Kitchen Sync, the six-month standing agreement, Cindy's mother, Employee Care of America — because Chat read 36 threads back to 2022, the full March thread, the calendar (March 24 lunch + the Sept 7 "Set up lunch" reminder), and his sent mail for voice. THREE CUT-OFFS, all ours: searchMail ran 120 days by ADDRESS alone (the March thread was 160 days old; people write from more than one address); _gmLastMeeting read the calendar feed on screen (~a month); four bodies. NOW: name+address (server-composed, name whitelisted to letters), 365 days then 1825 if empty, 30 rows, six bodies, twelve lines of thread in the context with ME/THEM marked, a TODAY line so "six months since" can be computed, the calendar over 24 months back / 12 ahead through the new searchCalendarEvents (newest past = last meeting, soonest future = "NEXT ON YOUR CALENDAR" — the reminder is what makes the email well-timed), and the prompt tells the model to write in HIS voice modelled on the ME messages and to use the people/places/agreements the context records. Both new reads gate on .gs 3.72.0 (GMAIL_AGENT_WIDE_GS_MIN); an older backend gets the old address-only read and the result line SAYS so. Result line now reads "N messages back to <date> · last meeting · next on your calendar · open items". Probe mail-agent A2 upgraded (name allowed, six bodies), A11 (name rides with the address; empty year widens to five), A12 (calendar searched by name; NEXT ON YOUR CALENDAR and the last calendar entry reach the prompt; Meeting Processor note still wins as LAST MEETING).
         // v5.3.1 (13:10): HIS FIRST LIVE DRAFT, TWO REPORTS (TWO-FILE, ?v=5.3.1). (1) 'Unknown AI provider "claude". Expected one of: anthropic, openai, gemini, grok.' — the app has called Anthropic "claude" since the routing table was written and the backend's AI_KEY_PROPS_ only knows "anthropic"; every caller through callAIViaBackend (the drafter, the composer's Rewrite, the birthday greeting) sent the client id verbatim and died on that sentence. ONE translation at the seam, _aiBackendProviderId, never at the call sites. (2) "It is a bit jarring when I click on a typable box and then another window pops open... if the box is already large enough, build in the AI icon and the Microphone icon in the place where you type." THE INLINE STRIP: on a FINE pointer a textarea whose rendered height is >= CMP_INLINE_MIN_H (60px) keeps its focus and gets a zero-height .cmp-inline strip in its bottom-right corner (sparkle + mic) while focused; the mic dictates straight into the box through _cmpDictateInto — the composer's engine REFACTORED to take (ta, mic, opts), composerToggleMic is now a two-line wrapper, so there is ONE recogniser/restart/duplicate-guard, not a copy; the sparkle opens the composer on that box with the AI menu already open (explicit click, not an interruption). Short boxes and every phone behave exactly as before. The strip is checked BEFORE the composer's on/off so it works even with the composer switched off. Probe composer-inline-probe (new) at 1280 fine + 412 coarse.
         // v5.3.0 (11:40): DEALT WITH IN GMAIL MEANS DEALT WITH (pairs with .gs v3.71.0, both accounts). His report: 'I am receiving emails in my Daily Brief that I have already dealt with in my Gmail, so it is causing me to have to double my work.' Two causes, one per file. BACKEND: scanInbox's query was category:primary after:<since> with NO in:inbox, and Gmail keeps the category label on an archived message, so everything he archived came straight back the next morning; v3.71.0 adds in:inbox (exactly the Primary tab) and reports inInbox per row. CLIENT: read was only ever a +1 SCORE SIGNAL, never a verdict, so a message he had opened and finished with surfaced again as 'direct to you'; and the auto-resolve (v4.57.0) only ever compared against the SAME DAY's cache, so on a new day it had nothing to compare. briefTriageRank now has a THIRD bucket, handledInGmail: inInbox:false ('archived in Gmail') or unread:false without a star ('already read in Gmail'), below his pin and mute, above every rule the tool decided on its own. Counted as ONE LINE in the band and on the Gmail page, NO rows, because the review rail exists to undo decisions THIS TOOL made and reading mail in Gmail is his own. Two escapes, both his: a star in Gmail, and Settings › Brief senders › the new switch (skipRead, synced lww like showFiltered, in the fingerprint). ALSO: 'Draft the email' on a Redtail task (v4.91.0) was a task-only draft while the v5.2.0 Gmail-page drafter reads the chain, the last meeting and the open Redtail items — the weaker-private-copy shape for the THIRD time (memory feedback_reuse_before_rebuild), so the modal now hands the task to gmailAgentRun with the person named (Last, First normalised), and keeps the old path only as the fallback for a backend without the drafter. Probe brief-mail R1-R5 (read leaves both lists and is counted; archived leaves both; a star keeps it; the switch off restores read-as-signal but archived never returns; the band draws one line and no row). His item 4 (delete from the viewer) had ALREADY shipped in v4.96.0 — his screenshot predates it.
@@ -7870,7 +7880,16 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.5.0 &mdash; 2026-09-03 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.6.0 &mdash; 2026-09-03 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">The empty answer is fixed, the drafter shows what it costs, and you can change who it goes to.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>&ldquo;The model returned an empty response&rdquo; is fixed.</strong> The model was spending its whole output budget thinking before it wrote. The drafter now asks for less reasoning and a bigger budget. Needs backend v3.73.0, deployed to both accounts today.</li>'
+                + '<li><strong>Cost, before and after.</strong> The step line estimates the cost before the call; the result line shows what it actually cost from the real token counts. The context it sends is capped, oldest messages dropped first. The price table was years out of date and made every Claude call look three to five times dearer than it is.</li>'
+                + '<li><strong>Who it goes to is yours to set.</strong> A To box above Draft it takes a name or an address and beats the name in your sentence; Search looks them up in Google Contacts and Redtail. A Stop button appears while it works. A finished draft has &ldquo;Not them? Change who it goes to&rdquo;.</li>'
+                + '</ul>'
+                + '</div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.5.0 &mdash; 2026-09-03</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">The drafter knows how long it has been, briefs you before the draft, and shows a spinner while it works.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>It knows what day it is.</strong> After a long silence it writes a fresh outreach rather than a reply &mdash; no &ldquo;great to hear from you&rdquo;, no &ldquo;Re:&rdquo;, and it starts a new conversation instead of threading onto a months-old one. It treats what was happening back then as having moved on since.</li>'
@@ -28289,10 +28308,17 @@ Make sure your suggestions directly address the specific root cause and discussi
         // 2026-08-27. The usage log in the Sheet stores raw token FACTS; this table is
         // the display-time guess and says "est." wherever it is shown. An unknown model
         // shows tokens with no dollar figure rather than a made-up one.
+        // v5.6.0: brought up to the current Anthropic list (2026-06). The old rows priced
+        // Opus at $15/$75 and Sonnet at $3/$15 — Opus 3-era and Sonnet 4.6 numbers — so
+        // every cost the tool showed for a Claude 5 call was three to five times too high,
+        // which is where "$1 for every email" comes from. Most specific pattern FIRST: the
+        // list is searched top-down and the first match wins.
         const MTG_PRICES = [
-            { re: /claude.*opus/i,    inPerM: 15,   outPerM: 75 },
-            { re: /claude.*sonnet/i,  inPerM: 3,    outPerM: 15 },
-            { re: /claude.*haiku/i,   inPerM: 1,    outPerM: 5 },
+            { re: /claude.*fable/i,        inPerM: 10,   outPerM: 50 },
+            { re: /claude.*sonnet-?4/i,    inPerM: 3,    outPerM: 15 },
+            { re: /claude.*sonnet/i,       inPerM: 2,    outPerM: 10 },
+            { re: /claude.*opus/i,         inPerM: 5,    outPerM: 25 },
+            { re: /claude.*haiku/i,        inPerM: 1,    outPerM: 5 },
             { re: /gpt-5/i,           inPerM: 1.25, outPerM: 10 },
             { re: /gpt-4o/i,          inPerM: 2.5,  outPerM: 10 },
             { re: /gemini.*pro/i,     inPerM: 1.25, outPerM: 10 },
@@ -29003,6 +29029,10 @@ Make sure your suggestions directly address the specific root cause and discussi
         // told not to thank them for writing. His v5.4.0 draft opened "Great to hear from
         // you" to a man he had not heard from in six months.
         const GMAIL_AGENT_REPLY_WINDOW_DAYS = 45;
+        // v5.6.0: the context cap in characters (~10,000 tokens — about two cents of input
+        // on Sonnet 5, ten on Fable). The oldest thread lines are dropped first, the
+        // newest three never; the step line says how many were left out.
+        const GMAIL_AGENT_MAX_PROMPT_CHARS = 40000;
         let _gmAgentBusy = false;
 
         function gmailAgentGate() {
@@ -29089,6 +29119,10 @@ Make sure your suggestions directly address the specific root cause and discussi
         let _gmLastSearch = null;
         async function gmailAgentSearch() {
             const q = String((document.getElementById('gmSearchQ') || {}).value || '').trim();
+            return _gmSearchFor(q);
+        }
+        async function _gmSearchFor(q) {
+            q = String(q || '').trim();
             if (q.length < 2) { showToast('Type at least two letters.', 'info'); return; }
             _gmStep('Searching Google Contacts and Redtail for "' + q + '"...');
             const search = await contactSearchAll(q);
@@ -29197,9 +29231,31 @@ Make sure your suggestions directly address the specific root cause and discussi
         // v5.5.0 (his ask: "a loading spinner or throbber so I can tell if AI is working in
         // the background"): every non-empty step carries a ring spinner beside the words.
         function _gmStep(text) {
+            // v5.6.0: Stop. The flag is checked at every step boundary, so a run halts
+            // before its next read or write — never in the middle of one.
+            if (text && _gmAbort) throw new Error('Stopped. Nothing more was read or saved.');
             const el = document.getElementById('gmAgentStatus');
             if (!el) return;
             el.innerHTML = text ? '<span class="gm-spin" aria-hidden="true"></span>' + escapeHtml(text) : '';
+        }
+        let _gmAbort = false;
+        function gmailAgentStop() {
+            if (!_gmAgentBusy) return;
+            _gmAbort = true;
+            const el = document.getElementById('gmAgentStatus');
+            if (el) el.textContent = 'Stopping…';
+        }
+        // The To box: search what HE typed, and continue the run from the candidate he picks.
+        function gmailAgentSearchTo() {
+            const q = String((document.getElementById('gmAgentTo') || {}).value || '').trim();
+            if (q.length < 2) { showToast('Type a name or an address in the To box first.', 'info'); return; }
+            return _gmSearchFor(q);
+        }
+        // "Not them?" on a finished draft: the name goes into the To box and the search runs.
+        function gmailAgentChangeTo(name) {
+            const box = document.getElementById('gmAgentTo');
+            if (box) { box.value = String(name || ''); try { box.scrollIntoView({ block: 'center' }); } catch (e) { } }
+            return _gmSearchFor(String(name || ''));
         }
 
         async function gmailAgentRun(chosen) {
@@ -29210,11 +29266,20 @@ Make sure your suggestions directly address the specific root cause and discussi
             const gate = gmailAgentGate();
             if (gate) { showToast(gate, 'error'); _gmSay('<div class="gm-note">' + escapeHtml(gate) + '</div>'); return; }
             _gmAgentBusy = true;
+            _gmAbort = false;
             const btn = document.getElementById('gmAgentBtn');
             if (btn) { btn.disabled = true; btn.textContent = 'Working…'; }
+            const stopBtn = document.getElementById('gmAgentStop');
+            if (stopBtn) stopBtn.style.display = '';
             try {
                 const esc = escapeHtml;
-                const person = chosen ? { email: chosen.email, name: chosen.name } : _gmPersonFrom(intent);
+                // v5.6.0: a picked candidate beats the To box, and the To box beats the name
+                // in the sentence — his ask, so a wrong guess costs one edit, not a draft to
+                // the wrong person.
+                const toRaw = String((document.getElementById('gmAgentTo') || {}).value || '').trim();
+                const toTyped = !toRaw ? null
+                    : (/^[^\s@<>"']+@[^\s@<>"']+\.[a-z]{2,}$/i.test(toRaw) ? { email: toRaw.toLowerCase(), name: '' } : { email: '', name: toRaw });
+                const person = chosen ? { email: chosen.email, name: chosen.name } : (toTyped || _gmPersonFrom(intent));
                 _gmStep('Working out who this is for…');
                 const who = chosen ? { email: chosen.email, name: chosen.name, via: chosen.via } : await _gmResolveAddress(person);
                 if (!who || who.ask) {
@@ -29289,6 +29354,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                 if (calLast && calLast !== last) ctx.push('LAST CALENDAR ENTRY WITH THEM (' + fmtDate(calLast.at) + '): ' + calLast.summary);
                 if (next) ctx.push('NEXT ON YOUR CALENDAR (' + fmtDate(next.at) + '): ' + next.summary);
                 if (open.length) ctx.push('OPEN REDTAIL ITEMS: ' + open.map(function (a) { return a.subject; }).join('; '));
+                const threadStart = ctx.length;
                 if (threads.length) {
                     ctx.push('EMAIL WITH THEM, newest first (' + threads.length + ' messages, back to ' + fmtDate(oldest) + '; ME = Hans wrote it, THEM = they wrote it):');
                     threads.slice(0, 12).forEach(function (r) {
@@ -29296,7 +29362,13 @@ Make sure your suggestions directly address the specific root cause and discussi
                         ctx.push('- ' + fmtDate(r.dateMs) + ' ' + (r.sentByMe ? 'ME' : 'THEM') + ': ' + (r.subject || '') + ' — ' + String((body && body.body) || r.snippet || '').slice(0, 1500));
                     });
                 } else ctx.push('EMAIL WITH THEM: none found in the last ' + daysRead + ' days.');
-                const prompt = 'You are drafting an email on behalf of Hans Blake, a financial adviser at Intelligent Investing in Greenville. '
+                // v5.6.0 — THE CAP (his ask: "I don't want to be spending $1 for every email...
+                // an estimator, or cap"). The oldest thread lines go first, one at a time,
+                // until the context fits; the newest three always stay. At Sonnet 5's
+                // rate the cap is about two cents of input; the estimate below says so.
+                let dropped = 0;
+                while (ctx.join('\n').length > GMAIL_AGENT_MAX_PROMPT_CHARS && ctx.length > threadStart + 4) { ctx.pop(); dropped++; }
+                const promptHead = 'You are drafting an email on behalf of Hans Blake, a financial adviser at Intelligent Investing in Greenville. '
                     + 'Use the CONTEXT to make it specific — refer to what was actually discussed, the people, places and agreements it records '
                     + '(a standing lunch, a venue, a family detail, an offer he made), and how long ago the last meeting was. Never invent facts. '
                     + 'Write in HIS voice: model the greeting, warmth, paragraph length and phrasing on the messages marked ME. '
@@ -29313,8 +29385,18 @@ Make sure your suggestions directly address the specific root cause and discussi
                     + 'Also return "briefing": 3-5 short factual bullets FOR HANS (not for the recipient) of what the context shows — when you last met and where, '
                     + 'what was discussed, what was agreed, what is next on the calendar — each with its date and its source in brackets (email, Meeting Processor, Calendar). '
                     + 'Answer ONLY as JSON: {"subject": "...", "body": "...", "briefing": ["..."], "notes": ["anything you could not do or were unsure of"]}\n\n'
-                    + 'HIS REQUEST: ' + intent + '\n\nCONTEXT:\n' + ctx.join('\n');
-                const raw = await callAI('meetingEmail', prompt, { featureLabel: 'Email drafter', maxTokens: 1400 });
+                    + 'HIS REQUEST: ' + intent + '\n\nCONTEXT:\n';
+                const prompt = promptHead + ctx.join('\n');
+                // THE ESTIMATE, before a cent is spent: chars/4 in, the budget out at worst.
+                const estModel = (function () { try { return getAIProviderConfig('meetingEmail').model || _aiDefaultModelFor('claude'); } catch (e) { return 'claude-sonnet-5'; } })();
+                const estIn = Math.round(prompt.length / 4);
+                const estUsd = _aiEstimateUsd(estModel, estIn, 900);
+                _gmStep('Writing the draft with ' + estModel + ' — about ' + estIn.toLocaleString() + ' tokens in'
+                    + (estUsd ? ', roughly ' + estUsd : '') + (dropped ? ' (left out the ' + dropped + ' oldest messages to stay under the cap)' : '') + '…');
+                // effort:'low' + a 4,000-token budget — the v5.5.0 "empty response" was
+                // adaptive thinking eating a 1,400-token budget before any text was written.
+                const raw = await callAI('meetingEmail', prompt, { featureLabel: 'Email drafter', maxTokens: 4000, effort: 'low' });
+                const usage = (_aiLastUsage && (Date.now() - _aiLastUsage.at) < 60000) ? _aiLastUsage : null;
                 let out = null;
                 try { out = JSON.parse(String(raw).replace(/^```(?:json)?|```$/g, '').trim()); } catch (e) { out = null; }
                 if (!out || !out.body) throw new Error('The AI did not return a usable draft.');
@@ -29351,13 +29433,19 @@ Make sure your suggestions directly address the specific root cause and discussi
                 _gmStep('');
                 _gmSay('<div class="gm-result">'
                     + '<div class="gm-ok">Draft saved to Gmail for <strong>' + esc(who.name || who.email) + '</strong>'
-                    + ' &lt;' + esc(who.email) + '&gt;' + (who.via ? ' <span class="gm-via">(address from ' + esc(who.via) + ')</span>' : '') + '.</div>'
+                    + ' &lt;' + esc(who.email) + '&gt;' + (who.via ? ' <span class="gm-via">(address from ' + esc(who.via) + ')</span>' : '') + '. '
+                    + '<button type="button" class="mb-mail-link" data-gm-name="' + esc(who.name || who.email) + '" '
+                    + 'onclick="gmailAgentChangeTo(this.getAttribute(\'data-gm-name\'))">Not them? Change who it goes to</button></div>'
                     + '<div class="gm-ctx">Read: ' + threads.length + ' message' + (threads.length === 1 ? '' : 's')
                     + (threads.length ? ' back to ' + esc(fmtDate(oldest)) : ' in the last ' + daysRead + ' days')
                     + (last ? ' · last meeting ' + esc(last.source) + (last.at ? ' ' + esc(fmtDate(last.at)) : '') : ' · no meeting on file')
                     + (next ? ' · next on your calendar ' + esc(fmtDate(next.at)) + ' ' + esc(String(next.title || '').slice(0, 60)) : '')
                     + (open.length ? ' · ' + open.length + ' open Redtail item' + (open.length === 1 ? '' : 's') : '')
-                    + (wide ? '' : ' · <em>address-only read: backend v' + esc(GMAIL_AGENT_WIDE_GS_MIN) + ' widens this</em>') + '</div>'
+                    + (wide ? '' : ' · <em>address-only read: backend v' + esc(GMAIL_AGENT_WIDE_GS_MIN) + ' widens this</em>')
+                    // v5.6.0: what it actually cost, from the backend's own token counts.
+                    + (usage && (usage.inputTokens || usage.outputTokens)
+                        ? ' · cost: ' + esc(mtgUsageText({ model: usage.model, inTok: usage.inputTokens, outTok: usage.outputTokens }))
+                        : '') + '</div>'
                     + '<div class="gm-brief"><div class="gm-brief-h">What I found, for you</div><ul>'
                     + found.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul></div>'
                     + '<div class="gm-subj">' + esc(subject) + '</div>'
@@ -29373,7 +29461,10 @@ Make sure your suggestions directly address the specific root cause and discussi
                 _gmSay('<div class="gm-note gm-err">' + escapeHtml(String(e && e.message || e)) + '</div>');
             } finally {
                 _gmAgentBusy = false;
+                _gmAbort = false;
                 if (btn) { btn.disabled = false; btn.textContent = 'Draft it'; }
+                const stopBtn2 = document.getElementById('gmAgentStop');
+                if (stopBtn2) stopBtn2.style.display = 'none';
             }
         }
 
@@ -36583,6 +36674,11 @@ Make sure your suggestions directly address the specific root cause and discussi
             // asks an AI to do needs chain-of-thought, and leaving it on silently spends
             // the output budget on reasoning nobody ever sees. opts.thinking re-enables it.
             if (opts.thinking !== true) baseOpts.noThinking = true;
+            // v5.6.0: reasoning depth for the backend seam (low/medium/high). Adaptive
+            // thinking is ON by default on current Claude models and its tokens count
+            // against the output budget, so a feature with a hard prompt and a small
+            // budget must ask for less thinking or it gets an empty answer back.
+            if (opts.effort) baseOpts.effort = opts.effort;
 
             let text;
             try {
@@ -36598,9 +36694,18 @@ Make sure your suggestions directly address the specific root cause and discussi
             // parser said next ("did not return the expected format"), which pointed at
             // the wrong thing entirely. Name the real cause once, here.
             if (!String(text || '').trim()) {
+                // v5.6.0: name the cause the usage line can prove. Output tokens spent with
+                // no text back means the model reasoned the whole budget away — Hans's
+                // v5.5.0 draft — and "raise the budget" alone was the wrong instruction.
+                const u = (_aiLastUsage && (Date.now() - _aiLastUsage.at) < 60000) ? _aiLastUsage : null;
+                if (u && u.outputTokens > 0 && /max_tokens|length/i.test(u.stopReason || '')) {
+                    throw makeAIError(AI_ERR_CALL,
+                        'The model spent its whole output budget (' + u.outputTokens.toLocaleString() + ' tokens) reasoning and wrote nothing. ' +
+                        'This feature now asks for less reasoning and a bigger budget — try again. If it repeats, the backend may be older than v3.73.0.');
+                }
                 throw makeAIError(AI_ERR_CALL,
-                    'The model returned an empty response. This usually means the output ' +
-                    'budget was too small - raise it in Settings > AI > AI Output ' +
+                    'The model returned an empty response' + (u ? ' (' + u.outputTokens + ' output tokens, stop reason "' + (u.stopReason || 'none') + '")' : '') +
+                    '. This usually means the output budget was too small - raise it in Settings > AI > AI Output ' +
                     'Length, or route this feature to a different provider.');
             }
             return text;
@@ -37277,6 +37382,19 @@ Make sure your suggestions directly address the specific root cause and discussi
             const pv = String(provider || '').toLowerCase();
             return pv === 'claude' ? 'anthropic' : pv;
         }
+        // v5.6.0: the last backend AI call's usage — {provider, model, inputTokens,
+        // outputTokens, stopReason, at} — so a feature can show what it just spent
+        // (mtgUsageText prices it) and callAI can explain an EMPTY answer honestly.
+        let _aiLastUsage = null;
+        // Estimated dollars for a call BEFORE it is made, from the same table the usage
+        // line uses; '' when the model is not in the table. Chars/4 is the rough token
+        // count — close enough to say "about 2 cents" and never presented as more.
+        function _aiEstimateUsd(model, inTok, outTok) {
+            const p = (typeof MTG_PRICES !== 'undefined' ? MTG_PRICES : []).find(function (row) { return row.re.test(model || ''); });
+            if (!p) return '';
+            const usd = (inTok || 0) / 1e6 * p.inPerM + (outTok || 0) / 1e6 * p.outPerM;
+            return '$' + (usd < 0.005 ? usd.toFixed(4) : usd.toFixed(2));
+        }
         async function callAIViaBackend(provider, model, promptText, opts) {
             const useModel = model || _aiDefaultModelFor(provider);
             if (!useModel) {
@@ -37287,9 +37405,16 @@ Make sure your suggestions directly address the specific root cause and discussi
                 action: 'generateOutputs', provider: _aiBackendProviderId(provider), model: useModel,
                 systemPrompt: '', userContent: String(promptText || ''),
                 maxTokens: opts.maxTokens || 1024,
+                // v5.6.0: how hard the model may think before it writes (.gs 3.73.0 passes
+                // it through as output_config.effort; an older backend ignores the key).
+                effort: opts.effort || '',
                 feature: opts.feature || 'composer'
             });
             if (!r || !r.success) throw new Error((r && r.error) || 'backend unreachable');
+            // v5.6.0: what the call actually cost, kept for the caller that wants to say so.
+            _aiLastUsage = { provider: _aiBackendProviderId(provider), model: useModel,
+                inputTokens: Number(r.inputTokens) || 0, outputTokens: Number(r.outputTokens) || 0,
+                stopReason: String(r.stopReason || ''), at: Date.now() };
             const text = String(r.text || '');
             const truncated = ['max_tokens', 'length', 'MAX_TOKENS'].indexOf(String(r.stopReason || '')) !== -1;
             return opts.withMeta === true ? { text: text, truncated: truncated } : text;
