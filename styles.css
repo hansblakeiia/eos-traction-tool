@@ -5788,3 +5788,20 @@
     .habits-head { margin-bottom: 8px !important; }
     #dailyHabitsSection h3 { font-size: 1rem !important; }
 }
+
+/* ==================== v5.3.1 — the inline strip for big boxes (desktop) ====================
+   Hans, 2026-09-03: a text box that is already tall keeps its own space; a mic and an
+   AI button sit in its corner instead of the full-screen composer. ZERO HEIGHT in the
+   flow — the JS sets a negative top margin that lifts it into the box — so it follows
+   any textarea without moving what comes after; the right margin clears the resize
+   grip. Fine pointers only (the JS never creates it on a phone), so no 44px floor. */
+.cmp-inline { position: relative; z-index: 2; height: 0; display: flex; justify-content: flex-end; gap: 6px; margin-right: 22px; pointer-events: none; }
+.cmp-inline-btn {
+    pointer-events: auto; flex: 0 0 auto; width: 32px; height: 32px; min-height: 32px; border-radius: 50%;
+    border: 1px solid var(--gray-300); background: #fff; color: var(--gray-700); cursor: pointer; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: inherit; font-size: 1rem; line-height: 1; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+.cmp-inline-btn:hover { background: var(--gray-100); }
+.cmp-inline-btn svg { width: 16px; height: 16px; display: block; }
+.cmp-inline-mic.cmp-recording { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
