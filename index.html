@@ -2978,6 +2978,9 @@
                             <div id="briefClientsLine" style="font-size: 0.78rem; color: var(--gray-600); margin: 3px 0 6px;"></div>
                             <button type="button" id="briefClientsBtn" class="btn btn-secondary"
                                     style="font-size: 0.8rem;" onclick="briefImportActiveClients()">Import my active clients</button>
+                            <!-- v5.8.0: which statuses/categories count — his ticks, from Redtail's own values -->
+                            <span id="briefClientsFilterLine" style="font-size: 0.75rem; color: var(--gray-500); margin-left: 6px;"></span>
+                            <div id="briefClientsFacets"></div>
                             <!-- v5.6.1 (his question: "can you double check that indeed they would
                                  have been brought to my attention otherwise?"). Only he can see his
                                  list and his mailbox, so the check is a button: a name or an
@@ -4114,9 +4117,10 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '5.7.0';
+        const EOS_VERSION = '5.8.0';
         const EOS_BUILD_DATE = '2026-09-03';
-        const EOS_BUILD_TIME = '19:20'; // v5.7.0: THE IMPORT NUDGE (client-only; styles.css unchanged, link stays ?v=5.5.0). His point, verbatim: "How do I run the importer, etc... I don't think I've been told to do that, and if this were a commercial product, a popup or something would have guided me that way." He is right: the active-client import shipped in v4.99.0 as one button in Settings › Me › Brief senders and nothing in the app ever pointed at it — so v4.99.0's "client mail always reaches you", v5.2.0's birthdays and v5.6.1's checker were all built on a list that, on a device that never ran the import, is EMPTY. NOW: briefClientsNudgeHtml() renders ONE line at the top of the mail section, on the brief AND on the Gmail page (both call it — one function, two hosts), whenever the imported list is empty: what is missing and what it costs him ("mail from a client is not flagged as a client"), what the import does and does not do ("takes about a minute, never changes Redtail"), and the button itself (briefClientsNudgeImport → the existing briefImportActiveClients, whose progress words now also land on the line via a mirrored say()); "Not now" rests it for 7 days on this device (eos_ui_prefs.clientsNudgeAt, rule 30 — never synced). When briefClientsGate() has a sentence (backend too old, Redtail not connected) the line shows THAT sentence and an Open Settings button instead of a button that would fail (rule 51/25). It disappears the moment the list has an address. Not a popup, by choice: a popup interrupts the brief he came to read; a line in the section it affects is where the fact belongs. AND HIS FIRST CLICK ON IT: "Importing your client list needs backend v3.68.0. This deployment reports vunknown" — on a 3.73.0 backend. The load-time capability probe had not completed in that tab, and ALL FIFTEEN version gates (`_calGsAtLeast(X) !== true`) read "never found out" as "too old" — rule 51's exact confusion, one layer up. NOW: `_gsEnsureVersion()` re-asks the backend once when no version is known, called at the top of the import, the drafter and the Redtail-modal draft BEFORE their gates; the two gates he can reach say `_gsUnknownSentence` (names the probe's own error, points at Check Google access) instead of "vunknown"; the nudge OFFERS the button when the version is unknown (the action re-asks itself); and a load-time probe that fails retries once after 20s. Probe brief-mail T1–T4 (T4: unknown version still offers the button, the sentence names the cause, and the line is above the fold at 375); the H fold fixture now seeds an imported list because the fold budget is the every-morning layout and the nudge is one click from gone.
+        const EOS_BUILD_TIME = '20:10'; // v5.8.0: WHICH CONTACTS ARE CURRENT CLIENTS IS HIS CALL (client-only; styles.css unchanged, link stays ?v=5.5.0). His first import on v5.7.0: "1 addresses from 1 active clients" — and his question: "shouldn't I be able to see a dropdown of categories or status to ensure you are grabbing just current clients?" The v4.99.0 filter GUESSED (/active/ on status, /client/ on category) against a Redtail contract this repo has never read, and matched almost nothing. NOW the import is two steps the first time: fetch contacts/search, compute the DISTINCT Status and Category values Redtail actually returned with counts (_briefContactFacets, tolerant of label/id/object shapes via _briefFacetOf), render them as tick boxes in Settings › Brief senders › Your active clients (renderBriefClientFacets) with the old guess as the STARTING ticks and a live "Matching now: N" count, and import only what he ticks (briefClientsImportSelected). The ticks are saved as clientFilter in the triage doc (defaults, normalise, lww merge, fingerprint — the four touches every synced field needs) so a re-import is one click and the choice travels; the Settings line shows the saved ticks with Change (pick:true re-fetches and shows the pickers without importing). The brief's nudge button opens Settings at the block and fetches when no ticks are saved, imports directly when they are. The record's FIELD NAMES are listed under the pickers (and in the done line when no birthday was found), naming any that look like a birth date — the contract read the v5.2.0 note asked for. Probe brief-mail U1–U4.
+        // v5.7.0 (19:20): THE IMPORT NUDGE (client-only; styles.css unchanged, link stays ?v=5.5.0). His point, verbatim: "How do I run the importer, etc... I don't think I've been told to do that, and if this were a commercial product, a popup or something would have guided me that way." He is right: the active-client import shipped in v4.99.0 as one button in Settings › Me › Brief senders and nothing in the app ever pointed at it — so v4.99.0's "client mail always reaches you", v5.2.0's birthdays and v5.6.1's checker were all built on a list that, on a device that never ran the import, is EMPTY. NOW: briefClientsNudgeHtml() renders ONE line at the top of the mail section, on the brief AND on the Gmail page (both call it — one function, two hosts), whenever the imported list is empty: what is missing and what it costs him ("mail from a client is not flagged as a client"), what the import does and does not do ("takes about a minute, never changes Redtail"), and the button itself (briefClientsNudgeImport → the existing briefImportActiveClients, whose progress words now also land on the line via a mirrored say()); "Not now" rests it for 7 days on this device (eos_ui_prefs.clientsNudgeAt, rule 30 — never synced). When briefClientsGate() has a sentence (backend too old, Redtail not connected) the line shows THAT sentence and an Open Settings button instead of a button that would fail (rule 51/25). It disappears the moment the list has an address. Not a popup, by choice: a popup interrupts the brief he came to read; a line in the section it affects is where the fact belongs. AND HIS FIRST CLICK ON IT: "Importing your client list needs backend v3.68.0. This deployment reports vunknown" — on a 3.73.0 backend. The load-time capability probe had not completed in that tab, and ALL FIFTEEN version gates (`_calGsAtLeast(X) !== true`) read "never found out" as "too old" — rule 51's exact confusion, one layer up. NOW: `_gsEnsureVersion()` re-asks the backend once when no version is known, called at the top of the import, the drafter and the Redtail-modal draft BEFORE their gates; the two gates he can reach say `_gsUnknownSentence` (names the probe's own error, points at Check Google access) instead of "vunknown"; the nudge OFFERS the button when the version is unknown (the action re-asks itself); and a load-time probe that fails retries once after 20s. Probe brief-mail T1–T4 (T4: unknown version still offers the button, the sentence names the cause, and the line is above the fold at 375); the H fold fixture now seeds an imported list because the fold budget is the every-morning layout and the nudge is one click from gone.
         // v5.6.1 (18:40): "WOULD THEY REACH ME?" (client-only; styles.css unchanged, link stays ?v=5.5.0). His question: "I recently received emails from our clients (Don Woodward, and Mary Beth Galbreath). These should have been caught in a 'Redtail Active Client' sweep and highlighted for me in the Gmail Tab and Daily Brief. Perhaps it is because I already dealt and responded to them, but can you double check that indeed they would have been brought to my attention otherwise?" Nobody but he can see his list and his mailbox, so the check is a button in Settings › Brief senders › Your active clients: a name or an address in; out comes membership of the imported list BY ADDRESS (the list is addresses only, so a name is resolved through contactSearchAll + the birthday records), the ranker's OWN verdict on a plain unread message from that address with no Gmail signal (briefTriageRank on a fabricated row — the real function, never a description of it — so "an active client" vs "direct to you" vs a filter reason is exactly what the brief would say), VIP/muted state, how many addresses the list holds and when it was imported (or that it never was on this device), and the two standing reasons a real email is still skipped by design (read/archived before the scan; before the window). The Gmail tab shows the same rows, so one answer covers both. Probe brief-mail S1–S3.
         // v5.6.0 (17:50): THE EMPTY ANSWER, THE COST, AND THE RECIPIENT (pairs with .gs v3.73.0, both accounts; styles.css unchanged, link stays ?v=5.5.0). (1) "The model returned an empty response" on his v5.5.0 draft: the Anthropic adapter was right; the model wrote nothing because current Claude models run ADAPTIVE THINKING by default, its tokens count against max_tokens, and the drafter's bigger prompt spent all 1,400 on reasoning — HTTP 200, stop_reason max_tokens, no text. The client's own comment above callAI had written this exact warning for Gemini. NOW: callAI takes opts.effort, callAIViaBackend sends it, .gs 3.73.0 passes output_config.effort (thinking stays adaptive — `disabled` is rejected by some current models); the drafter asks for effort:'low' and a 4,000 budget; callAI's empty-answer message names the real cause when the usage proves it (output tokens spent, stop reason max_tokens) instead of "raise the budget". (2) "$1 for every email... an estimator, or cap": MTG_PRICES was Opus-3-era ($15/$75) and Sonnet 4.6 ($3/$15) — every cost the tool showed for a Claude 5 call was 3–5x too high; now the current list, most-specific-first. The drafter shows an ESTIMATE in the step line before the call (chars/4 in, priced from the table), a CAP (GMAIL_AGENT_MAX_PROMPT_CHARS 40,000, oldest thread lines dropped first, the newest three never, the step says how many), and the ACTUAL cost in the result line from the backend's token counts (_aiLastUsage, priced by mtgUsageText). (3) "a way to adjust who the email is to... stopped... search manually": a To box (name or address; beats the sentence; a picked candidate beats both) with Search (the shared contact search, _gmSearchFor, one implementation behind both search boxes), a Stop button visible while a run is busy (checked at every step boundary, never mid-read), and "Not them? Change who it goes to" on the finished draft. Dictation into the request box already works through the v5.3.1 inline mic. Probe mail-agent A15–A18.
         // v5.5.0 (15:40): THE DRAFTER KNOWS WHAT DAY IT IS (client-only, TWO-FILE, ?v=5.5.0). His second Rick Ezell draft on v5.4.0 had the facts (Kitchen Sync, the standing lunch, Employee Care of America, Cindy's mother) and read them as if the March thread had arrived this morning: "Great to hear from you" after six months of silence, "glad our standing lunch is sticking" after ONE lunch, "glad Cindy's mother has settled in" about a move in progress six months earlier, and it threaded as "Re: Time for our six-month lunch?". The model was given the thread's TEXT and never its AGE. NOW: a TIME SINCE LAST CONTACT line (days, who wrote last, when); past GMAIL_AGENT_REPLY_WINDOW_DAYS (45) the email is a FRESH OUTREACH — the prompt says so and forbids thanking them for writing, the draft is NOT threaded onto the old conversation and any leading "Re:" is stripped; a TIME AWARENESS instruction (what was in progress then has moved on; ask in the present; count the meetings — one lunch plus an agreement means this proposes the SECOND, never "sticking"); the JSON gains "briefing" — 3-5 factual bullets FOR HANS with dates and sources — rendered above the draft as "What I found, for you", after a deterministic first line (last met/where, next on the calendar, last email N days ago and therefore outreach vs reply). SPINNER: every _gmStep carries a .gm-spin ring beside the words (his ask: "a loading spinner or throbber so I can tell if AI is working"). Probe mail-agent A13 (a two-day-old thread is a REPLY: threaded, TIME SINCE line, briefing rendered) and A14 (a 200-day-old thread is a FRESH OUTREACH: not threaded, no Re:, the prompt forbids "great to hear from you", the What-I-found box says outreach).
@@ -7898,7 +7902,15 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.7.0 &mdash; 2026-09-03 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.8.0 &mdash; 2026-09-03 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">You choose which Redtail statuses and categories count as a current client.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>The import shows you Redtail&rsquo;s own values first.</strong> Every Status and Category it returned, with counts, as tick boxes in Settings &rsaquo; Brief senders. Tick what means a current client, watch the match count, press Import these. Your ticks are remembered, so the next import is one click, and &ldquo;Change&rdquo; brings the boxes back.</li>'
+                + '<li>It also lists the field names on a contact record, and says which one looks like a birth date, or that none does.</li>'
+                + '</ul>'
+                + '</div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.7.0 &mdash; 2026-09-03</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">The brief tells you when your client list has not been imported, and imports it from right there.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>A line at the top of the mail section</strong>, on the brief and on the Gmail page, whenever your active clients have not been imported: what that means for you, what the import does (reads Redtail, about a minute, changes nothing), and the button to run it. &ldquo;Not now&rdquo; hides it for a week on this device. It disappears once the list exists.</li>'
@@ -18565,6 +18577,7 @@ Example:
             showFiltered: true, // the honesty rail's own on/off (design §5)
             aiReview: false,    // v4.73.0 — Hans's A (2026-08-28): the AI executive pass. OFF until he flips it.
             skipRead: true,     // v5.3.0 — mail he has already READ in Gmail stays out of the brief (his "touch it once")
+            clientFilter: null, // v5.8.0 — {status:[…], category:[…]}: which Redtail values count as a current client (his ticks)
             lastBriefAt: 0,     // epoch SECONDS of the last first-scan-of-a-day; the window
             savedAt: 0
         };
@@ -18591,6 +18604,7 @@ Example:
             t.showFiltered = t.showFiltered !== false;
             t.aiReview = t.aiReview === true;   // default OFF — his explicit flip turns it on
             t.skipRead = t.skipRead !== false;  // v5.3.0: default ON — read in Gmail means dealt with
+            if (!t.clientFilter || typeof t.clientFilter !== 'object' || !Array.isArray(t.clientFilter.status) || !Array.isArray(t.clientFilter.category)) t.clientFilter = null;
             _briefTriageCache = t;
             return t;
         }
@@ -20328,6 +20342,7 @@ Example:
             out.showFiltered = newer.showFiltered !== false;
             out.aiReview = newer.aiReview === true;   // v4.73.0 — lww scalar, same as showFiltered
             out.skipRead = newer.skipRead !== false;  // v5.3.0 — lww scalar, same as showFiltered
+            out.clientFilter = (newer.clientFilter && typeof newer.clientFilter === 'object') ? newer.clientFilter : null;   // v5.8.0 — lww, travels with the list it shapes
             // Accumulated facts: union. `handled` keeps the EARLIER date because the question
             // it answers is "when did he first deal with this"; `snoozed` keeps the LATER
             // return date and `pinned` the later stamp, because for those the most recent
@@ -20391,7 +20406,8 @@ Example:
                     t.showFiltered !== false ? '1' : '0',
                     // v5.3.0 — same reason as the clients line above: a switch the fingerprint
                     // cannot see is a switch that never pushes.
-                    t.skipRead !== false ? '1' : '0'].join('|');
+                    t.skipRead !== false ? '1' : '0',
+                    JSON.stringify(t.clientFilter || '')].join('|');   // v5.8.0
         }
 
 
@@ -20441,6 +20457,18 @@ Example:
         }
         async function briefClientsNudgeImport(btn) {
             if (btn) { btn.disabled = true; btn.textContent = 'Importing…'; }
+            // v5.8.0: the first import needs HIS ticks (which Redtail values are clients),
+            // and the pickers live in Settings — so the first press opens Settings at the
+            // block and fetches; a later press (ticks saved) imports from right here.
+            if (!briefTriage().clientFilter) {
+                try { openSettings(); } catch (e) { }
+                setTimeout(function () {
+                    const band = document.getElementById('setBand-briefMail');
+                    if (band && band.scrollIntoView) { try { band.scrollIntoView({ block: 'start' }); } catch (e) { } }
+                }, 150);
+                try { await briefImportActiveClients({ pick: true }); } finally { _briefPaintMail(); }
+                return;
+            }
             try { await briefImportActiveClients(); } finally { _briefPaintMail(); }
         }
         function briefClientsNudgeLater() {
@@ -20475,7 +20503,7 @@ Example:
             const status = txt('status', 'status_id');
             const cat = txt('category', 'category_id');
             const type = txt('type', 'contact_type');
-            const activeish = /active/.test(status) || status === '1';
+            const activeish = /\bactive\b/.test(status) || status === '1';   // v5.8.0: "inactive" contains "active"
             const clientish = /client/.test(cat) || /client/.test(type) || cat === '1';
             return activeish && clientish;
         }
@@ -20574,7 +20602,104 @@ Example:
                 + '<div style="margin-top:4px; color: var(--gray-500);">Two things still keep a real email out, by design: you read it or archived it in Gmail before the scan (star it in Gmail to keep it), or it arrived before the scan window opened.</div>');
         }
 
-        async function briefImportActiveClients() {
+        // ==================== v5.8.0 — WHICH CONTACTS ARE CURRENT CLIENTS? ====================
+        // His first import on v5.7.0: "1 addresses from 1 active clients". The v4.99.0
+        // filter GUESSED — /active/ on the status and /client/ on the category — and
+        // Redtail's real values matched almost nothing. His words: "shouldn't I be able to
+        // see a dropdown of categories or status to ensure you are grabbing just current
+        // clients?" Yes. The standing Redtail rule is READ the contract, never guess it,
+        // so the import now shows him the distinct Status and Category values Redtail
+        // actually returned, with counts, ticked by the old guess as a starting point, and
+        // imports only what he ticked. The choice is saved in the triage doc (lww, like
+        // showFiltered) so a re-import is one click and the choice travels between devices.
+        let _briefRtContacts = null;   // the last contacts/search answer, kept for the pickers
+        function _briefFacetVal(v) {
+            if (v == null) return '';
+            if (typeof v === 'object') return String(v.name || v.label || v.description || v.value || v.id || '').trim();
+            return String(v).trim();
+        }
+        function _briefFacetOf(c, kind) {
+            if (!c) return '';
+            const keys = kind === 'status'
+                ? ['status', 'status_name', 'StatusName', 'Status', 'status_id', 'StatusID']
+                : ['category', 'category_name', 'CategoryName', 'Category', 'category_id', 'CategoryID'];
+            for (let i = 0; i < keys.length; i++) { const v = _briefFacetVal(c[keys[i]]); if (v) return v; }
+            return '(blank)';
+        }
+        function _briefContactFacets(contacts) {
+            const st = {}, cat = {};
+            (contacts || []).forEach(function (c) {
+                const s = _briefFacetOf(c, 'status'); st[s] = (st[s] || 0) + 1;
+                const k = _briefFacetOf(c, 'category'); cat[k] = (cat[k] || 0) + 1;
+            });
+            const list = function (m) { return Object.keys(m).map(function (k) { return { value: k, n: m[k] }; }).sort(function (a, b) { return b.n - a.n; }); };
+            return { status: list(st), category: list(cat), fields: Object.keys((contacts && contacts[0]) || {}) };
+        }
+        // The v4.99.0 guess, as a STARTING tick — never the decision.
+        function _briefClientFilterDefault(f) {
+            return {
+                // \bactive\b, not /active/ — "Inactive" contains "active", and the v4.99.0
+                // guess ticked it (the probe's fixture caught it on its first run).
+                status: f.status.filter(function (x) { return /\bactive\b/i.test(x.value) || x.value === '1'; }).map(function (x) { return x.value; }),
+                category: f.category.filter(function (x) { return /client/i.test(x.value); }).map(function (x) { return x.value; })
+            };
+        }
+        function _briefMatchesFilter(c, f) {
+            if (!f) return _briefIsActiveClient(c);
+            const s = _briefFacetOf(c, 'status'), k = _briefFacetOf(c, 'category');
+            return (!f.status.length || f.status.indexOf(s) !== -1) && (!f.category.length || f.category.indexOf(k) !== -1);
+        }
+        function _briefReadFacetPicks() {
+            const picks = { status: [], category: [] };
+            document.querySelectorAll('#briefClientsFacets input[data-facet]').forEach(function (cb) {
+                if (cb.checked) picks[cb.getAttribute('data-facet')].push(cb.value);
+            });
+            return picks;
+        }
+        function renderBriefClientFacets(facets, picked) {
+            const host = document.getElementById('briefClientsFacets');
+            if (!host) return;
+            if (!facets) { host.innerHTML = ''; return; }
+            const esc = escapeHtml;
+            const group = function (kind, label, rows) {
+                return '<div style="margin:4px 0;"><strong>' + label + '</strong> '
+                    + rows.map(function (r) {
+                        const on = picked[kind].indexOf(r.value) !== -1;
+                        return '<label style="display:inline-flex; align-items:center; gap:4px; margin:2px 10px 2px 0; font-size:0.8rem; cursor:pointer;">'
+                            + '<input type="checkbox" data-facet="' + kind + '" value="' + esc(r.value) + '"' + (on ? ' checked' : '')
+                            + ' onchange="briefClientsFacetChanged()" style="width:14px; height:14px; margin:0;"> ' + esc(r.value) + ' <span style="color:var(--gray-500);">(' + r.n + ')</span></label>';
+                    }).join('') + '</div>';
+            };
+            const n = (_briefRtContacts || []).filter(function (c) { return _briefMatchesFilter(c, picked); }).length;
+            const bdayLike = facets.fields.filter(function (k) { return /birth|dob/i.test(k); });
+            host.innerHTML = '<div class="gm-brief" style="margin-top:8px;">'
+                + '<div class="gm-brief-h">Redtail returned ' + (_briefRtContacts || []).length + ' contacts &mdash; which of these are current clients?</div>'
+                + group('status', 'Status:', facets.status)
+                + group('category', 'Category:', facets.category)
+                + '<div style="margin-top:6px;">Matching now: <strong id="briefClientsMatchN">' + n + '</strong> contact' + (n === 1 ? '' : 's') + '. '
+                + '<button type="button" class="btn btn-primary" style="font-size:0.8rem;" onclick="briefClientsImportSelected()">Import these</button></div>'
+                + '<div style="margin-top:6px; color:var(--gray-500); font-size:0.75rem;">Fields on a contact record: ' + esc(facets.fields.slice(0, 30).join(', ')) + (facets.fields.length > 30 ? ', …' : '')
+                + (bdayLike.length ? '. Birth date looks like: ' + esc(bdayLike.join(', ')) + '.' : '. None of these looks like a birth date &mdash; Redtail may keep it on the contact detail, not the search row.') + '</div>'
+                + '</div>';
+        }
+        function briefClientsFacetChanged() {
+            const picks = _briefReadFacetPicks();
+            const n = (_briefRtContacts || []).filter(function (c) { return _briefMatchesFilter(c, picks); }).length;
+            const el = document.getElementById('briefClientsMatchN');
+            if (el) el.textContent = String(n);
+        }
+        function briefClientsImportSelected() {
+            const picks = _briefReadFacetPicks();
+            if (!picks.status.length && !picks.category.length) { showToast('Tick at least one status or category first.', 'info'); return; }
+            saveBriefTriage({ clientFilter: picks });
+            return briefImportActiveClients({ contacts: _briefRtContacts, filter: picks });
+        }
+
+        // opts.contacts — reuse the last fetch (the pickers' Import button);
+        // opts.filter   — what he ticked; absent, the saved filter; absent THAT, show the pickers;
+        // opts.pick     — fetch and show the pickers even when a filter is saved ("Change").
+        async function briefImportActiveClients(opts) {
+            opts = opts || {};
             await _gsEnsureVersion();   // v5.7.0: never refuse on a version we never read
             const gate = briefClientsGate();
             if (gate) { showToast(gate, 'error'); return; }
@@ -20589,27 +20714,39 @@ Example:
             };
             if (btn) { btn.disabled = true; btn.textContent = 'Importing…'; }
             try {
-                say('Asking Redtail for your contacts…');
-                // base:'classic' IS REQUIRED. The backend picks the base from THIS field and
-                // then matches the whitelist against that tag, so omitting it makes the row
-                // match as api2 and the call comes back "Path not permitted" from a backend
-                // that supports it perfectly well. Both v3.68.0 rows are classic-only.
-                const r = await _calPost({ action: 'redtailApi', base: 'classic', method: 'POST', path: 'contacts/search', body: {} });
-                if (!r || !r.success) throw new Error((r && r.error) || 'Redtail did not answer.');
-                const body = r.body || {};
-                const contacts = body.contacts || body.Contacts || body.data || (Array.isArray(body) ? body : []);
-                if (!Array.isArray(contacts) || !contacts.length) {
-                    throw new Error('Redtail returned no contacts. If your search is restricted, check the API user’s permissions.');
+                let contacts = Array.isArray(opts.contacts) ? opts.contacts : null;
+                if (!contacts) {
+                    say('Asking Redtail for your contacts…');
+                    // base:'classic' IS REQUIRED. The backend picks the base from THIS field and
+                    // then matches the whitelist against that tag, so omitting it makes the row
+                    // match as api2 and the call comes back "Path not permitted" from a backend
+                    // that supports it perfectly well. Both v3.68.0 rows are classic-only.
+                    const r = await _calPost({ action: 'redtailApi', base: 'classic', method: 'POST', path: 'contacts/search', body: {} });
+                    if (!r || !r.success) throw new Error((r && r.error) || 'Redtail did not answer.');
+                    const body = r.body || {};
+                    contacts = body.contacts || body.Contacts || body.data || (Array.isArray(body) ? body : []);
+                    if (!Array.isArray(contacts) || !contacts.length) {
+                        throw new Error('Redtail returned no contacts. If your search is restricted, check the API user’s permissions.');
+                    }
+                    _briefRtContacts = contacts;
                 }
-                const active = contacts.filter(_briefIsActiveClient);
+                // v5.8.0: WHICH of these are current clients is HIS call, made once from the
+                // values Redtail actually returned, and remembered. No saved choice (or an
+                // explicit "Change") shows the pickers and imports nothing yet.
+                const facets = _briefContactFacets(contacts);
+                const saved = (briefTriage().clientFilter && typeof briefTriage().clientFilter === 'object') ? briefTriage().clientFilter : null;
+                const filter = opts.filter || (opts.pick ? null : saved);
+                if (!filter) {
+                    renderBriefClientFacets(facets, saved || _briefClientFilterDefault(facets));
+                    say('Redtail returned ' + contacts.length + ' contacts. Tick the statuses and categories that mean a current client, then press Import these.');
+                    if (btn) { btn.disabled = false; btn.textContent = 'Import my active clients'; }
+                    return;
+                }
+                renderBriefClientFacets(null);
+                const active = contacts.filter(function (c) { return _briefMatchesFilter(c, filter); });
                 if (!active.length) {
-                    // Say what it SAW, so a filter that missed is diagnosable rather than
-                    // being read as "you have no clients" (rule 63's shape).
-                    const sample = contacts.slice(0, 3).map(function (c) {
-                        return JSON.stringify({ status: c.status, status_id: c.status_id, category: c.category, category_id: c.category_id });
-                    }).join(' ');
-                    throw new Error('Read ' + contacts.length + ' contacts but none matched "active" + "client". '
-                        + 'The first few look like: ' + sample);
+                    throw new Error('Read ' + contacts.length + ' contacts but none matched your ticks (status: '
+                        + (filter.status.join(', ') || 'any') + '; category: ' + (filter.category.join(', ') || 'any') + '). Press Change to pick again.');
                 }
                 const walk = active.slice(0, BRIEF_CLIENTS_MAX);
                 const addrs = [];
@@ -20645,9 +20782,9 @@ Example:
                 saveBriefTriage({ clients: uniq, clientsAt: Date.now(), clientBirthdays: bdays });
                 _briefPaintMail();
                 if (typeof renderBriefMailSettings === 'function') renderBriefMailSettings();
-                say(uniq.length + ' addresses from ' + walk.length + ' active clients — mail from them will always reach you.'
+                say(uniq.length + ' addresses from ' + walk.length + ' current clients (of ' + contacts.length + ' Redtail contacts) — mail from them will always reach you.'
                     + (bdays.length ? ' Birthdays found for ' + bdays.length + ' (Redtail field "' + bdayField + '").'
-                       : ' No birth dates found on these records — tell Claude which Redtail field carries them.')
+                       : ' No birth dates on these records (fields: ' + facets.fields.slice(0, 20).join(', ') + (facets.fields.length > 20 ? ', …' : '') + ').')
                     + (active.length > walk.length ? ' (' + active.length + ' matched; the first ' + walk.length + ' were read.)' : ''));
                 showToast('Imported ' + uniq.length + ' client addresses.', 'success');
             } catch (e) {
@@ -20801,6 +20938,15 @@ Example:
             if (ai) ai.checked = t.aiReview === true;
             // v4.99.0 — the client-list line states the COUNT and WHEN, because "imported"
             // with no number is indistinguishable from "imported nothing".
+            // v5.8.0: the saved ticks, and a way to change them.
+            const fl = document.getElementById('briefClientsFilterLine');
+            if (fl) {
+                const f = t.clientFilter;
+                fl.innerHTML = (f && (f.status.length || f.category.length))
+                    ? 'Counting as clients: status ' + escapeHtml(f.status.join(', ') || 'any') + '; category ' + escapeHtml(f.category.join(', ') || 'any') + '. '
+                      + '<button type="button" class="mb-mail-link" onclick="briefImportActiveClients({ pick: true })">Change</button>'
+                    : '';
+            }
             const cl = document.getElementById('briefClientsLine');
             if (cl) {
                 const n = (t.clients || []).length;
