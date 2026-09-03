@@ -4096,9 +4096,10 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '5.3.1';
+        const EOS_VERSION = '5.4.0';
         const EOS_BUILD_DATE = '2026-09-03';
-        const EOS_BUILD_TIME = '13:10'; // v5.3.1: HIS FIRST LIVE DRAFT, TWO REPORTS (TWO-FILE, ?v=5.3.1). (1) 'Unknown AI provider "claude". Expected one of: anthropic, openai, gemini, grok.' — the app has called Anthropic "claude" since the routing table was written and the backend's AI_KEY_PROPS_ only knows "anthropic"; every caller through callAIViaBackend (the drafter, the composer's Rewrite, the birthday greeting) sent the client id verbatim and died on that sentence. ONE translation at the seam, _aiBackendProviderId, never at the call sites. (2) "It is a bit jarring when I click on a typable box and then another window pops open... if the box is already large enough, build in the AI icon and the Microphone icon in the place where you type." THE INLINE STRIP: on a FINE pointer a textarea whose rendered height is >= CMP_INLINE_MIN_H (60px) keeps its focus and gets a zero-height .cmp-inline strip in its bottom-right corner (sparkle + mic) while focused; the mic dictates straight into the box through _cmpDictateInto — the composer's engine REFACTORED to take (ta, mic, opts), composerToggleMic is now a two-line wrapper, so there is ONE recogniser/restart/duplicate-guard, not a copy; the sparkle opens the composer on that box with the AI menu already open (explicit click, not an interruption). Short boxes and every phone behave exactly as before. The strip is checked BEFORE the composer's on/off so it works even with the composer switched off. Probe composer-inline-probe (new) at 1280 fine + 412 coarse.
+        const EOS_BUILD_TIME = '14:30'; // v5.4.0: THE DRAFTER SEES THE WHOLE RELATIONSHIP (pairs with .gs v3.72.0, both accounts; styles.css unchanged, link stays ?v=5.3.1). His Rick Ezell draft: "Read: 0 recent messages · no meeting on file" and a generic "Lunch soon?", against Claude Chat's version that knew the March lunch at Kitchen Sync, the six-month standing agreement, Cindy's mother, Employee Care of America — because Chat read 36 threads back to 2022, the full March thread, the calendar (March 24 lunch + the Sept 7 "Set up lunch" reminder), and his sent mail for voice. THREE CUT-OFFS, all ours: searchMail ran 120 days by ADDRESS alone (the March thread was 160 days old; people write from more than one address); _gmLastMeeting read the calendar feed on screen (~a month); four bodies. NOW: name+address (server-composed, name whitelisted to letters), 365 days then 1825 if empty, 30 rows, six bodies, twelve lines of thread in the context with ME/THEM marked, a TODAY line so "six months since" can be computed, the calendar over 24 months back / 12 ahead through the new searchCalendarEvents (newest past = last meeting, soonest future = "NEXT ON YOUR CALENDAR" — the reminder is what makes the email well-timed), and the prompt tells the model to write in HIS voice modelled on the ME messages and to use the people/places/agreements the context records. Both new reads gate on .gs 3.72.0 (GMAIL_AGENT_WIDE_GS_MIN); an older backend gets the old address-only read and the result line SAYS so. Result line now reads "N messages back to <date> · last meeting · next on your calendar · open items". Probe mail-agent A2 upgraded (name allowed, six bodies), A11 (name rides with the address; empty year widens to five), A12 (calendar searched by name; NEXT ON YOUR CALENDAR and the last calendar entry reach the prompt; Meeting Processor note still wins as LAST MEETING).
+        // v5.3.1 (13:10): HIS FIRST LIVE DRAFT, TWO REPORTS (TWO-FILE, ?v=5.3.1). (1) 'Unknown AI provider "claude". Expected one of: anthropic, openai, gemini, grok.' — the app has called Anthropic "claude" since the routing table was written and the backend's AI_KEY_PROPS_ only knows "anthropic"; every caller through callAIViaBackend (the drafter, the composer's Rewrite, the birthday greeting) sent the client id verbatim and died on that sentence. ONE translation at the seam, _aiBackendProviderId, never at the call sites. (2) "It is a bit jarring when I click on a typable box and then another window pops open... if the box is already large enough, build in the AI icon and the Microphone icon in the place where you type." THE INLINE STRIP: on a FINE pointer a textarea whose rendered height is >= CMP_INLINE_MIN_H (60px) keeps its focus and gets a zero-height .cmp-inline strip in its bottom-right corner (sparkle + mic) while focused; the mic dictates straight into the box through _cmpDictateInto — the composer's engine REFACTORED to take (ta, mic, opts), composerToggleMic is now a two-line wrapper, so there is ONE recogniser/restart/duplicate-guard, not a copy; the sparkle opens the composer on that box with the AI menu already open (explicit click, not an interruption). Short boxes and every phone behave exactly as before. The strip is checked BEFORE the composer's on/off so it works even with the composer switched off. Probe composer-inline-probe (new) at 1280 fine + 412 coarse.
         // v5.3.0 (11:40): DEALT WITH IN GMAIL MEANS DEALT WITH (pairs with .gs v3.71.0, both accounts). His report: 'I am receiving emails in my Daily Brief that I have already dealt with in my Gmail, so it is causing me to have to double my work.' Two causes, one per file. BACKEND: scanInbox's query was category:primary after:<since> with NO in:inbox, and Gmail keeps the category label on an archived message, so everything he archived came straight back the next morning; v3.71.0 adds in:inbox (exactly the Primary tab) and reports inInbox per row. CLIENT: read was only ever a +1 SCORE SIGNAL, never a verdict, so a message he had opened and finished with surfaced again as 'direct to you'; and the auto-resolve (v4.57.0) only ever compared against the SAME DAY's cache, so on a new day it had nothing to compare. briefTriageRank now has a THIRD bucket, handledInGmail: inInbox:false ('archived in Gmail') or unread:false without a star ('already read in Gmail'), below his pin and mute, above every rule the tool decided on its own. Counted as ONE LINE in the band and on the Gmail page, NO rows, because the review rail exists to undo decisions THIS TOOL made and reading mail in Gmail is his own. Two escapes, both his: a star in Gmail, and Settings › Brief senders › the new switch (skipRead, synced lww like showFiltered, in the fingerprint). ALSO: 'Draft the email' on a Redtail task (v4.91.0) was a task-only draft while the v5.2.0 Gmail-page drafter reads the chain, the last meeting and the open Redtail items — the weaker-private-copy shape for the THIRD time (memory feedback_reuse_before_rebuild), so the modal now hands the task to gmailAgentRun with the person named (Last, First normalised), and keeps the old path only as the fallback for a backend without the drafter. Probe brief-mail R1-R5 (read leaves both lists and is counted; archived leaves both; a star keeps it; the switch off restores read-as-signal but archived never returns; the band draws one line and no row). His item 4 (delete from the viewer) had ALREADY shipped in v4.96.0 — his screenshot predates it.
         // v5.2.2 (20:05): THE DRAFTER NEVER DEAD-ENDS ON A NAME (TWO-FILE, ?v=5.2.2). His screenshot: 'I could not work out who this is for - I read the name as Ruth Di Pascali and found no address for them. Add their email address to your request and try again.' His question: 'Do you honestly think this is helpful and the best thing you could have done? Don't you think there should then be a search for, and it searches within Google Contacts and Redtail for who the email may be for?' HE WAS RIGHT, AND THE APP ALREADY HAD THAT SEARCH: v4.90.0 built it for the Meeting Processor after the DiPasquale miss - Google Contacts AND Redtail, the surname retry, an answer that names which sources it asked. The drafter shipped with a WEAKER private copy (brief cache + Google only, no retry, no box) and dead-ended. The failure to reuse is the lesson, not the search. NOW: contactSearchAll(q) is ONE shared search (extracted from mtgReferralFind's core; both callers run the same code); mtgExtractRedtailContacts keeps the ContactID it used to drop, so a Redtail candidate with no address on api2 (the normal case, §5.64) resolves through the classic contacts/{id}/emails row on pick; the drafter's resolver runs the shared search automatically, auto-continues ONLY when the FULL name matched exactly one person, and shows candidates for confirmation when the match came from the SURNAME retry - a misheard name landing on the one 'Pascali' in Redtail is precisely the draft-to-the-wrong-person case he would hate, and one click to confirm costs less than that. When nothing matches, an editable 'Search for' box prefilled with the name as read, Search re-runs both sources on what HE typed (v4.90.0's contract, 'search the name HE knows'), each candidate is a button that continues the run, and the sentence names the sources it searched. gmailAgentPick RETURNS the run rather than firing it, so a caller can await the whole thing. Probe mail-agent 12/12 (A8: both sources searched, surname retry, candidate with source, box prefilled, no dead end; A9: the Redtail pick fetches her address via classic /emails and continues to a draft addressed to it; A10: typing 'DiPasquale' searches THAT). Three fixture faults on the way, all mine: A8's stub matched the surname inside the full name so the retry never ran; A10's Google stub answered every query so the box never appeared; A9 read the screen mid-run because the pick was fire-and-forget. Battery: meeting-processor 96/96 (the extractor change), ref-search 6/6, client-vip 7/7, brief-mail 63/63, mail-actions 10/10.
         // v4.54.0: DRAGGING AN EVENT TO ANOTHER SPOT IN THE WEEK — and the feature was never missing, it was being deleted. Hans: "on desktop I'm not able to drag and then drop events to other spots in the calendar week, like I can in Google Calendar." A real mouse drag against the shipped build moves the box, posts updateCalendarEvent with the right start, end and expectedStartISO, and honours the recurring-scope chooser: the whole feature works, and has since v4.30.2. What kills it is one word. `_calRenderWeek` decided the drag affordance with a bare `capabilityReady('calendar.createEvent')`, which is a SYNCHRONOUS CACHED READ THAT IS FALSE IN THREE DIFFERENT SITUATIONS and means "off" in only one of them: the probe answered no, the probe never completed, or the probe failed. So a single unreachable-backend moment — the same 404 that confounded his August 11 Today-button screenshot — stripped `cal-wk-ev-drag` off every event, and there was nothing on screen to read, because the sentence that would have explained it lives inside a write path the dead gesture could no longer reach. THIS IS RULE 51 EXACTLY, and rule 51's own last line names this shape: "a dead gesture is the same defect in gesture form — worse than a refusal, because there is nothing to read." v4.39.1 fixed it for the "+ New event" BUTTON and stopped there. THE SAME `canWrite` GOVERNED TWO MORE THINGS NOBODY HAD CONNECTED TO IT: the "+ Block" gaps (measured: 2 of 2 gone on a failed probe) and the coach's "Block time now" button — so a blip quietly removed three features at once, one of which was the only route to the explanation for the other two. The fix is a NAMED FUNCTION rather than a remembered habit: `capabilityDenied(key)` is true only when the probe COMPLETED, did NOT fail, and still says no — the one state in which hiding something is honest — so an affordance reads `!capabilityDenied(k)` and an action reads `await capabilityReadyChecked(k)`, which re-probes and turns a blip into one retry instead of a vanished feature. `_calCommitMove` now asks that question at the drop and, on a genuine no, snaps the block back AND says why in calBlockTime's own words, because a drag that silently undoes itself is the dead gesture wearing a different coat. Proof: `.claude/probes/cal-dragmove-probe.js` drives real page.mouse events at measured coordinates (never el.click(), which cannot see an overlay or prove a gesture) across all three capability states — 19/19 here, 16/19 on the deployed v4.53.0, and the three that flip are precisely the three this fixes.
@@ -7868,7 +7869,17 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.3.1 &mdash; 2026-09-03 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.4.0 &mdash; 2026-09-03 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">The email drafter reads the whole relationship, not the last four months.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>It reads much further back.</strong> A year of mail with the person first, five years if that finds nothing, searched by their name as well as their address, and it reads more of the messages. The result line says how many it read and how far back.</li>'
+                + '<li><strong>It reads your calendar properly.</strong> Two years back and a year ahead, by name &mdash; so it knows when you last met and whether you have a reminder coming up, and times the email to that.</li>'
+                + '<li><strong>It writes in your voice</strong>, modelled on your own messages in the thread, and picks up the specifics the thread recorded rather than writing a generic note.</li>'
+                + '<li>Needs backend v3.72.0, deployed to both accounts today. Reload once.</li>'
+                + '</ul>'
+                + '</div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.3.1 &mdash; 2026-09-03</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">The drafter works again, and a big text box on a desktop keeps its own space.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>&ldquo;Unknown AI provider claude&rdquo; is fixed.</strong> The app and the backend used two different names for the same provider; they agree now. This had stopped the email drafter, the composer&rsquo;s Rewrite and the birthday greeting.</li>'
@@ -28964,8 +28975,19 @@ Make sure your suggestions directly address the specific root cause and discussi
         // document / agreement / form / PDF in his own request always produce the line
         // "Attach the … — a draft cannot carry a file", whatever the model wrote.
         const GMAIL_AGENT_GS_MIN = '3.70.0';
-        const GMAIL_AGENT_DAYS = 120;
-        const GMAIL_AGENT_BODIES = 4;
+        // v5.4.0 — HIS RICK EZELL DRAFT: "Read: 0 recent messages · no meeting on file", then
+        // a generic email, while Claude Chat, asked the same thing, read 36 threads back to
+        // 2022 and found the March lunch and a September reminder on his calendar. Three
+        // cut-offs, all this module's: 120 days by ADDRESS alone (the thread that mattered
+        // was 160 days old, and people write from more than one address); a calendar read
+        // limited to the month on screen; and four bodies. Now a year first, five years if
+        // that finds nothing, the NAME beside the address, six bodies, and the calendar over
+        // two years through the backend. The name and the calendar search need .gs 3.72.0;
+        // an older backend gets the old address-only read and the result line says so.
+        const GMAIL_AGENT_WIDE_GS_MIN = '3.72.0';
+        const GMAIL_AGENT_DAYS = 365;
+        const GMAIL_AGENT_DAYS_WIDE = 1825;
+        const GMAIL_AGENT_BODIES = 8;
         let _gmAgentBusy = false;
 
         function gmailAgentGate() {
@@ -29098,6 +29120,40 @@ Make sure your suggestions directly address the specific root cause and discussi
             return null;
         }
 
+        // v5.4.0: the calendar over a WIDE window, through the backend's text search —
+        // the client's own feed only ever holds the month on screen. Full name first, then
+        // the surname alone (a lunch is often titled "Lunch - Ezell"). Returns the newest
+        // past match and the soonest future one; a reminder he set himself ("Set up lunch
+        // with Rick Ezell", next week) is exactly the kind of future entry that turns a
+        // generic catch-up into a well-timed email. Degrades to nothing, never throws.
+        async function _gmCalendarLookup(name) {
+            const n = String(name || '').replace(/\s+/g, ' ').trim();
+            if (!n || _calGsAtLeast(GMAIL_AGENT_WIDE_GS_MIN) !== true) return { last: null, next: null, unavailable: true };
+            const terms = [n];
+            const sur = n.split(' ').pop();
+            if (sur && sur.length >= 3 && sur.toLowerCase() !== n.toLowerCase()) terms.push(sur);
+            const shape = function (e) {
+                if (!e) return null;
+                const when = Date.parse(e.start) || 0;
+                return {
+                    at: when, source: 'Calendar', title: String(e.title || ''),
+                    summary: String(e.title || '') + (e.location ? ' at ' + e.location : '')
+                        + (e.description ? ' — note: ' + String(e.description).slice(0, 300) : '')
+                };
+            };
+            for (let i = 0; i < terms.length; i++) {
+                let r = null;
+                try { r = await _calPost({ action: 'searchCalendarEvents', q: terms[i], monthsBack: 24, monthsAhead: 12, max: 20 }); }
+                catch (e) { r = null; }
+                if (!r || !r.success) continue;
+                const past = Array.isArray(r.past) ? r.past : [];
+                const future = Array.isArray(r.future) ? r.future : [];
+                if (!past.length && !future.length) continue;
+                return { last: shape(past[0]), next: shape(future[0]), term: terms[i] };
+            }
+            return { last: null, next: null };
+        }
+
         function _gmOpenItems(name) {
             const n = String(name || '').toLowerCase();
             if (!n || typeof rtActState === 'undefined' || !rtActState || !Array.isArray(rtActState.rows)) return [];
@@ -29153,37 +29209,68 @@ Make sure your suggestions directly address the specific root cause and discussi
                     return;
                 }
 
-                _gmStep('Reading your recent mail with ' + (who.name || who.email) + '…');
-                const sr = await _briefMailPost({ action: 'searchMail', address: who.email, days: GMAIL_AGENT_DAYS, max: 20 });
+                // v5.4.0: the whole relationship, not the last 120 days — see GMAIL_AGENT_DAYS.
+                const personName = who.name || person.name || '';
+                const wide = _calGsAtLeast(GMAIL_AGENT_WIDE_GS_MIN) === true;
+                _gmStep('Reading your mail with ' + (personName || who.email) + '…');
+                const searchArgs = { action: 'searchMail', address: who.email, days: GMAIL_AGENT_DAYS, max: 30 };
+                if (wide && personName) searchArgs.name = personName;
+                let sr = await _briefMailPost(searchArgs);
                 if (!sr || !sr.success) throw new Error((sr && sr.error) || 'Could not search your mail.');
-                const threads = (sr.rows || []).filter(function (r) { return !r.bulk; });
+                let threads = (sr.rows || []).filter(function (r) { return !r.bulk; });
+                let daysRead = Number(sr.days) || GMAIL_AGENT_DAYS;
+                if (!threads.length && wide) {
+                    _gmStep('Nothing in the last year — looking further back…');
+                    sr = await _briefMailPost(Object.assign({}, searchArgs, { days: GMAIL_AGENT_DAYS_WIDE }));
+                    if (sr && sr.success) {
+                        threads = (sr.rows || []).filter(function (r) { return !r.bulk; });
+                        daysRead = Number(sr.days) || GMAIL_AGENT_DAYS_WIDE;
+                    }
+                }
                 let bodies = [];
                 if (threads.length) {
                     _gmStep('Reading the ' + Math.min(GMAIL_AGENT_BODIES, threads.length) + ' most recent…');
                     const br = await _briefMailPost({ action: 'briefFetchBodies', ids: threads.slice(0, GMAIL_AGENT_BODIES).map(function (r) { return r.id; }) });
                     bodies = (br && br.success && Array.isArray(br.bodies)) ? br.bodies : [];
                 }
+                const oldest = threads.length ? threads[threads.length - 1].dateMs : 0;
 
                 _gmStep('Finding when you last met…');
-                const last = _gmLastMeeting(who.name || person.name, who.email);
-                const open = _gmOpenItems(who.name || person.name);
+                // The Meeting Processor's note is the richest record when it exists, so it
+                // stays first; the calendar over two years supplies what it cannot — the last
+                // time they actually sat down, and the next thing on the calendar with them.
+                let last = _gmLastMeeting(personName, who.email);
+                let calLast = null, next = null;
+                if (wide) {
+                    const cal = await _gmCalendarLookup(personName);
+                    calLast = cal.last || null;
+                    next = cal.next || null;
+                    if (!last && calLast) last = calLast;
+                }
+                const open = _gmOpenItems(personName);
                 const reminders = _gmAttachmentReminders(intent);
 
                 _gmStep('Writing the draft…');
+                const fmtDate = function (ms) { return ms ? new Date(ms).toLocaleDateString() : 'date unknown'; };
                 const ctx = [];
                 ctx.push('RECIPIENT: ' + (who.name ? who.name + ' <' + who.email + '>' : who.email));
-                if (last) ctx.push('LAST MEETING (' + last.source + ', ' + (last.at ? new Date(last.at).toLocaleDateString() : 'date unknown') + '): ' + last.summary);
+                ctx.push('TODAY: ' + fmtDate(Date.now()));
+                if (last) ctx.push('LAST MEETING (' + last.source + ', ' + fmtDate(last.at) + '): ' + last.summary);
                 else ctx.push('LAST MEETING: none on file.');
+                if (calLast && calLast !== last) ctx.push('LAST CALENDAR ENTRY WITH THEM (' + fmtDate(calLast.at) + '): ' + calLast.summary);
+                if (next) ctx.push('NEXT ON YOUR CALENDAR (' + fmtDate(next.at) + '): ' + next.summary);
                 if (open.length) ctx.push('OPEN REDTAIL ITEMS: ' + open.map(function (a) { return a.subject; }).join('; '));
                 if (threads.length) {
-                    ctx.push('RECENT EMAIL THREAD (newest first):');
-                    threads.slice(0, 8).forEach(function (r) {
+                    ctx.push('EMAIL WITH THEM, newest first (' + threads.length + ' messages, back to ' + fmtDate(oldest) + '; ME = Hans wrote it, THEM = they wrote it):');
+                    threads.slice(0, 12).forEach(function (r) {
                         const body = bodies.find(function (b) { return b && b.id === r.id; });
-                        ctx.push('- ' + new Date(r.dateMs).toLocaleDateString() + ' ' + (r.sentByMe ? 'ME' : 'THEM') + ': ' + (r.subject || '') + ' — ' + String((body && body.body) || r.snippet || '').slice(0, 700));
+                        ctx.push('- ' + fmtDate(r.dateMs) + ' ' + (r.sentByMe ? 'ME' : 'THEM') + ': ' + (r.subject || '') + ' — ' + String((body && body.body) || r.snippet || '').slice(0, 1500));
                     });
-                } else ctx.push('RECENT EMAIL THREAD: none found in the last ' + GMAIL_AGENT_DAYS + ' days.');
-                const prompt = 'You are drafting an email on behalf of Hans Blake, a financial adviser at Intelligent Investing. '
-                    + 'Use the CONTEXT to make it specific — refer to what was actually discussed, never invent facts. '
+                } else ctx.push('EMAIL WITH THEM: none found in the last ' + daysRead + ' days.');
+                const prompt = 'You are drafting an email on behalf of Hans Blake, a financial adviser at Intelligent Investing in Greenville. '
+                    + 'Use the CONTEXT to make it specific — refer to what was actually discussed, the people, places and agreements it records '
+                    + '(a standing lunch, a venue, a family detail, an offer he made), and how long ago the last meeting was. Never invent facts. '
+                    + 'Write in HIS voice: model the greeting, warmth, paragraph length and phrasing on the messages marked ME. '
                     + 'Warm, brief, direct. Do NOT say "attached" unless the request says something is being attached; '
                     + 'if it does, say it plainly. No sign-off block (his signature is added separately). '
                     + 'Answer ONLY as JSON: {"subject": "...", "body": "...", "notes": ["anything you could not do or were unsure of"]}\n\n'
@@ -29210,9 +29297,12 @@ Make sure your suggestions directly address the specific root cause and discussi
                 _gmSay('<div class="gm-result">'
                     + '<div class="gm-ok">Draft saved to Gmail for <strong>' + esc(who.name || who.email) + '</strong>'
                     + ' &lt;' + esc(who.email) + '&gt;' + (who.via ? ' <span class="gm-via">(address from ' + esc(who.via) + ')</span>' : '') + '.</div>'
-                    + '<div class="gm-ctx">Read: ' + threads.length + ' recent message' + (threads.length === 1 ? '' : 's')
-                    + (last ? ' · last meeting ' + esc(last.source) + (last.at ? ' ' + esc(new Date(last.at).toLocaleDateString()) : '') : ' · no meeting on file')
-                    + (open.length ? ' · ' + open.length + ' open Redtail item' + (open.length === 1 ? '' : 's') : '') + '</div>'
+                    + '<div class="gm-ctx">Read: ' + threads.length + ' message' + (threads.length === 1 ? '' : 's')
+                    + (threads.length ? ' back to ' + esc(fmtDate(oldest)) : ' in the last ' + daysRead + ' days')
+                    + (last ? ' · last meeting ' + esc(last.source) + (last.at ? ' ' + esc(fmtDate(last.at)) : '') : ' · no meeting on file')
+                    + (next ? ' · next on your calendar ' + esc(fmtDate(next.at)) + ' ' + esc(String(next.title || '').slice(0, 60)) : '')
+                    + (open.length ? ' · ' + open.length + ' open Redtail item' + (open.length === 1 ? '' : 's') : '')
+                    + (wide ? '' : ' · <em>address-only read: backend v' + esc(GMAIL_AGENT_WIDE_GS_MIN) + ' widens this</em>') + '</div>'
                     + '<div class="gm-subj">' + esc(String(out.subject || '')) + '</div>'
                     + '<div class="gm-body">' + esc(String(out.body)).replace(/\n/g, '<br>') + '</div>'
                     + (todo.length ? '<div class="gm-todo"><div class="gm-todo-h">Still on you</div><ul>'
