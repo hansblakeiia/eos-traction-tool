@@ -4117,9 +4117,10 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '5.9.0';
+        const EOS_VERSION = '5.10.0';
         const EOS_BUILD_DATE = '2026-09-04';
-        const EOS_BUILD_TIME = '09:10'; // v5.9.0: THE IMPORT READS EVERY PAGE (client-only; styles.css unchanged, link stays ?v=5.5.0). His screenshot of the v5.8.0 pickers: "REDTAIL RETURNED 50 CONTACTS — WHICH OF THESE ARE CURRENT CLIENTS?… It should be 'Status = Active Client' but you didn't give me those options." FIFTY IS REDTAIL'S PAGE SIZE, not his book — the pickers can only offer values that appear in the contacts actually read, and "Active Client" sat on a later page. The pickers were right; the READ stopped at page one, and it had done so since v4.99.0 (so the original "1 active client" was one match within fifty rows, not within his firm). NOW contacts/search is paged: `?page=N` (the v3.68.0 whitelist row already allows a query string — `/^contacts\/search(\?.*)?$/` — so NO backend round), up to BRIEF_CLIENTS_MAX_PAGES (40 = 2,000 contacts), stopping on Redtail's own `meta.total_pages`, on a short page, on an empty page, or on a page whose ids REPEAT (the guard against a backend that ignores ?page — that loop would otherwise spin 40 times over page one); a later page that errors keeps what page one returned rather than failing the run; the step line counts as it goes. Default ticks improved with his real data in hand: when a STATUS value names a client ("Active Client"), that is the whole default and the category is left open — his ticks decide; otherwise the category default excludes Prospect/Vendor/Relationship, which his screenshot shows are separate categories. Probe brief-mail U5.
+        const EOS_BUILD_TIME = '10:05'; // v5.10.0: THE CLIENT LIST KEEPS ITSELF (client-only; styles.css unchanged, link stays ?v=5.5.0). His first successful import — 79 addresses from 73 current clients of 1,458 Redtail contacts, birthdays via field "dob" (THE CONTRACT READ THE v5.2.0 NOTE ASKED FOR: it is `dob`) — and his question: "that was extremely cumbersome, can we not have a webhook that monitors the 'Active Client' status (adding/removing) as clients come on board/leave?" A WEBHOOK IS THE WRONG NEXT STEP AND THE REASONS ARE ARCHITECTURAL, not effort: (a) Redtail's OWN outbound-webhook contract is not in this repo — integration vendors (Rollout, Zapier) advertise webhooks, which is not Redtail documenting one, and the standing rule is read the contract, never guess it; (b) this backend is executeAs USER_DEPLOYING with every data action TOKEN-gated, so receiving a webhook means opening a PUBLIC UNAUTHENTICATED endpoint on a deployment that can read his mailbox and calendar — a new attack surface on a fail-closed design; (c) Hans and Amanda have separate deployments, so one registered URL cannot serve both, and an /exec URL is not a stable registration target. What he ASKED FOR (the list stays current untouched) needs none of that: briefClientsMaybeAutoRefresh() runs the same import in the background 45s after load — only with HIS saved ticks (never a guess), only on a list older than a week, at most once a day per device, only when the gate is clear — and it is cheap because addresses are now cached per contact id (eos_brief_client_emails, device-local, rebuildable, 30-day TTL so addresses still re-read monthly): a weekly run costs the search pages plus a lookup for genuinely NEW clients. A manual press still re-reads everything (he pressed it; it is authoritative). WHAT CHANGED is the other half — a silently-updating list is no better than none — so the import diffs the previous addresses and renders "Your client list changed — N added (…); N no longer active (…)" with Got it, on the brief and the Gmail page, device-local in eos_ui_prefs.clientsDelta. Probe brief-mail V1–V4.
+        // v5.9.0 (09:10): THE IMPORT READS EVERY PAGE (client-only; styles.css unchanged, link stays ?v=5.5.0). His screenshot of the v5.8.0 pickers: "REDTAIL RETURNED 50 CONTACTS — WHICH OF THESE ARE CURRENT CLIENTS?… It should be 'Status = Active Client' but you didn't give me those options." FIFTY IS REDTAIL'S PAGE SIZE, not his book — the pickers can only offer values that appear in the contacts actually read, and "Active Client" sat on a later page. The pickers were right; the READ stopped at page one, and it had done so since v4.99.0 (so the original "1 active client" was one match within fifty rows, not within his firm). NOW contacts/search is paged: `?page=N` (the v3.68.0 whitelist row already allows a query string — `/^contacts\/search(\?.*)?$/` — so NO backend round), up to BRIEF_CLIENTS_MAX_PAGES (40 = 2,000 contacts), stopping on Redtail's own `meta.total_pages`, on a short page, on an empty page, or on a page whose ids REPEAT (the guard against a backend that ignores ?page — that loop would otherwise spin 40 times over page one); a later page that errors keeps what page one returned rather than failing the run; the step line counts as it goes. Default ticks improved with his real data in hand: when a STATUS value names a client ("Active Client"), that is the whole default and the category is left open — his ticks decide; otherwise the category default excludes Prospect/Vendor/Relationship, which his screenshot shows are separate categories. Probe brief-mail U5.
         // v5.8.0 (2026-09-03 20:10): WHICH CONTACTS ARE CURRENT CLIENTS IS HIS CALL (client-only; styles.css unchanged, link stays ?v=5.5.0). His first import on v5.7.0: "1 addresses from 1 active clients" — and his question: "shouldn't I be able to see a dropdown of categories or status to ensure you are grabbing just current clients?" The v4.99.0 filter GUESSED (/active/ on status, /client/ on category) against a Redtail contract this repo has never read, and matched almost nothing. NOW the import is two steps the first time: fetch contacts/search, compute the DISTINCT Status and Category values Redtail actually returned with counts (_briefContactFacets, tolerant of label/id/object shapes via _briefFacetOf), render them as tick boxes in Settings › Brief senders › Your active clients (renderBriefClientFacets) with the old guess as the STARTING ticks and a live "Matching now: N" count, and import only what he ticks (briefClientsImportSelected). The ticks are saved as clientFilter in the triage doc (defaults, normalise, lww merge, fingerprint — the four touches every synced field needs) so a re-import is one click and the choice travels; the Settings line shows the saved ticks with Change (pick:true re-fetches and shows the pickers without importing). The brief's nudge button opens Settings at the block and fetches when no ticks are saved, imports directly when they are. The record's FIELD NAMES are listed under the pickers (and in the done line when no birthday was found), naming any that look like a birth date — the contract read the v5.2.0 note asked for. Probe brief-mail U1–U4.
         // v5.7.0 (19:20): THE IMPORT NUDGE (client-only; styles.css unchanged, link stays ?v=5.5.0). His point, verbatim: "How do I run the importer, etc... I don't think I've been told to do that, and if this were a commercial product, a popup or something would have guided me that way." He is right: the active-client import shipped in v4.99.0 as one button in Settings › Me › Brief senders and nothing in the app ever pointed at it — so v4.99.0's "client mail always reaches you", v5.2.0's birthdays and v5.6.1's checker were all built on a list that, on a device that never ran the import, is EMPTY. NOW: briefClientsNudgeHtml() renders ONE line at the top of the mail section, on the brief AND on the Gmail page (both call it — one function, two hosts), whenever the imported list is empty: what is missing and what it costs him ("mail from a client is not flagged as a client"), what the import does and does not do ("takes about a minute, never changes Redtail"), and the button itself (briefClientsNudgeImport → the existing briefImportActiveClients, whose progress words now also land on the line via a mirrored say()); "Not now" rests it for 7 days on this device (eos_ui_prefs.clientsNudgeAt, rule 30 — never synced). When briefClientsGate() has a sentence (backend too old, Redtail not connected) the line shows THAT sentence and an Open Settings button instead of a button that would fail (rule 51/25). It disappears the moment the list has an address. Not a popup, by choice: a popup interrupts the brief he came to read; a line in the section it affects is where the fact belongs. AND HIS FIRST CLICK ON IT: "Importing your client list needs backend v3.68.0. This deployment reports vunknown" — on a 3.73.0 backend. The load-time capability probe had not completed in that tab, and ALL FIFTEEN version gates (`_calGsAtLeast(X) !== true`) read "never found out" as "too old" — rule 51's exact confusion, one layer up. NOW: `_gsEnsureVersion()` re-asks the backend once when no version is known, called at the top of the import, the drafter and the Redtail-modal draft BEFORE their gates; the two gates he can reach say `_gsUnknownSentence` (names the probe's own error, points at Check Google access) instead of "vunknown"; the nudge OFFERS the button when the version is unknown (the action re-asks itself); and a load-time probe that fails retries once after 20s. Probe brief-mail T1–T4 (T4: unknown version still offers the button, the sentence names the cause, and the line is above the fold at 375); the H fold fixture now seeds an imported list because the fold budget is the every-morning layout and the nudge is one click from gone.
         // v5.6.1 (18:40): "WOULD THEY REACH ME?" (client-only; styles.css unchanged, link stays ?v=5.5.0). His question: "I recently received emails from our clients (Don Woodward, and Mary Beth Galbreath). These should have been caught in a 'Redtail Active Client' sweep and highlighted for me in the Gmail Tab and Daily Brief. Perhaps it is because I already dealt and responded to them, but can you double check that indeed they would have been brought to my attention otherwise?" Nobody but he can see his list and his mailbox, so the check is a button in Settings › Brief senders › Your active clients: a name or an address in; out comes membership of the imported list BY ADDRESS (the list is addresses only, so a name is resolved through contactSearchAll + the birthday records), the ranker's OWN verdict on a plain unread message from that address with no Gmail signal (briefTriageRank on a fabricated row — the real function, never a description of it — so "an active client" vs "direct to you" vs a filter reason is exactly what the brief would say), VIP/muted state, how many addresses the list holds and when it was imported (or that it never was on this device), and the two standing reasons a real email is still skipped by design (read/archived before the scan; before the window). The Gmail tab shows the same rows, so one answer covers both. Probe brief-mail S1–S3.
@@ -4295,6 +4296,10 @@ Example:
                     if (!ok) setTimeout(function () { probeCapabilities({ attempts: 2 }); }, 20000);
                 });
             }, 1200);
+            // v5.10.0: keep the client list current without him pressing anything. Well off
+            // the critical path — the probe has to land first, and this can take a minute
+            // in the background on a big Redtail book.
+            setTimeout(function () { try { briefClientsMaybeAutoRefresh(); } catch (e) { } }, 45000);
             
             // Auto-select the current quarter based on today's date
             autoSelectCurrentQuarter();
@@ -7903,7 +7908,16 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.9.0 &mdash; 2026-09-04 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.10.0 &mdash; 2026-09-04 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Your client list refreshes itself, and tells you who came on board or left.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>You should not have to press Import again.</strong> Once your ticks are saved, the list refreshes itself in the background about once a week, using those same ticks. It is quick because addresses are remembered per contact, so it only looks up clients it has never seen.</li>'
+                + '<li><strong>You are told what changed</strong> &mdash; &ldquo;2 added, 1 no longer active&rdquo; with the addresses &mdash; on the brief and the Gmail page, until you press Got it.</li>'
+                + '<li>Pressing Import yourself still re-reads everything from Redtail.</li>'
+                + '</ul>'
+                + '</div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.9.0 &mdash; 2026-09-04</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">The client import reads every page of your Redtail contacts, not the first fifty.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>&ldquo;Active Client&rdquo; is on the list now.</strong> Redtail answers fifty contacts a page and the import only ever read the first page, so the tick boxes could only offer the statuses and categories that happened to appear there. It now pages through all of them and counts as it goes.</li>'
@@ -19122,6 +19136,7 @@ Example:
 
             let body = '';
             body += briefClientsNudgeHtml();   // v5.7.0: '' once the client list exists
+            body += briefClientsDeltaHtml();   // v5.10.0: '' unless the automatic refresh found a change
             if (!surfaced.length) {
                 // v4.72.0 (Hans's report: it said "this morning" at 9pm): the noun
                 // follows the clock, from the same source as the greeting above it.
@@ -20438,6 +20453,45 @@ Example:
         // below breaks that loop on the first repeat anyway).
         const BRIEF_CLIENTS_MAX_PAGES = 40;
 
+        // ==================== v5.10.0 — THE LIST KEEPS ITSELF ====================
+        // His words after the first successful import (79 addresses from 73 clients of 1,458
+        // contacts): "that was extremely cumbersome, can we not have a webhook that monitors
+        // the 'Active Client' status (adding/removing) as clients come on board/leave?"
+        //
+        // A WEBHOOK IS NOT THE RIGHT NEXT STEP HERE, and the reasons are architectural
+        // rather than a matter of effort. (a) Redtail's OWN contract for outbound webhooks
+        // is not in this repo — third-party integration vendors advertise them, which is
+        // not the same thing, and the standing Redtail rule is read the contract, never
+        // guess it. (b) This backend is `executeAs: USER_DEPLOYING` and every data action
+        // is TOKEN-gated; an inbound webhook carries no Supabase token, so receiving one
+        // means opening a public unauthenticated endpoint on the deployment that can read
+        // Hans's mailbox and calendar — a real attack surface added to a backend whose
+        // whole design is fail-closed. (c) Hans and Amanda have SEPARATE deployments, so a
+        // single registered webhook URL cannot serve both, and an /exec URL is not a stable
+        // registration target across redeploys.
+        //
+        // What he actually asked for is that the list stay current without him touching it.
+        // That needs no webhook and no new surface: run the SAME import automatically, on a
+        // cadence, with the ticks he already saved, and tell him what changed. The refresh
+        // is cheap because addresses are cached per contact id, so a weekly run costs the
+        // search pages plus a lookup for genuinely NEW clients only.
+        const BRIEF_CLIENTS_REFRESH_MS = 7 * 86400000;    // refresh a list older than this
+        const BRIEF_CLIENTS_AUTO_GAP_MS = 20 * 3600000;   // and at most once a day per device
+        const BRIEF_CLIENTS_EMAIL_TTL_MS = 30 * 86400000; // a cached address re-reads monthly
+        const BRIEF_CLIENT_EMAIL_KEY = 'eos_brief_client_emails';
+        // Device-local and rebuildable, so it is never synced: it is a cache of an answer
+        // Redtail can always give again, and rule 30's line applies to the whole shape.
+        function _briefClientEmailCache() {
+            try {
+                const c = JSON.parse(localStorage.getItem(BRIEF_CLIENT_EMAIL_KEY) || 'null');
+                if (c && c.v === 1 && c.byId && typeof c.byId === 'object') return c;
+            } catch (e) { }
+            return { v: 1, byId: {} };
+        }
+        function _saveBriefClientEmailCache(c) {
+            try { localStorage.setItem(BRIEF_CLIENT_EMAIL_KEY, JSON.stringify(c)); } catch (e) { }
+        }
+
         // v5.7.0 — HIS POINT (2026-09-03): "How do I run the importer? I don't think I've
         // been told to do that, and if this were a commercial product, a popup or
         // something would have guided me that way." He is right: the import shipped in
@@ -20798,6 +20852,12 @@ Example:
                         + (filter.status.join(', ') || 'any') + '; category: ' + (filter.category.join(', ') || 'any') + '). Press Change to pick again.');
                 }
                 const walk = active.slice(0, BRIEF_CLIENTS_MAX);
+                // v5.10.0: the address cache. A manual press re-reads everything (he pressed
+                // it, so it is the authoritative run); the automatic refresh uses the cache
+                // and therefore costs a lookup only for contacts it has never seen — which
+                // is what makes a weekly refresh affordable at 1,458 contacts.
+                const emailCache = _briefClientEmailCache();
+                let cacheHits = 0, cacheMisses = 0;
                 const addrs = [];
                 // v5.2.0: birthdays, from the same records. The field name is NOT in this
                 // repo (Redtail contracts are read, never guessed), so every plausible name
@@ -20813,9 +20873,19 @@ Example:
                     const bd = _briefBirthdayOf(walk[i]);
                     if (bd) bdayField = bdayField || bd.field;
                     try {
-                        const er = await _calPost({ action: 'redtailApi', base: 'classic', method: 'GET', path: 'contacts/' + encodeURIComponent(id) + '/emails' });
-                        if (er && er.success) {
-                            const got = _briefExtractAddrs(er.body);
+                        const hit = emailCache.byId[String(id)];
+                        const fresh = hit && Array.isArray(hit.a) && (Date.now() - (Number(hit.at) || 0)) < BRIEF_CLIENTS_EMAIL_TTL_MS;
+                        let got = null;
+                        if (opts.useCache && fresh) { got = hit.a; cacheHits++; }
+                        else {
+                            const er = await _calPost({ action: 'redtailApi', base: 'classic', method: 'GET', path: 'contacts/' + encodeURIComponent(id) + '/emails' });
+                            cacheMisses++;
+                            if (er && er.success) {
+                                got = _briefExtractAddrs(er.body);
+                                emailCache.byId[String(id)] = { a: got, at: Date.now() };
+                            }
+                        }
+                        if (got) {
                             got.forEach(function (a) { addrs.push(a); });
                             if (bd && got[0]) {
                                 const nm = [walk[i].first_name || walk[i].FirstName || '', walk[i].last_name || walk[i].LastName || ''].join(' ').trim();
@@ -20828,6 +20898,18 @@ Example:
                 const seen = {};
                 addrs.forEach(function (a) { if (!seen[a]) { seen[a] = true; uniq.push(a); } });
                 if (!uniq.length) throw new Error('Found ' + walk.length + ' active clients but none had an email address on file.');
+                _saveBriefClientEmailCache(emailCache);
+                // v5.10.0: WHAT CHANGED. The point of an automatic refresh is that he is
+                // told when a client arrives or leaves — a list that silently updates is
+                // the same as no list at all for a person who needs to notice.
+                const before = (briefTriage().clients || []);
+                const beforeSet = {}; before.forEach(function (a) { beforeSet[a] = true; });
+                const uniqSet = {}; uniq.forEach(function (a) { uniqSet[a] = true; });
+                const added = uniq.filter(function (a) { return !beforeSet[a]; });
+                const removed = before.filter(function (a) { return !uniqSet[a]; });
+                if (before.length && (added.length || removed.length)) {
+                    saveUiPrefs({ clientsDelta: { added: added.slice(0, 12), removed: removed.slice(0, 12), at: Date.now(), auto: !!opts.auto } });
+                }
                 saveBriefTriage({ clients: uniq, clientsAt: Date.now(), clientBirthdays: bdays });
                 _briefPaintMail();
                 if (typeof renderBriefMailSettings === 'function') renderBriefMailSettings();
@@ -20835,13 +20917,53 @@ Example:
                     + (bdays.length ? ' Birthdays found for ' + bdays.length + ' (Redtail field "' + bdayField + '").'
                        : ' No birth dates on these records (fields: ' + facets.fields.slice(0, 20).join(', ') + (facets.fields.length > 20 ? ', …' : '') + ').')
                     + (active.length > walk.length ? ' (' + active.length + ' matched; the first ' + walk.length + ' were read.)' : ''));
-                showToast('Imported ' + uniq.length + ' client addresses.', 'success');
+                if (!opts.silent) showToast('Imported ' + uniq.length + ' client addresses.', 'success');
+                _briefPaintMail();
             } catch (e) {
                 say('Could not import — ' + String(e && e.message || e));
-                showToast('Client import failed.', 'error');
+                if (!opts.silent) showToast('Client import failed.', 'error');
             } finally {
                 if (btn) { btn.disabled = false; btn.textContent = 'Import my active clients'; }
             }
+        }
+
+        // v5.10.0: the refresh that means he never presses the button again. Runs at most
+        // once a day per device, only on a list older than a week, only when HIS ticks are
+        // already saved (it must never guess what counts as a client), and only when the
+        // backend can actually do it. Silent: the only thing he ever sees is the
+        // what-changed line, and only when something changed.
+        async function briefClientsMaybeAutoRefresh() {
+            try {
+                const t = briefTriage();
+                if (!t.clientFilter) return 'no filter saved';        // his ticks decide; never guess
+                if (!(t.clients || []).length) return 'never imported';  // the nudge asks for the first one
+                const p = getUiPrefs();
+                if (p.clientsAutoAt && (Date.now() - Number(p.clientsAutoAt)) < BRIEF_CLIENTS_AUTO_GAP_MS) return 'ran today';
+                if ((Date.now() - (Number(t.clientsAt) || 0)) < BRIEF_CLIENTS_REFRESH_MS) return 'still fresh';
+                await _gsEnsureVersion();
+                if (briefClientsGate()) return 'backend cannot';
+                saveUiPrefs({ clientsAutoAt: Date.now() });
+                await briefImportActiveClients({ silent: true, useCache: true, auto: true });
+                return 'refreshed';
+            } catch (e) { return 'failed: ' + String(e && e.message || e); }
+        }
+
+        // The what-changed line, rendered with the mail rows and cleared by his click.
+        function briefClientsDeltaHtml() {
+            try {
+                const d = getUiPrefs().clientsDelta;
+                if (!d || (!(d.added || []).length && !(d.removed || []).length)) return '';
+                const esc = escapeHtml;
+                const bits = [];
+                if ((d.added || []).length) bits.push(d.added.length + ' added (' + d.added.slice(0, 3).map(esc).join(', ') + (d.added.length > 3 ? ', …' : '') + ')');
+                if ((d.removed || []).length) bits.push(d.removed.length + ' no longer active (' + d.removed.slice(0, 3).map(esc).join(', ') + (d.removed.length > 3 ? ', …' : '') + ')');
+                return '<div class="mb-mail-note" data-mb-nudge="clientsDelta"><strong>Your client list changed</strong> &mdash; ' + bits.join('; ') + '. '
+                    + '<button type="button" class="mb-mail-link" onclick="briefClientsDeltaSeen()">Got it</button></div>';
+            } catch (e) { return ''; }
+        }
+        function briefClientsDeltaSeen() {
+            saveUiPrefs({ clientsDelta: null });
+            _briefPaintMail();
         }
 
         function briefTriageSyncBlocker() {
@@ -20994,6 +21116,8 @@ Example:
                 fl.innerHTML = (f && (f.status.length || f.category.length))
                     ? 'Counting as clients: status ' + escapeHtml(f.status.join(', ') || 'any') + '; category ' + escapeHtml(f.category.join(', ') || 'any') + '. '
                       + '<button type="button" class="mb-mail-link" onclick="briefImportActiveClients({ pick: true })">Change</button>'
+                      // v5.10.0: say that it keeps itself, so the button is a top-up and not a chore.
+                      + '<span style="display:block;">Refreshes itself weekly in the background; you are told what changed.</span>'
                     : '';
             }
             const cl = document.getElementById('briefClientsLine');
@@ -29846,7 +29970,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                     ? '<div class="mb-mail-note mb-mail-gmail-done">' + gmailDone.length
                       + ' already read or archived in Gmail &mdash; not shown. Star one in Gmail to keep it here.</div>'
                     : '';
-                host.innerHTML = briefClientsNudgeHtml() + (rows.length
+                host.innerHTML = briefClientsNudgeHtml() + briefClientsDeltaHtml() + (rows.length
                     ? '<ul class="mb-rows">' + rows.map(function (r) { return _briefMailRow(r, { filtered: ranked.filtered.indexOf(r) !== -1 }); }).join('') + '</ul>'
                       + _briefBulkBarHtml() + doneLine
                     : (c.scannedAt
