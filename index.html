@@ -4117,9 +4117,10 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '5.8.0';
-        const EOS_BUILD_DATE = '2026-09-03';
-        const EOS_BUILD_TIME = '20:10'; // v5.8.0: WHICH CONTACTS ARE CURRENT CLIENTS IS HIS CALL (client-only; styles.css unchanged, link stays ?v=5.5.0). His first import on v5.7.0: "1 addresses from 1 active clients" — and his question: "shouldn't I be able to see a dropdown of categories or status to ensure you are grabbing just current clients?" The v4.99.0 filter GUESSED (/active/ on status, /client/ on category) against a Redtail contract this repo has never read, and matched almost nothing. NOW the import is two steps the first time: fetch contacts/search, compute the DISTINCT Status and Category values Redtail actually returned with counts (_briefContactFacets, tolerant of label/id/object shapes via _briefFacetOf), render them as tick boxes in Settings › Brief senders › Your active clients (renderBriefClientFacets) with the old guess as the STARTING ticks and a live "Matching now: N" count, and import only what he ticks (briefClientsImportSelected). The ticks are saved as clientFilter in the triage doc (defaults, normalise, lww merge, fingerprint — the four touches every synced field needs) so a re-import is one click and the choice travels; the Settings line shows the saved ticks with Change (pick:true re-fetches and shows the pickers without importing). The brief's nudge button opens Settings at the block and fetches when no ticks are saved, imports directly when they are. The record's FIELD NAMES are listed under the pickers (and in the done line when no birthday was found), naming any that look like a birth date — the contract read the v5.2.0 note asked for. Probe brief-mail U1–U4.
+        const EOS_VERSION = '5.9.0';
+        const EOS_BUILD_DATE = '2026-09-04';
+        const EOS_BUILD_TIME = '09:10'; // v5.9.0: THE IMPORT READS EVERY PAGE (client-only; styles.css unchanged, link stays ?v=5.5.0). His screenshot of the v5.8.0 pickers: "REDTAIL RETURNED 50 CONTACTS — WHICH OF THESE ARE CURRENT CLIENTS?… It should be 'Status = Active Client' but you didn't give me those options." FIFTY IS REDTAIL'S PAGE SIZE, not his book — the pickers can only offer values that appear in the contacts actually read, and "Active Client" sat on a later page. The pickers were right; the READ stopped at page one, and it had done so since v4.99.0 (so the original "1 active client" was one match within fifty rows, not within his firm). NOW contacts/search is paged: `?page=N` (the v3.68.0 whitelist row already allows a query string — `/^contacts\/search(\?.*)?$/` — so NO backend round), up to BRIEF_CLIENTS_MAX_PAGES (40 = 2,000 contacts), stopping on Redtail's own `meta.total_pages`, on a short page, on an empty page, or on a page whose ids REPEAT (the guard against a backend that ignores ?page — that loop would otherwise spin 40 times over page one); a later page that errors keeps what page one returned rather than failing the run; the step line counts as it goes. Default ticks improved with his real data in hand: when a STATUS value names a client ("Active Client"), that is the whole default and the category is left open — his ticks decide; otherwise the category default excludes Prospect/Vendor/Relationship, which his screenshot shows are separate categories. Probe brief-mail U5.
+        // v5.8.0 (2026-09-03 20:10): WHICH CONTACTS ARE CURRENT CLIENTS IS HIS CALL (client-only; styles.css unchanged, link stays ?v=5.5.0). His first import on v5.7.0: "1 addresses from 1 active clients" — and his question: "shouldn't I be able to see a dropdown of categories or status to ensure you are grabbing just current clients?" The v4.99.0 filter GUESSED (/active/ on status, /client/ on category) against a Redtail contract this repo has never read, and matched almost nothing. NOW the import is two steps the first time: fetch contacts/search, compute the DISTINCT Status and Category values Redtail actually returned with counts (_briefContactFacets, tolerant of label/id/object shapes via _briefFacetOf), render them as tick boxes in Settings › Brief senders › Your active clients (renderBriefClientFacets) with the old guess as the STARTING ticks and a live "Matching now: N" count, and import only what he ticks (briefClientsImportSelected). The ticks are saved as clientFilter in the triage doc (defaults, normalise, lww merge, fingerprint — the four touches every synced field needs) so a re-import is one click and the choice travels; the Settings line shows the saved ticks with Change (pick:true re-fetches and shows the pickers without importing). The brief's nudge button opens Settings at the block and fetches when no ticks are saved, imports directly when they are. The record's FIELD NAMES are listed under the pickers (and in the done line when no birthday was found), naming any that look like a birth date — the contract read the v5.2.0 note asked for. Probe brief-mail U1–U4.
         // v5.7.0 (19:20): THE IMPORT NUDGE (client-only; styles.css unchanged, link stays ?v=5.5.0). His point, verbatim: "How do I run the importer, etc... I don't think I've been told to do that, and if this were a commercial product, a popup or something would have guided me that way." He is right: the active-client import shipped in v4.99.0 as one button in Settings › Me › Brief senders and nothing in the app ever pointed at it — so v4.99.0's "client mail always reaches you", v5.2.0's birthdays and v5.6.1's checker were all built on a list that, on a device that never ran the import, is EMPTY. NOW: briefClientsNudgeHtml() renders ONE line at the top of the mail section, on the brief AND on the Gmail page (both call it — one function, two hosts), whenever the imported list is empty: what is missing and what it costs him ("mail from a client is not flagged as a client"), what the import does and does not do ("takes about a minute, never changes Redtail"), and the button itself (briefClientsNudgeImport → the existing briefImportActiveClients, whose progress words now also land on the line via a mirrored say()); "Not now" rests it for 7 days on this device (eos_ui_prefs.clientsNudgeAt, rule 30 — never synced). When briefClientsGate() has a sentence (backend too old, Redtail not connected) the line shows THAT sentence and an Open Settings button instead of a button that would fail (rule 51/25). It disappears the moment the list has an address. Not a popup, by choice: a popup interrupts the brief he came to read; a line in the section it affects is where the fact belongs. AND HIS FIRST CLICK ON IT: "Importing your client list needs backend v3.68.0. This deployment reports vunknown" — on a 3.73.0 backend. The load-time capability probe had not completed in that tab, and ALL FIFTEEN version gates (`_calGsAtLeast(X) !== true`) read "never found out" as "too old" — rule 51's exact confusion, one layer up. NOW: `_gsEnsureVersion()` re-asks the backend once when no version is known, called at the top of the import, the drafter and the Redtail-modal draft BEFORE their gates; the two gates he can reach say `_gsUnknownSentence` (names the probe's own error, points at Check Google access) instead of "vunknown"; the nudge OFFERS the button when the version is unknown (the action re-asks itself); and a load-time probe that fails retries once after 20s. Probe brief-mail T1–T4 (T4: unknown version still offers the button, the sentence names the cause, and the line is above the fold at 375); the H fold fixture now seeds an imported list because the fold budget is the every-morning layout and the nudge is one click from gone.
         // v5.6.1 (18:40): "WOULD THEY REACH ME?" (client-only; styles.css unchanged, link stays ?v=5.5.0). His question: "I recently received emails from our clients (Don Woodward, and Mary Beth Galbreath). These should have been caught in a 'Redtail Active Client' sweep and highlighted for me in the Gmail Tab and Daily Brief. Perhaps it is because I already dealt and responded to them, but can you double check that indeed they would have been brought to my attention otherwise?" Nobody but he can see his list and his mailbox, so the check is a button in Settings › Brief senders › Your active clients: a name or an address in; out comes membership of the imported list BY ADDRESS (the list is addresses only, so a name is resolved through contactSearchAll + the birthday records), the ranker's OWN verdict on a plain unread message from that address with no Gmail signal (briefTriageRank on a fabricated row — the real function, never a description of it — so "an active client" vs "direct to you" vs a filter reason is exactly what the brief would say), VIP/muted state, how many addresses the list holds and when it was imported (or that it never was on this device), and the two standing reasons a real email is still skipped by design (read/archived before the scan; before the window). The Gmail tab shows the same rows, so one answer covers both. Probe brief-mail S1–S3.
         // v5.6.0 (17:50): THE EMPTY ANSWER, THE COST, AND THE RECIPIENT (pairs with .gs v3.73.0, both accounts; styles.css unchanged, link stays ?v=5.5.0). (1) "The model returned an empty response" on his v5.5.0 draft: the Anthropic adapter was right; the model wrote nothing because current Claude models run ADAPTIVE THINKING by default, its tokens count against max_tokens, and the drafter's bigger prompt spent all 1,400 on reasoning — HTTP 200, stop_reason max_tokens, no text. The client's own comment above callAI had written this exact warning for Gemini. NOW: callAI takes opts.effort, callAIViaBackend sends it, .gs 3.73.0 passes output_config.effort (thinking stays adaptive — `disabled` is rejected by some current models); the drafter asks for effort:'low' and a 4,000 budget; callAI's empty-answer message names the real cause when the usage proves it (output tokens spent, stop reason max_tokens) instead of "raise the budget". (2) "$1 for every email... an estimator, or cap": MTG_PRICES was Opus-3-era ($15/$75) and Sonnet 4.6 ($3/$15) — every cost the tool showed for a Claude 5 call was 3–5x too high; now the current list, most-specific-first. The drafter shows an ESTIMATE in the step line before the call (chars/4 in, priced from the table), a CAP (GMAIL_AGENT_MAX_PROMPT_CHARS 40,000, oldest thread lines dropped first, the newest three never, the step says how many), and the ACTUAL cost in the result line from the backend's token counts (_aiLastUsage, priced by mtgUsageText). (3) "a way to adjust who the email is to... stopped... search manually": a To box (name or address; beats the sentence; a picked candidate beats both) with Search (the shared contact search, _gmSearchFor, one implementation behind both search boxes), a Stop button visible while a run is busy (checked at every step boundary, never mid-read), and "Not them? Change who it goes to" on the finished draft. Dictation into the request box already works through the v5.3.1 inline mic. Probe mail-agent A15–A18.
@@ -7902,7 +7903,15 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.8.0 &mdash; 2026-09-03 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.9.0 &mdash; 2026-09-04 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">The client import reads every page of your Redtail contacts, not the first fifty.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>&ldquo;Active Client&rdquo; is on the list now.</strong> Redtail answers fifty contacts a page and the import only ever read the first page, so the tick boxes could only offer the statuses and categories that happened to appear there. It now pages through all of them and counts as it goes.</li>'
+                + '<li>When a status already names a client (like &ldquo;Active Client&rdquo;), that alone is pre-ticked and the categories are left to you.</li>'
+                + '</ul>'
+                + '</div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.8.0 &mdash; 2026-09-03</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">You choose which Redtail statuses and categories count as a current client.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>The import shows you Redtail&rsquo;s own values first.</strong> Every Status and Category it returned, with counts, as tick boxes in Settings &rsaquo; Brief senders. Tick what means a current client, watch the match count, press Import these. Your ticks are remembered, so the next import is one click, and &ldquo;Change&rdquo; brings the boxes back.</li>'
@@ -20424,6 +20433,10 @@ Example:
         // backend the client had just declared ready.
         const BRIEF_CLIENTS_GS_MIN = '3.68.0';
         const BRIEF_CLIENTS_MAX = 400;     // contacts we will walk for addresses in one run
+        // v5.9.0: Redtail's search answers 50 per page. 40 pages = 2,000 contacts, well past
+        // a firm's book and a hard stop against a backend that ignores ?page (the id dedupe
+        // below breaks that loop on the first repeat anyway).
+        const BRIEF_CLIENTS_MAX_PAGES = 40;
 
         // v5.7.0 — HIS POINT (2026-09-03): "How do I run the importer? I don't think I've
         // been told to do that, and if this were a commercial product, a popup or
@@ -20640,8 +20653,13 @@ Example:
             return {
                 // \bactive\b, not /active/ — "Inactive" contains "active", and the v4.99.0
                 // guess ticked it (the probe's fixture caught it on its first run).
+                // v5.9.0: his real Redtail spells it "Active Client" on the STATUS, so a
+                // status naming a client is the strongest default there is; when one
+                // exists the category is left wide open (his ticks decide, not a guess).
                 status: f.status.filter(function (x) { return /\bactive\b/i.test(x.value) || x.value === '1'; }).map(function (x) { return x.value; }),
-                category: f.category.filter(function (x) { return /client/i.test(x.value); }).map(function (x) { return x.value; })
+                category: f.status.some(function (x) { return /\bactive\b/i.test(x.value) && /client/i.test(x.value); })
+                    ? []
+                    : f.category.filter(function (x) { return /client/i.test(x.value) && !/prospect|vendor|relationship/i.test(x.value); }).map(function (x) { return x.value; })
             };
         }
         function _briefMatchesFilter(c, f) {
@@ -20673,7 +20691,7 @@ Example:
             const n = (_briefRtContacts || []).filter(function (c) { return _briefMatchesFilter(c, picked); }).length;
             const bdayLike = facets.fields.filter(function (k) { return /birth|dob/i.test(k); });
             host.innerHTML = '<div class="gm-brief" style="margin-top:8px;">'
-                + '<div class="gm-brief-h">Redtail returned ' + (_briefRtContacts || []).length + ' contacts &mdash; which of these are current clients?</div>'
+                + '<div class="gm-brief-h">Redtail returned ' + (_briefRtContacts || []).length + ' contacts, every page &mdash; which of these are current clients?</div>'
                 + group('status', 'Status:', facets.status)
                 + group('category', 'Category:', facets.category)
                 + '<div style="margin-top:6px;">Matching now: <strong id="briefClientsMatchN">' + n + '</strong> contact' + (n === 1 ? '' : 's') + '. '
@@ -20716,16 +20734,47 @@ Example:
             try {
                 let contacts = Array.isArray(opts.contacts) ? opts.contacts : null;
                 if (!contacts) {
-                    say('Asking Redtail for your contacts…');
-                    // base:'classic' IS REQUIRED. The backend picks the base from THIS field and
-                    // then matches the whitelist against that tag, so omitting it makes the row
-                    // match as api2 and the call comes back "Path not permitted" from a backend
-                    // that supports it perfectly well. Both v3.68.0 rows are classic-only.
-                    const r = await _calPost({ action: 'redtailApi', base: 'classic', method: 'POST', path: 'contacts/search', body: {} });
-                    if (!r || !r.success) throw new Error((r && r.error) || 'Redtail did not answer.');
-                    const body = r.body || {};
-                    contacts = body.contacts || body.Contacts || body.data || (Array.isArray(body) ? body : []);
-                    if (!Array.isArray(contacts) || !contacts.length) {
+                    // v5.9.0 — HIS SCREENSHOT: "REDTAIL RETURNED 50 CONTACTS… It should be
+                    // 'Status = Active Client' but you didn't give me those options." Fifty
+                    // is Redtail's PAGE SIZE, not his book: the pickers could only offer
+                    // the values present in page one, and "Active Client" was not among
+                    // them. Nothing was wrong with the pickers — the read stopped at one
+                    // page. Now it pages until Redtail runs out (or the cap), reporting
+                    // progress, so the values he ticks are the values he actually has.
+                    contacts = [];
+                    const seenIds = {};
+                    for (let page = 1; page <= BRIEF_CLIENTS_MAX_PAGES; page++) {
+                        say('Asking Redtail for your contacts… page ' + page + (contacts.length ? ' (' + contacts.length + ' so far)' : ''));
+                        // base:'classic' IS REQUIRED. The backend picks the base from THIS field and
+                        // then matches the whitelist against that tag, so omitting it makes the row
+                        // match as api2 and the call comes back "Path not permitted" from a backend
+                        // that supports it perfectly well. Both v3.68.0 rows are classic-only.
+                        // The whitelist row already allows a query string, so paging needs no
+                        // backend round: /^contacts\/search(\?.*)?$/.
+                        const r = await _calPost({ action: 'redtailApi', base: 'classic', method: 'POST',
+                            path: 'contacts/search?page=' + page, body: {} });
+                        if (!r || !r.success) {
+                            if (contacts.length) break;   // page 1 worked, a later page did not: keep what we have
+                            throw new Error((r && r.error) || 'Redtail did not answer.');
+                        }
+                        const body = r.body || {};
+                        const got = body.contacts || body.Contacts || body.data || (Array.isArray(body) ? body : []);
+                        if (!Array.isArray(got) || !got.length) break;
+                        let added = 0;
+                        got.forEach(function (c) {
+                            const id = String((c && (c.id || c.ContactID || c.contact_id)) || '');
+                            if (id && seenIds[id]) return;   // a backend that ignores ?page would repeat page one
+                            if (id) seenIds[id] = true;
+                            contacts.push(c); added++;
+                        });
+                        // Redtail's own meta is the reliable stop when it is there.
+                        const meta = body.meta || body.Meta || {};
+                        const totalPages = Number(meta.total_pages || meta.totalPages || 0);
+                        if (!added) break;                                   // nothing new: stop rather than loop
+                        if (totalPages && page >= totalPages) break;
+                        if (!totalPages && got.length < 50) break;           // a short page is the last page
+                    }
+                    if (!contacts.length) {
                         throw new Error('Redtail returned no contacts. If your search is restricted, check the API user’s permissions.');
                     }
                     _briefRtContacts = contacts;
@@ -20738,7 +20787,7 @@ Example:
                 const filter = opts.filter || (opts.pick ? null : saved);
                 if (!filter) {
                     renderBriefClientFacets(facets, saved || _briefClientFilterDefault(facets));
-                    say('Redtail returned ' + contacts.length + ' contacts. Tick the statuses and categories that mean a current client, then press Import these.');
+                    say('Redtail returned ' + contacts.length + ' contacts across every page. Tick the statuses and categories that mean a current client, then press Import these.');
                     if (btn) { btn.disabled = false; btn.textContent = 'Import my active clients'; }
                     return;
                 }
