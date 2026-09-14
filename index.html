@@ -4117,9 +4117,10 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '5.11.0';
-        const EOS_BUILD_DATE = '2026-09-04';
-        const EOS_BUILD_TIME = '11:15'; // v5.11.0: THE EMAIL IS WRITTEN FROM THE BRIEFING (client-only; styles.css unchanged, link stays ?v=5.5.0). His v5.10.0 Rick draft, ranked "poorly, especially compared to the one created in Claude" — and this time the RETRIEVAL was not the fault: the briefing found the 3/24 Kitchen Sync lunch with its address, the 9/7 reminder, the every-6-month agreement, Rick's 9/3 outreach, Employee Care of America and the potential sale, Cindy's mother settling in Greenville, and the standing dinner with Cindy and Amanda — seven facts — and the EMAIL used one of them in half a clause. (The coffee at Creperia / Third Place was HIS OWN instruction, not an invention; the draft obeyed the ask and even acknowledged the in-flight Kitchen Sync lunch. The shortfall was warmth and the human material, not obedience.) TWO CAUSES, both mine. (1) The briefing was the LAST field of the JSON contract — an afterthought written beside the body rather than the reasoning the body comes from. Now the contract is {briefing, subject, body, notes} in that order, the prompt says WORK IN THIS ORDER and write the email FROM the briefing, the briefing must carry 4-7 bullets INCLUDING every personal thread and what each of them is waiting on, and the email MUST use what the briefing found — asking after the relative, the sale, the standing invitation by name unless the request rules them out, opening with a human line that anchors the gap rather than with the ask, and running three or four short paragraphs rather than being clipped. (2) v5.6.0's effort:'low' was paying for the empty-response fix twice: the REAL fix was the token budget (thinking had eaten all 1,400), and low effort on a task that is entirely judgement — which of seven facts belong in this email, in his voice — was buying back the cost in quality. Effort is HIGH again (the API's own default) with the backend's 8,000-token ceiling, so thinking cannot starve the text; a draft still costs cents and the result line prints the real figure. Also NEW: a deterministic WHO SPOKE LAST context line — when the newest message is theirs, the email must acknowledge what they asked for even when his request is about something else. Probe mail-agent A19-A20.
+        const EOS_VERSION = '5.12.0';
+        const EOS_BUILD_DATE = '2026-09-14';
+        const EOS_BUILD_TIME = '13:45'; // v5.12.0: EVERY DRAFT CARRIES HIS SIGNATURE (client-only; styles.css unchanged, link stays ?v=5.5.0). His report: "The birthday draft did not have my proper signature that we already baked in in previous sessions from the Gmail integration." It never had one — and nor did FOUR of its siblings. The v3.64.0 comment above emailSignatureHtml() asserted the signature "gets appended here, which puts it on every draft this tool creates", and that was TRUE WHEN WRITTEN: two paths existed and both assembled their HTML through assembleMeetingEmailHtml. Five more draft paths have been built since and every one hand-rolled its own escapeHtml(body).replace(/\n/g,'<br>') — the brief's AI reply (v4.73.0), the Redtail task draft (v4.91.0), the Meetings follow-up (v4.66.0), the Gmail-page drafter (v5.2.0) and the birthday greeting (v5.2.0) — so all five shipped unsigned, while each of their prompts told the model "no sign-off block (his signature is added separately)". The intent was there the whole time; only the wiring was missing. A COMMENT ASSERTING AN INVARIANT IS NOT AN ENFORCEMENT OF IT, and that is the lesson rather than the five edits. NOW: one builder, draftBodyHtml(text), escapes the body, converts newlines and appends emailSignatureHtml() — and all five paths call it (memory feedback_reuse_before_rebuild). The two paths that already signed keep their own assembly because each adds something the shared builder cannot: assembleMeetingEmailHtml hyperlinks the Calendly words, and the viewer's reply puts the quoted original BELOW the signature where a reply's quote belongs. The unsubscribe request stays deliberately unsigned — his phone number has no business going to a list operator. Probe mail-agent C1 (the builder signs and escapes; the birthday greeting and the drafter both reach the backend signed) and C2, which is the real deliverable: it reads the SOURCE and fails on any future draft path that assembles its own body, resolving one variable hop and exempting postGmailDraft by name as a transport whose two callers are themselves checked. C2 PROVEN TO FAIL on a build with the birthday path reverted (scratchpad copy, named the exact line) — a check that passes on the broken build proves nothing. 24/24.
+        // v5.11.0 (2026-09-04 11:15): THE EMAIL IS WRITTEN FROM THE BRIEFING (client-only; styles.css unchanged, link stays ?v=5.5.0). His v5.10.0 Rick draft, ranked "poorly, especially compared to the one created in Claude" — and this time the RETRIEVAL was not the fault: the briefing found the 3/24 Kitchen Sync lunch with its address, the 9/7 reminder, the every-6-month agreement, Rick's 9/3 outreach, Employee Care of America and the potential sale, Cindy's mother settling in Greenville, and the standing dinner with Cindy and Amanda — seven facts — and the EMAIL used one of them in half a clause. (The coffee at Creperia / Third Place was HIS OWN instruction, not an invention; the draft obeyed the ask and even acknowledged the in-flight Kitchen Sync lunch. The shortfall was warmth and the human material, not obedience.) TWO CAUSES, both mine. (1) The briefing was the LAST field of the JSON contract — an afterthought written beside the body rather than the reasoning the body comes from. Now the contract is {briefing, subject, body, notes} in that order, the prompt says WORK IN THIS ORDER and write the email FROM the briefing, the briefing must carry 4-7 bullets INCLUDING every personal thread and what each of them is waiting on, and the email MUST use what the briefing found — asking after the relative, the sale, the standing invitation by name unless the request rules them out, opening with a human line that anchors the gap rather than with the ask, and running three or four short paragraphs rather than being clipped. (2) v5.6.0's effort:'low' was paying for the empty-response fix twice: the REAL fix was the token budget (thinking had eaten all 1,400), and low effort on a task that is entirely judgement — which of seven facts belong in this email, in his voice — was buying back the cost in quality. Effort is HIGH again (the API's own default) with the backend's 8,000-token ceiling, so thinking cannot starve the text; a draft still costs cents and the result line prints the real figure. Also NEW: a deterministic WHO SPOKE LAST context line — when the newest message is theirs, the email must acknowledge what they asked for even when his request is about something else. Probe mail-agent A19-A20.
         // v5.10.0 (10:05): THE CLIENT LIST KEEPS ITSELF (client-only; styles.css unchanged, link stays ?v=5.5.0). His first successful import — 79 addresses from 73 current clients of 1,458 Redtail contacts, birthdays via field "dob" (THE CONTRACT READ THE v5.2.0 NOTE ASKED FOR: it is `dob`) — and his question: "that was extremely cumbersome, can we not have a webhook that monitors the 'Active Client' status (adding/removing) as clients come on board/leave?" A WEBHOOK IS THE WRONG NEXT STEP AND THE REASONS ARE ARCHITECTURAL, not effort: (a) Redtail's OWN outbound-webhook contract is not in this repo — integration vendors (Rollout, Zapier) advertise webhooks, which is not Redtail documenting one, and the standing rule is read the contract, never guess it; (b) this backend is executeAs USER_DEPLOYING with every data action TOKEN-gated, so receiving a webhook means opening a PUBLIC UNAUTHENTICATED endpoint on a deployment that can read his mailbox and calendar — a new attack surface on a fail-closed design; (c) Hans and Amanda have separate deployments, so one registered URL cannot serve both, and an /exec URL is not a stable registration target. What he ASKED FOR (the list stays current untouched) needs none of that: briefClientsMaybeAutoRefresh() runs the same import in the background 45s after load — only with HIS saved ticks (never a guess), only on a list older than a week, at most once a day per device, only when the gate is clear — and it is cheap because addresses are now cached per contact id (eos_brief_client_emails, device-local, rebuildable, 30-day TTL so addresses still re-read monthly): a weekly run costs the search pages plus a lookup for genuinely NEW clients. A manual press still re-reads everything (he pressed it; it is authoritative). WHAT CHANGED is the other half — a silently-updating list is no better than none — so the import diffs the previous addresses and renders "Your client list changed — N added (…); N no longer active (…)" with Got it, on the brief and the Gmail page, device-local in eos_ui_prefs.clientsDelta. Probe brief-mail V1–V4.
         // v5.9.0 (09:10): THE IMPORT READS EVERY PAGE (client-only; styles.css unchanged, link stays ?v=5.5.0). His screenshot of the v5.8.0 pickers: "REDTAIL RETURNED 50 CONTACTS — WHICH OF THESE ARE CURRENT CLIENTS?… It should be 'Status = Active Client' but you didn't give me those options." FIFTY IS REDTAIL'S PAGE SIZE, not his book — the pickers can only offer values that appear in the contacts actually read, and "Active Client" sat on a later page. The pickers were right; the READ stopped at page one, and it had done so since v4.99.0 (so the original "1 active client" was one match within fifty rows, not within his firm). NOW contacts/search is paged: `?page=N` (the v3.68.0 whitelist row already allows a query string — `/^contacts\/search(\?.*)?$/` — so NO backend round), up to BRIEF_CLIENTS_MAX_PAGES (40 = 2,000 contacts), stopping on Redtail's own `meta.total_pages`, on a short page, on an empty page, or on a page whose ids REPEAT (the guard against a backend that ignores ?page — that loop would otherwise spin 40 times over page one); a later page that errors keeps what page one returned rather than failing the run; the step line counts as it goes. Default ticks improved with his real data in hand: when a STATUS value names a client ("Active Client"), that is the whole default and the category is left open — his ticks decide; otherwise the category default excludes Prospect/Vendor/Relationship, which his screenshot shows are separate categories. Probe brief-mail U5.
         // v5.8.0 (2026-09-03 20:10): WHICH CONTACTS ARE CURRENT CLIENTS IS HIS CALL (client-only; styles.css unchanged, link stays ?v=5.5.0). His first import on v5.7.0: "1 addresses from 1 active clients" — and his question: "shouldn't I be able to see a dropdown of categories or status to ensure you are grabbing just current clients?" The v4.99.0 filter GUESSED (/active/ on status, /client/ on category) against a Redtail contract this repo has never read, and matched almost nothing. NOW the import is two steps the first time: fetch contacts/search, compute the DISTINCT Status and Category values Redtail actually returned with counts (_briefContactFacets, tolerant of label/id/object shapes via _briefFacetOf), render them as tick boxes in Settings › Brief senders › Your active clients (renderBriefClientFacets) with the old guess as the STARTING ticks and a live "Matching now: N" count, and import only what he ticks (briefClientsImportSelected). The ticks are saved as clientFilter in the triage doc (defaults, normalise, lww merge, fingerprint — the four touches every synced field needs) so a re-import is one click and the choice travels; the Settings line shows the saved ticks with Change (pick:true re-fetches and shows the pickers without importing). The brief's nudge button opens Settings at the block and fetches when no ticks are saved, imports directly when they are. The record's FIELD NAMES are listed under the pickers (and in the done line when no birthday was found), naming any that look like a birth date — the contract read the v5.2.0 note asked for. Probe brief-mail U1–U4.
@@ -7909,7 +7910,16 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.11.0 &mdash; 2026-09-04 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.12.0 &mdash; 2026-09-14 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Every draft the tool creates now carries your signature.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>The birthday greeting had no signature, and nor did four others</strong> &mdash; the brief&rsquo;s AI reply, the Redtail task draft, the Meetings follow-up and the Gmail-page drafter. Only the two oldest draft paths were ever wired to it. All of them now use one shared builder, so your signature lands on every draft.</li>'
+                + '<li>The one exception, on purpose: an unsubscribe request stays unsigned &mdash; there is no reason to send your phone number to a mailing-list operator.</li>'
+                + '<li>Set it in Settings &rsaquo; Email Signature, either typed or fetched from Gmail.</li>'
+                + '</ul>'
+                + '</div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.11.0 &mdash; 2026-09-04</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">The drafter now writes the email from everything it found, not a fraction of it.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>It has to use what it found.</strong> The briefing is written first and the email is written from it, so the personal threads it turns up &mdash; a family member, a decision they are weighing, a standing invitation &mdash; get asked after by name instead of sitting in the box above the draft.</li>'
@@ -20250,7 +20260,7 @@ Example:
             const subject = String((document.getElementById('brSubject') || {}).value || '').trim();
             const bodyTxt = String((document.getElementById('brBody') || {}).value || '').trim();
             if (!bodyTxt) { if (st) { st.textContent = 'Write (or let the AI propose) a reply first.'; st.style.color = '#b45309'; } return null; }
-            const htmlBody = escapeHtml(bodyTxt).replace(/\n/g, '<br>');
+            const htmlBody = draftBodyHtml(bodyTxt);   // v5.12.0: with his signature
             if (st) { st.textContent = 'Saving to your Gmail drafts…'; st.style.color = '#374151'; }
             const r = await _briefMailPost({
                 action: 'createReplyDraft',
@@ -21686,7 +21696,7 @@ Example:
             const sent = await _briefMailPost({
                 action: 'createReplyDraft', to: to,
                 subject: String(obj.subject || f.subject),
-                htmlBody: escapeHtml(String(obj.body)).replace(/\n/g, '<br>')
+                htmlBody: draftBodyHtml(String(obj.body))   // v5.12.0: with his signature
             });
             if (sent && sent.success) {
                 _rtActMSay('Saved to your Gmail drafts' + (to ? ' for ' + to : ' — add the address in Gmail')
@@ -25588,6 +25598,32 @@ Example:
             // design doc §3 — is Step 3; not added here. Voice — §5 — is Step 4.)
             return '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;' +
                 'line-height:1.5;color:#202124;">' + html + emailSignatureHtml() + '</div>';
+        }
+
+        // v5.12.0 — HIS REPORT: "The birthday draft did not have my proper signature that
+        // we already baked in in previous sessions from the Gmail integration." It never
+        // had one, and nor did four of its siblings. The v3.64.0 note below this function
+        // claims the signature "gets appended here, which puts it on every draft this tool
+        // creates" — TRUE WHEN IT WAS WRITTEN, when two paths existed and both assembled
+        // their HTML through assembleMeetingEmailHtml. FIVE more draft paths have been
+        // built since and every one of them hand-rolled its own
+        // `escapeHtml(body).replace(/\n/g,'<br>')`: the brief's AI reply, the Redtail task
+        // draft, the Meetings follow-up, the Gmail-page drafter and the birthday greeting.
+        // So all five shipped unsigned — while each of their prompts told the model "no
+        // sign-off block (his signature is added separately)". The intent was there the
+        // whole time; only the wiring was missing, and a comment asserting the invariant
+        // is not the same as a function enforcing it.
+        //
+        // ONE builder now turns a plain-text body into the HTML a draft carries, and every
+        // path that creates a draft from plain text calls it (memory
+        // feedback_reuse_before_rebuild). The two paths that already append the signature
+        // keep their own assembly because each adds something this cannot: the meeting
+        // drafter hyperlinks the Calendly words, and the viewer's reply appends the quoted
+        // original BELOW the signature, which is where a reply's quote belongs.
+        function draftBodyHtml(text) {
+            const body = escapeEmailHtml(String(text == null ? '' : text)).replace(/\n/g, '<br>');
+            return '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;'
+                + 'line-height:1.5;color:#202124;">' + body + emailSignatureHtml() + '</div>';
         }
 
         // ---- Email signature (v3.64.0) --------------------------------------
@@ -29931,7 +29967,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                 const newest = (!freshOutreach && threads[0]) || null;
                 let subject = String(out.subject || (newest ? 'Re: ' + newest.subject : 'Following up'));
                 if (freshOutreach) subject = subject.replace(/^\s*(re|fwd?)\s*:\s*/i, '');
-                const html = '<div>' + esc(String(out.body)).replace(/\n/g, '<br>') + '</div>';
+                const html = draftBodyHtml(String(out.body));   // v5.12.0: with his signature
                 const dr = await _briefMailPost({
                     action: 'createReplyDraft', to: who.email,
                     subject: subject,
@@ -30086,7 +30122,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                 const dr = await _briefMailPost({
                     action: 'createReplyDraft', to: email,
                     subject: String(out.subject || ('Happy birthday' + (first ? ', ' + first : '') + '!')),
-                    htmlBody: '<div>' + escapeHtml(String(out.body)).replace(/\n/g, '<br>') + '</div>'
+                    htmlBody: draftBodyHtml(String(out.body))   // v5.12.0: with his signature
                 });
                 if (!dr || !dr.success) throw new Error((dr && dr.error) || 'Could not save the draft.');
                 showToast('Greeting saved to your Gmail Drafts — tweak it there and send.', 'success');
@@ -30611,7 +30647,7 @@ Make sure your suggestions directly address the specific root cause and discussi
             const r = await _briefMailPost({
                 action: 'createReplyDraft',
                 to: to, subject: subject,
-                htmlBody: escapeHtml(bodyTxt).replace(/\n/g, '<br>')
+                htmlBody: draftBodyHtml(bodyTxt)   // v5.12.0: with his signature
             });
             if (r && r.success && r.draftId) {
                 d.emailDraft = { draftId: r.draftId, to: to, subject: subject, body: bodyTxt };
