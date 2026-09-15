@@ -5482,6 +5482,9 @@
 
 /* ── Birthdays in the brief (v5.2.0) ──────────────────────────────────────────── */
 .mb-bdays { display: flex; flex-direction: column; gap: 4px; }
+/* v5.13.0: the tick box that marks a birthday dealt with. flex:0 0 auto so it never
+   shrinks when the name wraps, and sized like the app's other row checkboxes. */
+.mb-bday-ck { flex: 0 0 auto; width: 16px; height: 16px; margin: 0; cursor: pointer; }
 .mb-bday { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font-size: 0.88rem; color: #374151; }
 
 @media (max-width: 768px) {
