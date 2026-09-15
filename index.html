@@ -13,7 +13,7 @@
          Marketing tab; the rest of the app is untouched by this. -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%231a365d' width='100' height='100' rx='15'/%3E%3Ctext x='50' y='50' font-family='Arial, sans-serif' font-size='45' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='central'%3EEOS%3C/text%3E%3Ccircle cx='85' cy='15' r='8' fill='%233182ce'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="styles.css?v=5.13.0">
+    <link rel="stylesheet" href="styles.css?v=5.14.0">
 </head>
 <body>
     <div class="container">
@@ -2859,7 +2859,13 @@
                         <label style="font-size: 0.8rem;">Coffee / short meeting link</label>
                         <input type="text" id="calendlyCoffee" placeholder="https://calendly.com/you/coffee" style="font-size: 0.85rem; width: 100%; margin-bottom: 8px;">
                         <label style="font-size: 0.8rem;">Lunch / longer meeting link</label>
-                        <input type="text" id="calendlyLunch" placeholder="https://calendly.com/you/lunch" style="font-size: 0.85rem; width: 100%;">
+                        <input type="text" id="calendlyLunch" placeholder="https://calendly.com/you/lunch" style="font-size: 0.85rem; width: 100%; margin-bottom: 8px;">
+                        <!-- v5.14.0: the third link, for his "30 minute Google Meet" answer.
+                             The field ships one release AHEAD of the drafter that uses it, so
+                             the link is already in place when that lands. -->
+                        <label style="font-size: 0.8rem;">30-minute video call link</label>
+                        <input type="text" id="calendlyMeet" placeholder="https://calendly.com/you/30min" style="font-size: 0.85rem; width: 100%;">
+                        <div style="font-size: 0.75rem; color: var(--gray-500); margin-top: 6px;">Used for &ldquo;can we get 30 minutes?&rdquo; replies. The drafter will propose real openings from your calendar first and offer this link as the fallback.</div>
                     </div>
                     </div>
                     <div class="set-band" id="setBand-habits">
@@ -4117,9 +4123,10 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '5.13.0';
+        const EOS_VERSION = '5.14.0';
         const EOS_BUILD_DATE = '2026-09-15';
-        const EOS_BUILD_TIME = '10:30'; // v5.13.0: THE LEAH COX MISS, AND BIRTHDAYS IN HIS VOICE (TWO-FILE, ?v=5.13.0). FOUR of his five asks; the Calendly/meeting one is a real fork and is being put to him rather than guessed. (1) HIS REPORT: "I'm surprised that you didn't catch the email from Leah Cox requesting money as important... I added a task to 'Client Work' over the weekend that says 'transfer of funds' and it was tagged from within Gmail. That should always get your attention." WHY IT MISSED, and it is worth naming: the brief's strongest signal is the SENDER being on the imported active-client list, and Leah wrote ON BEHALF OF a client (Piedmont Women's Center) — her own address is not the client's, so every relationship signal said "stranger", and he had read it, so v5.3.0's read-skip then hid it. TWO DETERMINISTIC ANSWERS, no AI in either. (a) _briefTaskLinkedEmails(): tagging a mail into Google Tasks writes task.emailLink as `…/#all/<gmail message id>`, and scanInbox returns THAT SAME id — he had already told the tool this mattered, in the tool's own data, and nothing read it. An OPEN task he owns surfaces its email with "you made a task from this: <task>"; completing the task stops it, which is the correct exit. (b) _briefIsMoneyRequest(): for a fiduciary, mail about moving money is never noise whoever sent it — paired evidence like the sign-in-code detector (an unambiguous phrase, or a money noun AND an action word), so "Lunch Thursday?" cannot match. Both beat the read-skip; NEITHER beats an ARCHIVE, because archiving is a filing decision he made and undoing it would re-open the v5.3.0 complaint, while reading is not a decision at all. Both are also exempted from _briefAutoResolve, which would otherwise write them out of the record before the ranker ever saw them — and both are set BESIDE row.client and BEFORE _briefWhy runs (rule 42's family, the trap the comment right there warns about). (2) BIRTHDAY TICK BOX, his ask verbatim: keyed `email|MM-DD` in the synced triage doc so next year is a NEW key and returns on its own; the four touches (defaults, normalise, lww union on 'min' like handled, fingerprint). (3) BIRTHDAY WORDING: the row knows how far away it is, so an early greeting SAYS it is early in his own words ("I know I'm a bit early" / a happy birthday week) instead of wishing them a happy birthday on the wrong day; and BIRTHDAY_VOICE_SAMPLES carries three greetings HE ACTUALLY SENT, verbatim, as worked examples — the lever offered after v5.11.0, because describing a voice does not transfer it and showing three does. The prompt takes the rhythm and forbids reusing those clients' personal details. Effort high, 1,200 tokens (was 400 at low, which is what made it generic). (4) SPOUSE: _briefSpouseOf reads the Redtail record the same way `dob` was read — plausible fields, first value wins, a marital STATUS ("Married") refused because it is not a name — and the import REPORTS the field it found or says none was found. Probe brief-mail 91/91 (W1-W4, X1-X2 new), mail-agent 24/24.
+        const EOS_BUILD_TIME = '12:20'; // v5.14.0: THE MONDAY FOLD, HIS ANSWER (TWO-FILE, ?v=5.14.0). He was asked which should give way when the Week Ahead band pushes the mail rows below the fold on Mondays, and chose COLLAPSE THE WEEK AHEAD. _wkMode() replaces the two-state show/hide with THREE: `full` (the band as it always was, what an explicit tap gives him), `summary` (the new Monday default — one line carrying the same facts from the same weekAheadFacts() call, so the line and the band cannot disagree, with Open and Not now), and `chip` (every other day, unchanged). Measured, not reasoned: the band was 229px and the summary is 53px, and the last mail row moves from 2px BELOW the fold at 375 to inside it — the 2px was real and was fixed properly, by giving a band that holds one line a line's worth of chrome (`.wk-band:has(.wk-oneline)`, 8px/12px instead of 14px/16px), not by moving the assertion. THE ASSERTION IS THE POINT: the six H geometry checks only fail on a REAL Monday, which is why this sat unseen from v5.0.0 until 2026-09-14, so Y1-Y3 FORCE Monday by stubbing _wkMonday and no longer depend on the day the probe runs — Y1 the band is one line and materially shorter than the full band, Y2 the mail rows are back above the fold at 375, Y3 a tap still opens the whole week. ALSO: the THIRD scheduling link, `calendlyMeet` (Settings › Meeting Scheduling Links, "30-minute video call link"), shipped ONE RELEASE AHEAD of the drafter that will use it so the link is already in place when that lands — his other answer was BOTH (real openings from his calendar AND the Calendly link as fallback), and that build needs `_calGapsFor`'s busy/gap arithmetic extracted from the Calendar page's own `_calState` before a second caller can share it. Deliberately not rushed into this release. Probe brief-mail 94/94 (Y1-Y3 new), css-audit clean, dead-selector sweep clean.
+        // v5.13.0 (10:30): THE LEAH COX MISS, AND BIRTHDAYS IN HIS VOICE (TWO-FILE, ?v=5.13.0). FOUR of his five asks; the Calendly/meeting one is a real fork and is being put to him rather than guessed. (1) HIS REPORT: "I'm surprised that you didn't catch the email from Leah Cox requesting money as important... I added a task to 'Client Work' over the weekend that says 'transfer of funds' and it was tagged from within Gmail. That should always get your attention." WHY IT MISSED, and it is worth naming: the brief's strongest signal is the SENDER being on the imported active-client list, and Leah wrote ON BEHALF OF a client (Piedmont Women's Center) — her own address is not the client's, so every relationship signal said "stranger", and he had read it, so v5.3.0's read-skip then hid it. TWO DETERMINISTIC ANSWERS, no AI in either. (a) _briefTaskLinkedEmails(): tagging a mail into Google Tasks writes task.emailLink as `…/#all/<gmail message id>`, and scanInbox returns THAT SAME id — he had already told the tool this mattered, in the tool's own data, and nothing read it. An OPEN task he owns surfaces its email with "you made a task from this: <task>"; completing the task stops it, which is the correct exit. (b) _briefIsMoneyRequest(): for a fiduciary, mail about moving money is never noise whoever sent it — paired evidence like the sign-in-code detector (an unambiguous phrase, or a money noun AND an action word), so "Lunch Thursday?" cannot match. Both beat the read-skip; NEITHER beats an ARCHIVE, because archiving is a filing decision he made and undoing it would re-open the v5.3.0 complaint, while reading is not a decision at all. Both are also exempted from _briefAutoResolve, which would otherwise write them out of the record before the ranker ever saw them — and both are set BESIDE row.client and BEFORE _briefWhy runs (rule 42's family, the trap the comment right there warns about). (2) BIRTHDAY TICK BOX, his ask verbatim: keyed `email|MM-DD` in the synced triage doc so next year is a NEW key and returns on its own; the four touches (defaults, normalise, lww union on 'min' like handled, fingerprint). (3) BIRTHDAY WORDING: the row knows how far away it is, so an early greeting SAYS it is early in his own words ("I know I'm a bit early" / a happy birthday week) instead of wishing them a happy birthday on the wrong day; and BIRTHDAY_VOICE_SAMPLES carries three greetings HE ACTUALLY SENT, verbatim, as worked examples — the lever offered after v5.11.0, because describing a voice does not transfer it and showing three does. The prompt takes the rhythm and forbids reusing those clients' personal details. Effort high, 1,200 tokens (was 400 at low, which is what made it generic). (4) SPOUSE: _briefSpouseOf reads the Redtail record the same way `dob` was read — plausible fields, first value wins, a marital STATUS ("Married") refused because it is not a name — and the import REPORTS the field it found or says none was found. Probe brief-mail 91/91 (W1-W4, X1-X2 new), mail-agent 24/24.
         // v5.12.0 (2026-09-14 13:45): EVERY DRAFT CARRIES HIS SIGNATURE (client-only; styles.css unchanged, link stays ?v=5.5.0). His report: "The birthday draft did not have my proper signature that we already baked in in previous sessions from the Gmail integration." It never had one — and nor did FOUR of its siblings. The v3.64.0 comment above emailSignatureHtml() asserted the signature "gets appended here, which puts it on every draft this tool creates", and that was TRUE WHEN WRITTEN: two paths existed and both assembled their HTML through assembleMeetingEmailHtml. Five more draft paths have been built since and every one hand-rolled its own escapeHtml(body).replace(/\n/g,'<br>') — the brief's AI reply (v4.73.0), the Redtail task draft (v4.91.0), the Meetings follow-up (v4.66.0), the Gmail-page drafter (v5.2.0) and the birthday greeting (v5.2.0) — so all five shipped unsigned, while each of their prompts told the model "no sign-off block (his signature is added separately)". The intent was there the whole time; only the wiring was missing. A COMMENT ASSERTING AN INVARIANT IS NOT AN ENFORCEMENT OF IT, and that is the lesson rather than the five edits. NOW: one builder, draftBodyHtml(text), escapes the body, converts newlines and appends emailSignatureHtml() — and all five paths call it (memory feedback_reuse_before_rebuild). The two paths that already signed keep their own assembly because each adds something the shared builder cannot: assembleMeetingEmailHtml hyperlinks the Calendly words, and the viewer's reply puts the quoted original BELOW the signature where a reply's quote belongs. The unsubscribe request stays deliberately unsigned — his phone number has no business going to a list operator. Probe mail-agent C1 (the builder signs and escapes; the birthday greeting and the drafter both reach the backend signed) and C2, which is the real deliverable: it reads the SOURCE and fails on any future draft path that assembles its own body, resolving one variable hop and exempting postGmailDraft by name as a transport whose two callers are themselves checked. C2 PROVEN TO FAIL on a build with the birthday path reverted (scratchpad copy, named the exact line) — a check that passes on the broken build proves nothing. 24/24.
         // v5.11.0 (2026-09-04 11:15): THE EMAIL IS WRITTEN FROM THE BRIEFING (client-only; styles.css unchanged, link stays ?v=5.5.0). His v5.10.0 Rick draft, ranked "poorly, especially compared to the one created in Claude" — and this time the RETRIEVAL was not the fault: the briefing found the 3/24 Kitchen Sync lunch with its address, the 9/7 reminder, the every-6-month agreement, Rick's 9/3 outreach, Employee Care of America and the potential sale, Cindy's mother settling in Greenville, and the standing dinner with Cindy and Amanda — seven facts — and the EMAIL used one of them in half a clause. (The coffee at Creperia / Third Place was HIS OWN instruction, not an invention; the draft obeyed the ask and even acknowledged the in-flight Kitchen Sync lunch. The shortfall was warmth and the human material, not obedience.) TWO CAUSES, both mine. (1) The briefing was the LAST field of the JSON contract — an afterthought written beside the body rather than the reasoning the body comes from. Now the contract is {briefing, subject, body, notes} in that order, the prompt says WORK IN THIS ORDER and write the email FROM the briefing, the briefing must carry 4-7 bullets INCLUDING every personal thread and what each of them is waiting on, and the email MUST use what the briefing found — asking after the relative, the sale, the standing invitation by name unless the request rules them out, opening with a human line that anchors the gap rather than with the ask, and running three or four short paragraphs rather than being clipped. (2) v5.6.0's effort:'low' was paying for the empty-response fix twice: the REAL fix was the token budget (thinking had eaten all 1,400), and low effort on a task that is entirely judgement — which of seven facts belong in this email, in his voice — was buying back the cost in quality. Effort is HIGH again (the API's own default) with the backend's 8,000-token ceiling, so thinking cannot starve the text; a draft still costs cents and the result line prints the real figure. Also NEW: a deterministic WHO SPOKE LAST context line — when the newest message is theirs, the email must acknowledge what they asked for even when his request is about something else. Probe mail-agent A19-A20.
         // v5.10.0 (10:05): THE CLIENT LIST KEEPS ITSELF (client-only; styles.css unchanged, link stays ?v=5.5.0). His first successful import — 79 addresses from 73 current clients of 1,458 Redtail contacts, birthdays via field "dob" (THE CONTRACT READ THE v5.2.0 NOTE ASKED FOR: it is `dob`) — and his question: "that was extremely cumbersome, can we not have a webhook that monitors the 'Active Client' status (adding/removing) as clients come on board/leave?" A WEBHOOK IS THE WRONG NEXT STEP AND THE REASONS ARE ARCHITECTURAL, not effort: (a) Redtail's OWN outbound-webhook contract is not in this repo — integration vendors (Rollout, Zapier) advertise webhooks, which is not Redtail documenting one, and the standing rule is read the contract, never guess it; (b) this backend is executeAs USER_DEPLOYING with every data action TOKEN-gated, so receiving a webhook means opening a PUBLIC UNAUTHENTICATED endpoint on a deployment that can read his mailbox and calendar — a new attack surface on a fail-closed design; (c) Hans and Amanda have separate deployments, so one registered URL cannot serve both, and an /exec URL is not a stable registration target. What he ASKED FOR (the list stays current untouched) needs none of that: briefClientsMaybeAutoRefresh() runs the same import in the background 45s after load — only with HIS saved ticks (never a guess), only on a list older than a week, at most once a day per device, only when the gate is clear — and it is cheap because addresses are now cached per contact id (eos_brief_client_emails, device-local, rebuildable, 30-day TTL so addresses still re-read monthly): a weekly run costs the search pages plus a lookup for genuinely NEW clients. A manual press still re-reads everything (he pressed it; it is authoritative). WHAT CHANGED is the other half — a silently-updating list is no better than none — so the import diffs the previous addresses and renders "Your client list changed — N added (…); N no longer active (…)" with Got it, on the brief and the Gmail page, device-local in eos_ui_prefs.clientsDelta. Probe brief-mail V1–V4.
@@ -7911,7 +7918,15 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.13.0 &mdash; 2026-09-15 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.14.0 &mdash; 2026-09-15 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Mondays keep your mail above the fold.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>On Mondays the Week Ahead is one line</strong> &mdash; the same figures, with Open to see the whole week and Not now to put it away. It was pushing your mail rows off the bottom of the screen on a phone every Monday since it shipped.</li>'
+                + '<li><strong>A third scheduling link</strong> in Settings &rsaquo; Meeting Scheduling Links, for a 30-minute video call. Paste it now; the drafter starts using it next release, proposing real openings from your calendar first and the link as the fallback.</li>'
+                + '</ul>'
+                + '</div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.13.0 &mdash; 2026-09-15</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Money and tagged emails always reach you, and birthday greetings sound like you.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>If you made a task from an email, that email reaches the brief</strong> &mdash; even if you had read it. It says &ldquo;you made a task from this&rdquo; and names the task, and it stops once the task is done.</li>'
@@ -18015,6 +18030,34 @@ Example:
             try { seen = localStorage.getItem(WK_SEEN_KEY) || ''; } catch (e) { }
             return seen !== _calYmd(new Date());
         }
+        // v5.14.0 — HIS ANSWER to the Monday fold question: collapse the Week Ahead to one
+        // line on Mondays, keeping the mail rows and the context counts above the fold, with
+        // the week one tap away. The band cost roughly 265px at the top of the brief and
+        // pushed the headline from 233px to 498px at 375 — measured against the untouched
+        // v5.11.0 build on Monday 2026-09-14, so it was never a regression, just a real
+        // Monday-only defect nobody had been on the tool to see.
+        //
+        // THREE states now, where there were two. `full` is the band as it always was and is
+        // what an explicit tap gives him; `summary` is the new Monday default — one line of
+        // the same facts, with Open; `chip` is every other day, unchanged.
+        function _wkMode() {
+            if (_wkOpen === true) return 'full';
+            if (_wkOpen === false) return 'chip';        // he closed it himself
+            return _wkShouldShow() ? 'summary' : 'chip';
+        }
+        // The same facts the band opens with, in one sentence. Built from weekAheadFacts()
+        // rather than a second count, so the line and the band can never disagree.
+        function weekAheadSummaryHtml() {
+            const f = weekAheadFacts();
+            const bits = [f.meetings + ' meeting' + (f.meetings === 1 ? '' : 's')];
+            if (f.minutes) bits.push(_wkHrs(f.minutes) + ' committed');
+            if (f.busiest) bits.push('busiest ' + _wkDayName(f.busiest.d));
+            return '<div class="wk-oneline">'
+                + '<span>' + String.fromCodePoint(0x1F4C5) + ' <strong>This week:</strong> ' + escapeHtml(bits.join(' · ')) + '</span>'
+                + '<button type="button" class="mb-mail-link" onclick="weekOpen()">Open</button>'
+                + '<button type="button" class="mb-mail-link" onclick="weekClose()">Not now</button>'
+                + '</div>';
+        }
         function weekOpen() { _wkOpen = true; renderWeekAhead(); }
         function weekClose() {
             _wkOpen = false;
@@ -18206,7 +18249,13 @@ Example:
             const band = document.getElementById('weekAhead');
             const chip = document.getElementById('weekAheadChip');
             if (!band || !chip) return;
-            if (_wkShouldShow()) {
+            const mode = _wkMode();   // v5.14.0: full | summary | chip
+            if (mode === 'summary') {
+                // One line in the band's own slot, so nothing else on the page moves.
+                band.style.display = '';
+                band.innerHTML = weekAheadSummaryHtml();
+                chip.style.display = 'none';
+            } else if (mode === 'full') {
                 band.style.display = '';
                 band.innerHTML = weekAheadHtml();
                 chip.style.display = 'none';
@@ -37789,7 +37838,8 @@ Make sure your suggestions directly address the specific root cause and discussi
         // read the same two values.
         function _schedulingLinks() {
             const s = getSettings() || {};
-            return { coffee: String(s.calendlyCoffee || '').trim(), lunch: String(s.calendlyLunch || '').trim() };
+            return { coffee: String(s.calendlyCoffee || '').trim(), lunch: String(s.calendlyLunch || '').trim(),
+                meet: String(s.calendlyMeet || '').trim() };   // v5.14.0 — the 30-minute video call
         }
 
         async function _taskAiEmail(subject, res) {
@@ -40549,6 +40599,7 @@ Make sure your suggestions directly address the specific root cause and discussi
 
             document.getElementById('calendlyCoffee').value = settings.calendlyCoffee || '';
             document.getElementById('calendlyLunch').value = settings.calendlyLunch || '';
+            document.getElementById('calendlyMeet').value = settings.calendlyMeet || '';   // v5.14.0
             document.getElementById('emailSignature').value = settings.emailSignature || '';
             // v3.65.0. Defaults to 'manual' rather than 'gmail' so an existing typed
             // signature keeps working untouched on upgrade - opting in is a choice.
@@ -41043,6 +41094,7 @@ Make sure your suggestions directly address the specific root cause and discussi
             };
             settings.calendlyCoffee = document.getElementById('calendlyCoffee').value.trim();
             settings.calendlyLunch = document.getElementById('calendlyLunch').value.trim();
+            settings.calendlyMeet = document.getElementById('calendlyMeet').value.trim();   // v5.14.0
             // Trailing blank lines only, not leading whitespace - an indented signature
             // block is a legitimate thing to paste.
             settings.emailSignature = document.getElementById('emailSignature').value.replace(/\s+$/, '');

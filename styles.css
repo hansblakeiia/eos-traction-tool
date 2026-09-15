@@ -5485,6 +5485,18 @@
 /* v5.13.0: the tick box that marks a birthday dealt with. flex:0 0 auto so it never
    shrinks when the name wraps, and sized like the app's other row checkboxes. */
 .mb-bday-ck { flex: 0 0 auto; width: 16px; height: 16px; margin: 0; cursor: pointer; }
+
+/* v5.14.0: the Monday Week Ahead, collapsed to one line (his answer to the fold question).
+   One row, wrapping only if it must, and no vertical padding beyond the band's own — the
+   whole point is that it costs a line instead of a screenful. */
+.wk-oneline { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 0.88rem; color: #374151; }
+.wk-oneline > span { min-width: 0; }
+/* The band's own 14px/14px padding + 14px margin is sized for a card stack, and on the
+   maximal-morning fixture it still put the last mail row 2px past the fold at 375 —
+   measured, not guessed. A band holding one line is given a line's worth of chrome.
+   `:has()` keeps the rule with the thing it describes instead of adding a JS class the
+   renderer would have to remember to set. */
+.wk-band:has(.wk-oneline) { padding: 8px 12px; margin-bottom: 10px; }
 .mb-bday { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font-size: 0.88rem; color: #374151; }
 
 @media (max-width: 768px) {
