@@ -224,7 +224,7 @@
              "Click things, type only as a last resort" - and the publishing flow was the most
              direct violation of it left in the app, on the surface he demos.
              Promise-based so the existing `await`-shaped call sites read almost unchanged. -->
-        <div class="modal-overlay" id="choiceModal">
+        <div class="modal-overlay" id="choiceModal" style="z-index:1002;"><!-- v5.21.0: the ONE chooser/confirm must sit above whichever modal asked — his "Move to Trash?" was hidden behind the email viewer -->
             <div class="modal" style="max-width:520px;">
                 <div class="modal-header">
                     <h3 style="margin:0;" id="choiceTitle">Choose</h3>
@@ -4207,9 +4207,10 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '5.20.1';
+        const EOS_VERSION = '5.21.0';
         const EOS_BUILD_DATE = '2026-09-16';
-        const EOS_BUILD_TIME = '11:05'; // v5.20.1: TWO THINGS THE LIVE CHECK FOUND IN v5.20.0, ten minutes after the push. (a) "Show my week" and "What Calendly said" opened BEHIND the brief's reply modal — every .modal-overlay is z-index 1000 and the later sibling paints on top, and both of these are earlier siblings of briefReplyModal. Inline z-index 1001 on those two overlays, because they are the only modals that open FROM another modal. (b) The backend's GS_VERSION constant still read 3.74.0 after the v3.75.0 header was written, so a freshly redeployed backend (Hans @135, Amanda @26) probed as 3.74.0 and the one-off button refused by version — the header and the constant are two places, and only the constant is what the client reads. Bumped, redeployed again on both accounts. Rule 12 in its purest form: "Redeployed" in the clasp output proves the push, and only the probe reading the NEW version proves the deploy. Probe mail-agent 39/39 unchanged.
+        const EOS_BUILD_TIME = '12:30'; // v5.21.0: THREE THINGS HE KEEPS SEEING, EACH DIAGNOSED BEFORE IT WAS TOUCHED (client-only; styles.css unchanged, link stays ?v=5.14.0; backend stays .gs v3.75.0). (1) "I clicked Delete in the popup window of an email I opened from Daily brief and nothing happens" — the ONE chooser (#choiceModal, which every confirm in the file goes through) is the FIRST modal in the DOM and the email viewer is a later sibling at the same z-index 1000, so "Move to Trash?" opened BEHIND the viewer; he only saw it after "Back to EOS" closed the viewer. Inline z-index 1002 on the chooser — it must sit above whichever modal asked, always. Same class as v5.20.1's week popup, caught one release apart, so the rule is now written: a modal that opens FROM another modal carries its own z-index. (2) "when I did click Send to trash the email was still sitting in my daily brief" — the viewer passes THREAD ids to briefMailDo (opts.threadIds, v4.96.0), and the local clearing keyed the handled map and the cache drop by MESSAGE id, so Gmail trashed the conversation and the brief kept its row. Every cached row in an acted-on conversation is now cleared too. (3) "I also got a bunch of new redtail workflows (Where did they come from)?" — thirty 2017–2018 rows. Diagnosed live in his tab: the documented feed answers 5 workflows / 7 tasks; the LEGACY /workflows?completed=0 path answers exactly those 50 old rows. On that load the documented call failed (transient) or came back unreadable, the parser returned null, and rtWorkflowsFetch walked on to the guessed paths — the very junk its own comment promised never to resurrect. Now a failed or unreadable authoritative call is REPORTED and the last good list stays; the legacy paths run only on a genuine 404. (4) HIS QUESTION, "What does 'Review my inbox with AI' do — shouldn't it already do that?": it reads the open emails once and sorts them into needs-you / not-sure / not-worth-your-time with reasons; it was opt-in per click since v4.73.0 because it costs one AI call. Now, with the toggle on, it runs ITSELF after any scan that brought mail it has not seen (_briefAiAuto, once per scan, nothing when nothing is new) and the button is only "run it now"; the human-act invariant is untouched — it still only proposes. Probe mail-actions 13/13 (M10, M11 new), meeting-processor +1 (a failed feed never falls through), brief-mail 94/94.
+        // v5.20.1 (11:05): TWO THINGS THE LIVE CHECK FOUND IN v5.20.0, ten minutes after the push. (a) "Show my week" and "What Calendly said" opened BEHIND the brief's reply modal — every .modal-overlay is z-index 1000 and the later sibling paints on top, and both of these are earlier siblings of briefReplyModal. Inline z-index 1001 on those two overlays, because they are the only modals that open FROM another modal. (b) The backend's GS_VERSION constant still read 3.74.0 after the v3.75.0 header was written, so a freshly redeployed backend (Hans @135, Amanda @26) probed as 3.74.0 and the one-off button refused by version — the header and the constant are two places, and only the constant is what the client reads. Bumped, redeployed again on both accounts. Rule 12 in its purest form: "Redeployed" in the clasp output proves the push, and only the probe reading the NEW version proves the deploy. Probe mail-agent 39/39 unchanged.
         // v5.20.0 (10:40): HIS THREE YESES — STEERING, THE WEEK, AND THE ONE-OFF LINK (PAIRS WITH .gs v3.75.0 ON BOTH ACCOUNTS; styles.css unchanged, link stays ?v=5.14.0). He answered "1, 2, and 3 — yes" to the v5.19.0 close-out. (1) STEERING: a chip row above the openings — Prefer: Mornings / Afternoons, then one chip per day that has openings — and the ticks FOLLOW the chips (the first three that fit are ticked, the rest greyed to 45% rather than hidden, so he can still reach one outside his preference); with nothing chosen it is "the first three", as before. That is "Thursday morning or Friday?" answered by him with two taps instead of the model guessing. (2) SHOW MY WEEK: a modal of his next fourteen days as columns — Google Calendar events as grey blocks (one getCalendarEvents read, the same backend action the Calendar page uses, for the same 14-day window the openings cover; all-day events on top, today amber, weekends muted) and the Calendly openings as blue tick rows on top of them. The ticks in the popup ARE the panel's ticks (meetWeekTick writes through), so there is one set of truth and D9's "untick everything" still means what it did. (3) THE ONE-OFF LINK, his decision on shares:write: "One-off link for these days" builds Calendly's "customize once and share" body from exactly what he ticked — the picked one-on-one type, named "<first name> — <type>", period fixed to the ticked days, every weekday explicitly EMPTY and each ticked date open only from its first ticked time to the end of its last, in HIS Calendly timezone — and POSTs it through the new whitelisted path (.gs v3.75.0: three GETs plus exactly ONE POST, body forwarded verbatim, answer raw). The rules then carry the times in words and that ONE booking_url in place of the per-slot links, so the invitee sees only what he chose. It runs only from his click; a tick, chip or type change makes the link stale and drops it; a v3.74.0 backend refuses by version with a sentence and sends nothing; a 401/403 names the missing shares:write scope and tells him where to regenerate the token. HIS ONE STEP: generate a new Calendly token with users:read, event_types:read, availability:read AND shares:write, paste it in Settings › Meeting Scheduling Links, save. Probe mail-agent 39/39 — D13/D14/D15 new, D4 re-pinned to "three GETs + exactly one POST".
         // v5.19.0 (17:10): WHAT CALENDLY SAID, AND THE RIGHT MEETING FOR MICHIGAN (client-only; styles.css unchanged, link stays ?v=5.14.0; backend stays .gs v3.74.0). His v5.18.0 test on Trevor's mail got "I don't have set times open right now" plus a link to the ONE-HOUR COFFEE CHAT, and the panel said "Calendly reports no openings in the next 7 days". He asked for a DIAGNOSTIC before any fix, and the diagnostic was run live first, in his own signed-in browser through his own backend, against all 30 of his active types: every call answered HTTP 200 (so not auth, not the ISO format, not a user-vs-organization listing gap — hypotheses 3 and 4 are dead). THE CAUSE: nothing was ticked in Settings, so _gmPickEventType guessed "the first 30-minute type", and Calendly's collection order put "30 Minute Client Call" — a PHONE type whose next opening was Sep 30, fifteen days out — ahead of the "Immediate 30 Minute Virtual Meeting (via Google Meet)" at position 1, which had 35 openings from the next morning. So the empty answer was true for the type asked about and wrong for the feature (hypothesis 1, compounded by 2: that type's own notice rules). FAULT 2, the coffee: the fallback chain was meet || coffee || lunch, the 30-minute video field was blank, and nothing knew Trevor was remote. NOW: (1) "TEST MY CALENDLY" in Settings › Meeting Scheduling Links, and "Show what Calendly said" inside any empty times panel — a modal listing his Calendly user, the exact window sent, which type would be offered and WHY (ticks or a guess), every type with its openings in that window and its first one flagged when it is a week or more out, and the raw request + response for the picked type. Candidates run first (the pick, his ticks, everything ≤ 30 min), the rest on one click, because 30 types is a minute of Apps Script calls. (2) Each type's MODE is read from Calendly's own location configuration — video / phone / in person — and the incoming request's mode from its words (coffee, lunch, office, come in → in person; everything else is remote). The guess prefers a 30-minute type that FITS, video before phone, in HIS Calendly order; his ticks still win, filtered by fit. (3) ONE fallback link, meetFallbackLink: the picked type's own scheduling page, then the Settings video link, and the coffee/lunch links only for a request that was in person to begin with — used by meetRules AND the Gmail-page drafter, so D10's enumeration now also fails on any drafter with a private links.coffee chain. (4) The window is 14 days (Calendly's documented ceiling is 31 now, not 7), the panel shows up to 40 openings grouped by day, the draft still carries only what he ticks, and the empty note NAMES the type. Probe mail-agent 36/36 — D11 and D12 are new and both FAIL against v5.18.0 from the clone.
         // v5.18.0 (21:15): ONE MEETING MODULE, EVERY REPLY PATH (client-only; styles.css unchanged, link stays ?v=5.14.0; backend stays .gs v3.74.0). His screenshot was the SOURCE EMAIL VIEWER's "AI reply" — `evAiReply`, a THIRD entry point I had never touched — still inventing times after v5.15.0 wired the Gmail-page drafter and v5.17.0 wired the brief's reply. ONE BEHAVIOUR, THREE ENTRY POINTS, WIRED TO TWO — the third occurrence of this class in four releases, and v5.16.0's own record had named the missing guard in writing ("a generalised entry-point check... would have caught this before he saw it") and I did not build it. SO THE SCHEDULING HALF STOPS BEING SOMETHING EACH PATH ASSEMBLES: `meetPrepare` decides and fetches, `meetRender(prefix)` draws the picker into whichever surface is open, `meetChosen`/`meetRules` produce the ONE instruction text with both prohibitions his live tests earned, and all three paths call them. The viewer gains the same picker the brief has — its own static markup (rule 15 / the dead-selector hook wants real ids: `evMeetPanel`/`evMeetType`/`evMeetSlots`/`evMeetNote`) driven by the SHARED renderer, so the wording cannot drift again; its Redraft re-asks without re-fetching, and `evCloseReplyPanel` hides it because the panel is per-EMAIL state (v4.7.2's shape). AND THE GUARD, which is the real deliverable: probe D10 ENUMERATES every reply drafter (`_briefReplyAsk`, `evAiReply`, `gmailAgentRun`) and fails BY NAME on any that does not reach the shared module, plus on any that writes a private copy of the prohibition text. D10 FAILS against v5.17.0 from the clone and names `evAiReply` exactly — it catches the defect he screenshotted rather than describing it. Probe mail-agent 34/34, brief-mail 94/94, mail-actions 10/10.
@@ -8013,7 +8014,17 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.20.1 &mdash; 2026-09-16 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.21.0 &mdash; 2026-09-16 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Delete from the email window works and clears the brief; the AI review runs by itself; old Redtail workflows stop reappearing.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>&ldquo;Move to Trash?&rdquo; now appears in front of the email window</strong> instead of hidden behind it. Every confirm in the tool goes through that one dialog, so it always sits on top now.</li>'
+                + '<li><strong>Trashing or archiving from the email window clears it from the brief.</strong> The window works by conversation and the brief by message; the two were not matched, so Gmail moved the mail and the brief kept showing it.</li>'
+                + '<li><strong>&ldquo;Review my inbox with AI&rdquo; runs by itself</strong> after each inbox scan that brings mail it has not seen, when the toggle in Settings is on. It reads the open emails and sorts them: what needs you first with reasons, what it was not sure about, and what is probably not worth your time. It only proposes; you still act. The button remains to run it again.</li>'
+                + '<li><strong>The thirty old Redtail workflows.</strong> They were never-completed 2017&ndash;2018 workflows from Redtail&rsquo;s general list, which the tool fell back to because the &ldquo;in my court&rdquo; feed failed once on that load. A failed feed now says so and keeps your last good list instead of guessing.</li>'
+                + '</ul>'
+                + '</div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.20.1 &mdash; 2026-09-16</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Two small fixes found by testing v5.20.0 live.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li>&ldquo;Show my week&rdquo; and &ldquo;What Calendly said&rdquo; now open in front of the reply window instead of behind it.</li>'
@@ -19347,6 +19358,13 @@ Example:
                     error: ''
                 };
                 saveBriefMailCache(next);
+                // v5.21.0 — HIS QUESTION: "What does 'Review my inbox with AI' do. Shouldn't
+                // it already do that and that button is not needed?" Yes. With the toggle on,
+                // the review now runs itself after a scan that brought mail the AI has not
+                // seen; the button stays only as "Re-run". Scheduled AFTER this scan returns
+                // so the caller's paint lands first, and the run still only PROPOSES
+                // (the human-act invariant: nothing here acts on the mailbox).
+                setTimeout(function () { try { _briefAiAuto(next.scannedAt); } catch (eAuto) { } }, 0);
                 // Only the FIRST scan of a day moves the window forward — otherwise a refresh
                 // at 11am would make tomorrow's brief start from 11am and lose the morning.
                 // DEVICE-LOCAL: this used to go through saveBriefTriage(), which pushed the
@@ -19943,13 +19961,23 @@ Example:
 
             // A message that left the inbox must leave the brief, or the next repaint puts
             // it straight back and the button reads as broken — his item 6, exactly.
+            // v5.21.0: ...and the SOURCE-EMAIL VIEWER passes THREAD ids (opts.threadIds),
+            // while the brief's rows and its handled map are keyed by MESSAGE id — so a
+            // trash from the viewer cleared nothing and the mail "was still sitting in my
+            // daily brief". Every cached row in an acted-on conversation is cleared too.
             if (ok && opts.clearLocally !== false) {
+                const localIds = ids.slice();
+                const inThread = {};
+                threadIds.forEach(function (tid) { inThread[tid] = true; });
+                (briefMailCache().rows || []).forEach(function (r) {
+                    if (r && r.id && r.threadId && inThread[r.threadId] && localIds.indexOf(r.id) === -1) localIds.push(r.id);
+                });
                 const t = briefTriage();
                 const handled = Object.assign({}, t.handled);
                 const pinned = Object.assign({}, t.pinned);
-                ids.forEach(function (id) { handled[id] = _briefTodayYmd(); delete pinned[id]; });
+                localIds.forEach(function (id) { handled[id] = _briefTodayYmd(); delete pinned[id]; });
                 saveBriefTriage({ handled: handled, pinned: pinned });
-                _briefMailDropRows(ids);
+                _briefMailDropRows(localIds);
             }
             ids.forEach(function (id) { _briefMailSel.delete(id); });
             _briefPaintMail();
@@ -20294,6 +20322,34 @@ Example:
         function _briefAiSave(c) { try { localStorage.setItem(BRIEF_AI_KEY, JSON.stringify(c)); } catch (e) { } }
 
         let _briefAiRunning = false;
+        // v5.21.0: the automatic pass. Once per scan (keyed by scannedAt), only when the
+        // toggle is on and the backend carries it, and only when there is something the
+        // cached verdicts do not cover — a scan that brought nothing new spends nothing.
+        let _briefAiAutoFor = 0;
+        function _briefAiOpenRows() {
+            const t = briefTriage();
+            const today = _briefTodayYmd();
+            return (briefMailCache().rows || []).filter(function (r) {
+                if (!r || !r.id) return false;
+                if (t.handled[r.id]) return false;
+                if (t.snoozed[r.id] && String(t.snoozed[r.id]) > today) return false;
+                const addr = r.fromEmail || briefSenderAddress(r.from);
+                if (addr && t.muted.indexOf(addr) !== -1) return false;
+                return true;
+            });
+        }
+        function _briefAiAuto(scanKey) {
+            if (!scanKey || _briefAiAutoFor === scanKey) return false;
+            if (briefAiGate()) return false;
+            if (_briefAiRunning) return false;
+            const cache = briefAiCache();
+            const open = _briefAiOpenRows();
+            const unseen = open.filter(function (r) { return !cache || !cache.verdicts[r.id]; });
+            if (!open.length || !unseen.length) return false;
+            _briefAiAutoFor = scanKey;
+            briefAiRun();
+            return true;
+        }
         async function briefAiRun() {
             const gate = briefAiGate();
             if (gate) { showToast(gate, 'error'); return; }
@@ -20383,8 +20439,12 @@ Example:
             if (gate && gate.indexOf('backend') !== -1) {
                 inner = '<div class="mb-mail-note">' + escapeHtml(gate) + '</div>';
             } else if (!cache) {
-                inner = '<button type="button" class="mb-mail-btn" onclick="briefAiRun()">Review my inbox with AI</button>'
-                    + '<span class="mb-mail-note" style="margin-left:8px;">Reads the open emails and proposes what to trash, unsubscribe from, and answer first.</span>';
+                // v5.21.0: the pass runs itself after each scan now; this is the state
+                // between a scan and its verdicts, or a day with nothing open.
+                inner = _briefAiRunning
+                    ? '<div class="mb-mail-note">Reviewing your inbox…</div>'
+                    : '<button type="button" class="mb-mail-btn" onclick="briefAiRun()">Review my inbox with AI</button>'
+                    + '<span class="mb-mail-note" style="margin-left:8px;">Runs by itself after each inbox scan; press this to run it now.</span>';
             } else {
                 const rowsById = {};
                 (briefMailCache().rows || []).forEach(function (r) { if (r && r.id) rowsById[r.id] = r; });
@@ -22759,6 +22819,30 @@ Example:
                         if (!myParsed.length) { got = null; sawEmpty = true; }
                         if (r && r.body && !rtWfState.rawSample) {
                             try { rtWfState.rawSample = JSON.stringify(r.body).slice(0, 6000); } catch (eRaw0) { }
+                        }
+                        continue;
+                    }
+                    // v5.21.0 — HIS "I also got a bunch of new redtail workflows (where did
+                    // they come from)?": thirty 2017–2018 rows, "Deposit Check to Client
+                    // Account(s)", "2018 1Q Mid-Term Billing". They came from the LEGACY
+                    // /workflows list — the very junk the comment above promised never to
+                    // resurrect — because on that load the documented endpoint FAILED (a
+                    // transient error, or a shape this build could not read), `myParsed`
+                    // was null, and the loop walked on to the guessed paths. Live check the
+                    // same morning: the documented feed answered 5 workflows / 7 tasks; the
+                    // legacy path answered those same 50 old rows. A failed authoritative
+                    // call is an ERROR to report, not a licence to guess. The legacy paths
+                    // now run ONLY when Redtail says the documented route does not exist.
+                    const routeAbsent = !!(r && (r.status === 404 || /HTTP 404/.test(String(r.error || ''))));
+                    if (i === 0 && !routeAbsent) {
+                        authoritative = true;
+                        if (r && r.success) {
+                            lastErr = 'Workflows: Redtail answered on /workflows/my_workflow_tasks in a shape the tool could not read.';
+                            if (r.body && !rtWfState.rawSample) {
+                                try { rtWfState.rawSample = JSON.stringify(r.body).slice(0, 6000); } catch (eRaw3) { }
+                            }
+                        } else {
+                            lastErr = 'Workflows: ' + ((r && r.error) ? r.error : 'could not reach the backend.') + ' Showing the last good list.';
                         }
                         continue;
                     }
