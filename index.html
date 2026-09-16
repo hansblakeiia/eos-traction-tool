@@ -1781,7 +1781,7 @@
                 </div>
                 <div style="overflow-y:auto; padding:14px 18px; flex:1;">
                     <div id="rtActMMeta" style="font-size:0.8rem; color:var(--gray-600); margin-bottom:10px;"></div>
-                    <div id="rtActMNote" style="font-size:0.85rem; white-space:pre-wrap; background:var(--gray-50, #f9fafb); border-radius:6px; padding:10px; margin-bottom:12px; max-height:180px; overflow-y:auto;"></div>
+                    <div id="rtActMNote" style="font-size:0.85rem; line-height:1.45; background:var(--gray-50, #f9fafb); border-radius:6px; padding:10px; margin-bottom:12px; max-height:180px; overflow-y:auto;"></div>
                     <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:end; margin-bottom:10px;">
                         <div style="min-width:0;">
                             <label for="rtActMDate" style="font-size:0.75rem; display:block;">Due date (Redtail&rsquo;s end date)</label>
@@ -4207,9 +4207,10 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '5.21.0';
+        const EOS_VERSION = '5.21.1';
         const EOS_BUILD_DATE = '2026-09-16';
-        const EOS_BUILD_TIME = '12:30'; // v5.21.0: THREE THINGS HE KEEPS SEEING, EACH DIAGNOSED BEFORE IT WAS TOUCHED (client-only; styles.css unchanged, link stays ?v=5.14.0; backend stays .gs v3.75.0). (1) "I clicked Delete in the popup window of an email I opened from Daily brief and nothing happens" — the ONE chooser (#choiceModal, which every confirm in the file goes through) is the FIRST modal in the DOM and the email viewer is a later sibling at the same z-index 1000, so "Move to Trash?" opened BEHIND the viewer; he only saw it after "Back to EOS" closed the viewer. Inline z-index 1002 on the chooser — it must sit above whichever modal asked, always. Same class as v5.20.1's week popup, caught one release apart, so the rule is now written: a modal that opens FROM another modal carries its own z-index. (2) "when I did click Send to trash the email was still sitting in my daily brief" — the viewer passes THREAD ids to briefMailDo (opts.threadIds, v4.96.0), and the local clearing keyed the handled map and the cache drop by MESSAGE id, so Gmail trashed the conversation and the brief kept its row. Every cached row in an acted-on conversation is now cleared too. (3) "I also got a bunch of new redtail workflows (Where did they come from)?" — thirty 2017–2018 rows. Diagnosed live in his tab: the documented feed answers 5 workflows / 7 tasks; the LEGACY /workflows?completed=0 path answers exactly those 50 old rows. On that load the documented call failed (transient) or came back unreadable, the parser returned null, and rtWorkflowsFetch walked on to the guessed paths — the very junk its own comment promised never to resurrect. Now a failed or unreadable authoritative call is REPORTED and the last good list stays; the legacy paths run only on a genuine 404. (4) HIS QUESTION, "What does 'Review my inbox with AI' do — shouldn't it already do that?": it reads the open emails once and sorts them into needs-you / not-sure / not-worth-your-time with reasons; it was opt-in per click since v4.73.0 because it costs one AI call. Now, with the toggle on, it runs ITSELF after any scan that brought mail it has not seen (_briefAiAuto, once per scan, nothing when nothing is new) and the button is only "run it now"; the human-act invariant is untouched — it still only proposes. Probe mail-actions 13/13 (M10, M11 new), meeting-processor +1 (a failed feed never falls through), brief-mail 94/94.
+        const EOS_BUILD_TIME = '13:20'; // v5.21.1: REDTAIL NOTES READ AS THEY DO IN REDTAIL (client-only; styles.css unchanged, link stays ?v=5.14.0). His screenshot: "Snyder Items Still Needed / Open Questions" as one grey paragraph with literal "&nbsp;" in it, and his question "Can the format of the Tasks from Redtail not have better formatting as they are in Redtail." CAUSE, and it was deliberate at v4.91.0: the activity modal stripped every tag and collapsed every run of whitespace before setting textContent, as a safety measure — which also destroyed the bold headers and numbered lists this tool itself WRITES into those descriptions (v4.80.0's "one combined activity … bold headers, real numbered lists") and left the entities showing. NOW: rtNoteHtml renders the note through sanitizeEmailHtml_ — the email viewer's existing allow-list (p, br, strong, em, ul/ol/li, headings; scripts, handlers, forms and images removed; links forced to open in a new tab) — so it reads exactly as in Redtail and still cannot run anything; a note with no markup keeps its own line breaks. rtNoteText hands the AI-Helper the same note as TEXT with its line structure (paragraphs, "• " list items) instead of tags replaced by spaces. Reuse, not a second sanitizer (the v5.2.2 lesson). Probe meeting-processor +1.
+        // v5.21.0 (12:30): THREE THINGS HE KEEPS SEEING, EACH DIAGNOSED BEFORE IT WAS TOUCHED (client-only; styles.css unchanged, link stays ?v=5.14.0; backend stays .gs v3.75.0). (1) "I clicked Delete in the popup window of an email I opened from Daily brief and nothing happens" — the ONE chooser (#choiceModal, which every confirm in the file goes through) is the FIRST modal in the DOM and the email viewer is a later sibling at the same z-index 1000, so "Move to Trash?" opened BEHIND the viewer; he only saw it after "Back to EOS" closed the viewer. Inline z-index 1002 on the chooser — it must sit above whichever modal asked, always. Same class as v5.20.1's week popup, caught one release apart, so the rule is now written: a modal that opens FROM another modal carries its own z-index. (2) "when I did click Send to trash the email was still sitting in my daily brief" — the viewer passes THREAD ids to briefMailDo (opts.threadIds, v4.96.0), and the local clearing keyed the handled map and the cache drop by MESSAGE id, so Gmail trashed the conversation and the brief kept its row. Every cached row in an acted-on conversation is now cleared too. (3) "I also got a bunch of new redtail workflows (Where did they come from)?" — thirty 2017–2018 rows. Diagnosed live in his tab: the documented feed answers 5 workflows / 7 tasks; the LEGACY /workflows?completed=0 path answers exactly those 50 old rows. On that load the documented call failed (transient) or came back unreadable, the parser returned null, and rtWorkflowsFetch walked on to the guessed paths — the very junk its own comment promised never to resurrect. Now a failed or unreadable authoritative call is REPORTED and the last good list stays; the legacy paths run only on a genuine 404. (4) HIS QUESTION, "What does 'Review my inbox with AI' do — shouldn't it already do that?": it reads the open emails once and sorts them into needs-you / not-sure / not-worth-your-time with reasons; it was opt-in per click since v4.73.0 because it costs one AI call. Now, with the toggle on, it runs ITSELF after any scan that brought mail it has not seen (_briefAiAuto, once per scan, nothing when nothing is new) and the button is only "run it now"; the human-act invariant is untouched — it still only proposes. Probe mail-actions 13/13 (M10, M11 new), meeting-processor +1 (a failed feed never falls through), brief-mail 94/94.
         // v5.20.1 (11:05): TWO THINGS THE LIVE CHECK FOUND IN v5.20.0, ten minutes after the push. (a) "Show my week" and "What Calendly said" opened BEHIND the brief's reply modal — every .modal-overlay is z-index 1000 and the later sibling paints on top, and both of these are earlier siblings of briefReplyModal. Inline z-index 1001 on those two overlays, because they are the only modals that open FROM another modal. (b) The backend's GS_VERSION constant still read 3.74.0 after the v3.75.0 header was written, so a freshly redeployed backend (Hans @135, Amanda @26) probed as 3.74.0 and the one-off button refused by version — the header and the constant are two places, and only the constant is what the client reads. Bumped, redeployed again on both accounts. Rule 12 in its purest form: "Redeployed" in the clasp output proves the push, and only the probe reading the NEW version proves the deploy. Probe mail-agent 39/39 unchanged.
         // v5.20.0 (10:40): HIS THREE YESES — STEERING, THE WEEK, AND THE ONE-OFF LINK (PAIRS WITH .gs v3.75.0 ON BOTH ACCOUNTS; styles.css unchanged, link stays ?v=5.14.0). He answered "1, 2, and 3 — yes" to the v5.19.0 close-out. (1) STEERING: a chip row above the openings — Prefer: Mornings / Afternoons, then one chip per day that has openings — and the ticks FOLLOW the chips (the first three that fit are ticked, the rest greyed to 45% rather than hidden, so he can still reach one outside his preference); with nothing chosen it is "the first three", as before. That is "Thursday morning or Friday?" answered by him with two taps instead of the model guessing. (2) SHOW MY WEEK: a modal of his next fourteen days as columns — Google Calendar events as grey blocks (one getCalendarEvents read, the same backend action the Calendar page uses, for the same 14-day window the openings cover; all-day events on top, today amber, weekends muted) and the Calendly openings as blue tick rows on top of them. The ticks in the popup ARE the panel's ticks (meetWeekTick writes through), so there is one set of truth and D9's "untick everything" still means what it did. (3) THE ONE-OFF LINK, his decision on shares:write: "One-off link for these days" builds Calendly's "customize once and share" body from exactly what he ticked — the picked one-on-one type, named "<first name> — <type>", period fixed to the ticked days, every weekday explicitly EMPTY and each ticked date open only from its first ticked time to the end of its last, in HIS Calendly timezone — and POSTs it through the new whitelisted path (.gs v3.75.0: three GETs plus exactly ONE POST, body forwarded verbatim, answer raw). The rules then carry the times in words and that ONE booking_url in place of the per-slot links, so the invitee sees only what he chose. It runs only from his click; a tick, chip or type change makes the link stale and drops it; a v3.74.0 backend refuses by version with a sentence and sends nothing; a 401/403 names the missing shares:write scope and tells him where to regenerate the token. HIS ONE STEP: generate a new Calendly token with users:read, event_types:read, availability:read AND shares:write, paste it in Settings › Meeting Scheduling Links, save. Probe mail-agent 39/39 — D13/D14/D15 new, D4 re-pinned to "three GETs + exactly one POST".
         // v5.19.0 (17:10): WHAT CALENDLY SAID, AND THE RIGHT MEETING FOR MICHIGAN (client-only; styles.css unchanged, link stays ?v=5.14.0; backend stays .gs v3.74.0). His v5.18.0 test on Trevor's mail got "I don't have set times open right now" plus a link to the ONE-HOUR COFFEE CHAT, and the panel said "Calendly reports no openings in the next 7 days". He asked for a DIAGNOSTIC before any fix, and the diagnostic was run live first, in his own signed-in browser through his own backend, against all 30 of his active types: every call answered HTTP 200 (so not auth, not the ISO format, not a user-vs-organization listing gap — hypotheses 3 and 4 are dead). THE CAUSE: nothing was ticked in Settings, so _gmPickEventType guessed "the first 30-minute type", and Calendly's collection order put "30 Minute Client Call" — a PHONE type whose next opening was Sep 30, fifteen days out — ahead of the "Immediate 30 Minute Virtual Meeting (via Google Meet)" at position 1, which had 35 openings from the next morning. So the empty answer was true for the type asked about and wrong for the feature (hypothesis 1, compounded by 2: that type's own notice rules). FAULT 2, the coffee: the fallback chain was meet || coffee || lunch, the 30-minute video field was blank, and nothing knew Trevor was remote. NOW: (1) "TEST MY CALENDLY" in Settings › Meeting Scheduling Links, and "Show what Calendly said" inside any empty times panel — a modal listing his Calendly user, the exact window sent, which type would be offered and WHY (ticks or a guess), every type with its openings in that window and its first one flagged when it is a week or more out, and the raw request + response for the picked type. Candidates run first (the pick, his ticks, everything ≤ 30 min), the rest on one click, because 30 types is a minute of Apps Script calls. (2) Each type's MODE is read from Calendly's own location configuration — video / phone / in person — and the incoming request's mode from its words (coffee, lunch, office, come in → in person; everything else is remote). The guess prefers a 30-minute type that FITS, video before phone, in HIS Calendly order; his ticks still win, filtered by fit. (3) ONE fallback link, meetFallbackLink: the picked type's own scheduling page, then the Settings video link, and the coffee/lunch links only for a request that was in person to begin with — used by meetRules AND the Gmail-page drafter, so D10's enumeration now also fails on any drafter with a private links.coffee chain. (4) The window is 14 days (Calendly's documented ceiling is 31 now, not 7), the panel shows up to 40 openings grouped by day, the draft still carries only what he ticks, and the empty note NAMES the type. Probe mail-agent 36/36 — D11 and D12 are new and both FAIL against v5.18.0 from the clone.
@@ -8014,7 +8015,15 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.21.0 &mdash; 2026-09-16 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.21.1 &mdash; 2026-09-16 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Redtail activity descriptions now read as they do in Redtail.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Bold headers, numbered lists and paragraphs come through</strong> when you open a Redtail activity, instead of one run-on paragraph with stray &ldquo;&amp;nbsp;&rdquo; in it. It uses the same safety filter as the email window, so nothing in a note can run here.</li>'
+                + '<li>The AI-Helper reads the description with its line structure too.</li>'
+                + '</ul>'
+                + '</div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.21.0 &mdash; 2026-09-16</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Delete from the email window works and clears the brief; the AI review runs by itself; old Redtail workflows stop reappearing.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>&ldquo;Move to Trash?&rdquo; now appears in front of the email window</strong> instead of hidden behind it. Every confirm in the tool goes through that one dialog, so it always sits on top now.</li>'
@@ -22363,13 +22372,46 @@ Example:
                 gv(/^all_?day(event)?$/i) === true ? 'All day' : null
             ].filter(Boolean).map(String);
             document.getElementById('rtActMMeta').textContent = bits.join(' · ');
-            // The Note is rich text from Redtail's editor — displayed as PLAIN TEXT only
-            // (tags stripped, set via textContent) so nothing it carries can run here.
+            // The Note is rich text from Redtail's editor. v5.21.1 — HIS ASK: "Can the
+            // format of the Tasks from Redtail not have better formatting as they are in
+            // Redtail." Until now the tags were stripped and every run of whitespace
+            // collapsed, so the bold headers and numbered lists the tool itself WRITES
+            // there (v4.80.0) came back as one paragraph with literal "&nbsp;" in it.
+            // Now it goes through the SAME sanitizer the email viewer uses — the allow-list
+            // that keeps p/br/strong/ul/ol/li and drops scripts, handlers and images — so
+            // it reads as it does in Redtail and still cannot run anything here.
             const noteRaw = String(gv(/^note$/i) || '');
-            document.getElementById('rtActMNote').textContent =
-                noteRaw ? noteRaw.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : '(no description)';
+            const noteEl = document.getElementById('rtActMNote');
+            const noteHtml = rtNoteHtml(noteRaw);
+            noteEl.innerHTML = noteHtml || '(no description)';
+            noteEl.querySelectorAll('p, div').forEach(function (p) { p.style.margin = '0 0 6px'; });
+            noteEl.querySelectorAll('ul, ol').forEach(function (l) { l.style.margin = '2px 0 8px 20px'; l.style.padding = '0'; });
             document.getElementById('rtActMDate').value = rtDateInputValue(end || start);
             _rtActMSay('', false);
+        }
+        // v5.21.1 — Redtail's rich-text note, two ways: as SAFE HTML for the screen (the
+        // email viewer's sanitizer, images never) and as TEXT with its line structure for
+        // the AI-Helper. A note with no markup keeps its own line breaks.
+        function rtNoteHtml(raw) {
+            const s = String(raw == null ? '' : raw);
+            if (!s.trim()) return '';
+            if (!/<[a-z][^>]*>/i.test(s) && !/&[a-z#0-9]+;/i.test(s)) return escapeHtml(s).replace(/\r?\n/g, '<br>');
+            return sanitizeEmailHtml_(s, false).html;
+        }
+        function rtNoteText(raw) {
+            const s = String(raw == null ? '' : raw);
+            if (!s.trim()) return '';
+            const withBreaks = s
+                .replace(/<\s*(br|\/p|\/div|\/li|\/h[1-6]|\/tr)\b[^>]*>/gi, '\n')
+                .replace(/<\s*li\b[^>]*>/gi, '• ');
+            let text = '';
+            try {
+                const doc = new DOMParser().parseFromString(withBreaks, 'text/html');
+                // textContent would otherwise carry a <script>'s source as words.
+                doc.body.querySelectorAll('script, style, template').forEach(function (el) { el.remove(); });
+                text = String(doc.body.textContent || '');
+            } catch (e) { text = withBreaks.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<[^>]*>/g, ' '); }
+            return text.replace(/ /g, ' ').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
         }
         // ==== v4.91.0: the activity modal acts like an assistant ======================
         // His item 1: "better options … think the best executive assistant and how they
@@ -22566,7 +22608,7 @@ Example:
                     + '\nType: ' + String(gv(/^type$/i)) + '\nCategory: ' + String(gv(/^category$/i))
                     + '\nClient: ' + String(gv(/^(client|contact)_?name$/i) || '(none linked)')
                     + '\nDue: ' + (document.getElementById('rtActMDate').value || '(unset)')
-                    + '\nDescription: ' + String(gv(/^note$/i) || '(none)').replace(/<[^>]*>/g, ' ').slice(0, 2000),
+                    + '\nDescription: ' + (rtNoteText(gv(/^note$/i)) || '(none)').slice(0, 2000),   // v5.21.1: line structure kept
                 maxTokens: 700, feature: 'redtail-activity-helper'
             });
             if (r && r.success) {
