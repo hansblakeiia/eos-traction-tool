@@ -5899,7 +5899,7 @@
 #opportunities .opp-form > * { min-width: 0; }
 #opportunities .opp-form .opp-wide { grid-column: 1 / -1; }
 #opportunities .opp-form label, #opportunities .opp-ai > label, #opportunities .opp-label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--gray-700); }
-#opportunities .opp-form input, #opportunities .opp-form select, #opportunities .opp-form textarea, #opportunities .opp-ai > label textarea {
+#opportunities .opp-form input, #opportunities .opp-form select, #opportunities .opp-form textarea, #opportunities .opp-ai > label textarea, #opportunities .opp-ai > label input {
     display: block; width: 100%; box-sizing: border-box; margin-top: 3px; padding: 7px 9px; font: inherit; font-size: 0.85rem; font-weight: 400;
     border: 1px solid var(--gray-300); border-radius: 6px; background: #fff; color: var(--gray-900);
 }
@@ -5914,6 +5914,9 @@
 #opportunities .opp-ai h4 { margin: 0 0 6px; font-size: 0.9rem; }
 #opportunities .opp-ai-out { background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 8px; padding: 10px 12px; margin-top: 10px; font-size: 0.85rem; color: #1e1b4b; overflow-wrap: anywhere; }
 #opportunities .opp-ai-out > div + div { margin-top: 5px; }
+#opportunities .opp-preview { background: #fff; border: 1px solid var(--gray-300); border-radius: 8px; padding: 14px 16px; margin-top: 10px; overflow-wrap: anywhere; max-width: 720px; }
+#opportunities .opp-preview-head { font-size: 0.76rem; color: var(--gray-500); border-bottom: 1px solid var(--gray-200); padding-bottom: 6px; margin-bottom: 10px; }
+#opportunities .opp-preview img { max-width: 100%; height: auto; }
 #opportunities .opp-brief { margin: 3px 0 2px 18px; padding: 0; }
 #opportunities .opp-brief li { margin: 2px 0; }
 #opportunities .opp-review { background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 8px; padding: 10px 12px; margin: 10px 0; font-size: 0.84rem; overflow-wrap: anywhere; }
