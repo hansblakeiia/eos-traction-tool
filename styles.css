@@ -5914,6 +5914,8 @@
 #opportunities .opp-ai h4 { margin: 0 0 6px; font-size: 0.9rem; }
 #opportunities .opp-ai-out { background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 8px; padding: 10px 12px; margin-top: 10px; font-size: 0.85rem; color: #1e1b4b; overflow-wrap: anywhere; }
 #opportunities .opp-ai-out > div + div { margin-top: 5px; }
+#opportunities .opp-brief { margin: 3px 0 2px 18px; padding: 0; }
+#opportunities .opp-brief li { margin: 2px 0; }
 #opportunities .opp-review { background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 8px; padding: 10px 12px; margin: 10px 0; font-size: 0.84rem; overflow-wrap: anywhere; }
 #opportunities .opp-rv-head { font-weight: 700; color: #312e81; }
 #opportunities .opp-rv-group h4 { margin: 10px 0 2px; font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase; color: #4338ca; }

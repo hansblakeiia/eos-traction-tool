@@ -13,7 +13,7 @@
          Marketing tab; the rest of the app is untouched by this. -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%231a365d' width='100' height='100' rx='15'/%3E%3Ctext x='50' y='50' font-family='Arial, sans-serif' font-size='45' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='central'%3EEOS%3C/text%3E%3Ccircle cx='85' cy='15' r='8' fill='%233182ce'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="styles.css?v=5.23.0">
+    <link rel="stylesheet" href="styles.css?v=5.24.0">
 </head>
 <body>
     <div class="container">
@@ -4329,9 +4329,10 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '5.23.0';
+        const EOS_VERSION = '5.24.0';
         const EOS_BUILD_DATE = '2026-09-17';
-        const EOS_BUILD_TIME = '15:30'; // v5.23.0: THE LIST, AS A TABLE HE ALREADY KNOWS — PLUS BULK, DELETE, "AI EMAIL" (client-only; TWO-FILE — styles.css bumps too, new .opp-table/.opp-bulk rules, link becomes ?v=5.23.0; pairs with .gs v3.77.0, DEPLOYED TO BOTH ACCOUNTS 2026-09-17 BUT NOT YET CONFIRMED LIVE per rule 12 — the only accepted proof is HIS OWN Access check reading 3.77.0, which has not run as of this writing; until it does, Delete refuses by name and points at Closed Lost instead of failing silently). His first live test of v5.22.0, same afternoon: pressed Refresh, then "Review my pipeline with AI" and got "The AI answered in a shape the tool could not read — try again." Then, in his own words: a checkmark to delete and do "other administrative responses," make it "look like it does in Redtail," a simple "AI email" this person, filters — "built more professionally to leverage AI." (1) THE AI FAILURE, diagnosed from the code before anything was touched: v5.22.0 capped the review at 3,000 output tokens with no effort setting and never read stopReason — current models THINK before writing and thinking counts against the cap, the exact failure .gs v3.73.0's own header documents from v5.5.0, so a reply that had simply run out of room was reported as "a shape the tool could not read," a WRONG-CAUSE diagnostic (rule 63). Both AI helpers now ask for the FULL 8192-token allowance at effort medium and read stopReason FIRST; _oppAiUnreadable names which way it failed — ran out of room (with the token count), returned no text, or genuinely unreadable — and "Copy diagnostic" now carries the raw AI answer, not just the last Redtail read. The review no longer demands a `today` array — a complete review with nothing for today was being refused. THIS IS NOT YET CONFIRMED as the cause of HIS failure — his next press is the test; if it fails again the status line names which way and Copy diagnostic carries the raw answer. (2) THE LIST IS NOW A TABLE in Redtail's own column order (tick, Name with description snippet and flags, Linked contacts, Assigned to, Next steps, Stage, Source, Prob., Close date red when passed, Amount, AI email), sortable heads (asc, desc, back to needs-attention), Active/Closed/All, a search box matching linked-contact names too, filters for stage/type/source/assigned, totals that follow the filters. Every control is STATIC (rule 15) — only the table body re-renders, nothing loses focus. Cards on a phone. Linked contacts are NOT in Redtail's documented LIST response, only the by-id record, so they load in the background after the table paints (oppHydrate), cached, re-read only when the record's last-change stamp moves — a race the probe found (a refresh landing mid-load) is fixed: the older pass now defers to the newer one instead of the new rows never loading. (3) TICK BOXES + A BULK BAR: move to a stage, Closed Won, Closed Lost, set close date, assign, "AI review of these" (scoped to ticked rows when any are ticked), Delete, Clear. Every write is HIS click behind a confirm that NAMES the rows; each record is read then put back — Redtail's own record, unknown fields kept — then the list is RE-READ and any row Redtail did not keep is named rather than silently trusted. Cancel writes nothing, keeps the ticks. DATA-SAFETY FIX found while building: a record that comes back WITHOUT its contact list is now saved WITHOUT linked_contacts, in both the bulk path and the editor (contactsKnown/contactsTouched) — v5.22.0's editor would have sent an empty array and could have UNLINKED EVERYONE the day Redtail ever omitted that field. (4) DELETE, HIS DECISION BY NAME: backend v3.77.0 adds ONE whitelist row (DELETE opportunities/{numeric id}, classic base, no query string; gs-auditor: safe, no blockers). Client gates on 3.77.0 — on an older backend it names BOTH versions and points at Closed Lost without even asking. Reachable from exactly one function; NO AI OR BACKGROUND FUNCTION CAN WRITE TO REDTAIL AT ALL (probe O10, REWRITTEN not deleted, rule 78 — the old "no delete anywhere" claim is retired deliberately, not silently). (5) "AI EMAIL" on every row REUSES the Gmail-page drafter (gmailAgentRun) instead of a second one — it already reads his real threads with the person, the last meeting, the calendar and his Calendly openings. The button resolves linked contacts, RE-READING the record if the cached link predates the record's last change (an email is addressed to a PERSON, a stale cache is not good enough), fills the request with the opportunity, stage, his log and the no-repeat/no-pressure/no-performance-claims rules, fills To from Redtail, names the second contact of a couple, starts the drafter with the chosen address; with no linked contact it opens the record instead of drafting to nobody. This is v5.22.0's "read his Gmail correspondence into the nudge" next-step, closed by reuse. (6) MEASURED at 375/768/1280 with screenshots; one defect found and fixed: the global rule stretching every select to full width put each filter on its own row — the opp-toolbar selects now carry their own width:auto. NOT BUILT THIS RELEASE: the daily-brief "who to touch today" section (his stated next step); touch counting; bulk snooze; inline cell editing. Probe opportunities-probe 16/16 (O10 rewritten; O12 cut AI reply; O13 table/sort/filters/contacts; O14 bulk with a stateful fake backend; O15 delete; O16 AI email hand-off incl. a planted stale link).
+        const EOS_BUILD_TIME = '16:20'; // v5.24.0: ONE READER OF HIS CORRESPONDENCE — THE NUDGE READS HIS MAIL TOO (client-only, TWO-FILE — styles.css bumps too, link becomes ?v=5.24.0; backend UNCHANGED at .gs v3.77.0, NO CLASP ROUND). His second live test, same afternoon, backend confirmed 3.77.0 by his own Access check: "Plan the next nudge" on a real prospect, and close to verbatim: "the email is a bit flat. Now that you know his email address, why can't you look back at our email chain for better context to reach out with more context? That is the whole point of this section of the EOS Tool. The goal is to get more clients and do a lot of the grunt work for me." MY OWN RATING, given to him plainly: a C — it ignored the reason-for-writing-now he had typed into the note, dropped his own best phrase, offered nothing concrete, and its "Missing" line asked whether the prospect had replied to an earlier email, a question the tool could have answered by reading his mail. v5.23.0 had wired mail-reading into the row's "AI email" button but NOT into this panel: ONE BEHAVIOUR, TWO ENTRY POINTS, WIRED TO ONE — the same class as §5.87, §5.91 and §5.93, committed again. FIX, BY REUSE NOT COPY: gmReadCorrespondence, gmContactFactLines and gmCorrespondenceLines were extracted out of gmailAgentRun, wording UNCHANGED; gmailAgentRun calls them (mail-agent-probe 39/39 before and after, proving the extraction changed nothing), and the nudge's oppGatherContext calls the same three. O17 reads the SOURCE of both and FAILS if either grows a private searchMail call. THE NUDGE NOW GATHERS BEFORE IT WRITES: finds the address in Redtail and fills To; reads the thread (a year, then five if empty; bulk dropped; newest bodies in full); states how long ago and WHO SPOKE LAST as facts the code proves; the last meeting from the Meeting Processor and the calendar, and the next calendar entry; his real Calendly openings. The chain and meetings travel in the USER block as data; the openings are trusted facts and ride in the SYSTEM prompt (the v5.17.0 lesson). EACH SOURCE DEGRADES TO A SENTENCE — none can block the plan. THE PROMPT IS BRIEFING-FIRST (the v5.11.0 lesson): 4-7 sourced, dated bullets for Hans, THEN the email FROM them, built around his own typed reason for writing now. "A FLAT EMAIL IS A FAILED EMAIL": a specific opening, the reason now, one concrete useful thing, one easy ask, 90-150 words, banned filler; anything of THEIRS unanswered is acknowledged first; "missing" lists only what could not be found in anything supplied. HE IS SHOWN THE WORK: a "Read:" line and a "What I found" bullet list. NOT YET CONFIRMED LIVE: whether the drafts are BETTER is his own judgement on his next try — the probe proves the context REACHES the model, not that the prose is good. The Calendly type offered is still the shared picker's GUESS (a 30-minute video type), which may not be his discovery-meeting type — the Read line names it. PRIVACY, unchanged: email bodies reach the AI provider for that one call, as the Gmail-page drafter has done since v5.2.0; nothing is stored beyond the device. Probes: opportunities-probe 17/17 (O17 new), mail-agent 39/39 unchanged.
+        // v5.23.0 (15:30):THE LIST, AS A TABLE HE ALREADY KNOWS — PLUS BULK, DELETE, "AI EMAIL" (client-only; TWO-FILE — styles.css bumps too, new .opp-table/.opp-bulk rules, link becomes ?v=5.23.0; pairs with .gs v3.77.0, DEPLOYED TO BOTH ACCOUNTS 2026-09-17 BUT NOT YET CONFIRMED LIVE per rule 12 — the only accepted proof is HIS OWN Access check reading 3.77.0, which has not run as of this writing; until it does, Delete refuses by name and points at Closed Lost instead of failing silently). His first live test of v5.22.0, same afternoon: pressed Refresh, then "Review my pipeline with AI" and got "The AI answered in a shape the tool could not read — try again." Then, in his own words: a checkmark to delete and do "other administrative responses," make it "look like it does in Redtail," a simple "AI email" this person, filters — "built more professionally to leverage AI." (1) THE AI FAILURE, diagnosed from the code before anything was touched: v5.22.0 capped the review at 3,000 output tokens with no effort setting and never read stopReason — current models THINK before writing and thinking counts against the cap, the exact failure .gs v3.73.0's own header documents from v5.5.0, so a reply that had simply run out of room was reported as "a shape the tool could not read," a WRONG-CAUSE diagnostic (rule 63). Both AI helpers now ask for the FULL 8192-token allowance at effort medium and read stopReason FIRST; _oppAiUnreadable names which way it failed — ran out of room (with the token count), returned no text, or genuinely unreadable — and "Copy diagnostic" now carries the raw AI answer, not just the last Redtail read. The review no longer demands a `today` array — a complete review with nothing for today was being refused. THIS IS NOT YET CONFIRMED as the cause of HIS failure — his next press is the test; if it fails again the status line names which way and Copy diagnostic carries the raw answer. (2) THE LIST IS NOW A TABLE in Redtail's own column order (tick, Name with description snippet and flags, Linked contacts, Assigned to, Next steps, Stage, Source, Prob., Close date red when passed, Amount, AI email), sortable heads (asc, desc, back to needs-attention), Active/Closed/All, a search box matching linked-contact names too, filters for stage/type/source/assigned, totals that follow the filters. Every control is STATIC (rule 15) — only the table body re-renders, nothing loses focus. Cards on a phone. Linked contacts are NOT in Redtail's documented LIST response, only the by-id record, so they load in the background after the table paints (oppHydrate), cached, re-read only when the record's last-change stamp moves — a race the probe found (a refresh landing mid-load) is fixed: the older pass now defers to the newer one instead of the new rows never loading. (3) TICK BOXES + A BULK BAR: move to a stage, Closed Won, Closed Lost, set close date, assign, "AI review of these" (scoped to ticked rows when any are ticked), Delete, Clear. Every write is HIS click behind a confirm that NAMES the rows; each record is read then put back — Redtail's own record, unknown fields kept — then the list is RE-READ and any row Redtail did not keep is named rather than silently trusted. Cancel writes nothing, keeps the ticks. DATA-SAFETY FIX found while building: a record that comes back WITHOUT its contact list is now saved WITHOUT linked_contacts, in both the bulk path and the editor (contactsKnown/contactsTouched) — v5.22.0's editor would have sent an empty array and could have UNLINKED EVERYONE the day Redtail ever omitted that field. (4) DELETE, HIS DECISION BY NAME: backend v3.77.0 adds ONE whitelist row (DELETE opportunities/{numeric id}, classic base, no query string; gs-auditor: safe, no blockers). Client gates on 3.77.0 — on an older backend it names BOTH versions and points at Closed Lost without even asking. Reachable from exactly one function; NO AI OR BACKGROUND FUNCTION CAN WRITE TO REDTAIL AT ALL (probe O10, REWRITTEN not deleted, rule 78 — the old "no delete anywhere" claim is retired deliberately, not silently). (5) "AI EMAIL" on every row REUSES the Gmail-page drafter (gmailAgentRun) instead of a second one — it already reads his real threads with the person, the last meeting, the calendar and his Calendly openings. The button resolves linked contacts, RE-READING the record if the cached link predates the record's last change (an email is addressed to a PERSON, a stale cache is not good enough), fills the request with the opportunity, stage, his log and the no-repeat/no-pressure/no-performance-claims rules, fills To from Redtail, names the second contact of a couple, starts the drafter with the chosen address; with no linked contact it opens the record instead of drafting to nobody. This is v5.22.0's "read his Gmail correspondence into the nudge" next-step, closed by reuse. (6) MEASURED at 375/768/1280 with screenshots; one defect found and fixed: the global rule stretching every select to full width put each filter on its own row — the opp-toolbar selects now carry their own width:auto. NOT BUILT THIS RELEASE: the daily-brief "who to touch today" section (his stated next step); touch counting; bulk snooze; inline cell editing. Probe opportunities-probe 16/16 (O10 rewritten; O12 cut AI reply; O13 table/sort/filters/contacts; O14 bulk with a stateful fake backend; O15 delete; O16 AI email hand-off incl. a planted stale link).
         // v5.22.0 (14:10): REDTAIL OPPORTUNITIES — THE PIPELINE, INSIDE THE TOOL (TWO-FILE — styles.css bumps too, link becomes ?v=5.22.0; pairs with .gs v3.76.0, deployed to BOTH accounts today). His ask, 2026-09-17: Redtail now charges $15/user/month for its own AI (MCP) access on opportunities, and he wants that inside this tool instead — "nudge people and get people to continue to move forward on the path towards becoming clients, or getting them off the path" — with follow-ups drafted into Gmail, grounded in researched sales practice, and later surfaced in the daily brief (that last part is NOT built this release, named below). WHAT SHIPPED: a new Opportunities page (four nav touches, rule 27) reading the pipeline live from Redtail — paged, a repeat-id guard, closed stages filtered off the list, a 5-minute TTL, a device-local cache, and a "Copy diagnostic" button for the day Redtail answers in a shape this build cannot read; a no-AI hygiene pass (close date passed, no next step, no stage, no close date, and "no change in Redtail for N days" measured against a per-kind threshold read off HIS OWN stage-name prefixes, OPP_KINDS — COI, prospect, podcast/speaking, and so on) with a device-local snooze; a create/edit form whose Save RE-READS the record after every write and NAMES BY FIELD anything Redtail did not keep — the documented create/update bodies never show stage_id and no example shows a non-null close_date, so a clean 2xx from Redtail is not proof either one survived — and a record whose full read failed CANNOT be saved, on purpose, so nothing can be overwritten blind. Two AI helpers that only PROPOSE: "Review my pipeline" (today / this week / let go, gracefully / tidy up) and "Plan the next nudge" for one opportunity (assessment, suggested stage, next step, look-again date, an email draft and a text-message draft) — the playbook, the compliance bans and the meeting rule live in the SYSTEM prompt, and the CRM record plus his own pasted "what happened last" travel ALONE in the user block, declared as data (the v5.17.0 lesson: an instruction sitting in a block the model is told is untrusted gets ignored right along with everything else in that block, which is the guard working, not failing). The one scheduling line it may offer comes from the shared meetFallbackLink — never a private link chain — and the AI may never invent a specific time. Saving a draft goes through the same SIGNED shared builder every other draft path in this file uses (draftBodyHtml → createReplyDraft); nothing on this page can send anything. RESEARCH HONESTY, kept where the code can be read: only TWO of the cadence numbers in OPP_KINDS are evidence — HBR's 2011 "Short Life of Online Sales Leads" on answering an inbound web lead within the hour, and a vendor study on returns falling off after about six attempts — every other day-count is labelled a practitioner convention, not a finding, and the oft-quoted "80% of sales need five follow-ups" was checked and deliberately left OUT because it is unsourced. DELETE is documented by Redtail and DELIBERATELY NOT WHITELISTED — taking someone "off the path" is a stage move to Closed Lost, which keeps the history; a delete would not, and that is Hans's call to make later, by name, not a default. NO NEW CAPABILITY KEY, NO NEW SCOPE, NO CONSENT RUN — the client gates on the backend VERSION alone (RT_OPP_GS_MIN, rules 12/63c): against an old backend the page NAMES BOTH VERSIONS and sends nothing, and — rule 51 — the buttons that would open the page still exist rather than vanishing; only the ACTION is gated. BACKEND v3.76.0 WAS DEPLOYED TO BOTH ACCOUNTS TODAY (Hans @137, Amanda @29) — but per apps-script.md rule 12, THE ONLY ACCEPTED PROOF A .gs RELEASE IS ACTUALLY LIVE IS HIS OWN ACCESS CHECK READING 3.76.0, and that check has NOT yet run. Until it does, treat the deploy as unconfirmed: if it turns out stale, this page explains itself with the version-gate sentence above rather than failing silently or writing anything malformed. NOT BUILT THIS RELEASE, said outright rather than implied: the daily-brief integration (his own stated next step); touch counting (a Redtail opportunity carries no touch counter at all — the idle clock here is updated_at, a proxy, not a count); reading his Gmail thread with a prospect into the nudge (the Gmail-page drafter's thread reader is the reuse target for that, not duplicated here — memory feedback_reuse_before_rebuild); a full Calendly slot picker inside the nudge (only the one fallback link). OPEN CONTRACT QUESTIONS his first live use will answer: whether a real POST/PUT actually keeps stage_id and close_date (the docs don't show either); whether a PUT carrying linked_contacts REPLACES the list or duplicates it; whether the opportunity deep link (smf.crm3.redtailtechnology.com/opportunities/{id}) is right; the real shape of lists/database_users. THE DEPLOY REPO IS PUBLIC: no prospect's name may ever land in this file — the two opportunities he asked to have on hand go in through the FORM, by his own hand, after this ships, never seeded into a fixture, a default or a comment. gs-auditor: safe, no blockers. Probe opportunities-probe 11/11 (O1–O11, new).
         // v5.21.1 (13:20): REDTAIL NOTES READ AS THEY DO IN REDTAIL (client-only; styles.css unchanged, link stays ?v=5.14.0). His screenshot: "Snyder Items Still Needed / Open Questions" as one grey paragraph with literal "&nbsp;" in it, and his question "Can the format of the Tasks from Redtail not have better formatting as they are in Redtail." CAUSE, and it was deliberate at v4.91.0: the activity modal stripped every tag and collapsed every run of whitespace before setting textContent, as a safety measure — which also destroyed the bold headers and numbered lists this tool itself WRITES into those descriptions (v4.80.0's "one combined activity … bold headers, real numbered lists") and left the entities showing. NOW: rtNoteHtml renders the note through sanitizeEmailHtml_ — the email viewer's existing allow-list (p, br, strong, em, ul/ol/li, headings; scripts, handlers, forms and images removed; links forced to open in a new tab) — so it reads exactly as in Redtail and still cannot run anything; a note with no markup keeps its own line breaks. rtNoteText hands the AI-Helper the same note as TEXT with its line structure (paragraphs, "• " list items) instead of tags replaced by spaces. Reuse, not a second sanitizer (the v5.2.2 lesson). Probe meeting-processor +1.
         // v5.21.0 (12:30): THREE THINGS HE KEEPS SEEING, EACH DIAGNOSED BEFORE IT WAS TOUCHED (client-only; styles.css unchanged, link stays ?v=5.14.0; backend stays .gs v3.75.0). (1) "I clicked Delete in the popup window of an email I opened from Daily brief and nothing happens" — the ONE chooser (#choiceModal, which every confirm in the file goes through) is the FIRST modal in the DOM and the email viewer is a later sibling at the same z-index 1000, so "Move to Trash?" opened BEHIND the viewer; he only saw it after "Back to EOS" closed the viewer. Inline z-index 1002 on the chooser — it must sit above whichever modal asked, always. Same class as v5.20.1's week popup, caught one release apart, so the rule is now written: a modal that opens FROM another modal carries its own z-index. (2) "when I did click Send to trash the email was still sitting in my daily brief" — the viewer passes THREAD ids to briefMailDo (opts.threadIds, v4.96.0), and the local clearing keyed the handled map and the cache drop by MESSAGE id, so Gmail trashed the conversation and the brief kept its row. Every cached row in an acted-on conversation is now cleared too. (3) "I also got a bunch of new redtail workflows (Where did they come from)?" — thirty 2017–2018 rows. Diagnosed live in his tab: the documented feed answers 5 workflows / 7 tasks; the LEGACY /workflows?completed=0 path answers exactly those 50 old rows. On that load the documented call failed (transient) or came back unreadable, the parser returned null, and rtWorkflowsFetch walked on to the guessed paths — the very junk its own comment promised never to resurrect. Now a failed or unreadable authoritative call is REPORTED and the last good list stays; the legacy paths run only on a genuine 404. (4) HIS QUESTION, "What does 'Review my inbox with AI' do — shouldn't it already do that?": it reads the open emails once and sorts them into needs-you / not-sure / not-worth-your-time with reasons; it was opt-in per click since v4.73.0 because it costs one AI call. Now, with the toggle on, it runs ITSELF after any scan that brought mail it has not seen (_briefAiAuto, once per scan, nothing when nothing is new) and the button is only "run it now"; the human-act invariant is untouched — it still only proposes. Probe mail-actions 13/13 (M10, M11 new), meeting-processor +1 (a failed feed never falls through), brief-mail 94/94.
@@ -8139,7 +8140,17 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.23.0 &mdash; 2026-09-17 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.24.0 &mdash; 2026-09-17 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">The nudge now reads your real correspondence with the person before it writes anything.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>&ldquo;Plan the next nudge&rdquo; now reads your actual back-and-forth with the person first</strong> &mdash; the same mail-reading the pipeline&rsquo;s &ldquo;AI email&rdquo; button already used, now wired into this panel too, so both give you a draft grounded in what was really said, not a guess.</li>'
+                + '<li>It also reads how long it has been since you last spoke and who spoke last, your last meeting, what is next on your calendar, and your real Calendly openings &mdash; and shows you a &ldquo;Read:&rdquo; line plus a &ldquo;What I found&rdquo; list, so you can see exactly what it used before you read the draft.</li>'
+                + '<li>Whatever you type as your own reason for reaching out is now built into the email, not just tacked on &mdash; and if it cannot read your mail for any reason, it tells you plainly and still gives you a plan rather than failing silently.</li>'
+                + '<li>Nothing here writes to Redtail or sends anything on its own &mdash; it only reads and proposes, the same as before.</li>'
+                + '</ul>'
+                + '</div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.23.0 &mdash; 2026-09-17</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Opportunities now looks and works like the list you know, plus a delete button and a one-click AI email.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>The pipeline is now a table, in the same column order Redtail uses</strong> &mdash; name, linked contacts, who it is assigned to, next steps, stage, source, probability and close date, amount. Click a column heading to sort; click again to reverse it. Search now also finds an opportunity by the name of the person linked to it.</li>'
@@ -23815,6 +23826,73 @@ Example:
                 + '\nHIS STAGES, IN ORDER: ' + L.stages.map(function (s) { return s.name; }).sort(function (a, b) { return a.localeCompare(b, undefined, { numeric: true }); }).join(' | ')
                 + '\nDESCRIPTION / HIS DATED LOG:\n' + (String((document.getElementById('oppEdDesc') || {}).value || '').slice(0, 4000) || '(empty)');
         }
+        // Everything the tool can find out about this person BEFORE it writes, through the
+        // SAME readers the Gmail-page drafter uses (gmReadCorrespondence, _gmLastMeeting,
+        // _gmCalendarLookup, _gmCalendlySlots, meetFallbackLink) — never a second copy.
+        // Every source degrades to a sentence in `readSummary`; none of them can stop the plan.
+        // Returns { lines: [...for the USER block: it is data], meetRule: '...for the SYSTEM
+        // prompt: it is an instruction carrying trusted facts', readSummary: '...for him' }.
+        async function oppGatherContext(ed, f, note, say) {
+            const out = { lines: [], meetRule: '', readSummary: '' };
+            const read = [];
+            const typedTo = String((document.getElementById('oppAiTo') || {}).value || '').trim();
+            const first = (f.contacts || [])[0] || null;
+            let email = /^[^\s@<>"']+@[^\s@<>"']+\.[a-z]{2,}$/i.test(typedTo) ? typedTo.toLowerCase() : '';
+            if (!email && first) { say('Finding their email address in Redtail…'); email = await oppEmailOf(first.id); }
+            const name = (first && first.name) || '';
+            if (email) { const to = document.getElementById('oppAiTo'); if (to && !to.value) to.value = email; }
+            // 1. the email chain
+            const gate = (typeof gmailAgentGate === 'function') ? gmailAgentGate() : 'Mail reading is not available on this build.';
+            if (!email) { read.push('no email address on the linked contact, so no mail was read'); out.lines.push('EMAIL WITH THEM: not read — no address on file.'); }
+            else if (gate) { read.push('mail not read (' + gate + ')'); out.lines.push('EMAIL WITH THEM: not read.'); }
+            else {
+                try {
+                    const mail = await gmReadCorrespondence(email, name, say);
+                    gmContactFactLines(mail.threads).forEach(function (l) { out.lines.push(l); });
+                    let lines = gmCorrespondenceLines(mail);
+                    // The drafter's own cost cap, applied the same way: oldest lines go first.
+                    while (lines.join('\n').length > 24000 && lines.length > 4) lines.pop();
+                    lines.forEach(function (l) { out.lines.push(l); });
+                    read.push(mail.threads.length
+                        ? mail.threads.length + ' email' + (mail.threads.length > 1 ? 's' : '') + ' with ' + (name || email) + ' back to ' + _gmFmtDate(mail.threads[mail.threads.length - 1].dateMs) + ' (' + Math.min(mail.bodies.length, mail.threads.length) + ' read in full)'
+                        : 'no email with ' + (name || email) + ' in the last ' + mail.daysRead + ' days');
+                } catch (e) {
+                    read.push('mail search failed (' + String(e && e.message || e) + ')');
+                    out.lines.push('EMAIL WITH THEM: the search failed, so nothing was read.');
+                }
+            }
+            // 2. the last meeting and the calendar
+            try {
+                let last = name ? _gmLastMeeting(name, email) : null;
+                let next = null;
+                if (name) {
+                    say('Finding when you last met…');
+                    const cal = await _gmCalendarLookup(name);
+                    if (cal && !cal.unavailable) {
+                        if (cal.last && (!last || cal.last.at > last.at)) { if (last) out.lines.push('MEETING NOTES ON FILE (' + last.source + ', ' + _gmFmtDate(last.at) + '): ' + last.summary); last = cal.last; }
+                        next = cal.next || null;
+                    }
+                }
+                if (last) { out.lines.push('LAST MEETING (' + last.source + ', ' + _gmFmtDate(last.at) + '): ' + last.summary); read.push('last met ' + _gmFmtDate(last.at)); }
+                else { out.lines.push('LAST MEETING: none found in the Meeting Processor or the calendar.'); read.push('no meeting found on the calendar'); }
+                if (next) { out.lines.push('NEXT ON HIS CALENDAR WITH THEM (' + _gmFmtDate(next.at) + '): ' + next.summary); read.push('next on the calendar ' + _gmFmtDate(next.at)); }
+            } catch (eM) { read.push('calendar not read'); }
+            // 3. his real openings — trusted FACTS, so they ride in the SYSTEM prompt (v5.17.0)
+            const mode = (typeof _meetModeFor === 'function') ? _meetModeFor(f.name + ' ' + f.nextStep + ' ' + note) : '';
+            let slots = null;
+            try { say('Reading your real openings from Calendly…'); slots = await _gmCalendlySlots({ mode: mode }); } catch (eS) { slots = null; }
+            if (slots && slots.ok && slots.slots.length) {
+                out.meetRule = 'MEETING RULE: never invent a date or a time and never promise to "send an invite". If — and only if — the ask of this message IS a meeting, offer two or three of HANS\'S REAL BOOKABLE TIMES below'
+                    + (slots.type ? ' (' + slots.type.name + ', ' + slots.type.duration + ' min)' : '') + ', each with its own link, and say the link books it outright:\n'
+                    + slots.slots.slice(0, MEET_PROMPT_CAP).map(function (s) { return '- ' + s.label + (s.url ? ' — book: ' + s.url : ''); }).join('\n') + '\n';
+                read.push('your Calendly openings' + (slots.type ? ' for “' + slots.type.name + '”' : ''));
+            } else {
+                out.meetRule = _oppMeetRule(f.name + ' ' + f.nextStep + ' ' + note);
+                read.push('no Calendly openings' + (slots && slots.note ? ' (' + slots.note + ')' : ''));
+            }
+            out.readSummary = read.join('; ') + '.';
+            return out;
+        }
         async function oppAiPlan() {
             const ed = oppState.editing;
             if (!ed) return;
@@ -23827,18 +23905,33 @@ Example:
             if (!f.name) { _oppSay('oppAiStatus', 'Give the opportunity a name first.', true); return; }
             const ctx = String((document.getElementById('oppAiCtx') || {}).value || '').trim();
             const btn = document.getElementById('oppAiPlanBtn'); if (btn) btn.disabled = true;
-            _oppSay('oppAiStatus', 'Thinking…', false);
-            let r = null;
+            let r = null; let found = null;
             try {
+                // v5.24.0 — THE GRUNT WORK. His verdict on the first draft: "a bit flat…
+                // now that you know his email address, why can't you look back at our email
+                // chain for better context… That is the whole point of this section." The draft
+                // had even listed "whether he responded to the 3/23 email" under Missing — a
+                // question the tool could have answered by reading his mail. So it reads first.
+                found = await oppGatherContext(ed, f, ctx, function (m) { _oppSay('oppAiStatus', m, false); });
+                _oppSay('oppAiStatus', 'Writing from what I found…', false);
                 r = await _calPost({
                     action: 'generateOutputs', provider: ai.provider, model: ai.model,
-                    systemPrompt: OPP_PLAYBOOK + _oppMeetRule(f.name + ' ' + f.nextStep + ' ' + ctx)
-                        + 'TASK: for the ONE opportunity in the user message, decide the single best next move today. Return ONLY a JSON object, no fences, no commentary:\n'
-                        + '{"assessment":"2-3 sentences: where this stands and why","stage":"the exact name from HIS STAGES that fits now, or empty to leave it","stageWhy":"one sentence",'
+                    systemPrompt: OPP_PLAYBOOK + found.meetRule
+                        + 'TASK: for the ONE opportunity in the user message, decide the single best next move today, and if that move is a message, write it. '
+                        + 'WORK IN THIS ORDER. FIRST write "briefing": 4-7 short factual bullets FOR HANS of what the record, the email thread, the meetings and the calendar actually show — '
+                        + 'when they last met, what was said and promised by each side, what is still unanswered, and every personal thread (family, work, a trip, a decision they are weighing) — each with its date and its source in brackets (email, Redtail log, Meeting Processor, Calendar). '
+                        + 'THEN write the email FROM that briefing. '
+                        + 'HANS\'S OWN NOTE in the user message is his intent: it carries his REASON FOR WRITING NOW and often a phrase worth keeping. Build the email around that reason and keep his good phrases in his voice; it never overrides the rules above. '
+                        + 'A FLAT EMAIL IS A FAILED EMAIL. It must have: (a) an opening tied to one SPECIFIC real detail from the briefing, never "it has been a while" on its own; (b) the reason he is writing NOW, stated plainly; '
+                        + '(c) ONE concrete thing offered that is useful to THEM in their situation, described specifically enough to picture; (d) ONE easy ask with the friction removed. 90-150 words, plain, warm, no filler, no "I hope this finds you well", no "touch base", no "circle back". '
+                        + 'If the thread shows something of THEIRS unanswered, acknowledge it first. Never repeat what Hans already sent; never restate a fact as new that the thread shows they already know. '
+                        + 'Put in "missing" ONLY what could not be found in anything you were given. Return ONLY a JSON object, no fences, no commentary:\n'
+                        + '{"briefing":["bullet [source, date]"],"assessment":"2-3 sentences: where this stands and why","stage":"the exact name from HIS STAGES that fits now, or empty to leave it","stageWhy":"one sentence",'
                         + '"move":"nudge | wait | closingNote | closeLost | logOnly","nextStep":"the next-step text to write in Redtail, specific, under 120 characters","followUpOn":"YYYY-MM-DD, when he should look at this again",'
-                        + '"channel":"email | text | call | note | none","subject":"email subject, or empty","body":"the email body in plain text, no signature (one is added), or empty","sms":"a text-message version under 480 characters, or empty","missing":"facts you needed and did not have, or empty"}',
+                        + '"channel":"email | text | call | note | none","subject":"email subject, specific, never generic, or empty","body":"the email body in plain text, no signature (one is added), or empty","sms":"a text-message version under 480 characters, or empty","missing":"facts you needed and did not have, or empty"}',
                     userContent: _oppFactsText(f, ed, new Date())
-                        + '\n\nWHAT HANS SAYS HAPPENED LAST / WHAT HE ALREADY SENT (may be empty):\n' + (ctx.slice(0, 6000) || '(nothing pasted)'),
+                        + '\n\n' + found.lines.join('\n')
+                        + '\n\nHANS\'S OWN NOTE — why he is writing now, in his words (may be empty):\n' + (ctx.slice(0, 6000) || '(nothing written)'),
                     maxTokens: OPP_AI_MAX_TOKENS, effort: 'medium', feature: 'opportunity-nudge'
                 });
             } finally { if (btn) btn.disabled = false; }
@@ -23850,6 +23943,11 @@ Example:
             const moveLabel = { nudge: 'Send a nudge', wait: 'Wait — too soon to touch again', closingNote: 'Send the closing note', closeLost: 'Move to Closed Lost', logOnly: 'Just log it' };
             document.getElementById('oppAiOut').innerHTML =
                 '<div><strong>' + esc(moveLabel[obj.move] || String(obj.move || 'Next move')) + '</strong>' + (obj.channel && obj.channel !== 'none' ? ' · by ' + esc(obj.channel) : '') + '</div>'
+                // What was actually READ, said plainly — so an email that is thin because the
+                // mailbox was thin looks different from one that is thin because nothing was read.
+                + '<div class="opp-muted"><strong>Read:</strong> ' + esc(found.readSummary) + '</div>'
+                + ((Array.isArray(obj.briefing) && obj.briefing.length)
+                    ? '<div><strong>What I found:</strong><ul class="opp-brief">' + obj.briefing.slice(0, 8).map(function (b) { return '<li>' + esc(String(b)) + '</li>'; }).join('') + '</ul></div>' : '')
                 + '<div>' + esc(obj.assessment) + '</div>'
                 + (obj.stage ? '<div><strong>Stage:</strong> ' + esc(obj.stage) + (obj.stageWhy ? ' — ' + esc(obj.stageWhy) : '') + '</div>' : '')
                 + (obj.nextStep ? '<div><strong>Next step:</strong> ' + esc(obj.nextStep) + '</div>' : '')
@@ -32325,6 +32423,72 @@ Make sure your suggestions directly address the specific root cause and discussi
             return _gmSearchFor(String(name || ''));
         }
 
+        // ==================== v5.24.0 — ONE READER OF HIS CORRESPONDENCE WITH A PERSON ====
+        // Extracted from gmailAgentRun, wording unchanged, because a SECOND surface now needs
+        // it: his words on the Opportunities nudge, 2026-09-17 — "now that you know his
+        // email address, why can't you look back at our email chain for better context…
+        // That is the whole point of this section." A private copy there would drift from
+        // this one within a release (the v5.2.2 / §5.87 / §5.93 class), so both call these.
+        //   gmReadCorrespondence  the year first, then five years if the year is empty;
+        //                         metadata for up to 30 messages, bodies for the newest few
+        //   gmContactFactLines    how long ago, and WHO SPOKE LAST, as facts the code proves
+        //   gmCorrespondenceLines the thread itself, newest first, ME / THEM
+        // `step` is an optional progress callback. Throws when the mail search itself fails.
+        async function gmReadCorrespondence(email, personName, step) {
+            const say = typeof step === 'function' ? step : function () { };
+            const wide = _calGsAtLeast(GMAIL_AGENT_WIDE_GS_MIN) === true;
+            say('Reading your mail with ' + (personName || email) + '…');
+            const searchArgs = { action: 'searchMail', address: email, days: GMAIL_AGENT_DAYS, max: 30 };
+            if (wide && personName) searchArgs.name = personName;
+            let sr = await _briefMailPost(searchArgs);
+            if (!sr || !sr.success) throw new Error((sr && sr.error) || 'Could not search your mail.');
+            let threads = (sr.rows || []).filter(function (r) { return !r.bulk; });
+            let daysRead = Number(sr.days) || GMAIL_AGENT_DAYS;
+            if (!threads.length && wide) {
+                say('Nothing in the last year — looking further back…');
+                sr = await _briefMailPost(Object.assign({}, searchArgs, { days: GMAIL_AGENT_DAYS_WIDE }));
+                if (sr && sr.success) {
+                    threads = (sr.rows || []).filter(function (r) { return !r.bulk; });
+                    daysRead = Number(sr.days) || GMAIL_AGENT_DAYS_WIDE;
+                }
+            }
+            let bodies = [];
+            if (threads.length) {
+                say('Reading the ' + Math.min(GMAIL_AGENT_BODIES, threads.length) + ' most recent…');
+                const br = await _briefMailPost({ action: 'briefFetchBodies', ids: threads.slice(0, GMAIL_AGENT_BODIES).map(function (r) { return r.id; }) });
+                bodies = (br && br.success && Array.isArray(br.bodies)) ? br.bodies : [];
+            }
+            return { threads: threads, bodies: bodies, daysRead: daysRead };
+        }
+        function _gmFmtDate(ms) { return ms ? new Date(ms).toLocaleDateString() : 'date unknown'; }
+        function gmContactFactLines(threads) {
+            const newestMs = threads.length ? threads[0].dateMs : 0;
+            const gapDays = newestMs ? Math.max(0, Math.round((Date.now() - newestMs) / 86400000)) : null;
+            const out = ['TIME SINCE LAST CONTACT: ' + (gapDays === null
+                ? 'no email with them on file'
+                : gapDays + ' days — the last message was ' + (threads[0].sentByMe ? 'from Hans' : 'from them') + ' on ' + _gmFmtDate(newestMs))];
+            // v5.11.0: who owes whom, stated as a FACT the code can prove from the thread
+            // rather than left for the model to infer. An email that ignores an unanswered
+            // message from the other person reads as though he never saw it.
+            if (gapDays !== null) {
+                out.push('WHO SPOKE LAST: ' + (threads[0].sentByMe
+                    ? 'Hans did, and they have not replied — so do not write as though they are waiting on him for that.'
+                    : 'THEY did, and Hans has not replied yet — whatever they asked for is outstanding, so the email must acknowledge it even when his request is about something else.'));
+            }
+            return out;
+        }
+        function gmCorrespondenceLines(read) {
+            const threads = read.threads || [], bodies = read.bodies || [];
+            if (!threads.length) return ['EMAIL WITH THEM: none found in the last ' + read.daysRead + ' days.'];
+            const oldest = threads[threads.length - 1].dateMs;
+            const out = ['EMAIL WITH THEM, newest first (' + threads.length + ' messages, back to ' + _gmFmtDate(oldest) + '; ME = Hans wrote it, THEM = they wrote it):'];
+            threads.slice(0, 12).forEach(function (r) {
+                const body = bodies.find(function (b) { return b && b.id === r.id; });
+                out.push('- ' + _gmFmtDate(r.dateMs) + ' ' + (r.sentByMe ? 'ME' : 'THEM') + ': ' + (r.subject || '') + ' — ' + String((body && body.body) || r.snippet || '').slice(0, 1500));
+            });
+            return out;
+        }
+
         async function gmailAgentRun(chosen) {
             if (_gmAgentBusy) return;
             const box = document.getElementById('gmAgentIntent');
@@ -32363,27 +32527,12 @@ Make sure your suggestions directly address the specific root cause and discussi
                 // v5.4.0: the whole relationship, not the last 120 days — see GMAIL_AGENT_DAYS.
                 const personName = who.name || person.name || '';
                 const wide = _calGsAtLeast(GMAIL_AGENT_WIDE_GS_MIN) === true;
-                _gmStep('Reading your mail with ' + (personName || who.email) + '…');
-                const searchArgs = { action: 'searchMail', address: who.email, days: GMAIL_AGENT_DAYS, max: 30 };
-                if (wide && personName) searchArgs.name = personName;
-                let sr = await _briefMailPost(searchArgs);
-                if (!sr || !sr.success) throw new Error((sr && sr.error) || 'Could not search your mail.');
-                let threads = (sr.rows || []).filter(function (r) { return !r.bulk; });
-                let daysRead = Number(sr.days) || GMAIL_AGENT_DAYS;
-                if (!threads.length && wide) {
-                    _gmStep('Nothing in the last year — looking further back…');
-                    sr = await _briefMailPost(Object.assign({}, searchArgs, { days: GMAIL_AGENT_DAYS_WIDE }));
-                    if (sr && sr.success) {
-                        threads = (sr.rows || []).filter(function (r) { return !r.bulk; });
-                        daysRead = Number(sr.days) || GMAIL_AGENT_DAYS_WIDE;
-                    }
-                }
-                let bodies = [];
-                if (threads.length) {
-                    _gmStep('Reading the ' + Math.min(GMAIL_AGENT_BODIES, threads.length) + ' most recent…');
-                    const br = await _briefMailPost({ action: 'briefFetchBodies', ids: threads.slice(0, GMAIL_AGENT_BODIES).map(function (r) { return r.id; }) });
-                    bodies = (br && br.success && Array.isArray(br.bodies)) ? br.bodies : [];
-                }
+                // v5.24.0: the read itself is gmReadCorrespondence now — ONE reader, shared
+                // with the Opportunities nudge, so both see exactly the same mail.
+                const mailRead = await gmReadCorrespondence(who.email, personName, _gmStep);
+                const threads = mailRead.threads;
+                const bodies = mailRead.bodies;
+                const daysRead = mailRead.daysRead;
                 const oldest = threads.length ? threads[threads.length - 1].dateMs : 0;
                 // v5.5.0: HOW LONG AGO. The v5.4.0 draft read the March thread as if it had
                 // arrived this morning — "Great to hear from you", "glad our standing lunch is
@@ -32424,17 +32573,8 @@ Make sure your suggestions directly address the specific root cause and discussi
                 const ctx = [];
                 ctx.push('RECIPIENT: ' + (who.name ? who.name + ' <' + who.email + '>' : who.email));
                 ctx.push('TODAY: ' + fmtDate(Date.now()));
-                ctx.push('TIME SINCE LAST CONTACT: ' + (gapDays === null
-                    ? 'no email with them on file'
-                    : gapDays + ' days — the last message was ' + (threads[0].sentByMe ? 'from Hans' : 'from them') + ' on ' + fmtDate(newestMs)));
-                // v5.11.0: who owes whom, stated as a FACT the code can prove from the thread
-                // rather than left for the model to infer. An email that ignores an unanswered
-                // message from the other person reads as though he never saw it.
-                if (gapDays !== null) {
-                    ctx.push('WHO SPOKE LAST: ' + (threads[0].sentByMe
-                        ? 'Hans did, and they have not replied — so do not write as though they are waiting on him for that.'
-                        : 'THEY did, and Hans has not replied yet — whatever they asked for is outstanding, so the email must acknowledge it even when his request is about something else.'));
-                }
+                // v5.24.0: the wording lives in gmContactFactLines (shared, unchanged).
+                gmContactFactLines(threads).forEach(function (l) { ctx.push(l); });
                 if (last) ctx.push('LAST MEETING (' + last.source + ', ' + fmtDate(last.at) + '): ' + last.summary);
                 else ctx.push('LAST MEETING: none on file.');
                 if (calLast && calLast !== last) ctx.push('LAST CALENDAR ENTRY WITH THEM (' + fmtDate(calLast.at) + '): ' + calLast.summary);
@@ -32456,13 +32596,7 @@ Make sure your suggestions directly address the specific root cause and discussi
                         + (fallback ? '. Offer this scheduling link instead: ' + fallback : '. Do not propose specific times; ask what suits him.'));
                 }
                 const threadStart = ctx.length;
-                if (threads.length) {
-                    ctx.push('EMAIL WITH THEM, newest first (' + threads.length + ' messages, back to ' + fmtDate(oldest) + '; ME = Hans wrote it, THEM = they wrote it):');
-                    threads.slice(0, 12).forEach(function (r) {
-                        const body = bodies.find(function (b) { return b && b.id === r.id; });
-                        ctx.push('- ' + fmtDate(r.dateMs) + ' ' + (r.sentByMe ? 'ME' : 'THEM') + ': ' + (r.subject || '') + ' — ' + String((body && body.body) || r.snippet || '').slice(0, 1500));
-                    });
-                } else ctx.push('EMAIL WITH THEM: none found in the last ' + daysRead + ' days.');
+                gmCorrespondenceLines(mailRead).forEach(function (l) { ctx.push(l); });
                 // v5.6.0 — THE CAP (his ask: "I don't want to be spending $1 for every email...
                 // an estimator, or cap"). The oldest thread lines go first, one at a time,
                 // until the context fits; the newest three always stay. At Sonnet 5's
