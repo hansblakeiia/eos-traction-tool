@@ -5832,3 +5832,61 @@
 .gm-brief-h { font-weight: 700; font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase; color: #1e40af; margin-bottom: 2px; }
 .gm-brief ul { margin: 2px 0 0 18px; padding: 0; }
 .gm-brief li { margin: 2px 0; }
+
+/* ==================== v5.22.0 — Redtail Opportunities ==================== */
+/* Every rule is #opportunities-scoped: a bare class here would win or lose ties against
+   older sheets by source order alone (rule 10b). Every grid and flex child that holds
+   free text carries min-width:0 + overflow-wrap:anywhere on creation (rules 8, 9). */
+#opportunities .opp-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+#opportunities .opp-head h3 { font-size: 0.95rem; margin: 0; }
+#opportunities .opp-head-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+#opportunities .opp-summary { font-size: 0.82rem; color: var(--gray-600); margin-bottom: 4px; }
+#opportunities .opp-status { font-size: 0.8rem; min-width: 0; overflow-wrap: anywhere; }
+#opportunities .opp-filters { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0; }
+#opportunities .opp-chip { border: 1px solid var(--gray-300); background: #fff; color: var(--gray-700); border-radius: 999px; padding: 4px 12px; font-size: 0.78rem; cursor: pointer; }
+#opportunities .opp-chip.on { background: #4338ca; border-color: #4338ca; color: #fff; }
+#opportunities .opp-list { display: flex; flex-direction: column; }
+#opportunities .opp-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 260px); gap: 12px; padding: 10px 2px; border-top: 1px solid var(--gray-200); }
+#opportunities .opp-row > * { min-width: 0; }
+#opportunities .opp-name { background: none; border: 0; padding: 0; margin: 0; text-align: left; font: inherit; font-weight: 600; font-size: 0.9rem; color: #1d4ed8; cursor: pointer; overflow-wrap: anywhere; min-height: 0; }
+#opportunities .opp-name:hover { text-decoration: underline; }
+#opportunities .opp-next { font-size: 0.82rem; color: var(--gray-700); margin-top: 2px; overflow-wrap: anywhere; }
+#opportunities .opp-muted { color: var(--gray-500); font-size: 0.78rem; font-weight: 400; }
+#opportunities .opp-flags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; }
+#opportunities .opp-flag { font-size: 0.7rem; border-radius: 4px; padding: 1px 6px; background: #fef3c7; color: #92400e; overflow-wrap: anywhere; }
+#opportunities .opp-flag.overdue, #opportunities .opp-flag.stale { background: #fee2e2; color: #991b1b; }
+#opportunities .opp-flag.quiet { background: var(--gray-100); color: var(--gray-600); }
+#opportunities .opp-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-size: 0.78rem; color: var(--gray-600); text-align: right; overflow-wrap: anywhere; }
+#opportunities .opp-stage { font-weight: 600; color: var(--gray-800); }
+#opportunities .opp-empty { padding: 14px 2px; font-size: 0.85rem; color: var(--gray-500); }
+#opportunities .opp-foot { margin-top: 12px; font-size: 0.75rem; color: var(--gray-500); }
+#opportunities .opp-linkbtn { background: none; border: 0; padding: 0; color: #1d4ed8; font-size: 0.75rem; cursor: pointer; text-decoration: underline; min-height: 0; }
+#opportunities .opp-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; margin-top: 8px; }
+#opportunities .opp-form > * { min-width: 0; }
+#opportunities .opp-form .opp-wide { grid-column: 1 / -1; }
+#opportunities .opp-form label, #opportunities .opp-ai > label, #opportunities .opp-label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--gray-700); }
+#opportunities .opp-form input, #opportunities .opp-form select, #opportunities .opp-form textarea, #opportunities .opp-ai > label textarea {
+    display: block; width: 100%; box-sizing: border-box; margin-top: 3px; padding: 7px 9px; font: inherit; font-size: 0.85rem; font-weight: 400;
+    border: 1px solid var(--gray-300); border-radius: 6px; background: #fff; color: var(--gray-900);
+}
+#opportunities .opp-contacts { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 6px; }
+#opportunities .opp-contact { background: #e0e7ff; color: #3730a3; border-radius: 999px; padding: 2px 4px 2px 10px; font-size: 0.78rem; overflow-wrap: anywhere; }
+#opportunities .opp-contact button { background: none; border: 0; color: inherit; cursor: pointer; font-size: 0.95rem; line-height: 1; padding: 0 5px; min-height: 0; }
+#opportunities .opp-cands { margin-top: 4px; }
+#opportunities .opp-cand { display: block; width: 100%; text-align: left; margin-top: 4px; padding: 6px 10px; font-size: 0.8rem; }
+#opportunities .opp-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+#opportunities .opp-actions > * { min-width: 0; }
+#opportunities .opp-ai { margin-top: 18px; padding-top: 12px; border-top: 1px dashed var(--gray-300); }
+#opportunities .opp-ai h4 { margin: 0 0 6px; font-size: 0.9rem; }
+#opportunities .opp-ai-out { background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 8px; padding: 10px 12px; margin-top: 10px; font-size: 0.85rem; color: #1e1b4b; overflow-wrap: anywhere; }
+#opportunities .opp-ai-out > div + div { margin-top: 5px; }
+#opportunities .opp-review { background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 8px; padding: 10px 12px; margin: 10px 0; font-size: 0.84rem; overflow-wrap: anywhere; }
+#opportunities .opp-rv-head { font-weight: 700; color: #312e81; }
+#opportunities .opp-rv-group h4 { margin: 10px 0 2px; font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase; color: #4338ca; }
+#opportunities .opp-rv-item { padding: 5px 0; border-top: 1px solid #c7d2fe; }
+@media (max-width: 768px) {
+    #opportunities .opp-row { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+    #opportunities .opp-meta { flex-direction: row; flex-wrap: wrap; align-items: baseline; justify-content: flex-start; gap: 4px 10px; text-align: left; }
+    #opportunities .opp-form { grid-template-columns: minmax(0, 1fr); }
+    #opportunities .opp-head-btns .btn { flex: 1 1 auto; }
+}
