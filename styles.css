@@ -5845,19 +5845,53 @@
 #opportunities .opp-filters { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0; }
 #opportunities .opp-chip { border: 1px solid var(--gray-300); background: #fff; color: var(--gray-700); border-radius: 999px; padding: 4px 12px; font-size: 0.78rem; cursor: pointer; }
 #opportunities .opp-chip.on { background: #4338ca; border-color: #4338ca; color: #fff; }
-#opportunities .opp-list { display: flex; flex-direction: column; }
-#opportunities .opp-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 260px); gap: 12px; padding: 10px 2px; border-top: 1px solid var(--gray-200); }
-#opportunities .opp-row > * { min-width: 0; }
+/* v5.23.0: the list is a TABLE in Redtail's own column order. #oppList is the only scroller:
+   on a mid-width window the table scrolls sideways INSIDE it and the page never does. */
+#opportunities .opp-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 10px 0 4px; }
+#opportunities .opp-toolbar > * { min-width: 0; }
+#opportunities .opp-toolbar select, #opportunities .opp-q, #opportunities .opp-bulk select, #opportunities .opp-bulk input[type="date"] {
+    padding: 6px 8px; font: inherit; font-size: 0.8rem; border: 1px solid var(--gray-300); border-radius: 6px; background: #fff; color: var(--gray-900); max-width: 100%;
+}
+/* Measured, not assumed: a global rule stretches every select to 100%, which put each
+   filter on its own row and broke the bulk bar into three lines. */
+#opportunities .opp-toolbar select { width: auto; flex: 0 1 165px; }
+#opportunities .opp-bulk select, #opportunities .opp-bulk input[type="date"] { width: auto; max-width: 190px; padding: 4px 6px; font-size: 0.76rem; }
+#opportunities .opp-q { flex: 1 1 220px; width: auto; }
+#opportunities .opp-segs { display: inline-flex; border: 1px solid var(--gray-300); border-radius: 6px; overflow: hidden; }
+#opportunities .opp-seg { border: 0; background: #fff; color: var(--gray-700); padding: 6px 12px; font-size: 0.8rem; cursor: pointer; border-right: 1px solid var(--gray-300); min-height: 0; }
+#opportunities .opp-seg:last-child { border-right: 0; }
+#opportunities .opp-seg.on { background: var(--gray-200); font-weight: 700; color: var(--gray-900); }
+#opportunities .opp-bulk { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 8px; padding: 8px 10px; margin: 6px 0; font-size: 0.8rem; position: sticky; top: 0; z-index: 5; }
+#opportunities .opp-bulk > * { min-width: 0; }
+#opportunities .opp-bulk-group { display: inline-flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+#opportunities .opp-mini { padding: 4px 10px; font-size: 0.76rem; white-space: nowrap; }
+#opportunities .opp-danger { background: #fff; border: 1px solid #fca5a5; color: #b91c1c; }
+#opportunities .opp-danger:hover { background: #fee2e2; }
+#opportunities .opp-list { overflow-x: auto; }
+#opportunities .opp-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+#opportunities .opp-table th { text-align: left; vertical-align: bottom; padding: 8px 8px; border-bottom: 2px solid var(--gray-200); white-space: nowrap; }
+#opportunities .opp-th { background: none; border: 0; padding: 0; font: inherit; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--gray-700); cursor: pointer; min-height: 0; }
+#opportunities .opp-th.on { color: #4338ca; }
+#opportunities .opp-table td { padding: 9px 8px; border-bottom: 1px solid var(--gray-200); vertical-align: top; overflow-wrap: anywhere; color: var(--gray-800); }
+#opportunities .opp-row:hover td { background: var(--gray-50, #f9fafb); }
+#opportunities .opp-row.sel td { background: #eef2ff; }
+#opportunities .opp-c-chk { width: 28px; }
+#opportunities .opp-c-chk input { width: 16px; height: 16px; margin: 2px 0 0; cursor: pointer; }
+#opportunities .opp-c-name { min-width: 240px; }
+#opportunities .opp-c-act { white-space: nowrap; text-align: right; }
+#opportunities .opp-num { text-align: right; white-space: nowrap; }
+#opportunities th.opp-num { text-align: right; }
+#opportunities .opp-late { color: #dc2626; font-weight: 700; white-space: nowrap; }
+#opportunities .opp-desc { font-size: 0.76rem; color: var(--gray-600); margin-top: 2px; }
 #opportunities .opp-name { background: none; border: 0; padding: 0; margin: 0; text-align: left; font: inherit; font-weight: 600; font-size: 0.9rem; color: #1d4ed8; cursor: pointer; overflow-wrap: anywhere; min-height: 0; }
 #opportunities .opp-name:hover { text-decoration: underline; }
-#opportunities .opp-next { font-size: 0.82rem; color: var(--gray-700); margin-top: 2px; overflow-wrap: anywhere; }
+#opportunities .opp-next { min-width: 150px; }
 #opportunities .opp-muted { color: var(--gray-500); font-size: 0.78rem; font-weight: 400; }
 #opportunities .opp-flags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; }
 #opportunities .opp-flag { font-size: 0.7rem; border-radius: 4px; padding: 1px 6px; background: #fef3c7; color: #92400e; overflow-wrap: anywhere; }
 #opportunities .opp-flag.overdue, #opportunities .opp-flag.stale { background: #fee2e2; color: #991b1b; }
 #opportunities .opp-flag.quiet { background: var(--gray-100); color: var(--gray-600); }
-#opportunities .opp-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-size: 0.78rem; color: var(--gray-600); text-align: right; overflow-wrap: anywhere; }
-#opportunities .opp-stage { font-weight: 600; color: var(--gray-800); }
+#opportunities .opp-stage { font-weight: 600; min-width: 110px; }
 #opportunities .opp-empty { padding: 14px 2px; font-size: 0.85rem; color: var(--gray-500); }
 #opportunities .opp-foot { margin-top: 12px; font-size: 0.75rem; color: var(--gray-500); }
 #opportunities .opp-linkbtn { background: none; border: 0; padding: 0; color: #1d4ed8; font-size: 0.75rem; cursor: pointer; text-decoration: underline; min-height: 0; }
@@ -5885,8 +5919,20 @@
 #opportunities .opp-rv-group h4 { margin: 10px 0 2px; font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase; color: #4338ca; }
 #opportunities .opp-rv-item { padding: 5px 0; border-top: 1px solid #c7d2fe; }
 @media (max-width: 768px) {
-    #opportunities .opp-row { grid-template-columns: minmax(0, 1fr); gap: 4px; }
-    #opportunities .opp-meta { flex-direction: row; flex-wrap: wrap; align-items: baseline; justify-content: flex-start; gap: 4px 10px; text-align: left; }
+    /* On a phone each row becomes a card: the head row goes, every cell names itself from
+       its data-label, and empty cells drop out so a sparse record stays short. */
+    #opportunities .opp-table, #opportunities .opp-table tbody { display: block; width: 100%; }
+    #opportunities .opp-table thead { display: none; }
+    #opportunities .opp-row { display: grid; grid-template-columns: 28px minmax(0, 1fr); column-gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--gray-200); }
+    #opportunities .opp-row > * { min-width: 0; }
+    #opportunities .opp-table td { display: block; border: 0; padding: 1px 0; grid-column: 2; min-width: 0; text-align: left; white-space: normal; }
+    #opportunities .opp-table td.opp-c-chk { grid-column: 1; grid-row: 1 / span 12; }
+    #opportunities .opp-table td:empty { display: none; }
+    #opportunities .opp-table td[data-label]::before { content: attr(data-label) ": "; color: var(--gray-500); font-size: 0.72rem; font-weight: 400; }
+    #opportunities .opp-c-act { margin-top: 6px; }
+    #opportunities .opp-c-name, #opportunities .opp-next, #opportunities .opp-stage { min-width: 0; }
+    #opportunities .opp-toolbar select { flex: 1 1 45%; }
+    #opportunities .opp-bulk { position: static; }
     #opportunities .opp-form { grid-template-columns: minmax(0, 1fr); }
     #opportunities .opp-head-btns .btn { flex: 1 1 auto; }
 }

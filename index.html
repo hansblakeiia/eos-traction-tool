@@ -13,7 +13,7 @@
          Marketing tab; the rest of the app is untouched by this. -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%231a365d' width='100' height='100' rx='15'/%3E%3Ctext x='50' y='50' font-family='Arial, sans-serif' font-size='45' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='central'%3EEOS%3C/text%3E%3Ccircle cx='85' cy='15' r='8' fill='%233182ce'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="styles.css?v=5.22.0">
+    <link rel="stylesheet" href="styles.css?v=5.23.0">
 </head>
 <body>
     <div class="container">
@@ -2631,7 +2631,33 @@
                 <div id="oppSummary" class="opp-summary"></div>
                 <div id="oppStatus" class="opp-status"></div>
                 <div id="oppReview"></div>
+                <!-- v5.23.0: Redtail's own shape — Active / Closed / All, a search box, four
+                     filters, then the table. Every control here is STATIC (rule 15); only the
+                     table inside #oppList is re-rendered, so typing in the search box never
+                     loses focus and a filter never loses its pick. -->
+                <div class="opp-toolbar">
+                    <div id="oppViewSeg" class="opp-segs"></div>
+                    <input type="text" id="oppQ" class="opp-q" placeholder="Search name, contact, next step, notes" data-no-composer="1">
+                    <select id="oppFStage" aria-label="Filter by stage"></select>
+                    <select id="oppFType" aria-label="Filter by type"></select>
+                    <select id="oppFSource" aria-label="Filter by source"></select>
+                    <select id="oppFAssigned" aria-label="Filter by who it is assigned to"></select>
+                </div>
                 <div id="oppFilters" class="opp-filters"></div>
+                <div id="oppBulk" class="opp-bulk" style="display:none;">
+                    <strong id="oppBulkCount">0 selected</strong>
+                    <span class="opp-bulk-group"><select id="oppBulkStage" aria-label="Stage to move the selected opportunities to"></select><button type="button" class="btn btn-secondary opp-mini" onclick="oppBulkApply('stage')">Move</button></span>
+                    <button type="button" class="btn btn-secondary opp-mini" onclick="oppBulkApply('won')">Closed Won</button>
+                    <button type="button" class="btn btn-secondary opp-mini" onclick="oppBulkApply('lost')">Closed Lost</button>
+                    <span class="opp-bulk-group"><input type="date" id="oppBulkClose" aria-label="New close date"><button type="button" class="btn btn-secondary opp-mini" onclick="oppBulkApply('close')">Set close date</button></span>
+                    <span class="opp-bulk-group"><select id="oppBulkAssign" aria-label="Who to assign the selected opportunities to"></select><button type="button" class="btn btn-secondary opp-mini" onclick="oppBulkApply('assign')">Assign</button></span>
+                    <button type="button" class="btn btn-secondary opp-mini" onclick="oppAiReview()">AI review of these</button>
+                    <button type="button" class="btn opp-mini opp-danger" onclick="oppBulkDelete()">Delete</button>
+                    <button type="button" class="opp-linkbtn" onclick="oppBulkClear()">Clear</button>
+                </div>
+                <!-- Outside the bar on purpose: the bar hides when the selection clears, and
+                     the result of a bulk action is read AFTER that. -->
+                <div id="oppBulkStatus" class="opp-status"></div>
                 <div id="oppList" class="opp-list"></div>
                 <div class="opp-foot">
                     Read live from Redtail; nothing here is a second copy. “Needs attention” is arithmetic, not AI: a close date that has passed, no next step, no stage, or no change in Redtail for longer than that kind of opportunity should sit.
@@ -4303,9 +4329,10 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '5.22.0';
+        const EOS_VERSION = '5.23.0';
         const EOS_BUILD_DATE = '2026-09-17';
-        const EOS_BUILD_TIME = '14:10'; // v5.22.0: REDTAIL OPPORTUNITIES — THE PIPELINE, INSIDE THE TOOL (TWO-FILE — styles.css bumps too, link becomes ?v=5.22.0; pairs with .gs v3.76.0, deployed to BOTH accounts today). His ask, 2026-09-17: Redtail now charges $15/user/month for its own AI (MCP) access on opportunities, and he wants that inside this tool instead — "nudge people and get people to continue to move forward on the path towards becoming clients, or getting them off the path" — with follow-ups drafted into Gmail, grounded in researched sales practice, and later surfaced in the daily brief (that last part is NOT built this release, named below). WHAT SHIPPED: a new Opportunities page (four nav touches, rule 27) reading the pipeline live from Redtail — paged, a repeat-id guard, closed stages filtered off the list, a 5-minute TTL, a device-local cache, and a "Copy diagnostic" button for the day Redtail answers in a shape this build cannot read; a no-AI hygiene pass (close date passed, no next step, no stage, no close date, and "no change in Redtail for N days" measured against a per-kind threshold read off HIS OWN stage-name prefixes, OPP_KINDS — COI, prospect, podcast/speaking, and so on) with a device-local snooze; a create/edit form whose Save RE-READS the record after every write and NAMES BY FIELD anything Redtail did not keep — the documented create/update bodies never show stage_id and no example shows a non-null close_date, so a clean 2xx from Redtail is not proof either one survived — and a record whose full read failed CANNOT be saved, on purpose, so nothing can be overwritten blind. Two AI helpers that only PROPOSE: "Review my pipeline" (today / this week / let go, gracefully / tidy up) and "Plan the next nudge" for one opportunity (assessment, suggested stage, next step, look-again date, an email draft and a text-message draft) — the playbook, the compliance bans and the meeting rule live in the SYSTEM prompt, and the CRM record plus his own pasted "what happened last" travel ALONE in the user block, declared as data (the v5.17.0 lesson: an instruction sitting in a block the model is told is untrusted gets ignored right along with everything else in that block, which is the guard working, not failing). The one scheduling line it may offer comes from the shared meetFallbackLink — never a private link chain — and the AI may never invent a specific time. Saving a draft goes through the same SIGNED shared builder every other draft path in this file uses (draftBodyHtml → createReplyDraft); nothing on this page can send anything. RESEARCH HONESTY, kept where the code can be read: only TWO of the cadence numbers in OPP_KINDS are evidence — HBR's 2011 "Short Life of Online Sales Leads" on answering an inbound web lead within the hour, and a vendor study on returns falling off after about six attempts — every other day-count is labelled a practitioner convention, not a finding, and the oft-quoted "80% of sales need five follow-ups" was checked and deliberately left OUT because it is unsourced. DELETE is documented by Redtail and DELIBERATELY NOT WHITELISTED — taking someone "off the path" is a stage move to Closed Lost, which keeps the history; a delete would not, and that is Hans's call to make later, by name, not a default. NO NEW CAPABILITY KEY, NO NEW SCOPE, NO CONSENT RUN — the client gates on the backend VERSION alone (RT_OPP_GS_MIN, rules 12/63c): against an old backend the page NAMES BOTH VERSIONS and sends nothing, and — rule 51 — the buttons that would open the page still exist rather than vanishing; only the ACTION is gated. BACKEND v3.76.0 WAS DEPLOYED TO BOTH ACCOUNTS TODAY (Hans @137, Amanda @29) — but per apps-script.md rule 12, THE ONLY ACCEPTED PROOF A .gs RELEASE IS ACTUALLY LIVE IS HIS OWN ACCESS CHECK READING 3.76.0, and that check has NOT yet run. Until it does, treat the deploy as unconfirmed: if it turns out stale, this page explains itself with the version-gate sentence above rather than failing silently or writing anything malformed. NOT BUILT THIS RELEASE, said outright rather than implied: the daily-brief integration (his own stated next step); touch counting (a Redtail opportunity carries no touch counter at all — the idle clock here is updated_at, a proxy, not a count); reading his Gmail thread with a prospect into the nudge (the Gmail-page drafter's thread reader is the reuse target for that, not duplicated here — memory feedback_reuse_before_rebuild); a full Calendly slot picker inside the nudge (only the one fallback link). OPEN CONTRACT QUESTIONS his first live use will answer: whether a real POST/PUT actually keeps stage_id and close_date (the docs don't show either); whether a PUT carrying linked_contacts REPLACES the list or duplicates it; whether the opportunity deep link (smf.crm3.redtailtechnology.com/opportunities/{id}) is right; the real shape of lists/database_users. THE DEPLOY REPO IS PUBLIC: no prospect's name may ever land in this file — the two opportunities he asked to have on hand go in through the FORM, by his own hand, after this ships, never seeded into a fixture, a default or a comment. gs-auditor: safe, no blockers. Probe opportunities-probe 11/11 (O1–O11, new).
+        const EOS_BUILD_TIME = '15:30'; // v5.23.0: THE LIST, AS A TABLE HE ALREADY KNOWS — PLUS BULK, DELETE, "AI EMAIL" (client-only; TWO-FILE — styles.css bumps too, new .opp-table/.opp-bulk rules, link becomes ?v=5.23.0; pairs with .gs v3.77.0, DEPLOYED TO BOTH ACCOUNTS 2026-09-17 BUT NOT YET CONFIRMED LIVE per rule 12 — the only accepted proof is HIS OWN Access check reading 3.77.0, which has not run as of this writing; until it does, Delete refuses by name and points at Closed Lost instead of failing silently). His first live test of v5.22.0, same afternoon: pressed Refresh, then "Review my pipeline with AI" and got "The AI answered in a shape the tool could not read — try again." Then, in his own words: a checkmark to delete and do "other administrative responses," make it "look like it does in Redtail," a simple "AI email" this person, filters — "built more professionally to leverage AI." (1) THE AI FAILURE, diagnosed from the code before anything was touched: v5.22.0 capped the review at 3,000 output tokens with no effort setting and never read stopReason — current models THINK before writing and thinking counts against the cap, the exact failure .gs v3.73.0's own header documents from v5.5.0, so a reply that had simply run out of room was reported as "a shape the tool could not read," a WRONG-CAUSE diagnostic (rule 63). Both AI helpers now ask for the FULL 8192-token allowance at effort medium and read stopReason FIRST; _oppAiUnreadable names which way it failed — ran out of room (with the token count), returned no text, or genuinely unreadable — and "Copy diagnostic" now carries the raw AI answer, not just the last Redtail read. The review no longer demands a `today` array — a complete review with nothing for today was being refused. THIS IS NOT YET CONFIRMED as the cause of HIS failure — his next press is the test; if it fails again the status line names which way and Copy diagnostic carries the raw answer. (2) THE LIST IS NOW A TABLE in Redtail's own column order (tick, Name with description snippet and flags, Linked contacts, Assigned to, Next steps, Stage, Source, Prob., Close date red when passed, Amount, AI email), sortable heads (asc, desc, back to needs-attention), Active/Closed/All, a search box matching linked-contact names too, filters for stage/type/source/assigned, totals that follow the filters. Every control is STATIC (rule 15) — only the table body re-renders, nothing loses focus. Cards on a phone. Linked contacts are NOT in Redtail's documented LIST response, only the by-id record, so they load in the background after the table paints (oppHydrate), cached, re-read only when the record's last-change stamp moves — a race the probe found (a refresh landing mid-load) is fixed: the older pass now defers to the newer one instead of the new rows never loading. (3) TICK BOXES + A BULK BAR: move to a stage, Closed Won, Closed Lost, set close date, assign, "AI review of these" (scoped to ticked rows when any are ticked), Delete, Clear. Every write is HIS click behind a confirm that NAMES the rows; each record is read then put back — Redtail's own record, unknown fields kept — then the list is RE-READ and any row Redtail did not keep is named rather than silently trusted. Cancel writes nothing, keeps the ticks. DATA-SAFETY FIX found while building: a record that comes back WITHOUT its contact list is now saved WITHOUT linked_contacts, in both the bulk path and the editor (contactsKnown/contactsTouched) — v5.22.0's editor would have sent an empty array and could have UNLINKED EVERYONE the day Redtail ever omitted that field. (4) DELETE, HIS DECISION BY NAME: backend v3.77.0 adds ONE whitelist row (DELETE opportunities/{numeric id}, classic base, no query string; gs-auditor: safe, no blockers). Client gates on 3.77.0 — on an older backend it names BOTH versions and points at Closed Lost without even asking. Reachable from exactly one function; NO AI OR BACKGROUND FUNCTION CAN WRITE TO REDTAIL AT ALL (probe O10, REWRITTEN not deleted, rule 78 — the old "no delete anywhere" claim is retired deliberately, not silently). (5) "AI EMAIL" on every row REUSES the Gmail-page drafter (gmailAgentRun) instead of a second one — it already reads his real threads with the person, the last meeting, the calendar and his Calendly openings. The button resolves linked contacts, RE-READING the record if the cached link predates the record's last change (an email is addressed to a PERSON, a stale cache is not good enough), fills the request with the opportunity, stage, his log and the no-repeat/no-pressure/no-performance-claims rules, fills To from Redtail, names the second contact of a couple, starts the drafter with the chosen address; with no linked contact it opens the record instead of drafting to nobody. This is v5.22.0's "read his Gmail correspondence into the nudge" next-step, closed by reuse. (6) MEASURED at 375/768/1280 with screenshots; one defect found and fixed: the global rule stretching every select to full width put each filter on its own row — the opp-toolbar selects now carry their own width:auto. NOT BUILT THIS RELEASE: the daily-brief "who to touch today" section (his stated next step); touch counting; bulk snooze; inline cell editing. Probe opportunities-probe 16/16 (O10 rewritten; O12 cut AI reply; O13 table/sort/filters/contacts; O14 bulk with a stateful fake backend; O15 delete; O16 AI email hand-off incl. a planted stale link).
+        // v5.22.0 (14:10): REDTAIL OPPORTUNITIES — THE PIPELINE, INSIDE THE TOOL (TWO-FILE — styles.css bumps too, link becomes ?v=5.22.0; pairs with .gs v3.76.0, deployed to BOTH accounts today). His ask, 2026-09-17: Redtail now charges $15/user/month for its own AI (MCP) access on opportunities, and he wants that inside this tool instead — "nudge people and get people to continue to move forward on the path towards becoming clients, or getting them off the path" — with follow-ups drafted into Gmail, grounded in researched sales practice, and later surfaced in the daily brief (that last part is NOT built this release, named below). WHAT SHIPPED: a new Opportunities page (four nav touches, rule 27) reading the pipeline live from Redtail — paged, a repeat-id guard, closed stages filtered off the list, a 5-minute TTL, a device-local cache, and a "Copy diagnostic" button for the day Redtail answers in a shape this build cannot read; a no-AI hygiene pass (close date passed, no next step, no stage, no close date, and "no change in Redtail for N days" measured against a per-kind threshold read off HIS OWN stage-name prefixes, OPP_KINDS — COI, prospect, podcast/speaking, and so on) with a device-local snooze; a create/edit form whose Save RE-READS the record after every write and NAMES BY FIELD anything Redtail did not keep — the documented create/update bodies never show stage_id and no example shows a non-null close_date, so a clean 2xx from Redtail is not proof either one survived — and a record whose full read failed CANNOT be saved, on purpose, so nothing can be overwritten blind. Two AI helpers that only PROPOSE: "Review my pipeline" (today / this week / let go, gracefully / tidy up) and "Plan the next nudge" for one opportunity (assessment, suggested stage, next step, look-again date, an email draft and a text-message draft) — the playbook, the compliance bans and the meeting rule live in the SYSTEM prompt, and the CRM record plus his own pasted "what happened last" travel ALONE in the user block, declared as data (the v5.17.0 lesson: an instruction sitting in a block the model is told is untrusted gets ignored right along with everything else in that block, which is the guard working, not failing). The one scheduling line it may offer comes from the shared meetFallbackLink — never a private link chain — and the AI may never invent a specific time. Saving a draft goes through the same SIGNED shared builder every other draft path in this file uses (draftBodyHtml → createReplyDraft); nothing on this page can send anything. RESEARCH HONESTY, kept where the code can be read: only TWO of the cadence numbers in OPP_KINDS are evidence — HBR's 2011 "Short Life of Online Sales Leads" on answering an inbound web lead within the hour, and a vendor study on returns falling off after about six attempts — every other day-count is labelled a practitioner convention, not a finding, and the oft-quoted "80% of sales need five follow-ups" was checked and deliberately left OUT because it is unsourced. DELETE is documented by Redtail and DELIBERATELY NOT WHITELISTED — taking someone "off the path" is a stage move to Closed Lost, which keeps the history; a delete would not, and that is Hans's call to make later, by name, not a default. NO NEW CAPABILITY KEY, NO NEW SCOPE, NO CONSENT RUN — the client gates on the backend VERSION alone (RT_OPP_GS_MIN, rules 12/63c): against an old backend the page NAMES BOTH VERSIONS and sends nothing, and — rule 51 — the buttons that would open the page still exist rather than vanishing; only the ACTION is gated. BACKEND v3.76.0 WAS DEPLOYED TO BOTH ACCOUNTS TODAY (Hans @137, Amanda @29) — but per apps-script.md rule 12, THE ONLY ACCEPTED PROOF A .gs RELEASE IS ACTUALLY LIVE IS HIS OWN ACCESS CHECK READING 3.76.0, and that check has NOT yet run. Until it does, treat the deploy as unconfirmed: if it turns out stale, this page explains itself with the version-gate sentence above rather than failing silently or writing anything malformed. NOT BUILT THIS RELEASE, said outright rather than implied: the daily-brief integration (his own stated next step); touch counting (a Redtail opportunity carries no touch counter at all — the idle clock here is updated_at, a proxy, not a count); reading his Gmail thread with a prospect into the nudge (the Gmail-page drafter's thread reader is the reuse target for that, not duplicated here — memory feedback_reuse_before_rebuild); a full Calendly slot picker inside the nudge (only the one fallback link). OPEN CONTRACT QUESTIONS his first live use will answer: whether a real POST/PUT actually keeps stage_id and close_date (the docs don't show either); whether a PUT carrying linked_contacts REPLACES the list or duplicates it; whether the opportunity deep link (smf.crm3.redtailtechnology.com/opportunities/{id}) is right; the real shape of lists/database_users. THE DEPLOY REPO IS PUBLIC: no prospect's name may ever land in this file — the two opportunities he asked to have on hand go in through the FORM, by his own hand, after this ships, never seeded into a fixture, a default or a comment. gs-auditor: safe, no blockers. Probe opportunities-probe 11/11 (O1–O11, new).
         // v5.21.1 (13:20): REDTAIL NOTES READ AS THEY DO IN REDTAIL (client-only; styles.css unchanged, link stays ?v=5.14.0). His screenshot: "Snyder Items Still Needed / Open Questions" as one grey paragraph with literal "&nbsp;" in it, and his question "Can the format of the Tasks from Redtail not have better formatting as they are in Redtail." CAUSE, and it was deliberate at v4.91.0: the activity modal stripped every tag and collapsed every run of whitespace before setting textContent, as a safety measure — which also destroyed the bold headers and numbered lists this tool itself WRITES into those descriptions (v4.80.0's "one combined activity … bold headers, real numbered lists") and left the entities showing. NOW: rtNoteHtml renders the note through sanitizeEmailHtml_ — the email viewer's existing allow-list (p, br, strong, em, ul/ol/li, headings; scripts, handlers, forms and images removed; links forced to open in a new tab) — so it reads exactly as in Redtail and still cannot run anything; a note with no markup keeps its own line breaks. rtNoteText hands the AI-Helper the same note as TEXT with its line structure (paragraphs, "• " list items) instead of tags replaced by spaces. Reuse, not a second sanitizer (the v5.2.2 lesson). Probe meeting-processor +1.
         // v5.21.0 (12:30): THREE THINGS HE KEEPS SEEING, EACH DIAGNOSED BEFORE IT WAS TOUCHED (client-only; styles.css unchanged, link stays ?v=5.14.0; backend stays .gs v3.75.0). (1) "I clicked Delete in the popup window of an email I opened from Daily brief and nothing happens" — the ONE chooser (#choiceModal, which every confirm in the file goes through) is the FIRST modal in the DOM and the email viewer is a later sibling at the same z-index 1000, so "Move to Trash?" opened BEHIND the viewer; he only saw it after "Back to EOS" closed the viewer. Inline z-index 1002 on the chooser — it must sit above whichever modal asked, always. Same class as v5.20.1's week popup, caught one release apart, so the rule is now written: a modal that opens FROM another modal carries its own z-index. (2) "when I did click Send to trash the email was still sitting in my daily brief" — the viewer passes THREAD ids to briefMailDo (opts.threadIds, v4.96.0), and the local clearing keyed the handled map and the cache drop by MESSAGE id, so Gmail trashed the conversation and the brief kept its row. Every cached row in an acted-on conversation is now cleared too. (3) "I also got a bunch of new redtail workflows (Where did they come from)?" — thirty 2017–2018 rows. Diagnosed live in his tab: the documented feed answers 5 workflows / 7 tasks; the LEGACY /workflows?completed=0 path answers exactly those 50 old rows. On that load the documented call failed (transient) or came back unreadable, the parser returned null, and rtWorkflowsFetch walked on to the guessed paths — the very junk its own comment promised never to resurrect. Now a failed or unreadable authoritative call is REPORTED and the last good list stays; the legacy paths run only on a genuine 404. (4) HIS QUESTION, "What does 'Review my inbox with AI' do — shouldn't it already do that?": it reads the open emails once and sorts them into needs-you / not-sure / not-worth-your-time with reasons; it was opt-in per click since v4.73.0 because it costs one AI call. Now, with the toggle on, it runs ITSELF after any scan that brought mail it has not seen (_briefAiAuto, once per scan, nothing when nothing is new) and the button is only "run it now"; the human-act invariant is untouched — it still only proposes. Probe mail-actions 13/13 (M10, M11 new), meeting-processor +1 (a failed feed never falls through), brief-mail 94/94.
         // v5.20.1 (11:05): TWO THINGS THE LIVE CHECK FOUND IN v5.20.0, ten minutes after the push. (a) "Show my week" and "What Calendly said" opened BEHIND the brief's reply modal — every .modal-overlay is z-index 1000 and the later sibling paints on top, and both of these are earlier siblings of briefReplyModal. Inline z-index 1001 on those two overlays, because they are the only modals that open FROM another modal. (b) The backend's GS_VERSION constant still read 3.74.0 after the v3.75.0 header was written, so a freshly redeployed backend (Hans @135, Amanda @26) probed as 3.74.0 and the one-off button refused by version — the header and the constant are two places, and only the constant is what the client reads. Bumped, redeployed again on both accounts. Rule 12 in its purest form: "Redeployed" in the clasp output proves the push, and only the probe reading the NEW version proves the deploy. Probe mail-agent 39/39 unchanged.
@@ -8112,7 +8139,19 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.22.0 &mdash; 2026-09-17 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.23.0 &mdash; 2026-09-17 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Opportunities now looks and works like the list you know, plus a delete button and a one-click AI email.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>The pipeline is now a table, in the same column order Redtail uses</strong> &mdash; name, linked contacts, who it is assigned to, next steps, stage, source, probability and close date, amount. Click a column heading to sort; click again to reverse it. Search now also finds an opportunity by the name of the person linked to it.</li>'
+                + '<li><strong>Tick boxes and a bulk bar</strong>: move several opportunities to a stage at once, mark them Closed Won or Closed Lost, set a close date, assign them, or run the AI review on just the ones you ticked. Every bulk change asks first and names every opportunity it is about to touch, and tells you afterward if Redtail did not keep any of them.</li>'
+                + '<li><strong>You can now delete an opportunity.</strong> It asks first, names it, and reminds you that Closed Lost keeps the history if that is all you wanted. This only reaches Redtail from your own click &mdash; the AI can never delete anything.</li>'
+                + '<li><strong>&ldquo;AI email&rdquo; on every row</strong> hands the opportunity straight to your Gmail drafting assistant &mdash; the one that already reads your real back-and-forth with that person, your last meeting, and your calendar &mdash; so the draft is grounded in what actually happened, not guessed.</li>'
+                + '<li><strong>Fixed the AI review error from this afternoon</strong>: a reply that ran out of room was being reported as unreadable. It now asks for much more room and reads what came back correctly &mdash; and if it ever fails again, the message will say exactly why, with the AI&rsquo;s raw answer available to copy.</li>'
+                + '<li>A safety fix found while building this: if Redtail ever answers without an opportunity&rsquo;s linked contacts, saving that opportunity no longer wipes them out.</li>'
+                + '</ul>'
+                + '</div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.22.0 &mdash; 2026-09-17</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">A new Opportunities page &mdash; your Redtail pipeline, who has gone quiet, and a nudge drafted for you.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Opportunities is a new page</strong>, reading your Redtail pipeline directly &mdash; there is no second copy. It refreshes itself about every five minutes, or press Refresh.</li>'
@@ -22739,7 +22778,7 @@ Example:
             }
         }
 
-        // ==================== REDTAIL OPPORTUNITIES — THE PIPELINE (v5.22.0) ====================
+        // ==================== REDTAIL OPPORTUNITIES — THE PIPELINE (v5.22.0; table + bulk + AI email v5.23.0) ====================
         //
         // Hans's ask, 2026-09-17: Redtail now charges per user per month for its own AI
         // access; he wants Opportunities INSIDE this tool instead — "nudge people and get
@@ -22770,6 +22809,11 @@ Example:
         const OPP_REVIEW_KEY = 'eos_opp_review';
         const OPP_RT_LINK = 'https://smf.crm3.redtailtechnology.com/opportunities/';
         const OPP_MAX_PAGES = 10;
+        const RT_OPP_DELETE_GS_MIN = '3.77.0';   // the DELETE whitelist row - his decision, 2026-09-17
+        // The backend clamps to 8192. Thinking counts against the cap (.gs v3.73.0's header),
+        // so an AI call here asks for the whole allowance AND a medium effort, and ALWAYS
+        // reads stopReason before it trusts the text.
+        const OPP_AI_MAX_TOKENS = 8192;
         // Cadence defaults. ONLY TWO NUMBERS IN THIS TABLE ARE EVIDENCE: answer an inbound
         // web lead within the hour (HBR, "The Short Life of Online Sales Leads", 2011) and
         // returns falling off after about six attempts (a vendor study). Every day-count
@@ -22787,7 +22831,12 @@ Example:
         };
         const oppState = {
             rows: null, lists: { stages: [], types: [], sources: [], users: [] },
-            fetchedAt: 0, fetching: false, err: '', rawSample: '', filter: 'all',
+            fetchedAt: 0, fetching: false, err: '', rawSample: '', aiRaw: '', filter: 'all',
+            view: 'active', q: '', fStage: '', fType: '', fSource: '', fAssigned: '',
+            sort: { k: 'attention', dir: -1 }, sel: {},
+            links: {},      // opportunity id -> { ids:[contact ids], at: the lastChange it was read at }
+            people: {},     // contact id -> { name, email }
+            hydrating: false,
             editing: null,      // { id|null, record|null, contacts:[{id,name}] }
             review: null
         };
@@ -22843,7 +22892,10 @@ Example:
                 closeDate: o.close_date ? String(o.close_date).slice(0, 10) : '',
                 nextStep: String(o.next_step || '').trim(),
                 probability: (o.probability === null || o.probability === undefined || o.probability === '') ? '' : String(o.probability),
-                lastChange: last, deleted: !!o.deleted
+                lastChange: last, deleted: !!o.deleted,
+                // The documented LIST carries no contacts; if the live one does, use them.
+                contactIds: (Array.isArray(o.opportunity_contacts) ? o.opportunity_contacts : [])
+                    .map(function (c) { return c && c.contact_id != null ? String(c.contact_id) : ''; }).filter(Boolean)
             };
         }
         // null = a shape this build cannot read (an ERROR to report); [] = a real empty list.
@@ -22914,7 +22966,9 @@ Example:
             rec.close_date = f.closeDate || null;
             rec.next_step = f.nextStep;
             rec.probability = numOrNull(f.probability);
-            rec.linked_contacts = (f.contacts || []).map(function (c) { return { contact_id: Number(c.id) }; });
+            // A record Redtail returned WITHOUT its contact list must never be saved with an
+            // empty one - that would unlink everyone. Sent only when the list is known.
+            if (f.contactsKnown !== false) rec.linked_contacts = (f.contacts || []).map(function (c) { return { contact_id: Number(c.id) }; });
             return rec;
         }
         // His own habit, read off his records: a dated line appended to the description
@@ -22980,7 +23034,7 @@ Example:
             if (oppState.rows) return;
             try {
                 const c = JSON.parse(localStorage.getItem(OPP_CACHE_KEY) || 'null');
-                if (c && Array.isArray(c.rows)) { oppState.rows = c.rows; oppState.lists = c.lists || oppState.lists; oppState.fetchedAt = c.fetchedAt || 0; }
+                if (c && Array.isArray(c.rows)) { oppState.rows = c.rows; oppState.lists = c.lists || oppState.lists; oppState.fetchedAt = c.fetchedAt || 0; oppState.links = c.links || {}; oppState.people = c.people || {}; }
             } catch (e) { }
             try {
                 const r = JSON.parse(localStorage.getItem(OPP_REVIEW_KEY) || 'null');
@@ -23012,12 +23066,13 @@ Example:
                 }
                 if (!oppState.err) { oppState.rows = all; oppState.fetchedAt = Date.now(); }
                 await oppFetchLists(false);
-                try { localStorage.setItem(OPP_CACHE_KEY, JSON.stringify({ rows: oppState.rows, lists: oppState.lists, fetchedAt: oppState.fetchedAt })); } catch (eC) { }
+                oppSaveCache();
             } catch (e) {
                 oppState.err = 'Opportunities: ' + String(e && e.message || e);
             } finally {
                 oppState.fetching = false;
                 renderOpportunitiesPage();
+                oppHydrate();   // linked contacts, in the background, after the paint
             }
         }
         async function oppFetchLists(force) {
@@ -23040,77 +23095,469 @@ Example:
         }
         function oppFmtMoney(n) { return n ? '$' + Math.round(n).toLocaleString('en-US') : ''; }
         function oppFmtDay(ymd) { const d = oppDay(ymd); return d ? (String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getDate()).padStart(2, '0') + '/' + String(d.getFullYear()).slice(2)) : ''; }
-        // addEventListener, never an inline oninput= (rule 40: an inline attribute would
-        // silently opt the field out of the composer's own handling).
+        // ---- v5.23.0: THE LIST, AS A TABLE HE ALREADY KNOWS --------------------------------
+        // His first live test, 2026-09-17: "There needs to be a checkmark out by the
+        // opportunities list, so I can easily delete the opportunity, and other
+        // administrative responses. Can it not look like it does in Redtail? What about a
+        // simple 'AI email' this person. Filters, etc." So: Redtail's own columns in
+        // Redtail's own order, sortable heads, Active / Closed / All, a search box and four
+        // filters, a tick box on every row with a bulk bar, and one button that hands the
+        // person to the Gmail-page drafter — which already reads his real threads, the last
+        // meeting, the calendar and his Calendly openings. REUSE, not a second drafter.
+        function oppPersonName(cid) { const p = oppState.people[String(cid)]; return (p && p.name) || ''; }
+        function oppContactsOf(row) {
+            const l = oppState.links[row.id];
+            const ids = (l && l.ids) || row.contactIds || [];
+            return ids.map(function (cid) { return { id: String(cid), name: oppPersonName(cid) }; });
+        }
+        function oppContactsText(row) {
+            const cs = oppContactsOf(row);
+            if (!cs.length) return '';
+            const named = cs.filter(function (c) { return c.name; });
+            return named.length ? named.map(function (c) { return c.name; }).join('; ') : (cs.length + ' contact' + (cs.length > 1 ? 's' : ''));
+        }
+        function oppUserName(id) {
+            if (!id) return '';
+            const u = oppState.lists.users.find(function (x) { return String(x.id) === String(id); });
+            return u ? u.name : ('User #' + id);
+        }
+        function oppSelectedIds() { return Object.keys(oppState.sel).filter(function (k) { return oppState.sel[k]; }); }
+        // Everything the filters leave standing, decorated once. Pure over oppState.
+        function oppVisibleRows(now) {
+            const sn = oppSnoozes();
+            const q = String(oppState.q || '').trim().toLowerCase();
+            return (oppState.rows || []).filter(function (r) { return !r.deleted; }).filter(function (r) {
+                const closed = oppIsClosed(r);
+                if (oppState.view === 'active' && closed) return false;
+                if (oppState.view === 'closed' && !closed) return false;
+                if (oppState.fStage && String(r.stageId) !== String(oppState.fStage)) return false;
+                if (oppState.fType && String(r.typeId) !== String(oppState.fType)) return false;
+                if (oppState.fSource && String(r.sourceId) !== String(oppState.fSource)) return false;
+                if (oppState.fAssigned && String(r.assignedTo || 'none') !== String(oppState.fAssigned)) return false;
+                if (q) {
+                    const hay = [r.name, r.description, r.nextStep, r.stage, r.source, oppContactsText(r), oppUserName(r.assignedTo)].join(' ').toLowerCase();
+                    if (hay.indexOf(q) === -1) return false;
+                }
+                return true;
+            }).map(function (r) { return { r: r, f: oppIsClosed(r) ? { flags: [], score: 0, idleDays: null, snoozedUntil: '' } : oppFlags(r, now, sn), kind: oppKind(r) }; })
+                .filter(function (x) {
+                    const f = oppState.filter;
+                    if (f === 'all') return true;
+                    if (f === 'attention') return x.f.score > 0;
+                    if (f === 'prospects') return x.kind === 'prospect' || x.kind === 'inbound' || x.kind === 'postDiscovery';
+                    if (f === 'coi') return x.kind === 'coi' || x.kind === 'coiIntro';
+                    return x.kind === f;
+                });
+        }
+        const OPP_SORT_KEYS = {
+            name: function (x) { return x.r.name.toLowerCase(); },
+            contacts: function (x) { return oppContactsText(x.r).toLowerCase(); },
+            assigned: function (x) { return oppUserName(x.r.assignedTo).toLowerCase(); },
+            next: function (x) { return x.r.nextStep.toLowerCase(); },
+            stage: function (x) { return x.r.stage.toLowerCase(); },
+            source: function (x) { return x.r.source.toLowerCase(); },
+            prob: function (x) { return x.r.probability === '' ? -1 : Number(x.r.probability); },
+            close: function (x) { return x.r.closeDate || '9999-99-99'; },
+            amount: function (x) { return x.r.amount; }
+        };
+        function oppSortRows(rows) {
+            const s = oppState.sort;
+            const get = OPP_SORT_KEYS[s.k];
+            if (!get) {   // 'attention': what most needs him first, then the nearest close date
+                return rows.sort(function (a, b) { return (b.f.score - a.f.score) || String(a.r.closeDate || '9999').localeCompare(String(b.r.closeDate || '9999')); });
+            }
+            return rows.sort(function (a, b) {
+                const va = get(a), vb = get(b);
+                const c = (typeof va === 'number' && typeof vb === 'number') ? (va - vb) : String(va).localeCompare(String(vb), undefined, { numeric: true });
+                return (c * s.dir) || a.r.name.localeCompare(b.r.name);
+            });
+        }
+        function oppSortBy(k) {
+            if (oppState.sort.k === k) { if (oppState.sort.dir === 1) oppState.sort.dir = -1; else oppState.sort = { k: 'attention', dir: -1 }; }
+            else oppState.sort = { k: k, dir: 1 };
+            oppRenderTable();
+        }
+        function oppSetFilter(f) { oppState.filter = f; renderOpportunitiesPage(); }
+        function oppSetView(v) { oppState.view = v; oppState.sel = {}; renderOpportunitiesPage(); }
+        // addEventListener, never an inline oninput= (rule 40). ONE delegated change listener
+        // owns every tick box, so a re-rendered table never loses its wiring.
         function oppWire() {
             if (oppState.wired) return;
             const s = document.getElementById('oppEdContactSearch');
-            if (s) { s.addEventListener('input', oppContactSearchInput); oppState.wired = true; }
+            const list = document.getElementById('oppList');
+            const q = document.getElementById('oppQ');
+            if (!s || !list || !q) return;
+            oppState.wired = true;
+            s.addEventListener('input', oppContactSearchInput);
+            let qt = null;
+            q.addEventListener('input', function () { clearTimeout(qt); qt = setTimeout(function () { oppState.q = q.value; oppRenderTable(); }, 200); });
+            [['oppFStage', 'fStage'], ['oppFType', 'fType'], ['oppFSource', 'fSource'], ['oppFAssigned', 'fAssigned']].forEach(function (p) {
+                const el = document.getElementById(p[0]);
+                if (el) el.addEventListener('change', function () { oppState[p[1]] = el.value; oppRenderTable(); });
+            });
+            list.addEventListener('change', function (ev) {
+                const t = ev.target;
+                if (!t || t.type !== 'checkbox') return;
+                if (t.hasAttribute('data-opp-selall')) {
+                    const on = t.checked;
+                    list.querySelectorAll('input[data-opp-sel]').forEach(function (cb) { cb.checked = on; oppState.sel[cb.getAttribute('data-opp-sel')] = on; });
+                } else if (t.hasAttribute('data-opp-sel')) {
+                    oppState.sel[t.getAttribute('data-opp-sel')] = t.checked;
+                }
+                list.querySelectorAll('tr[data-opp-id]').forEach(function (tr) { tr.classList.toggle('sel', !!oppState.sel[tr.getAttribute('data-opp-id')]); });
+                oppRenderBulk();
+            });
+        }
+        function _oppFillFilter(id, items, value, allLabel, extra) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const sig = items.length + '|' + (extra ? extra.length : 0);
+            if (el.getAttribute('data-sig') === sig) return;   // refilling would drop his pick
+            const esc = escapeHtml;
+            el.innerHTML = '<option value="">' + esc(allLabel) + '</option>'
+                + (extra || []).map(function (x) { return '<option value="' + esc(x.id) + '">' + esc(x.name) + '</option>'; }).join('')
+                + items.map(function (x) { return '<option value="' + esc(x.id) + '">' + esc(x.name) + '</option>'; }).join('');
+            el.value = value || '';
+            el.setAttribute('data-sig', sig);
+        }
+        function oppSortedStages() {
+            return oppState.lists.stages.slice().sort(function (a, b) {
+                const ac = /^closed/i.test(a.name) ? 1 : 0, bc = /^closed/i.test(b.name) ? 1 : 0;
+                return (ac - bc) || a.name.localeCompare(b.name, undefined, { numeric: true });
+            });
         }
         function renderOpportunitiesPage() {
             oppLoadCache();
             oppWire();
             const esc = escapeHtml;
-            const sum = document.getElementById('oppSummary');
-            const list = document.getElementById('oppList');
             const filt = document.getElementById('oppFilters');
-            if (!sum || !list || !filt) return;
+            const seg = document.getElementById('oppViewSeg');
+            if (!filt || !seg) return;
             const gate = oppGate();
-            const now = new Date(); const sn = oppSnoozes();
-            const rows = oppActiveRows().map(function (r) { return { r: r, f: oppFlags(r, now, sn), kind: oppKind(r) }; });
-            const need = rows.filter(function (x) { return x.f.score > 0; }).length;
-            const total = rows.reduce(function (a, x) { return a + x.r.amount; }, 0);
-            let head = '';
-            if (oppState.fetching) head = 'Asking Redtail…';
-            else if (oppState.rows) {
-                head = rows.length + ' open · ' + need + ' need attention' + (total ? ' · ' + oppFmtMoney(total) + ' in view' : '')
-                    + (oppState.fetchedAt ? ' · read ' + new Date(oppState.fetchedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '');
-            }
-            sum.textContent = head;
             _oppSay('oppStatus', oppState.err || (gate && !oppState.rows ? gate : ''), true);
-
-            const kinds = [['all', 'All'], ['attention', 'Needs attention'], ['prospects', 'Prospects'], ['coi', 'COIs'], ['outreach', 'Podcast / speaking'], ['none', 'No stage']];
+            seg.innerHTML = [['active', 'Active'], ['closed', 'Closed'], ['all', 'All']].map(function (v) {
+                return '<button type="button" class="opp-seg' + (oppState.view === v[0] ? ' on' : '') + '" onclick="oppSetView(\'' + v[0] + '\')">' + v[1] + '</button>';
+            }).join('');
+            const kinds = [['all', 'Every kind'], ['attention', 'Needs attention'], ['prospects', 'Prospects'], ['coi', 'COIs'], ['outreach', 'Podcast / speaking'], ['none', 'No stage']];
             filt.innerHTML = kinds.map(function (k) {
                 return '<button type="button" class="opp-chip' + (oppState.filter === k[0] ? ' on' : '') + '" onclick="oppSetFilter(\'' + k[0] + '\')">' + esc(k[1]) + '</button>';
             }).join('');
-            const inFilter = function (x) {
-                const f = oppState.filter;
-                if (f === 'all') return true;
-                if (f === 'attention') return x.f.score > 0;
-                if (f === 'prospects') return x.kind === 'prospect' || x.kind === 'inbound' || x.kind === 'postDiscovery';
-                if (f === 'coi') return x.kind === 'coi' || x.kind === 'coiIntro';
-                return x.kind === f;
-            };
-            const shown = rows.filter(inFilter).sort(function (a, b) {
-                return (b.f.score - a.f.score) || String(a.r.closeDate || '9999').localeCompare(String(b.r.closeDate || '9999'));
-            });
+            const L = oppState.lists;
+            const stages = oppSortedStages();
+            _oppFillFilter('oppFStage', stages, oppState.fStage, 'All stages');
+            _oppFillFilter('oppFType', L.types, oppState.fType, 'All types');
+            _oppFillFilter('oppFSource', L.sources, oppState.fSource, 'All sources');
+            _oppFillFilter('oppFAssigned', L.users, oppState.fAssigned, 'Anyone', [{ id: 'none', name: 'Unassigned' }]);
+            _oppFillFilter('oppBulkStage', stages, '', 'Move to stage…');
+            _oppFillFilter('oppBulkAssign', L.users, '', 'Assign to…', [{ id: 'none', name: 'Unassigned' }]);
+            oppRenderTable();
+            oppRenderReview();
+        }
+        function oppRenderTable() {
+            const esc = escapeHtml;
+            const sum = document.getElementById('oppSummary');
+            const list = document.getElementById('oppList');
+            if (!sum || !list) return;
+            const now = new Date();
+            const shown = oppSortRows(oppVisibleRows(now));
+            const need = shown.filter(function (x) { return x.f.score > 0; }).length;
+            const total = shown.reduce(function (a, x) { return a + x.r.amount; }, 0);
+            const word = oppState.view === 'closed' ? 'closed' : (oppState.view === 'all' ? 'shown' : 'open');
+            sum.textContent = oppState.fetching && !oppState.rows ? 'Asking Redtail…'
+                : (oppState.rows ? shown.length + ' ' + word + ' · ' + need + ' need attention' + (total ? ' · ' + oppFmtMoney(total) + ' in view' : '')
+                    + (oppState.fetchedAt ? ' · read ' + new Date(oppState.fetchedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '')
+                    + (oppState.fetching ? ' · refreshing…' : '') + (oppState.hydrating ? ' · loading linked contacts…' : '') : '');
+            // A tick on a row the filters have since hidden must not ride into a bulk action.
+            const visible = {}; shown.forEach(function (x) { visible[x.r.id] = 1; });
+            Object.keys(oppState.sel).forEach(function (k) { if (!visible[k]) delete oppState.sel[k]; });
             if (!oppState.rows) {
                 list.innerHTML = oppState.fetching ? '' : '<div class="opp-empty">Nothing read from Redtail yet — press Refresh.</div>';
             } else if (!shown.length) {
-                list.innerHTML = '<div class="opp-empty">' + (rows.length ? 'Nothing in this view.' : 'Redtail returned no open opportunities.') + '</div>';
+                list.innerHTML = '<div class="opp-empty">' + ((oppState.rows || []).length ? 'Nothing matches these filters.' : 'Redtail returned no opportunities.') + '</div>';
             } else {
-                list.innerHTML = shown.map(function (x) {
-                    const r = x.r;
-                    const chips = x.f.snoozedUntil
-                        ? '<span class="opp-flag quiet">Snoozed on this device until ' + esc(oppFmtDay(x.f.snoozedUntil)) + '</span>'
-                        : x.f.flags.map(function (fl) { return '<span class="opp-flag ' + esc(fl.k) + '">' + esc(fl.t) + '</span>'; }).join('');
-                    return '<div class="opp-row" data-opp-id="' + esc(r.id) + '">'
-                        + '<div class="opp-main"><button type="button" class="opp-name" onclick="oppOpen(\'' + esc(r.id) + '\')">' + esc(r.name || '(no name)') + '</button>'
-                        + '<div class="opp-next">' + (r.nextStep ? esc(r.nextStep) : '<span class="opp-muted">No next step written</span>') + '</div>'
-                        + (chips ? '<div class="opp-flags">' + chips + '</div>' : '') + '</div>'
-                        + '<div class="opp-meta"><span class="opp-stage">' + esc(r.stage || 'No stage') + '</span>'
-                        + (r.closeDate ? '<span>Close ' + esc(oppFmtDay(r.closeDate)) + '</span>' : '')
-                        + (r.amount ? '<span>' + esc(oppFmtMoney(r.amount)) + '</span>' : '')
-                        + (r.probability !== '' ? '<span>' + esc(r.probability) + '%</span>' : '') + '</div></div>';
-                }).join('');
+                const th = function (k, label, cls) {
+                    const on = oppState.sort.k === k;
+                    return '<th class="' + (cls || '') + '"><button type="button" class="opp-th' + (on ? ' on' : '') + '" onclick="oppSortBy(\'' + k + '\')">'
+                        + esc(label) + (on ? (oppState.sort.dir > 0 ? ' ▲' : ' ▼') : '') + '</button></th>';
+                };
+                const todayYmd = oppYmd(now);
+                const allTicked = shown.every(function (x) { return oppState.sel[x.r.id]; });
+                list.innerHTML = '<table class="opp-table"><thead><tr>'
+                    + '<th class="opp-c-chk"><input type="checkbox" data-opp-selall="1"' + (allTicked ? ' checked' : '') + ' aria-label="Select every row shown"></th>'
+                    + th('name', 'Name') + th('contacts', 'Linked contacts') + th('assigned', 'Assigned to') + th('next', 'Next steps')
+                    + th('stage', 'Stage') + th('source', 'Source') + th('prob', 'Prob.', 'opp-num') + th('close', 'Close date') + th('amount', 'Amount', 'opp-num')
+                    + '<th class="opp-c-act"></th></tr></thead><tbody>'
+                    + shown.map(function (x) {
+                        const r = x.r;
+                        const chips = x.f.snoozedUntil
+                            ? '<span class="opp-flag quiet">Snoozed on this device until ' + esc(oppFmtDay(x.f.snoozedUntil)) + '</span>'
+                            : x.f.flags.map(function (fl) { return '<span class="opp-flag ' + esc(fl.k) + '">' + esc(fl.t) + '</span>'; }).join('');
+                        const desc = r.description.replace(/\s+/g, ' ').trim();
+                        const late = !oppIsClosed(r) && r.closeDate && r.closeDate < todayYmd;
+                        const cell = function (label, html, cls) { return '<td class="' + (cls || '') + '" data-label="' + esc(label) + '">' + (html || '') + '</td>'; };
+                        return '<tr class="opp-row' + (oppState.sel[r.id] ? ' sel' : '') + '" data-opp-id="' + esc(r.id) + '">'
+                            + '<td class="opp-c-chk"><input type="checkbox" data-opp-sel="' + esc(r.id) + '"' + (oppState.sel[r.id] ? ' checked' : '') + ' aria-label="Select ' + esc(r.name) + '"></td>'
+                            + '<td class="opp-c-name"><button type="button" class="opp-name" onclick="oppOpen(\'' + esc(r.id) + '\')">' + esc(r.name || '(no name)') + '</button>'
+                            + (desc ? '<div class="opp-desc">' + esc(desc.slice(0, 160)) + (desc.length > 160 ? '…' : '') + '</div>' : '')
+                            + (chips ? '<div class="opp-flags">' + chips + '</div>' : '') + '</td>'
+                            + cell('Linked contacts', esc(oppContactsText(r)))
+                            + cell('Assigned to', esc(oppUserName(r.assignedTo)))
+                            + cell('Next steps', r.nextStep ? esc(r.nextStep) : '<span class="opp-muted">None written</span>', 'opp-next')
+                            + cell('Stage', esc(r.stage || ''), 'opp-stage')
+                            + cell('Source', esc(r.source))
+                            + cell('Prob.', r.probability !== '' ? esc(r.probability) + '%' : '', 'opp-num')
+                            + cell('Close date', esc(oppFmtDay(r.closeDate)), late ? 'opp-late' : '')
+                            + cell('Amount', esc(oppFmtMoney(r.amount) || '$0'), 'opp-num')
+                            + '<td class="opp-c-act"><button type="button" class="btn btn-secondary opp-mini" onclick="oppAiEmail(\'' + esc(r.id) + '\')">AI email</button></td></tr>';
+                    }).join('') + '</tbody></table>';
             }
-            oppRenderReview();
+            oppRenderBulk();
         }
-        function oppSetFilter(f) { oppState.filter = f; renderOpportunitiesPage(); }
+        function oppRenderBulk() {
+            const bar = document.getElementById('oppBulk');
+            if (!bar) return;
+            const n = oppSelectedIds().length;
+            bar.style.display = n ? '' : 'none';
+            const c = document.getElementById('oppBulkCount');
+            if (c) c.textContent = n + ' selected';
+        }
+        function oppBulkClear() { oppState.sel = {}; oppRenderTable(); }
+
+        // ---- linked contacts arrive in the background ----------------------------------------
+        // Redtail's LIST carries no contacts (only the by-id record does), and his Redtail
+        // screen shows them — so they are read one record at a time AFTER the table paints,
+        // cached on this device, and re-read only when Redtail says the record changed.
+        async function oppHydrate() {
+            if (oppGate()) return;
+            // Found by the probe: a refresh landing mid-load returned here, the running pass
+            // then stopped itself on the token, and the NEW rows were never loaded at all.
+            if (oppState.hydrating) { oppState.hydrateAgain = true; return; }
+            oppState.hydrating = true;
+            const token = oppState.fetchedAt;
+            try {
+                const rows = oppActiveRows().slice(0, 60);
+                let n = 0;
+                for (let i = 0; i < rows.length; i++) {
+                    if (oppState.fetchedAt !== token) break;   // a newer read owns the table now
+                    const row = rows[i];
+                    const have = oppState.links[row.id];
+                    if (have && have.at === row.lastChange) continue;
+                    let ids = (row.contactIds && row.contactIds.length) ? row.contactIds : null;
+                    if (!ids) {
+                        const r = await _oppRt('GET', 'opportunities/' + encodeURIComponent(row.id));
+                        const one = (r && r.success) ? oppExtractOne(r.body) : null;
+                        if (!one || !Array.isArray(one.opportunity_contacts)) continue;
+                        ids = one.opportunity_contacts.map(function (c) { return String(c.contact_id); });
+                    }
+                    oppState.links[row.id] = { ids: ids, at: row.lastChange };
+                    for (let j = 0; j < ids.length && j < 4; j++) {
+                        if (oppState.people[ids[j]]) continue;
+                        try {
+                            const cr = await _oppRt('GET', 'contacts/' + encodeURIComponent(ids[j]));
+                            const got = (cr && cr.success) ? mtgExtractRtClients([cr.body], 0) : [];
+                            if (got[0] && got[0].name) oppState.people[ids[j]] = { name: got[0].name, email: got[0].email || '' };
+                        } catch (eP) { }
+                    }
+                    n++;
+                    if (n % 3 === 0) oppRenderTable();
+                }
+            } finally {
+                oppState.hydrating = false;
+                oppSaveCache();
+                oppRenderTable();
+                if (oppState.hydrateAgain) { oppState.hydrateAgain = false; oppHydrate(); }
+            }
+        }
+        function oppSaveCache() {
+            try { localStorage.setItem(OPP_CACHE_KEY, JSON.stringify({ rows: oppState.rows, lists: oppState.lists, fetchedAt: oppState.fetchedAt, links: oppState.links, people: oppState.people })); } catch (e) { }
+        }
+
+        // ---- bulk administration: every one is HIS click behind a confirm that names the rows ----
+        // A change is laid on REDTAIL'S OWN RECORD and put back (the K4 lesson), and the
+        // contacts ride along ONLY when Redtail returned them — a record that came back
+        // without its contact list must never be saved with an empty one.
+        function oppPayloadFromRecord(one, change) {
+            const rec = {};
+            Object.keys(one).forEach(function (k) { if (OPP_READONLY_KEYS.indexOf(k) === -1) rec[k] = one[k]; });
+            Object.assign(rec, change);
+            if (Array.isArray(one.opportunity_contacts)) rec.linked_contacts = one.opportunity_contacts.map(function (c) { return { contact_id: Number(c.contact_id) }; });
+            return rec;
+        }
+        function _oppNamesOf(ids) {
+            const names = ids.map(function (id) { const r = (oppState.rows || []).find(function (x) { return x.id === id; }); return r ? r.name : ('#' + id); });
+            return names.slice(0, 10).map(function (n) { return '• ' + n; }).join('\n') + (names.length > 10 ? '\n…and ' + (names.length - 10) + ' more' : '');
+        }
+        async function oppBulkApply(kind) {
+            const ids = oppSelectedIds();
+            if (!ids.length) return;
+            const gate = oppGate();
+            if (gate) { _oppSay('oppBulkStatus', gate, true); return; }
+            const change = {}; let label = ''; let check = null;
+            const stageNamed = function (re) { return oppState.lists.stages.find(function (s) { return re.test(s.name.trim()); }); };
+            if (kind === 'stage' || kind === 'won' || kind === 'lost') {
+                const st = kind === 'stage'
+                    ? oppState.lists.stages.find(function (s) { return String(s.id) === String((document.getElementById('oppBulkStage') || {}).value); })
+                    : stageNamed(kind === 'won' ? /^closed won$/i : /^closed lost$/i);
+                if (!st) { _oppSay('oppBulkStatus', kind === 'stage' ? 'Pick the stage to move them to first.' : 'Your Redtail stage list has no “Closed ' + (kind === 'won' ? 'Won' : 'Lost') + '” — press Refresh, or pick the stage by name.', true); return; }
+                change.stage_id = Number(st.id); label = 'Move to “' + st.name + '”';
+                check = function (row) { return String(row.stageId) === String(st.id); };
+            } else if (kind === 'close') {
+                const d = String((document.getElementById('oppBulkClose') || {}).value || '');
+                if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) { _oppSay('oppBulkStatus', 'Pick the new close date first.', true); return; }
+                change.close_date = d; label = 'Set the close date to ' + oppFmtDay(d);
+                check = function (row) { return row.closeDate === d; };
+            } else if (kind === 'assign') {
+                const v = String((document.getElementById('oppBulkAssign') || {}).value || '');
+                if (!v) { _oppSay('oppBulkStatus', 'Pick who to assign them to first.', true); return; }
+                change.assigned_to = v === 'none' ? null : Number(v); label = v === 'none' ? 'Unassign' : 'Assign to ' + oppUserName(v);
+                check = function (row) { return String(row.assignedTo || 'none') === v; };
+            } else return;
+            const yes = await eosChoose({
+                title: label + ' — ' + ids.length + ' opportunit' + (ids.length > 1 ? 'ies' : 'y') + '?',
+                message: _oppNamesOf(ids) + '\n\nThis writes to Redtail. Each record is read, changed and put back, then the list is re-read to check it.',
+                options: [{ label: 'Yes — ' + label.toLowerCase(), value: 'go' }]
+            });
+            if (yes !== 'go') { _oppSay('oppBulkStatus', 'Nothing changed.', false); return; }
+            const failed = []; const done = [];
+            for (let i = 0; i < ids.length; i++) {
+                _oppSay('oppBulkStatus', 'Writing ' + (i + 1) + ' of ' + ids.length + '…', false);
+                const r = await _oppRt('GET', 'opportunities/' + encodeURIComponent(ids[i]));
+                const one = (r && r.success) ? oppExtractOne(r.body) : null;
+                if (!one) { failed.push(ids[i]); continue; }   // never write a record that did not read
+                const w = await _oppRt('PUT', 'opportunities/' + encodeURIComponent(ids[i]), oppPayloadFromRecord(one, change));
+                if (w && w.success) done.push(ids[i]); else failed.push(ids[i]);
+            }
+            oppState.sel = {};
+            oppState.fetching = false;
+            await oppFetch(true);
+            const notKept = done.filter(function (id) { const row = (oppState.rows || []).find(function (x) { return x.id === id; }); return !row || !check(row); });
+            const parts = [(done.length - notKept.length) + ' of ' + ids.length + ' changed in Redtail and read back correctly'];
+            if (notKept.length) parts.push(notKept.length + (notKept.length === 1 ? ' was' : ' were') + ' accepted but Redtail did not keep the change (' + _oppNamesOf(notKept).replace(/\n/g, ' ') + ') — a contract finding, tell Claude');
+            if (failed.length) parts.push(failed.length + ' could not be read or written and ' + (failed.length === 1 ? 'was' : 'were') + ' left alone (' + _oppNamesOf(failed).replace(/\n/g, ' ') + ')');
+            _oppSay('oppBulkStatus', parts.join('; ') + '.', !!(notKept.length || failed.length));
+        }
+        // DELETE — HIS DECISION, BY NAME, 2026-09-17: "a checkmark… so I can easily delete the
+        // opportunity." v5.22.0 shipped with no delete on purpose and said a DELETE row needed
+        // exactly this. It is version-gated (.gs v3.77.0), it is only ever his click, the
+        // confirm names every row, and it says what Closed Lost would do instead. No AI path
+        // reaches it: neither helper can call a write at all.
+        async function oppBulkDelete() {
+            const ids = oppSelectedIds();
+            if (!ids.length) return;
+            const gate = oppGate();
+            if (gate) { _oppSay('oppBulkStatus', gate, true); return; }
+            if (_calGsAtLeast(RT_OPP_DELETE_GS_MIN) !== true) {
+                const v = (_capabilityProbeState && _capabilityProbeState.gsVersion) || 'unknown';
+                _oppSay('oppBulkStatus', 'Deleting needs backend v' + RT_OPP_DELETE_GS_MIN + ' — this deployment reports v' + v + '. Until then “Closed Lost” takes them off the pipeline and keeps the history.', true);
+                return;
+            }
+            const yes = await eosChoose({
+                title: 'Delete ' + ids.length + ' opportunit' + (ids.length > 1 ? 'ies' : 'y') + ' from Redtail?',
+                message: _oppNamesOf(ids) + '\n\nThis deletes them in REDTAIL, not just on this page, and this tool cannot bring them back. If you only want them off the pipeline, “Closed Lost” keeps the history.',
+                options: [{ label: 'Yes, delete from Redtail', value: 'delete' }]
+            });
+            if (yes !== 'delete') { _oppSay('oppBulkStatus', 'Nothing deleted.', false); return; }
+            let ok = 0; const failed = [];
+            for (let i = 0; i < ids.length; i++) {
+                _oppSay('oppBulkStatus', 'Deleting ' + (i + 1) + ' of ' + ids.length + '…', false);
+                const r = await _oppRt('DELETE', 'opportunities/' + encodeURIComponent(ids[i]));
+                if (r && r.success) ok++; else failed.push(ids[i] + ': ' + ((r && r.error) || 'backend unreachable'));
+            }
+            oppState.sel = {};
+            if (oppState.editing && ids.indexOf(String(oppState.editing.id)) !== -1) oppCloseEditor();
+            oppState.fetching = false;
+            await oppFetch(true);
+            const still = ids.filter(function (id) { return (oppState.rows || []).some(function (x) { return x.id === id && !x.deleted; }); });
+            _oppSay('oppBulkStatus', ok + ' of ' + ids.length + ' deleted in Redtail'
+                + (still.length ? '; ' + still.length + ' still came back on the re-read (' + _oppNamesOf(still).replace(/\n/g, ' ') + ')' : '')
+                + (failed.length ? '; failed — ' + failed.join(' | ') : '') + '.', !!(still.length || failed.length));
+        }
+
+        // ---- "AI email": hand the person to the drafter that already reads his mail -----------
+        async function oppEmailOf(cid) {
+            const p = oppState.people[String(cid)] || {};
+            if (p.email) return p.email;
+            try {
+                const er = await _oppRt('GET', 'contacts/' + encodeURIComponent(cid) + '/emails');
+                const got = (er && er.success) ? _briefExtractAddrs(er.body) : [];
+                if (got[0]) { oppState.people[String(cid)] = Object.assign({}, p, { email: got[0] }); return got[0]; }
+            } catch (e) { }
+            return '';
+        }
+        function oppEmailIntent(row, flags, others) {
+            const kind = OPP_KINDS[oppKind(row)] || OPP_KINDS.prospect;
+            const log = row.description.replace(/\s+$/, '').slice(-1500);
+            return 'Write the next follow-up email for this Redtail opportunity — to move it forward, or to let it go gracefully if that is where it stands.\n'
+                + 'Opportunity: ' + row.name + '\n'
+                + 'Stage: ' + (row.stage || 'none') + ' (' + kind.label + ')\n'
+                + 'Next step I wrote: ' + (row.nextStep || 'none') + '\n'
+                + (row.closeDate ? 'Close date: ' + row.closeDate + '\n' : '')
+                + (flags.idleDays !== null ? 'No change in Redtail for ' + flags.idleDays + ' days.\n' : '')
+                + (others.length ? 'Also address: ' + others.join(', ') + '\n' : '')
+                + (log ? 'My log:\n' + log + '\n' : '')
+                + '\nRead our actual correspondence first and do NOT repeat what I already sent. Bring one genuinely useful thing or one specific, easy next step, and end with one simple question. '
+                + 'Warm, brief, first names, no pressure, no urgency, no performance claims or promises of any kind. '
+                + (kind.breakUp ? 'If they engaged and then went silent through several touches, a gracious closing note is allowed.' : 'This is a friend or a referral partner: never write a closing-the-file note.');
+        }
+        async function oppAiEmail(id) {
+            const row = (oppState.rows || []).find(function (r) { return r.id === String(id); });
+            if (!row) return;
+            const gate = oppGate();
+            if (gate) { showToast(gate, 'error'); return; }
+            let cs = oppContactsOf(row);
+            const cachedLink = oppState.links[row.id];
+            const fresh = (row.contactIds && row.contactIds.length) || (cachedLink && cachedLink.at === row.lastChange);
+            // An email goes to a PERSON: a contact list read before the record last changed
+            // is good enough to display and not good enough to address.
+            if (!cs.length || !fresh) {
+                showToast('Finding who is linked to this opportunity…', 'info');
+                const r = await _oppRt('GET', 'opportunities/' + encodeURIComponent(row.id));
+                const one = (r && r.success) ? oppExtractOne(r.body) : null;
+                const ids = (one && Array.isArray(one.opportunity_contacts)) ? one.opportunity_contacts.map(function (c) { return String(c.contact_id); }) : [];
+                if (one && Array.isArray(one.opportunity_contacts)) { oppState.links[row.id] = { ids: ids, at: row.lastChange }; cs = oppContactsOf(row); }
+            }
+            if (!cs.length) { showToast('No contact is linked to this opportunity yet — link one, then try again.', 'info'); oppOpen(row.id); return; }
+            // EVERY linked person's name, not only the first: a couple is addressed as a couple.
+            for (let i = 0; i < cs.length && i < 4; i++) {
+                if (cs[i].name) continue;
+                try {
+                    const cr = await _oppRt('GET', 'contacts/' + encodeURIComponent(cs[i].id));
+                    const got = (cr && cr.success) ? mtgExtractRtClients([cr.body], 0) : [];
+                    if (got[0] && got[0].name) { oppState.people[cs[i].id] = Object.assign({}, oppState.people[cs[i].id] || {}, { name: got[0].name }); cs[i].name = got[0].name; }
+                } catch (eN) { }
+            }
+            const first = cs[0];
+            const email = await oppEmailOf(first.id);
+            const others = cs.slice(1).map(function (c) { return c.name; }).filter(Boolean);
+            const intent = oppEmailIntent(row, oppFlags(row, new Date(), oppSnoozes()), others);
+            // Out of the click's own event first: showPage() marks window.event's target
+            // "active", and that must be a nav tab, never this row's button.
+            setTimeout(function () {
+                showPage('gmail');
+                const box = document.getElementById('gmAgentIntent');
+                const to = document.getElementById('gmAgentTo');
+                if (box) box.value = intent;
+                if (to) to.value = email || first.name || '';
+                // With an address the drafter starts at once; with only a name its own
+                // search runs and shows him the candidates — never a dead end (v5.2.2).
+                if (typeof gmailAgentRun === 'function') gmailAgentRun(email ? { email: email, name: first.name || '', via: 'Redtail opportunity' } : undefined);
+            }, 0);
+        }
+        // When an AI answer cannot be used, say WHICH way it failed. v5.22.0 said "a shape
+        // the tool could not read" about a reply that had simply run out of room: current
+        // models think before they write, thinking counts against the cap, and the cap was
+        // 3,000 with no effort setting — the exact failure .gs v3.73.0's header documents.
+        function _oppAiUnreadable(r) {
+            try { oppState.aiRaw = JSON.stringify({ stopReason: r.stopReason || '', outputTokens: r.outputTokens, model: r.model, text: String(r.text || '').slice(0, 5000) }); } catch (e) { }
+            const cut = ['max_tokens', 'length', 'MAX_TOKENS'].indexOf(String(r.stopReason || '')) !== -1;
+            if (cut) return 'The AI ran out of room before it finished (stop reason “' + r.stopReason + '”, ' + (r.outputTokens || 0) + ' output tokens) — nothing was changed. Try again, or tick fewer opportunities first.';
+            if (!String(r.text || '').trim()) return 'The AI returned no text (stop reason “' + (r.stopReason || 'none') + '”) — nothing was changed. Try again.';
+            return 'The AI answered in a shape the tool could not read — press “Copy diagnostic” below and paste it to Claude.';
+        }
         function oppCopyDiag() {
-            if (!oppState.rawSample) { showToast('Nothing captured yet — press Refresh first.'); return; }
+            if (!oppState.rawSample && !oppState.aiRaw) { showToast('Nothing captured yet — press Refresh first.'); return; }
             if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(oppState.rawSample).then(function () { showToast('Diagnostic copied — paste it to Claude.'); },
+                navigator.clipboard.writeText((oppState.aiRaw ? 'LAST AI ANSWER: ' + oppState.aiRaw + '\n\n' : '') + 'REDTAIL LIST: ' + (oppState.rawSample || '(none)')).then(function () { showToast('Diagnostic copied — paste it to Claude.'); },
                     function () { showToast('Copy failed.', 'error'); });
             } else { showToast('Copy failed.', 'error'); }
         }
@@ -23169,7 +23616,7 @@ Example:
                     + ' <button type="button" aria-label="Remove" onclick="oppContactRemove(' + i + ')">×</button></span>';
             }).join('') : '<span class="opp-muted">No one linked yet — search below. The contact must already exist in Redtail.</span>';
         }
-        function oppContactRemove(i) { if (oppState.editing) { oppState.editing.contacts.splice(i, 1); oppRenderContacts(); } }
+        function oppContactRemove(i) { if (oppState.editing) { oppState.editing.contacts.splice(i, 1); oppState.editing.contactsTouched = true; oppRenderContacts(); } }
         let _oppSearchTimer = null, _oppSearchLast = '';
         function oppContactSearchInput() { clearTimeout(_oppSearchTimer); _oppSearchTimer = setTimeout(oppContactSearchRun, 400); }
         async function oppContactSearchRun() {
@@ -23200,6 +23647,7 @@ Example:
             const cs = oppState.editing.contacts;
             if (cs.some(function (x) { return String(x.id) === String(c.id); })) { showToast('Already linked.', 'info'); return; }
             cs.push({ id: String(c.id), name: c.name });
+            oppState.editing.contactsTouched = true;
             document.getElementById('oppEdContactCand').innerHTML = '';
             document.getElementById('oppEdContactSearch').value = '';
             oppRenderContacts();
@@ -23234,6 +23682,7 @@ Example:
             if (!one) { oppState.editing.loading = false; oppState.editing.readFailed = true; _oppSay('oppEdStatus', 'Could not read the full record — ' + ((r && r.error) || 'unreadable answer') + '. Saving is off until it reads, so nothing can be overwritten blind.', true); return; }
             oppState.editing.record = one;
             oppState.editing.loading = false;
+            oppState.editing.contactsKnown = Array.isArray(one.opportunity_contacts);
             oppState.editing.contacts = (Array.isArray(one.opportunity_contacts) ? one.opportunity_contacts : [])
                 .map(function (c) { return { id: String(c.contact_id), name: '' }; });
             oppRenderEditor();
@@ -23255,7 +23704,8 @@ Example:
                 name: v('oppEdName'), nextStep: v('oppEdNext'), closeDate: v('oppEdClose'), amount: v('oppEdAmount').replace(/[$,\s]/g, ''),
                 probability: v('oppEdProb'), stageId: v('oppEdStage'), typeId: v('oppEdType'), sourceId: v('oppEdSource'),
                 assignedTo: v('oppEdAssigned'), description: oppAppendLog(String((document.getElementById('oppEdDesc') || {}).value || ''), v('oppEdLog')),
-                contacts: (oppState.editing && oppState.editing.contacts) || []
+                contacts: (oppState.editing && oppState.editing.contacts) || [],
+                contactsKnown: !oppState.editing || !oppState.editing.id || !!oppState.editing.contactsKnown || !!oppState.editing.contactsTouched
             };
         }
         async function oppSave() {
@@ -23389,12 +23839,12 @@ Example:
                         + '"channel":"email | text | call | note | none","subject":"email subject, or empty","body":"the email body in plain text, no signature (one is added), or empty","sms":"a text-message version under 480 characters, or empty","missing":"facts you needed and did not have, or empty"}',
                     userContent: _oppFactsText(f, ed, new Date())
                         + '\n\nWHAT HANS SAYS HAPPENED LAST / WHAT HE ALREADY SENT (may be empty):\n' + (ctx.slice(0, 6000) || '(nothing pasted)'),
-                    maxTokens: 1600, feature: 'opportunity-nudge'
+                    maxTokens: OPP_AI_MAX_TOKENS, effort: 'medium', feature: 'opportunity-nudge'
                 });
             } finally { if (btn) btn.disabled = false; }
             if (!r || !r.success) { _oppSay('oppAiStatus', 'AI: ' + ((r && r.error) || 'backend unreachable'), true); return; }
             const obj = oppParseJson(r.text);
-            if (!obj || typeof obj.assessment !== 'string') { _oppSay('oppAiStatus', 'The AI answered in a shape the tool could not read — try again.', true); return; }
+            if (!obj || typeof obj.assessment !== 'string') { _oppSay('oppAiStatus', _oppAiUnreadable(r), true); return; }
             oppState.aiSuggestion = obj;
             const esc = escapeHtml;
             const moveLabel = { nudge: 'Send a nudge', wait: 'Wait — too soon to touch again', closingNote: 'Send the closing note', closeLost: 'Move to Closed Lost', logOnly: 'Just log it' };
@@ -23464,7 +23914,8 @@ Example:
             const ai = mtgGetAI();
             if (!ai.model) { _oppSay('oppStatus', 'Pick a model in Settings › AI Tools › Meeting transcripts first.', true); return; }
             const now = new Date(); const sn = oppSnoozes();
-            const rows = oppActiveRows();
+            const ticked = oppSelectedIds();
+            const rows = oppActiveRows().filter(function (x) { return !ticked.length || ticked.indexOf(x.id) !== -1; });
             if (!rows.length) { _oppSay('oppStatus', 'Nothing open to review — press Refresh first.', true); return; }
             const btn = document.getElementById('oppReviewBtn'); if (btn) { btn.disabled = true; btn.textContent = 'Reviewing…'; }
             let r = null;
@@ -23483,12 +23934,16 @@ Example:
                         + 'Return ONLY a JSON object, no fences: {"headline":"one sentence on the state of the pipeline","today":[{"id":"","action":"what to do, concretely","why":"one sentence"}],'
                         + '"thisWeek":[{"id":"","action":"","why":""}],"letGo":[{"id":"","action":"closing note or Closed Lost","why":""}],"tidy":[{"id":"","action":"the missing stage, next step or date to fix","why":""}]}. Use only ids from the list.',
                     userContent: 'TODAY: ' + oppYmd(now) + '\nOPEN OPPORTUNITIES (' + rows.length + '):\n' + lines.join('\n'),
-                    maxTokens: 3000, feature: 'opportunity-review'
+                    maxTokens: OPP_AI_MAX_TOKENS, effort: 'medium', feature: 'opportunity-review'
                 });
             } finally { if (btn) { btn.disabled = false; btn.textContent = 'Review my pipeline with AI'; } }
             if (!r || !r.success) { _oppSay('oppStatus', 'AI review: ' + ((r && r.error) || 'backend unreachable'), true); return; }
             const obj = oppParseJson(r.text);
-            if (!obj || !Array.isArray(obj.today)) { _oppSay('oppStatus', 'The AI answered in a shape the tool could not read — try again.', true); return; }
+            // Any ONE of the groups (or a headline) is an answer; demanding `today` refused a
+            // perfectly good review that happened to have nothing for today.
+            const hasAny = obj && typeof obj === 'object' && (typeof obj.headline === 'string' || ['today', 'thisWeek', 'letGo', 'tidy'].some(function (k) { return Array.isArray(obj[k]); }));
+            if (!hasAny) { _oppSay('oppStatus', _oppAiUnreadable(r), true); return; }
+            oppState.aiRaw = '';
             oppState.review = { ymd: oppYmd(now), data: obj, usage: mtgUsageText({ model: r.model, inTok: r.inputTokens, outTok: r.outputTokens }) };
             try { localStorage.setItem(OPP_REVIEW_KEY, JSON.stringify(oppState.review)); } catch (e) { }
             _oppSay('oppStatus', '', false);
