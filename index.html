@@ -13,7 +13,7 @@
          Marketing tab; the rest of the app is untouched by this. -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%231a365d' width='100' height='100' rx='15'/%3E%3Ctext x='50' y='50' font-family='Arial, sans-serif' font-size='45' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='central'%3EEOS%3C/text%3E%3Ccircle cx='85' cy='15' r='8' fill='%233182ce'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="styles.css?v=5.25.0">
+    <link rel="stylesheet" href="styles.css?v=5.26.0">
 </head>
 <body>
     <div class="container">
@@ -2698,51 +2698,84 @@
                     <span id="oppEdStatus" class="opp-status"></span>
                 </div>
 
-                <div class="opp-ai" id="oppAiPanel">
-                    <h4>Plan the next nudge</h4>
-                    <label class="opp-wide">Why you are reaching out now — in a sentence, or paste what you last sent <span class="opp-muted">(optional, but it is what makes the email yours; it goes to the AI with this record, and nowhere else)</span>
-                        <textarea id="oppAiCtx" rows="3"></textarea></label>
-                    <!-- v5.25.0: To sits ABOVE the button — it was inside the result, so he could
-                         not give an address the tool failed to find until after it had failed. -->
-                    <label class="opp-wide">To <span class="opp-muted">(found for you from Redtail, your contacts and your past email — type it here if you already know it)</span>
-                        <input type="text" id="oppAiTo" placeholder="their email address" data-no-composer="1"></label>
-                    <div class="opp-actions">
-                        <button type="button" class="btn btn-secondary" id="oppAiPlanBtn" onclick="oppAiPlan()">Plan the next nudge</button>
-                        <span id="oppAiStatus" class="opp-status"></span>
+                <!-- v5.26.0: the nudge moved OUT of this form into its own composer (below). His
+                     verdict on v5.25.0: "the whole workflow is clunky" — the email lived under a
+                     CRM form he had to scroll through. This button and every row's "AI email"
+                     open the same composer. -->
+                <div class="opp-actions">
+                    <button type="button" class="btn btn-secondary" onclick="oppCompose()">AI: plan the next nudge and draft the email</button>
+                </div>
+            </div>
+
+            <!-- v5.26.0: THE COMPOSER. One focused window: who it is for, what the tool did to
+                 find out about them (every step shown, ticked or explained), the email on the
+                 left and EXACTLY what will land in Gmail on the right — links visible, signature
+                 included — then one button to save the draft and one to write the follow-up back
+                 to Redtail. It sits INSIDE the page div so it inherits the page's styles; a
+                 .modal-overlay is position:fixed and .page is never transformed (rule 61). Static
+                 markup, never unmounted (rule 15). -->
+            <div class="modal-overlay" id="oppComposeModal">
+                <div class="modal opp-compose">
+                    <div class="modal-header opp-compose-head">
+                        <h2 id="oppComposeTitle">Plan the next nudge</h2>
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('oppComposeModal')">Close</button>
                     </div>
-                    <div id="oppAiResult" style="display:none;">
-                        <div id="oppAiOut" class="opp-ai-out"></div>
+                    <div class="opp-compose-body opp-ai" id="oppAiPanel">
+                        <div id="oppWho" class="opp-who"></div>
+                        <ul id="oppSteps" class="opp-steps"></ul>
+                        <div id="oppAiAsk" class="opp-ask" style="display:none;"></div>
+                        <label class="opp-wide">Why you are reaching out now — one sentence is enough <span class="opp-muted">(how you know them, what prompted this; it is what makes the email yours)</span>
+                            <textarea id="oppAiCtx" rows="2"></textarea></label>
+                        <label class="opp-wide">To <span class="opp-muted">(found for you — change it if it is wrong)</span>
+                            <input type="text" id="oppAiTo" placeholder="their email address" data-no-composer="1"></label>
                         <div class="opp-actions">
-                            <button type="button" class="btn btn-secondary" onclick="oppAiApply()">Copy stage, next step and look-again date into the form</button>
+                            <button type="button" class="btn btn-primary" id="oppAiPlanBtn" onclick="oppAiPlan(true)">Draft it</button>
+                            <span id="oppAiStatus" class="opp-status"></span>
                         </div>
-                        <div class="opp-form">
-                            <label class="opp-wide">Subject<input type="text" id="oppAiSubject"></label>
-                            <label class="opp-wide">Email <span class="opp-muted">(edit it freely — this is your draft; your Gmail signature is added when it is saved)</span><textarea id="oppAiBody" rows="11"></textarea></label>
-                            <label class="opp-wide">Or tell the AI what to change <span class="opp-muted">(it keeps everything it read, so this is quick)</span>
-                                <input type="text" id="oppAiReviseQ" placeholder="e.g. mention the end of summer · offer lunch as well · make it shorter · sound less formal"></label>
+                        <div id="oppAiResult" style="display:none;">
+                            <div id="oppAiOut" class="opp-ai-out"></div>
+                            <div class="opp-split">
+                                <div class="opp-split-edit">
+                                    <div class="opp-form">
+                                        <label class="opp-wide">Subject<input type="text" id="oppAiSubject"></label>
+                                        <label class="opp-wide">Email <span class="opp-muted">(yours to edit)</span><textarea id="oppAiBody" rows="12"></textarea></label>
+                                    </div>
+                                    <div id="oppAiLinks" class="opp-links"></div>
+                                    <div class="opp-form">
+                                        <label class="opp-wide">Tell the AI what to change <span class="opp-muted">(it keeps everything it read, so this is quick)</span>
+                                            <input type="text" id="oppAiReviseQ" placeholder="e.g. mention he was on the podcast · make it shorter · sound less formal"></label>
+                                    </div>
+                                    <div class="opp-actions">
+                                        <button type="button" class="btn btn-secondary" id="oppAiReviseBtn" onclick="oppAiRevise()">Revise</button>
+                                        <button type="button" class="opp-chip" onclick="oppAiRevise('Make it shorter and tighter.')">Shorter</button>
+                                        <button type="button" class="opp-chip" onclick="oppAiRevise('Make it warmer and more personal, without adding length.')">Warmer</button>
+                                        <button type="button" class="opp-chip" onclick="oppAiRevise('Make it more direct: state the ask sooner and more plainly.')">More direct</button>
+                                        <button type="button" class="opp-chip" onclick="oppAiRevise('Make it sound less like a sales email and more like a note between two people who know each other.')">Less salesy</button>
+                                        <button type="button" class="opp-chip" onclick="oppAiRevise('Make sure the email clearly invites them to meet, worded exactly as the MEETING RULE describes so my booking link is attached.')">Add booking link</button>
+                                        <button type="button" class="opp-linkbtn" id="oppAiUndoBtn" style="display:none;" onclick="oppAiUndo()">Undo the last change</button>
+                                    </div>
+                                </div>
+                                <div class="opp-split-view">
+                                    <div class="opp-label">Exactly what will land in Gmail</div>
+                                    <div id="oppAiPreview" class="opp-preview"></div>
+                                </div>
+                            </div>
+                            <div class="opp-actions opp-compose-foot">
+                                <button type="button" class="btn btn-primary" onclick="oppAiSaveDraft()">Save to my Gmail drafts</button>
+                                <button type="button" class="btn btn-secondary" id="oppAiApplyBtn" onclick="oppAiApplyAndSave()">Write the follow-up to Redtail</button>
+                                <span class="opp-muted">Nothing sends from here — you send it from Gmail.</span>
+                            </div>
+                            <div id="oppAiRtStatus" class="opp-status"></div>
+                            <div id="oppVoiceNote" class="opp-muted"></div>
+                            <details class="opp-more"><summary>Text-message version</summary>
+                                <div class="opp-form"><label class="opp-wide"><textarea id="oppAiSms" rows="4" aria-label="Text message version"></textarea></label></div>
+                                <div class="opp-actions"><button type="button" class="btn btn-secondary" onclick="oppAiCopySms()">Copy the text message</button></div>
+                            </details>
                         </div>
-                        <div class="opp-actions">
-                            <button type="button" class="btn btn-secondary" id="oppAiReviseBtn" onclick="oppAiRevise()">Revise</button>
-                            <button type="button" class="opp-chip" onclick="oppAiRevise('Make it shorter and tighter.')">Shorter</button>
-                            <button type="button" class="opp-chip" onclick="oppAiRevise('Make it warmer and more personal, without adding length.')">Warmer</button>
-                            <button type="button" class="opp-chip" onclick="oppAiRevise('Make it more direct: state the ask sooner and more plainly.')">More direct</button>
-                            <button type="button" class="opp-chip" onclick="oppAiRevise('Make it sound less like a sales email and more like a note between two people who know each other.')">Less salesy</button>
-                            <button type="button" class="opp-chip" onclick="oppAiRevise('Add one light, natural seasonal or timely line that fits today’s date.')">Seasonal line</button>
-                            <button type="button" class="opp-linkbtn" id="oppAiUndoBtn" style="display:none;" onclick="oppAiUndo()">Undo the last change</button>
-                        </div>
-                        <div class="opp-actions">
-                            <button type="button" class="btn btn-primary" onclick="oppAiSaveDraft()">Save to my Gmail drafts</button>
-                            <button type="button" class="btn btn-secondary" onclick="oppAiPreview()">Preview with my signature and links</button>
-                            <span class="opp-muted">Nothing sends from here — you send it from Gmail.</span>
-                        </div>
-                        <div id="oppAiPreview" class="opp-preview" style="display:none;"></div>
-                        <div id="oppVoiceNote" class="opp-muted"></div>
-                        <div class="opp-form">
-                            <label class="opp-wide">As a text message<textarea id="oppAiSms" rows="4"></textarea></label>
-                        </div>
-                        <div class="opp-actions">
-                            <button type="button" class="btn btn-secondary" onclick="oppAiCopySms()">Copy the text message</button>
-                        </div>
+                        <details class="opp-more"><summary>What I tried, in detail <span class="opp-muted">(paste this to Claude if something looks wrong)</span></summary>
+                            <pre id="oppTrace" class="opp-trace"></pre>
+                            <button type="button" class="opp-linkbtn" onclick="oppCopyDiag()">Copy diagnostic</button>
+                        </details>
                     </div>
                 </div>
             </div>
@@ -4346,9 +4379,10 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '5.25.0';
+        const EOS_VERSION = '5.26.0';
         const EOS_BUILD_DATE = '2026-09-17';
-        const EOS_BUILD_TIME = '18:10'; // v5.25.0: Two build-outs from Hans's third live test of Opportunities, same day. FINDING THE ADDRESS — his words, hitting a linked Redtail contact with no email on file: “Is there not a way for you to try and find out what his email is? …a popup… should ask me, hey, I found two… pick which one… I don't want this to spend 8 minutes trying to sort through 1,000 contacts.” oppResolveEmail now asks Redtail FIRST and ALONE (the emails sub-resource plus oppDeepAddrs scanning the whole contact record); only when Redtail has nothing do two more lookups run IN PARALLEL — the shared contactSearchAll (same one the Meetings referral finder and the Gmail drafter use) and ONE name-only search of his own past mail, oppMineAddrs, reading From/To headers (the name must sit beside the address, or the address's local part must carry it; his own team addresses and other people on the thread are excluded via oppOwnAddrs). One candidate -> used, and the Read line says where it came from. Several -> an eosChoose popup, evidence beside each. Cancel -> no address, no mail read, says so. None -> says what was tried. A pick is remembered on the device (oppState.people) so it is never asked twice; no crawl through Redtail's contact list anywhere. The To box moved ABOVE the Plan button so he can type an address the tool could not find. THIS DEPENDS ON .gs v3.78.0's searchMail nameOnly mode — DEPLOYED to both accounts 2026-09-17 but NOT YET CONFIRMED by his own Access check; the client gates on RT_OPP_NAMEMAIL_GS_MIN via _calGsAtLeast, so against an OLDER backend the name-search step is simply skipped (Redtail and Google Contacts still run) rather than failing. THE DRAFT IS HIS TO SHAPE — the boxes now say they are editable; “tell the AI what to change” (oppAiRevise) sends his hand-edited draft plus his instruction under the same rules and REUSES the already-gathered context, so a revision never re-reads his mail; quick chips (Shorter, Warmer, More direct, Less salesy, Seasonal line) and Undo. “Preview with my signature and links” (oppAiPreview) and the Gmail-drafts save (oppAiSaveDraft) both build the email through the SAME function, oppDraftHtml, so preview and save cannot differ. THE INVITATION RULE moved into the shared meeting module (meetInviteFacts, beside meetFallbackLink) so this block never reads a scheduling link itself: his verdict on a draft listing three clock times with per-slot Calendly links was “why you didn't just have the general 1 hour coffee chat link… give him the generic link to allow him to choose” — so an outbound nudge now offers his GENERIC coffee/lunch pages (the plain words coffee/lunch, turned into links by the existing v3.46.0 assembler) or his scheduling page, and at most ONE suggested day that really has openings — NEVER a clock time, NEVER a per-slot link. LEARNING HIS VOICE: an edited-then-saved draft is kept ON THE DEVICE ONLY (up to five) and the next draft's prompt is told to match its voice, never its content; an unedited save teaches nothing. The three context reads (mail, calendar, Calendly) in oppGatherContext now run in Promise.all rather than in sequence. BUG CAUGHT BEFORE SHIPPING: the preview called sanitizeEmailHtml_ as if it returned a string; it returns {html, blockedImages}, and the preview would have shown “[object Object]”. NOT BUILT: writing a found address back onto the Redtail contact, the daily-brief “who to touch today” section, touch counting. Probes: opportunities-probe 20/20 (O16 rewritten per rule 78, O17 updated, O18/O19/O20 new); mail-agent-probe 39/39 unchanged.
+        const EOS_BUILD_TIME = '19:40'; // v5.26.0: THE COMPOSER — his fourth live test, same day, grade a D: "you didn't find him in Redtail, the whole workflow is clunky. The email doesn't include Calendly links." His screenshot showed a draft opening "I don't think we've had the chance to sit down together yet" to a man who had been a GUEST ON HIS PODCAST; he typed the missing fact himself and asked why there was no Calendly link. HONEST DIAGNOSIS: this session cannot see his live Redtail or the Read line his screenshot cropped, so the exact live cause is UNCONFIRMED — but Redtail's documented contact-emails shape was re-checked and matches the code, so the lookup was sound WHEN it had a contact to look up. The draft's false claim proves it found NOBODY and read NOTHING: the record had no usable linked contact and the tool drafted blind. This release makes that path robust AND makes it explain itself, rather than asserting a cause. WHO: linked contacts are read from whichever key Redtail used (oppContactIdsOf — opportunity_contacts/linked_contacts/contacts; null means the record did not say, so a save never sends a list it was not given). With nobody linked, the NAME IS NOW READ FROM THE OPPORTUNITY TITLE (oppNameFromTitle — capitalised word runs, title-building verbs/nouns stripped, punctuation ends a name) and found through the SAME shared contactSearchAll the Meeting Processor's referral finder uses — his own pointer, half-applied one round early. Two Redtail contacts by that name -> a popup asks with evidence beside each; an unrelated surname is never offered. The found person is queued to link on the NEXT save, ONLY when Redtail said the contact list was empty, never when unknown — adding a name to an unknown list could silently replace others. The address finder now works for a person with no Redtail id at all. ASK, NEVER INVENT: with no email, no meeting, nothing typed or logged, the composer ASKS one question — how he knows them and why now — instead of calling the AI; Draft it again goes ahead regardless. The prompt may no longer state or imply they have never met, or how long, unless the context PROVES it. THE COMPOSER moved OUT of the CRM form into one focused window (#oppComposeModal), opened by every row's "AI email" and a button on the record: who it is for and how known, every lookup as a step ending ticked or explained, the email on the left and EXACTLY what will land in Gmail on the right — links visible, signature included, built by the SAME expression as the save (oppRenderLive/oppDraftHtml) — a plain line naming attached booking links, turning into a warning with the fix the moment the invitation is deleted. "Add booking link" chip. "Write the follow-up to Redtail" applies stage, next step, look-again date and a dated log line through the FORM'S OWN verified oppSave, never a second writer. Text message and the raw trail sit in expanders. LINKS, FIXED TWICE: v5.25.0 hid links behind plain words with no indication, and separately "coffee or lunch" linked only coffee when the title said coffee alone — now the WORD IN THE EMAIL decides what links (oppInviteLinksFor), the rule still decides what the AI is told to offer. THE TRAIL now keeps a RECORD line listing the keys the live Redtail record carried, in the trace expander and Copy diagnostic — the probe caught the composer WIPING it right after writing it; it now survives a reset on purpose. TWO HARNESS LESSONS: a hit-test taken while the modal is still animating in measures the animation, not the layout (rule 6); a "dead Save button" was a fixture whose record lacked the description the list row carried, so the composer correctly asked its question instead. NOT YET CONFIRMED LIVE: whether his contact is now found and the drafts read better is his to judge next try — if still not found, the RECORD and WHO lines say why. NOT BUILT: writing a found address back to Redtail; the daily-brief "who to touch today" section; touch counting. CLIENT-ONLY, TWO-FILE (styles.css bumps too, ?v=5.26.0) — backend UNCHANGED at .gs v3.78.0, NO CLASP ROUND, NOTHING FOR HANS TO DEPLOY. Probes: opportunities-probe 21/21 (O16 rewritten again incl. a real mouse-position hit-test of Save; O21 new); mail-agent-probe 39/39 unchanged.
+        // v5.25.0 (18:10):Two build-outs from Hans's third live test of Opportunities, same day. FINDING THE ADDRESS — his words, hitting a linked Redtail contact with no email on file: “Is there not a way for you to try and find out what his email is? …a popup… should ask me, hey, I found two… pick which one… I don't want this to spend 8 minutes trying to sort through 1,000 contacts.” oppResolveEmail now asks Redtail FIRST and ALONE (the emails sub-resource plus oppDeepAddrs scanning the whole contact record); only when Redtail has nothing do two more lookups run IN PARALLEL — the shared contactSearchAll (same one the Meetings referral finder and the Gmail drafter use) and ONE name-only search of his own past mail, oppMineAddrs, reading From/To headers (the name must sit beside the address, or the address's local part must carry it; his own team addresses and other people on the thread are excluded via oppOwnAddrs). One candidate -> used, and the Read line says where it came from. Several -> an eosChoose popup, evidence beside each. Cancel -> no address, no mail read, says so. None -> says what was tried. A pick is remembered on the device (oppState.people) so it is never asked twice; no crawl through Redtail's contact list anywhere. The To box moved ABOVE the Plan button so he can type an address the tool could not find. THIS DEPENDS ON .gs v3.78.0's searchMail nameOnly mode — DEPLOYED to both accounts 2026-09-17 but NOT YET CONFIRMED by his own Access check; the client gates on RT_OPP_NAMEMAIL_GS_MIN via _calGsAtLeast, so against an OLDER backend the name-search step is simply skipped (Redtail and Google Contacts still run) rather than failing. THE DRAFT IS HIS TO SHAPE — the boxes now say they are editable; “tell the AI what to change” (oppAiRevise) sends his hand-edited draft plus his instruction under the same rules and REUSES the already-gathered context, so a revision never re-reads his mail; quick chips (Shorter, Warmer, More direct, Less salesy, Seasonal line) and Undo. “Preview with my signature and links” (oppAiPreview) and the Gmail-drafts save (oppAiSaveDraft) both build the email through the SAME function, oppDraftHtml, so preview and save cannot differ. THE INVITATION RULE moved into the shared meeting module (meetInviteFacts, beside meetFallbackLink) so this block never reads a scheduling link itself: his verdict on a draft listing three clock times with per-slot Calendly links was “why you didn't just have the general 1 hour coffee chat link… give him the generic link to allow him to choose” — so an outbound nudge now offers his GENERIC coffee/lunch pages (the plain words coffee/lunch, turned into links by the existing v3.46.0 assembler) or his scheduling page, and at most ONE suggested day that really has openings — NEVER a clock time, NEVER a per-slot link. LEARNING HIS VOICE: an edited-then-saved draft is kept ON THE DEVICE ONLY (up to five) and the next draft's prompt is told to match its voice, never its content; an unedited save teaches nothing. The three context reads (mail, calendar, Calendly) in oppGatherContext now run in Promise.all rather than in sequence. BUG CAUGHT BEFORE SHIPPING: the preview called sanitizeEmailHtml_ as if it returned a string; it returns {html, blockedImages}, and the preview would have shown “[object Object]”. NOT BUILT: writing a found address back onto the Redtail contact, the daily-brief “who to touch today” section, touch counting. Probes: opportunities-probe 20/20 (O16 rewritten per rule 78, O17 updated, O18/O19/O20 new); mail-agent-probe 39/39 unchanged.
         // v5.24.0 (16:20):ONE READER OF HIS CORRESPONDENCE — THE NUDGE READS HIS MAIL TOO (client-only, TWO-FILE — styles.css bumps too, link becomes ?v=5.24.0; backend UNCHANGED at .gs v3.77.0, NO CLASP ROUND). His second live test, same afternoon, backend confirmed 3.77.0 by his own Access check: "Plan the next nudge" on a real prospect, and close to verbatim: "the email is a bit flat. Now that you know his email address, why can't you look back at our email chain for better context to reach out with more context? That is the whole point of this section of the EOS Tool. The goal is to get more clients and do a lot of the grunt work for me." MY OWN RATING, given to him plainly: a C — it ignored the reason-for-writing-now he had typed into the note, dropped his own best phrase, offered nothing concrete, and its "Missing" line asked whether the prospect had replied to an earlier email, a question the tool could have answered by reading his mail. v5.23.0 had wired mail-reading into the row's "AI email" button but NOT into this panel: ONE BEHAVIOUR, TWO ENTRY POINTS, WIRED TO ONE — the same class as §5.87, §5.91 and §5.93, committed again. FIX, BY REUSE NOT COPY: gmReadCorrespondence, gmContactFactLines and gmCorrespondenceLines were extracted out of gmailAgentRun, wording UNCHANGED; gmailAgentRun calls them (mail-agent-probe 39/39 before and after, proving the extraction changed nothing), and the nudge's oppGatherContext calls the same three. O17 reads the SOURCE of both and FAILS if either grows a private searchMail call. THE NUDGE NOW GATHERS BEFORE IT WRITES: finds the address in Redtail and fills To; reads the thread (a year, then five if empty; bulk dropped; newest bodies in full); states how long ago and WHO SPOKE LAST as facts the code proves; the last meeting from the Meeting Processor and the calendar, and the next calendar entry; his real Calendly openings. The chain and meetings travel in the USER block as data; the openings are trusted facts and ride in the SYSTEM prompt (the v5.17.0 lesson). EACH SOURCE DEGRADES TO A SENTENCE — none can block the plan. THE PROMPT IS BRIEFING-FIRST (the v5.11.0 lesson): 4-7 sourced, dated bullets for Hans, THEN the email FROM them, built around his own typed reason for writing now. "A FLAT EMAIL IS A FAILED EMAIL": a specific opening, the reason now, one concrete useful thing, one easy ask, 90-150 words, banned filler; anything of THEIRS unanswered is acknowledged first; "missing" lists only what could not be found in anything supplied. HE IS SHOWN THE WORK: a "Read:" line and a "What I found" bullet list. NOT YET CONFIRMED LIVE: whether the drafts are BETTER is his own judgement on his next try — the probe proves the context REACHES the model, not that the prose is good. The Calendly type offered is still the shared picker's GUESS (a 30-minute video type), which may not be his discovery-meeting type — the Read line names it. PRIVACY, unchanged: email bodies reach the AI provider for that one call, as the Gmail-page drafter has done since v5.2.0; nothing is stored beyond the device. Probes: opportunities-probe 17/17 (O17 new), mail-agent 39/39 unchanged.
         // v5.23.0 (15:30):THE LIST, AS A TABLE HE ALREADY KNOWS — PLUS BULK, DELETE, "AI EMAIL" (client-only; TWO-FILE — styles.css bumps too, new .opp-table/.opp-bulk rules, link becomes ?v=5.23.0; pairs with .gs v3.77.0, DEPLOYED TO BOTH ACCOUNTS 2026-09-17 BUT NOT YET CONFIRMED LIVE per rule 12 — the only accepted proof is HIS OWN Access check reading 3.77.0, which has not run as of this writing; until it does, Delete refuses by name and points at Closed Lost instead of failing silently). His first live test of v5.22.0, same afternoon: pressed Refresh, then "Review my pipeline with AI" and got "The AI answered in a shape the tool could not read — try again." Then, in his own words: a checkmark to delete and do "other administrative responses," make it "look like it does in Redtail," a simple "AI email" this person, filters — "built more professionally to leverage AI." (1) THE AI FAILURE, diagnosed from the code before anything was touched: v5.22.0 capped the review at 3,000 output tokens with no effort setting and never read stopReason — current models THINK before writing and thinking counts against the cap, the exact failure .gs v3.73.0's own header documents from v5.5.0, so a reply that had simply run out of room was reported as "a shape the tool could not read," a WRONG-CAUSE diagnostic (rule 63). Both AI helpers now ask for the FULL 8192-token allowance at effort medium and read stopReason FIRST; _oppAiUnreadable names which way it failed — ran out of room (with the token count), returned no text, or genuinely unreadable — and "Copy diagnostic" now carries the raw AI answer, not just the last Redtail read. The review no longer demands a `today` array — a complete review with nothing for today was being refused. THIS IS NOT YET CONFIRMED as the cause of HIS failure — his next press is the test; if it fails again the status line names which way and Copy diagnostic carries the raw answer. (2) THE LIST IS NOW A TABLE in Redtail's own column order (tick, Name with description snippet and flags, Linked contacts, Assigned to, Next steps, Stage, Source, Prob., Close date red when passed, Amount, AI email), sortable heads (asc, desc, back to needs-attention), Active/Closed/All, a search box matching linked-contact names too, filters for stage/type/source/assigned, totals that follow the filters. Every control is STATIC (rule 15) — only the table body re-renders, nothing loses focus. Cards on a phone. Linked contacts are NOT in Redtail's documented LIST response, only the by-id record, so they load in the background after the table paints (oppHydrate), cached, re-read only when the record's last-change stamp moves — a race the probe found (a refresh landing mid-load) is fixed: the older pass now defers to the newer one instead of the new rows never loading. (3) TICK BOXES + A BULK BAR: move to a stage, Closed Won, Closed Lost, set close date, assign, "AI review of these" (scoped to ticked rows when any are ticked), Delete, Clear. Every write is HIS click behind a confirm that NAMES the rows; each record is read then put back — Redtail's own record, unknown fields kept — then the list is RE-READ and any row Redtail did not keep is named rather than silently trusted. Cancel writes nothing, keeps the ticks. DATA-SAFETY FIX found while building: a record that comes back WITHOUT its contact list is now saved WITHOUT linked_contacts, in both the bulk path and the editor (contactsKnown/contactsTouched) — v5.22.0's editor would have sent an empty array and could have UNLINKED EVERYONE the day Redtail ever omitted that field. (4) DELETE, HIS DECISION BY NAME: backend v3.77.0 adds ONE whitelist row (DELETE opportunities/{numeric id}, classic base, no query string; gs-auditor: safe, no blockers). Client gates on 3.77.0 — on an older backend it names BOTH versions and points at Closed Lost without even asking. Reachable from exactly one function; NO AI OR BACKGROUND FUNCTION CAN WRITE TO REDTAIL AT ALL (probe O10, REWRITTEN not deleted, rule 78 — the old "no delete anywhere" claim is retired deliberately, not silently). (5) "AI EMAIL" on every row REUSES the Gmail-page drafter (gmailAgentRun) instead of a second one — it already reads his real threads with the person, the last meeting, the calendar and his Calendly openings. The button resolves linked contacts, RE-READING the record if the cached link predates the record's last change (an email is addressed to a PERSON, a stale cache is not good enough), fills the request with the opportunity, stage, his log and the no-repeat/no-pressure/no-performance-claims rules, fills To from Redtail, names the second contact of a couple, starts the drafter with the chosen address; with no linked contact it opens the record instead of drafting to nobody. This is v5.22.0's "read his Gmail correspondence into the nudge" next-step, closed by reuse. (6) MEASURED at 375/768/1280 with screenshots; one defect found and fixed: the global rule stretching every select to full width put each filter on its own row — the opp-toolbar selects now carry their own width:auto. NOT BUILT THIS RELEASE: the daily-brief "who to touch today" section (his stated next step); touch counting; bulk snooze; inline cell editing. Probe opportunities-probe 16/16 (O10 rewritten; O12 cut AI reply; O13 table/sort/filters/contacts; O14 bulk with a stateful fake backend; O15 delete; O16 AI email hand-off incl. a planted stale link).
         // v5.22.0 (14:10): REDTAIL OPPORTUNITIES — THE PIPELINE, INSIDE THE TOOL (TWO-FILE — styles.css bumps too, link becomes ?v=5.22.0; pairs with .gs v3.76.0, deployed to BOTH accounts today). His ask, 2026-09-17: Redtail now charges $15/user/month for its own AI (MCP) access on opportunities, and he wants that inside this tool instead — "nudge people and get people to continue to move forward on the path towards becoming clients, or getting them off the path" — with follow-ups drafted into Gmail, grounded in researched sales practice, and later surfaced in the daily brief (that last part is NOT built this release, named below). WHAT SHIPPED: a new Opportunities page (four nav touches, rule 27) reading the pipeline live from Redtail — paged, a repeat-id guard, closed stages filtered off the list, a 5-minute TTL, a device-local cache, and a "Copy diagnostic" button for the day Redtail answers in a shape this build cannot read; a no-AI hygiene pass (close date passed, no next step, no stage, no close date, and "no change in Redtail for N days" measured against a per-kind threshold read off HIS OWN stage-name prefixes, OPP_KINDS — COI, prospect, podcast/speaking, and so on) with a device-local snooze; a create/edit form whose Save RE-READS the record after every write and NAMES BY FIELD anything Redtail did not keep — the documented create/update bodies never show stage_id and no example shows a non-null close_date, so a clean 2xx from Redtail is not proof either one survived — and a record whose full read failed CANNOT be saved, on purpose, so nothing can be overwritten blind. Two AI helpers that only PROPOSE: "Review my pipeline" (today / this week / let go, gracefully / tidy up) and "Plan the next nudge" for one opportunity (assessment, suggested stage, next step, look-again date, an email draft and a text-message draft) — the playbook, the compliance bans and the meeting rule live in the SYSTEM prompt, and the CRM record plus his own pasted "what happened last" travel ALONE in the user block, declared as data (the v5.17.0 lesson: an instruction sitting in a block the model is told is untrusted gets ignored right along with everything else in that block, which is the guard working, not failing). The one scheduling line it may offer comes from the shared meetFallbackLink — never a private link chain — and the AI may never invent a specific time. Saving a draft goes through the same SIGNED shared builder every other draft path in this file uses (draftBodyHtml → createReplyDraft); nothing on this page can send anything. RESEARCH HONESTY, kept where the code can be read: only TWO of the cadence numbers in OPP_KINDS are evidence — HBR's 2011 "Short Life of Online Sales Leads" on answering an inbound web lead within the hour, and a vendor study on returns falling off after about six attempts — every other day-count is labelled a practitioner convention, not a finding, and the oft-quoted "80% of sales need five follow-ups" was checked and deliberately left OUT because it is unsourced. DELETE is documented by Redtail and DELIBERATELY NOT WHITELISTED — taking someone "off the path" is a stage move to Closed Lost, which keeps the history; a delete would not, and that is Hans's call to make later, by name, not a default. NO NEW CAPABILITY KEY, NO NEW SCOPE, NO CONSENT RUN — the client gates on the backend VERSION alone (RT_OPP_GS_MIN, rules 12/63c): against an old backend the page NAMES BOTH VERSIONS and sends nothing, and — rule 51 — the buttons that would open the page still exist rather than vanishing; only the ACTION is gated. BACKEND v3.76.0 WAS DEPLOYED TO BOTH ACCOUNTS TODAY (Hans @137, Amanda @29) — but per apps-script.md rule 12, THE ONLY ACCEPTED PROOF A .gs RELEASE IS ACTUALLY LIVE IS HIS OWN ACCESS CHECK READING 3.76.0, and that check has NOT yet run. Until it does, treat the deploy as unconfirmed: if it turns out stale, this page explains itself with the version-gate sentence above rather than failing silently or writing anything malformed. NOT BUILT THIS RELEASE, said outright rather than implied: the daily-brief integration (his own stated next step); touch counting (a Redtail opportunity carries no touch counter at all — the idle clock here is updated_at, a proxy, not a count); reading his Gmail thread with a prospect into the nudge (the Gmail-page drafter's thread reader is the reuse target for that, not duplicated here — memory feedback_reuse_before_rebuild); a full Calendly slot picker inside the nudge (only the one fallback link). OPEN CONTRACT QUESTIONS his first live use will answer: whether a real POST/PUT actually keeps stage_id and close_date (the docs don't show either); whether a PUT carrying linked_contacts REPLACES the list or duplicates it; whether the opportunity deep link (smf.crm3.redtailtechnology.com/opportunities/{id}) is right; the real shape of lists/database_users. THE DEPLOY REPO IS PUBLIC: no prospect's name may ever land in this file — the two opportunities he asked to have on hand go in through the FORM, by his own hand, after this ships, never seeded into a fixture, a default or a comment. gs-auditor: safe, no blockers. Probe opportunities-probe 11/11 (O1–O11, new).
@@ -8158,7 +8192,18 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.25.0 &mdash; 2026-09-17 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.26.0 &mdash; 2026-09-17 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">The nudge now finds a person even when nobody is linked in Redtail, asks instead of guessing when it has nothing to go on, and lives in its own window with the exact email always in view.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>When no one is linked to an opportunity, the tool now reads the name out of the opportunity&rsquo;s own title and looks them up in Redtail</strong> &mdash; two matches and it asks you which one, with the evidence beside each; one match and it is used, remembered for next time, and only offered to be linked back onto the opportunity when Redtail&rsquo;s own contact list was genuinely empty.</li>'
+                + '<li><strong>With nothing on file &mdash; no email, no meeting, no notes &mdash; the tool now asks you in one sentence how you know them and why you are reaching out, instead of guessing</strong> &mdash; and it can no longer claim you have never met someone unless the record actually proves it.</li>'
+                + '<li><strong>&ldquo;Plan the next nudge&rdquo; now opens in its own window</strong> instead of living inside the opportunity form &mdash; who it is for, every step the tool took to find them, and exactly what will land in Gmail, side by side and always visible.</li>'
+                + '<li><strong>Booking links are now shown plainly instead of hidden behind the words</strong> &mdash; a line under the draft says which link is attached, or warns you and tells you how to add one back if you edit it out; and an email offering &ldquo;coffee or lunch&rdquo; now links both words, not just whichever one happened to be in the opportunity&rsquo;s title.</li>'
+                + '<li>The &ldquo;What I tried&rdquo; trail now always shows what Redtail actually returned for the record, so a missed match is something you can read rather than guess at.</li>'
+                + '</ul>'
+                + '</div>'
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.25.0 &mdash; 2026-09-17</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">The nudge now finds the address itself, and the draft is yours to shape before it goes anywhere.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>When a linked Redtail contact has no email on file, the tool now looks for one</strong> &mdash; Redtail first, then (only if Redtail has nothing) your Google contacts and a search of your own past mail by name. One match is used automatically; more than one and it asks you which, with the evidence beside each, and remembers your pick so it is never asked twice.</li>'
@@ -22819,7 +22864,7 @@ Example:
             }
         }
 
-        // ==================== REDTAIL OPPORTUNITIES — THE PIPELINE (v5.22.0; table + bulk v5.23.0; the nudge v5.24.0-v5.25.0) ====================
+        // ==================== REDTAIL OPPORTUNITIES — THE PIPELINE (v5.22.0; table + bulk v5.23.0; the nudge v5.24.0-v5.25.0; the composer v5.26.0) ====================
         //
         // Hans's ask, 2026-09-17: Redtail now charges per user per month for its own AI
         // access; he wants Opportunities INSIDE this tool instead — "nudge people and get
@@ -22935,8 +22980,7 @@ Example:
                 probability: (o.probability === null || o.probability === undefined || o.probability === '') ? '' : String(o.probability),
                 lastChange: last, deleted: !!o.deleted,
                 // The documented LIST carries no contacts; if the live one does, use them.
-                contactIds: (Array.isArray(o.opportunity_contacts) ? o.opportunity_contacts : [])
-                    .map(function (c) { return c && c.contact_id != null ? String(c.contact_id) : ''; }).filter(Boolean)
+                contactIds: oppContactIdsOf(o) || []
             };
         }
         // null = a shape this build cannot read (an ERROR to report); [] = a real empty list.
@@ -23031,7 +23075,8 @@ Example:
             if (String(got.next_step || '').trim() !== String(sent.next_step || '').trim()) lost.push('next step');
             if (String(got.name || '').trim() !== String(sent.name || '').trim()) lost.push('name');
             const want = (sent.linked_contacts || []).length;
-            const have = Array.isArray(got.opportunity_contacts) ? got.opportunity_contacts.length : null;
+            const haveIds = oppContactIdsOf(got);
+            const have = haveIds ? haveIds.length : null;
             if (have !== null && have !== want) lost.push('linked contacts (' + have + ' of ' + want + ')');
             return lost;
         }
@@ -23230,6 +23275,11 @@ Example:
             if (!s || !list || !q) return;
             oppState.wired = true;
             s.addEventListener('input', oppContactSearchInput);
+            let lt = null;
+            ['oppAiBody', 'oppAiSubject', 'oppAiTo'].forEach(function (id) {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener('input', function () { clearTimeout(lt); lt = setTimeout(oppRenderLive, 250); });
+            });
             let qt = null;
             q.addEventListener('input', function () { clearTimeout(qt); qt = setTimeout(function () { oppState.q = q.value; oppRenderTable(); }, 200); });
             [['oppFStage', 'fStage'], ['oppFType', 'fType'], ['oppFSource', 'fSource'], ['oppFAssigned', 'fAssigned']].forEach(function (p) {
@@ -23349,7 +23399,7 @@ Example:
                             + cell('Prob.', r.probability !== '' ? esc(r.probability) + '%' : '', 'opp-num')
                             + cell('Close date', esc(oppFmtDay(r.closeDate)), late ? 'opp-late' : '')
                             + cell('Amount', esc(oppFmtMoney(r.amount) || '$0'), 'opp-num')
-                            + '<td class="opp-c-act"><button type="button" class="btn btn-secondary opp-mini" onclick="oppAiEmail(\'' + esc(r.id) + '\')">AI email</button></td></tr>';
+                            + '<td class="opp-c-act"><button type="button" class="btn btn-secondary opp-mini" onclick="oppCompose(\'' + esc(r.id) + '\')">AI email</button></td></tr>';
                     }).join('') + '</tbody></table>';
             }
             oppRenderBulk();
@@ -23387,8 +23437,8 @@ Example:
                     if (!ids) {
                         const r = await _oppRt('GET', 'opportunities/' + encodeURIComponent(row.id));
                         const one = (r && r.success) ? oppExtractOne(r.body) : null;
-                        if (!one || !Array.isArray(one.opportunity_contacts)) continue;
-                        ids = one.opportunity_contacts.map(function (c) { return String(c.contact_id); });
+                        ids = one ? oppContactIdsOf(one) : null;
+                        if (!ids) continue;
                     }
                     oppState.links[row.id] = { ids: ids, at: row.lastChange };
                     for (let j = 0; j < ids.length && j < 4; j++) {
@@ -23421,7 +23471,8 @@ Example:
             const rec = {};
             Object.keys(one).forEach(function (k) { if (OPP_READONLY_KEYS.indexOf(k) === -1) rec[k] = one[k]; });
             Object.assign(rec, change);
-            if (Array.isArray(one.opportunity_contacts)) rec.linked_contacts = one.opportunity_contacts.map(function (c) { return { contact_id: Number(c.contact_id) }; });
+            const keepIds = oppContactIdsOf(one);
+            if (keepIds) rec.linked_contacts = keepIds.map(function (cid) { return { contact_id: Number(cid) }; });
             return rec;
         }
         function _oppNamesOf(ids) {
@@ -23591,8 +23642,9 @@ Example:
             return Object.keys(tally).map(function (a) { return { email: a, score: tally[a] }; }).sort(function (a, b) { return b.score - a.score; });
         }
         async function oppResolveEmail(contact, say) {
-            const cid = String(contact.id); const name = String(contact.name || '').trim();
-            const cached = oppState.people[cid] && oppState.people[cid].email;
+            const cid = String(contact.id || ''); const name = String(contact.name || '').trim();
+            const key = cid || ('name:' + name.toLowerCase());   // a person found by name has no Redtail id
+            const cached = oppState.people[key] && oppState.people[key].email;
             if (cached) return { email: cached, via: 'remembered on this device', tried: [] };
             if (typeof say === 'function') say('Looking for ' + (name ? name + '’s' : 'their') + ' email address…');
             const own = oppOwnAddrs();
@@ -23603,8 +23655,8 @@ Example:
             // other sources are not asked at all — no wasted calls, and no "which one?" popup
             // because Google Contacts happens to hold an old address as well.
             const settle = function (list) { return Promise.all(list.map(function (j) { return j.catch(function () { }); })); };
-            tried.push('Redtail');
-            await settle([
+            if (cid) tried.push('Redtail');
+            await settle(!cid ? [] : [
                 (async function () {
                     const er = await _oppRt('GET', 'contacts/' + encodeURIComponent(cid) + '/emails');
                     if (er && er.success) _briefExtractAddrs(er.body).concat(oppDeepAddrs(er.body)).forEach(function (e) { add(e, 'Redtail'); });
@@ -23647,23 +23699,185 @@ Example:
                 email = pick && cands[pick] ? pick : '';
                 if (!email) return { email: '', via: '', tried: tried, declined: true };
             }
-            if (email) { oppState.people[cid] = Object.assign({}, oppState.people[cid] || {}, { name: name, email: email }); oppSaveCache(); }
+            if (email) { oppState.people[key] = Object.assign({}, oppState.people[key] || {}, { name: name, email: email }); oppSaveCache(); }
             return { email: email, via: email ? cands[email].join(' and ') : '', tried: tried };
         }
-        // The row's "AI email" opens the record and runs the SAME planner the panel runs —
-        // ONE drafter for an opportunity, with the playbook, the chain, the calendar, the
-        // invitation rule and the revise loop. (v5.23.0 sent this button to the Gmail page's
-        // drafter; once the planner could read mail too, two drafters of different quality
-        // behind two buttons on one page was the entry-point split again, by design this time.)
-        async function oppAiEmail(id) {
+        // ---- v5.26.0: THE COMPOSER ---------------------------------------------------------------
+        // His grade for v5.25.0 was a D: "you didn't find him in Redtail, the whole workflow is
+        // clunky. The email doesn't include Calendly links." The draft had opened "I don't think
+        // we've had the chance to sit down together yet" to a man who had been a guest on his
+        // podcast — it had found NOBODY, read nothing, and then asserted a history it could not
+        // know. Four changes, each aimed at one of those sentences:
+        //   WHO      the person is worked out in the open: the linked contact, else the NAME IN
+        //            THE OPPORTUNITY'S TITLE searched through the shared contact search (what he
+        //            pointed at: "look at how you handle the referrals in the Meeting tab"), with
+        //            a popup when there is more than one
+        //   STEPS    every lookup is a visible line that ends ticked or explained, and the raw
+        //            trail is one click away — so the next screenshot says what happened
+        //   ASK      with nothing on file the tool ASKS one question instead of inventing a
+        //            relationship, and the prompt may never assert an absence of history
+        //   LINKS    what will land in Gmail is always on screen beside the text, links visible,
+        //            and a plain line says which booking links are attached
+        function oppTrace(label, detail) {
+            const t = (oppState.trace = oppState.trace || []);
+            let d = '';
+            try { d = typeof detail === 'string' ? detail : JSON.stringify(detail); } catch (e) { d = String(detail); }
+            t.push(new Date().toLocaleTimeString() + '  ' + label + (d ? '  ' + String(d).slice(0, 600) : ''));
+            if (t.length > 60) t.shift();
+            const el = document.getElementById('oppTrace');
+            if (el) el.textContent = t.join('\n');
+        }
+        // The linked people on a record, whichever key Redtail used. null = the record did not
+        // say (so a save must NOT send a contact list); [] = it said "nobody".
+        function oppContactIdsOf(one) {
+            if (!one || typeof one !== 'object') return null;
+            const arr = [one.opportunity_contacts, one.linked_contacts, one.contacts].find(Array.isArray);
+            if (!arr) return null;
+            return arr.map(function (c) { return (c && typeof c === 'object') ? (c.contact_id != null ? c.contact_id : c.id) : c; })
+                .filter(function (v) { return v != null && String(v).trim() !== ''; }).map(String);
+        }
+        // A person's name inside an opportunity's title ("Coffee with First Last to discuss…").
+        // Runs of capitalised words, with the verbs and nouns a title is built from removed.
+        const OPP_TITLE_STOP = ['close', 'meet', 'coffee', 'lunch', 'breakfast', 'dinner', 'have', 'send', 'grab', 'book', 'call', 'email', 'follow', 'follow-up', 'up',
+            'client', 'clients', 'as', 'and', 'with', 'the', 'a', 'an', 'on', 'to', 'for', 'after', 'before', 'from', 'of', 'at', 'in', 'our', 'us', 'podcast', 'discovery', 'meeting',
+            'warm', 'nudge', 'reach', 'out', 'introduce', 'introduction', 'referral', 'guest', 'speaker', 'speaking', 'prospect', 'coi', 'cpa', 'hnw', 'llc', 'inc', 'firm', 'law', 'group',
+            'intelligent', 'money', 'minute', 'investing', 'new', 'business', 'existing', 'review', 'rollover', 'get', 'set', 'setup', 'schedule'];
+        function oppNameFromTitle(title) {
+            // Punctuation ENDS a name: "Jo Sample (Big Law Firm)" must not read as "Jo Sample Big".
+            const toks = String(title || '').replace(/[()\[\],;:]/g, ' | ').split(/\s+/).filter(Boolean);
+            let run = [];
+            const runs = [];
+            toks.forEach(function (w) {
+                const clean = w.replace(/[.!?]+$/, '');
+                const isName = /^[A-Z][A-Za-z'’-]+$/.test(clean) && OPP_TITLE_STOP.indexOf(clean.toLowerCase()) === -1;
+                if (isName) run.push(clean); else { if (run.length) runs.push(run); run = []; }
+            });
+            if (run.length) runs.push(run);
+            const hit = runs.find(function (r) { return r.length >= 2; });
+            return hit ? hit.slice(0, 3).join(' ') : '';
+        }
+        async function oppResolvePerson(ed, f, say) {
+            const linked = f.contacts || [];
+            if (linked.length) {
+                const c = linked[0];
+                if (!c.name) {
+                    try {
+                        const cr = await _oppRt('GET', 'contacts/' + encodeURIComponent(c.id));
+                        const got = (cr && cr.success) ? mtgExtractRtClients([cr.body], 0) : [];
+                        if (got[0] && got[0].name) c.name = got[0].name;
+                    } catch (e) { }
+                }
+                oppTrace('WHO: linked contact on the record', { id: c.id, name: c.name, others: linked.length - 1 });
+                return { id: String(c.id), name: c.name || '', via: 'the contact linked to this opportunity in Redtail', linked: true };
+            }
+            const guess = oppNameFromTitle(f.name);
+            oppTrace('WHO: the record came back with no linked contact', { contactsKnown: !!ed.contactsKnown, nameReadFromTitle: guess || '(none)' });
+            if (!guess) return { id: '', name: '', via: '', notFound: true };
+            say('Searching Redtail for ' + guess + '…');
+            let s = null;
+            try { s = await contactSearchAll(guess); } catch (e) { s = { candidates: [], notes: [String(e && e.message || e)] }; }
+            const toks = guess.toLowerCase().split(/\s+/);
+            const match = (s.candidates || []).filter(function (c) {
+                const n = String((c && c.name) || '').toLowerCase();
+                return n.indexOf(toks[0]) !== -1 && n.indexOf(toks[toks.length - 1]) !== -1;
+            });
+            oppTrace('WHO: shared contact search for "' + guess + '"', { found: match.map(function (c) { return c.source + ':' + c.name + (c.id ? '#' + c.id : '') + (c.email ? ' <has email>' : ''); }), notes: s.notes || [] });
+            const rt = match.filter(function (c) { return c.source === 'Redtail' && c.id; });
+            let pick = null;
+            if (rt.length === 1) pick = rt[0];
+            else if (rt.length > 1) {
+                const v = await eosChoose({
+                    title: 'Which ' + guess + ' is this?',
+                    message: 'Redtail has ' + rt.length + ' contacts by that name. Pick the right one.',
+                    options: rt.slice(0, 6).map(function (c, i) { return { label: c.name + (c.email ? '  —  ' + c.email : '') + '  —  Redtail #' + c.id, value: String(i) }; })
+                });
+                if (v == null || !rt[Number(v)]) return { id: '', name: guess, via: '', declined: true };
+                pick = rt[Number(v)];
+            }
+            if (pick) {
+                // Link them on the NEXT save — but only when Redtail told us the list was empty.
+                // If the record never said who is linked, adding one name could replace others.
+                let willLink = false;
+                if (ed.contactsKnown && !(ed.contacts || []).length) { ed.contacts.push({ id: String(pick.id), name: pick.name }); ed.contactsTouched = true; oppRenderContacts(); willLink = true; }
+                return { id: String(pick.id), name: pick.name, email: pick.email || '', via: 'a Redtail search for the name in the title', linked: false, willLink: willLink };
+            }
+            const other = match.filter(function (c) { return c.email; });
+            if (other.length) return { id: '', name: other[0].name || guess, email: other.length === 1 ? String(other[0].email).toLowerCase() : '', via: other[0].source || 'your contacts', linked: false };
+            return { id: '', name: guess, via: '', notFound: true };
+        }
+        // One visible line per lookup: running, done, or explained.
+        function oppStep(key, text, state) {
+            const st = (oppState.steps = oppState.steps || []);
+            let row = st.find(function (x) { return x.key === key; });
+            if (!row) { row = { key: key }; st.push(row); }
+            row.text = text; row.state = state || 'run';
+            const ul = document.getElementById('oppSteps');
+            if (!ul) return;
+            const mark = { run: '…', ok: '✓', warn: '!' };
+            ul.innerHTML = st.map(function (x) { return '<li class="opp-step-' + escapeHtml(x.state) + '"><span class="opp-step-mark">' + mark[x.state] + '</span> ' + escapeHtml(x.text) + '</li>'; }).join('');
+        }
+        function oppRenderWho(person, email, via) {
+            const el = document.getElementById('oppWho');
+            if (!el) return;
+            const esc = escapeHtml;
+            if (!person || (!person.name && !email)) { el.innerHTML = '<strong>For:</strong> <span class="opp-muted">nobody identified yet — link a contact on the opportunity, or type their address in To.</span>'; return; }
+            el.innerHTML = '<strong>For:</strong> ' + esc(person.name || '(name unknown)') + (email ? ' · ' + esc(email) : ' · <span class="opp-muted">no address found</span>')
+                + (person.via ? ' <span class="opp-muted">— ' + esc(person.via) + (via ? '; address from ' + esc(via) : '') + '</span>' : '')
+                + (person.willLink ? ' <span class="opp-muted">(will be linked to this opportunity when you write to Redtail)</span>' : '');
+        }
+        // What will land in Gmail, always on screen, built by the SAME expression as the save.
+        function oppRenderLive() {
+            const box = document.getElementById('oppAiPreview');
+            const lk = document.getElementById('oppAiLinks');
+            if (!box || !lk) return;
+            const body = String((document.getElementById('oppAiBody') || {}).value || '');
+            if (!body.trim()) { box.innerHTML = ''; lk.textContent = ''; return; }
+            box.innerHTML = '<div class="opp-preview-head">To: ' + escapeHtml(String(document.getElementById('oppAiTo').value || '(no address yet)'))
+                + ' · Subject: ' + escapeHtml(String(document.getElementById('oppAiSubject').value || '(none)')) + '</div>'
+                + sanitizeEmailHtml_(oppDraftHtml(body), true).html;   // an OBJECT, not a string (the v5.25.0 probe catch)
+            const inv = oppState.lastInvite || {};
+            const k = oppInviteLinksFor(body);
+            const parts = [];
+            if (k.coffee) parts.push('the word “coffee” links to ' + k.coffee);
+            if (k.lunch) parts.push('the word “lunch” links to ' + k.lunch);
+            if (!parts.length && inv.remoteUrl && body.indexOf(inv.remoteUrl) !== -1) parts.push('your scheduling page is in the email: ' + inv.remoteUrl);
+            const has = parts.length > 0;
+            lk.className = 'opp-links' + (has ? '' : ' warn');
+            lk.textContent = has ? 'Booking links in this email: ' + parts.join('; ') + '.'
+                : ((inv.coffeeAny || inv.lunchAny || inv.remoteUrl)
+                    ? 'No booking link is in this email yet. Press “Add booking link”' + ((inv.coffeeAny || inv.lunchAny)
+                        ? ', or write the word ' + [inv.coffeeAny ? 'coffee' : '', inv.lunchAny ? 'lunch' : ''].filter(Boolean).join(' or ') + ' and it links itself.'
+                        : ', or paste ' + inv.remoteUrl + ' yourself.')
+                    : 'No scheduling links are saved in Settings › Meeting Scheduling Links, so none can be added.');
+        }
+        // The ONE way into the composer: every row's "AI email" and the button on the record.
+        async function oppCompose(id) {
             const gate = oppGate();
             if (gate) { showToast(gate, 'error'); return; }
-            await oppOpen(String(id));
+            if (id != null && (!oppState.editing || oppState.editing.id !== String(id))) await oppOpen(String(id), { quiet: true });
             const ed = oppState.editing;
-            if (!ed || ed.id !== String(id) || ed.readFailed) return;
-            const panel = document.getElementById('oppAiPanel');
-            if (panel && panel.scrollIntoView) panel.scrollIntoView({ block: 'start' });
-            await oppAiPlan();
+            if (!ed) return;
+            if (ed.readFailed) { showToast('That record could not be read from Redtail — see the message on the form.', 'error'); return; }
+            oppAiReset();
+            const f = oppReadForm();
+            const t = document.getElementById('oppComposeTitle');
+            if (t) t.textContent = f.name || 'Plan the next nudge';
+            openModal('oppComposeModal');
+            await oppAiPlan(false);
+        }
+        // Stage + next step + look-again date + a dated log line, written to Redtail in one click
+        // — through the SAME oppSave the form uses (read back and verified), never a second writer.
+        async function oppAiApplyAndSave() {
+            if (!oppState.aiSuggestion) return;
+            oppAiApply();
+            const log = document.getElementById('oppEdLog');
+            const subject = String((document.getElementById('oppAiSubject') || {}).value || '').trim();
+            if (log && !log.value) log.value = 'Planned the next nudge' + (subject ? ' (“' + subject + '”)' : '') + '.';
+            const btn = document.getElementById('oppAiApplyBtn'); if (btn) btn.disabled = true;
+            _oppSay('oppAiRtStatus', 'Writing to Redtail…', false);
+            try { await oppSave(); } finally { if (btn) btn.disabled = false; }
+            const said = String((document.getElementById('oppEdStatus') || {}).textContent || '');
+            _oppSay('oppAiRtStatus', said || 'Done.', !/✓/.test(said));
         }
         // When an AI answer cannot be used, say WHICH way it failed. v5.22.0 said "a shape
         // the tool could not read" about a reply that had simply run out of room: current
@@ -23677,9 +23891,9 @@ Example:
             return 'The AI answered in a shape the tool could not read — press “Copy diagnostic” below and paste it to Claude.';
         }
         function oppCopyDiag() {
-            if (!oppState.rawSample && !oppState.aiRaw) { showToast('Nothing captured yet — press Refresh first.'); return; }
+            if (!oppState.rawSample && !oppState.aiRaw && !(oppState.trace && oppState.trace.length)) { showToast('Nothing captured yet — press Refresh first.'); return; }
             if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText((oppState.aiRaw ? 'LAST AI ANSWER: ' + oppState.aiRaw + '\n\n' : '') + 'REDTAIL LIST: ' + (oppState.rawSample || '(none)')).then(function () { showToast('Diagnostic copied — paste it to Claude.'); },
+                navigator.clipboard.writeText(((oppState.trace && oppState.trace.length) ? 'WHAT I TRIED:\n' + oppState.trace.join('\n') + '\n\n' : '') + (oppState.aiRaw ? 'LAST AI ANSWER: ' + oppState.aiRaw + '\n\n' : '') + 'REDTAIL LIST: ' + (oppState.rawSample || '(none)')).then(function () { showToast('Diagnostic copied — paste it to Claude.'); },
                     function () { showToast('Copy failed.', 'error'); });
             } else { showToast('Copy failed.', 'error'); }
         }
@@ -23784,7 +23998,7 @@ Example:
             const sec = document.getElementById('oppEditorSection');
             if (sec && sec.scrollIntoView) sec.scrollIntoView({ block: 'start' });
         }
-        async function oppOpen(id) {
+        async function oppOpen(id, opts) {
             const gate = oppGate();
             if (gate) { showToast(gate, 'error'); return; }
             const cached = (oppState.rows || []).find(function (r) { return r.id === String(id); });
@@ -23797,16 +24011,18 @@ Example:
             oppRenderEditor(); oppAiReset();
             _oppSay('oppEdStatus', 'Reading the full record from Redtail…', false);
             const sec = document.getElementById('oppEditorSection');
-            if (sec && sec.scrollIntoView) sec.scrollIntoView({ block: 'start' });
+            if (sec && sec.scrollIntoView && !(opts && opts.quiet)) sec.scrollIntoView({ block: 'start' });
             const r = await _oppRt('GET', 'opportunities/' + encodeURIComponent(id));
             if (!oppState.editing || oppState.editing.id !== String(id)) return;   // he moved on
             const one = (r && r.success) ? oppExtractOne(r.body) : null;
             if (!one) { oppState.editing.loading = false; oppState.editing.readFailed = true; _oppSay('oppEdStatus', 'Could not read the full record — ' + ((r && r.error) || 'unreadable answer') + '. Saving is off until it reads, so nothing can be overwritten blind.', true); return; }
             oppState.editing.record = one;
             oppState.editing.loading = false;
-            oppState.editing.contactsKnown = Array.isArray(one.opportunity_contacts);
-            oppState.editing.contacts = (Array.isArray(one.opportunity_contacts) ? one.opportunity_contacts : [])
-                .map(function (c) { return { id: String(c.contact_id), name: '' }; });
+            const linkedIds = oppContactIdsOf(one);
+            oppState.editing.contactsKnown = !!linkedIds;
+            oppState.editing.contacts = (linkedIds || []).map(function (cid) { return { id: cid, name: '' }; });
+            // The diagnostic that was missing on 2026-09-17: WHICH keys the live record carries.
+            oppTrace('RECORD ' + id, { keys: Object.keys(one), linkedContactIds: linkedIds });
             oppRenderEditor();
             // Names are a courtesy read; an id with no name still saves correctly.
             for (let i = 0; i < oppState.editing.contacts.length && i < 6; i++) {
@@ -23920,7 +24136,14 @@ Example:
         function oppAiReset() {
             ['oppAiTo', 'oppAiSubject', 'oppAiBody', 'oppAiSms', 'oppAiCtx', 'oppAiReviseQ'].forEach(function (id) { const el = document.getElementById(id); if (el) el.value = ''; });
             const out = document.getElementById('oppAiOut'); if (out) { out.innerHTML = ''; }
-            ['oppAiResult', 'oppAiPreview', 'oppAiUndoBtn'].forEach(function (id) { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+            ['oppAiResult', 'oppAiUndoBtn', 'oppAiAsk'].forEach(function (id) { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+            ['oppWho', 'oppSteps', 'oppAiPreview', 'oppAiLinks', 'oppAiRtStatus'].forEach(function (id) { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
+            // The RECORD line (which keys the live Redtail record carried) SURVIVES a reset. The
+            // probe caught the composer wiping it a moment after the record was read — the one
+            // line that would have explained 2026-09-17's "you didn't find him in Redtail".
+            oppState.steps = [];
+            oppState.trace = (oppState.trace || []).filter(function (l) { return /  RECORD /.test(l); }).slice(-1);
+            const traceEl = document.getElementById('oppTrace'); if (traceEl) traceEl.textContent = oppState.trace.join('\n');
             oppState.aiSuggestion = null; oppState.lastFound = null; oppState.lastInvite = null; oppState.aiOriginalBody = ''; oppState.versions = [];
             oppRenderVoiceNote();
             _oppSay('oppAiStatus', '', false);
@@ -23954,48 +24177,66 @@ Example:
         // Everything the tool can find out about this person BEFORE it writes, through the
         // SAME readers the Gmail-page drafter uses (gmReadCorrespondence, _gmLastMeeting,
         // _gmCalendarLookup, _gmCalendlySlots) and the shared invitation rule (meetInviteFacts)
-        // — never a second copy. v5.25.0: the three reads run AT ONCE (each is a backend
-        // round trip of a few seconds; in sequence they were most of the wait), and the
-        // address is FOUND rather than hoped for. Every source degrades to a sentence in
-        // `readSummary`; none of them can stop the plan.
-        // Returns { lines: [...for the USER block: it is data], meetRule: '...for the SYSTEM
-        // prompt: an instruction carrying trusted facts', readSummary: '...for him' }.
+        // — never a second copy. The three reads run AT ONCE. v5.26.0: WHO is worked out first
+        // and in the open (oppResolvePerson), every lookup is a visible step, and `thin` says
+        // when NOTHING was found — so the planner can ask him instead of inventing a history.
+        // Returns { lines: [...USER block: data], meetRule: '...SYSTEM prompt: trusted facts',
+        //           readSummary, person, email, thin }.
         async function oppGatherContext(ed, f, note, say) {
-            const out = { lines: [], meetRule: '', readSummary: '', invite: null };
+            const out = { lines: [], meetRule: '', readSummary: '', invite: null, person: null, email: '', thin: false };
             const read = [];
             const toEl = document.getElementById('oppAiTo');
             const typedTo = String((toEl || {}).value || '').trim();
-            const first = (f.contacts || [])[0] || null;
-            const name = (first && first.name) || '';
+            oppStep('who', 'Working out who this is for…', 'run');
+            const person = await oppResolvePerson(ed, f, function (m) { oppStep('who', m, 'run'); });
+            out.person = person;
+            const name = (person && person.name) || '';
+            oppStep('who', name ? 'For ' + name + ' — ' + (person.via || 'named in the title, but not found in Redtail or your contacts')
+                : (person && person.declined ? 'You did not pick a contact.' : 'Nobody is linked to this opportunity and no name could be read from its title.'), name && !person.notFound ? 'ok' : 'warn');
             let email = /^[^\s@<>"']+@[^\s@<>"']+\.[a-z]{2,}$/i.test(typedTo) ? typedTo.toLowerCase() : '';
-            if (!email && first) {
-                const found = await oppResolveEmail(first, say);
-                email = found.email;
-                if (email) { if (toEl) toEl.value = email; read.push('address found in ' + found.via); }
-                else read.push(found.declined ? 'you did not pick an address, so no mail was read'
-                    : 'no address found for ' + (name || 'the linked contact') + ' (tried ' + (found.tried.join(', ') || 'Redtail') + ') — type it in To and run this again');
-            } else if (!email) read.push('no contact is linked, so there was no one to look up');
-            say('Reading your mail, your calendar and your Calendly openings…');
+            let via = email ? 'what you typed' : '';
+            if (!email && person && person.email) { email = String(person.email).toLowerCase(); via = person.via; }
+            if (!email && name) {
+                oppStep('addr', 'Looking for ' + name + '’s email address…', 'run');
+                const found = await oppResolveEmail({ id: (person && person.id) || '', name: name }, function () { });
+                email = found.email; via = found.via;
+                oppTrace('ADDRESS', { found: !!email, via: found.via, tried: found.tried, declined: !!found.declined });
+                if (!email) read.push(found.declined ? 'you did not pick an address, so no mail was read'
+                    : 'no address found for ' + name + ' (tried ' + (found.tried.join(', ') || 'Redtail') + ') — type it in To and press Draft it');
+                oppStep('addr', email ? 'Address ' + email + ' — from ' + via : (found.declined ? 'You did not pick an address.' : 'No address found for ' + name + ' (tried ' + (found.tried.join(', ') || 'Redtail') + '). Type it in To.'), email ? 'ok' : 'warn');
+            } else if (email) oppStep('addr', 'Address ' + email + ' — from ' + via, 'ok');
+            else if (!name) read.push('nobody was identified, so there was no one to look up');
+            if (email) { if (toEl && !toEl.value) toEl.value = email; read.push('address from ' + via); }
+            out.email = email;
+            oppRenderWho(person, email, via);
             const intentText = f.name + ' ' + f.nextStep + ' ' + note;
             const mode = (typeof _meetModeFor === 'function') ? _meetModeFor(intentText) : '';
             const gate = (typeof gmailAgentGate === 'function') ? gmailAgentGate() : 'Mail reading is not available on this build.';
             const mailLines = []; const meetLines = []; const mailRead = []; const meetRead = [];
-            let slots = null;
+            let slots = null; let threads = 0; let met = false;
+            oppStep('mail', 'Reading your email with them…', 'run');
+            oppStep('cal', 'Looking for when you last met…', 'run');
+            oppStep('slots', 'Reading your Calendly openings…', 'run');
             const mailJob = (async function () {
-                if (!email) { mailLines.push('EMAIL WITH THEM: not read — no address.'); return; }
-                if (gate) { mailRead.push('mail not read (' + gate + ')'); mailLines.push('EMAIL WITH THEM: not read.'); return; }
+                if (!email) { mailLines.push('EMAIL WITH THEM: not read — no address.'); oppStep('mail', 'No email read — there is no address to search for.', 'warn'); return; }
+                if (gate) { mailRead.push('mail not read (' + gate + ')'); mailLines.push('EMAIL WITH THEM: not read.'); oppStep('mail', 'Email not read — ' + gate, 'warn'); return; }
                 try {
                     const mail = await gmReadCorrespondence(email, name);
+                    threads = mail.threads.length;
                     gmContactFactLines(mail.threads).forEach(function (l) { mailLines.push(l); });
                     let lines = gmCorrespondenceLines(mail);
                     while (lines.join('\n').length > 24000 && lines.length > 4) lines.pop();   // the drafter's cost cap: oldest first
                     lines.forEach(function (l) { mailLines.push(l); });
-                    mailRead.push(mail.threads.length
-                        ? mail.threads.length + ' email' + (mail.threads.length > 1 ? 's' : '') + ' with ' + (name || email) + ' back to ' + _gmFmtDate(mail.threads[mail.threads.length - 1].dateMs) + ' (' + Math.min(mail.bodies.length, mail.threads.length) + ' read in full)'
-                        : 'no email with ' + (name || email) + ' in the last ' + mail.daysRead + ' days');
+                    const sentence = threads
+                        ? threads + ' email' + (threads > 1 ? 's' : '') + ' with ' + (name || email) + ' back to ' + _gmFmtDate(mail.threads[threads - 1].dateMs) + ' (' + Math.min(mail.bodies.length, threads) + ' read in full)'
+                        : 'no email with ' + (name || email) + ' in the last ' + mail.daysRead + ' days';
+                    mailRead.push(sentence);
+                    oppStep('mail', threads ? 'Read ' + sentence + '.' : 'Found ' + sentence + '.', threads ? 'ok' : 'warn');
+                    oppTrace('MAIL', { threads: threads, bodies: mail.bodies.length, daysRead: mail.daysRead });
                 } catch (e) {
                     mailRead.push('mail search failed (' + String(e && e.message || e) + ')');
                     mailLines.push('EMAIL WITH THEM: the search failed, so nothing was read.');
+                    oppStep('mail', 'The mail search failed — ' + String(e && e.message || e), 'warn');
                 }
             })();
             const meetJob = (async function () {
@@ -24009,10 +24250,11 @@ Example:
                             next = cal.next || null;
                         }
                     }
-                    if (last) { meetLines.push('LAST MEETING (' + last.source + ', ' + _gmFmtDate(last.at) + '): ' + last.summary); meetRead.push('last met ' + _gmFmtDate(last.at)); }
-                    else { meetLines.push('LAST MEETING: none found in the Meeting Processor or the calendar.'); meetRead.push('no meeting found on the calendar'); }
+                    if (last) { met = true; meetLines.push('LAST MEETING (' + last.source + ', ' + _gmFmtDate(last.at) + '): ' + last.summary); meetRead.push('last met ' + _gmFmtDate(last.at)); }
+                    else { meetLines.push('LAST MEETING: none found in the Meeting Processor or the calendar. (That is NOT evidence they have never met.)'); meetRead.push('no meeting found on the calendar'); }
                     if (next) { meetLines.push('NEXT ON HIS CALENDAR WITH THEM (' + _gmFmtDate(next.at) + '): ' + next.summary); meetRead.push('next on the calendar ' + _gmFmtDate(next.at)); }
-                } catch (eM) { meetRead.push('calendar not read'); }
+                    oppStep('cal', last ? 'Last met ' + _gmFmtDate(last.at) + ' (' + last.source + ')' + (next ? '; next on the calendar ' + _gmFmtDate(next.at) : '') + '.' : 'No meeting with ' + (name || 'them') + ' found on your calendar or in the Meeting Processor.', last ? 'ok' : 'warn');
+                } catch (eM) { meetRead.push('calendar not read'); oppStep('cal', 'The calendar could not be read.', 'warn'); }
             })();
             const slotJob = (async function () { try { slots = await _gmCalendlySlots({ mode: mode }); } catch (eS) { slots = null; } })();
             await Promise.all([mailJob, meetJob, slotJob]);
@@ -24021,13 +24263,18 @@ Example:
             out.meetRule = _oppMeetRule(intentText, slots);
             out.invite = oppState.lastInvite;
             const inv = out.invite || {};
-            read.push((inv.coffeeUrl || inv.lunchUrl)
+            const linkSentence = (inv.coffeeUrl || inv.lunchUrl)
                 ? 'offering your generic ' + [inv.coffeeUrl ? 'coffee' : '', inv.lunchUrl ? 'lunch' : ''].filter(Boolean).join(' and ') + ' page' + (inv.coffeeUrl && inv.lunchUrl ? 's' : '') + (inv.days && inv.days.length ? ', with real open days to suggest' : '')
-                : (inv.remoteUrl ? 'offering your scheduling page' + (slots && slots.type ? ' for “' + slots.type.name + '”' : '') : 'no scheduling link is set in Settings › Meeting Scheduling Links'));
+                : (inv.remoteUrl ? 'offering your scheduling page' + (slots && slots.type ? ' for “' + slots.type.name + '”' : '') : 'no scheduling link is set in Settings › Meeting Scheduling Links');
+            read.push(linkSentence);
+            oppStep('slots', linkSentence.charAt(0).toUpperCase() + linkSentence.slice(1) + '.', (inv.coffeeUrl || inv.lunchUrl || inv.remoteUrl) ? 'ok' : 'warn');
+            oppTrace('INVITE', { inPerson: !!inv.inPerson, coffee: !!inv.coffeeUrl, lunch: !!inv.lunchUrl, remote: !!inv.remoteUrl, days: inv.days || [], calendly: slots ? (slots.ok ? 'ok' : slots.note) : 'no answer' });
+            out.thin = !threads && !met;
             out.readSummary = read.join('; ') + '.';
             return out;
         }
-        async function oppAiPlan() {
+        // `manual` = he pressed "Draft it" himself (so a thin context no longer stops it).
+        async function oppAiPlan(manual) {
             const ed = oppState.editing;
             if (!ed) return;
             const gate = aiActionGate('Planning the next nudge');   // an explicit click (v5.2.1)
@@ -24040,14 +24287,30 @@ Example:
             const ctx = String((document.getElementById('oppAiCtx') || {}).value || '').trim();
             const btn = document.getElementById('oppAiPlanBtn'); if (btn) btn.disabled = true;
             let r = null; let found = null;
+            oppState.steps = []; oppState.trace = oppState.trace || [];
+            const stepsReset = document.getElementById('oppSteps'); if (stepsReset) stepsReset.classList.remove('done');
+            const askEl = document.getElementById('oppAiAsk'); if (askEl) askEl.style.display = 'none';
             try {
                 // v5.24.0 — THE GRUNT WORK. His verdict on the first draft: "a bit flat…
                 // now that you know his email address, why can't you look back at our email
                 // chain for better context… That is the whole point of this section." The draft
                 // had even listed "whether he responded to the 3/23 email" under Missing — a
                 // question the tool could have answered by reading his mail. So it reads first.
+                _oppSay('oppAiStatus', '', false);
                 found = await oppGatherContext(ed, f, ctx, function (m) { _oppSay('oppAiStatus', m, false); });
-                _oppSay('oppAiStatus', 'Writing from what I found…', false);
+                // NOTHING ON FILE and he has said nothing: ASK, do not invent. The v5.25.0 draft
+                // told a former podcast guest they had never sat down together. One sentence from
+                // him is worth more than any amount of model effort here; pressing Draft it again
+                // without one goes ahead anyway.
+                const logText = String((document.getElementById('oppEdDesc') || {}).value || '').trim();
+                if (found.thin && !ctx && logText.length < 40 && !manual) {
+                    const who = (found.person && found.person.name) || 'this person';
+                    if (askEl) { askEl.textContent = 'I found nothing on file with ' + who + ' — no email, no meeting, no notes on the opportunity. Tell me in ONE sentence how you know them and why now, then press Draft it. (Or press Draft it as it is, and I will write without it.)'; askEl.style.display = ''; }
+                    const box = document.getElementById('oppAiCtx');
+                    if (box && window.matchMedia && window.matchMedia('(pointer: fine)').matches) box.focus();   // rule 57: never auto-focus on a phone
+                    return;
+                }
+                oppStep('write', 'Writing the email from what I found…', 'run');
                 r = await _calPost({
                     action: 'generateOutputs', provider: ai.provider, model: ai.model,
                     systemPrompt: OPP_PLAYBOOK + found.meetRule + oppVoiceBlock()
@@ -24058,6 +24321,7 @@ Example:
                         + 'HANS\'S OWN NOTE in the user message is his intent: it carries his REASON FOR WRITING NOW and often a phrase worth keeping. Build the email around that reason and keep his good phrases in his voice; it never overrides the rules above. '
                         + 'A FLAT EMAIL IS A FAILED EMAIL. It must have: (a) an opening tied to one SPECIFIC real detail from the briefing, never "it has been a while" on its own; (b) the reason he is writing NOW, stated plainly; '
                         + '(c) ONE concrete thing offered that is useful to THEM in their situation, described specifically enough to picture; (d) ONE easy ask with the friction removed. 90-150 words, plain, warm, no filler, no "I hope this finds you well", no "touch base", no "circle back". '
+                        + 'NEVER state or imply that Hans and this person have not met, spoken or worked together, and never say how long it has been, unless the context PROVES it — an empty search is not proof. If the context shows no history, write an opening that does not depend on any. '
                         + 'If the thread shows something of THEIRS unanswered, acknowledge it first. Never repeat what Hans already sent; never restate a fact as new that the thread shows they already know. '
                         + 'Where the thread shows emails HANS wrote (ME), match that voice. TODAY\'S DATE is in the user message: one light, natural seasonal or timely clause is welcome when it fits (the end of summer, school starting, the holidays) — ONE clause, never a paragraph, never the weather. '
                         + 'Put in "missing" ONLY what could not be found in anything you were given. Return ONLY a JSON object, no fences, no commentary:\n'
@@ -24075,8 +24339,11 @@ Example:
             if (!obj || typeof obj.assessment !== 'string') { _oppSay('oppAiStatus', _oppAiUnreadable(r), true); return; }
             oppState.aiSuggestion = obj;
             oppState.lastFound = found; oppState.aiOriginalBody = String(obj.body || ''); oppState.versions = [];
-            ['oppAiPreview', 'oppAiUndoBtn'].forEach(function (id) { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+            const undoBtn = document.getElementById('oppAiUndoBtn'); if (undoBtn) undoBtn.style.display = 'none';
+            oppStep('write', 'Draft written.', 'ok');
             oppRenderVoiceNote();
+            // Once the draft exists the steps shrink to one wrapped line, so the email sits higher.
+            const stepsEl = document.getElementById('oppSteps'); if (stepsEl) stepsEl.classList.add('done');
             const esc = escapeHtml;
             const moveLabel = { nudge: 'Send a nudge', wait: 'Wait — too soon to touch again', closingNote: 'Send the closing note', closeLost: 'Move to Closed Lost', logOnly: 'Just log it' };
             document.getElementById('oppAiOut').innerHTML =
@@ -24095,6 +24362,7 @@ Example:
             document.getElementById('oppAiBody').value = String(obj.body || '');
             document.getElementById('oppAiSms').value = String(obj.sms || '');
             document.getElementById('oppAiResult').style.display = '';
+            oppRenderLive();
             _oppSay('oppAiStatus', 'A proposal — nothing was changed or sent. ' + mtgUsageText({ model: r.model, inTok: r.inputTokens, outTok: r.outputTokens }), false);
         }
         // Copies the proposal INTO THE FORM. Redtail changes only when he presses Save.
@@ -24125,27 +24393,13 @@ Example:
         // offered, and only when the word is actually in the email.
         function oppInviteLinksFor(body) {
             const inv = oppState.lastInvite;
-            return { coffee: (inv && inv.coffeeUrl && /\bcoffee\b/i.test(body)) ? inv.coffeeUrl : '',
-                lunch: (inv && inv.lunchUrl && /\blunch\b/i.test(body)) ? inv.lunchUrl : '' };
+            // The WORD in the email decides, not what the rule happened to offer.
+            return { coffee: (inv && inv.coffeeAny && /\bcoffee\b/i.test(body)) ? inv.coffeeAny : '',
+                lunch: (inv && inv.lunchAny && /\blunch\b/i.test(body)) ? inv.lunchAny : '' };
         }
         function oppDraftHtml(body) {
             const k = oppInviteLinksFor(body);
             return (k.coffee || k.lunch) ? assembleMeetingEmailHtml(body, k.coffee, k.lunch) : draftBodyHtml(body);
-        }
-        function oppAiPreview() {
-            const box = document.getElementById('oppAiPreview');
-            if (!box) return;
-            const showing = box.style.display !== 'none';
-            if (showing) { box.style.display = 'none'; return; }
-            const body = String(document.getElementById('oppAiBody').value || '').trim();
-            if (!body) { _oppSay('oppAiStatus', 'There is no email text to preview yet.', true); return; }
-            box.innerHTML = '<div class="opp-preview-head">To: ' + escapeHtml(String(document.getElementById('oppAiTo').value || '(no address yet)'))
-                + ' · Subject: ' + escapeHtml(String(document.getElementById('oppAiSubject').value || '(none)')) + '</div>'
-                // sanitizeEmailHtml_ answers an OBJECT ({ html, blockedImages }), not a string —
-                // the probe caught this rendering "[object Object]". Images are allowed here
-                // because the only images are his own signature's.
-                + sanitizeEmailHtml_(oppDraftHtml(body), true).html;
-            box.style.display = '';
         }
         // His voice, learned from what he actually does to a draft. Device-local on purpose:
         // these are real emails to real people and must never reach the shared sheet.
@@ -24199,6 +24453,7 @@ Example:
                     action: 'generateOutputs', provider: ai.provider, model: ai.model,
                     systemPrompt: OPP_PLAYBOOK + found.meetRule + oppVoiceBlock()
                         + 'TASK: REVISE the draft email in the user message exactly as HANS\'S REVISION REQUEST asks, and change nothing he did not ask to change — he may already have edited it by hand, so his wording is deliberate. '
+                        + 'His booking links are attached BY THE TOOL exactly as the MEETING RULE describes — if he asks for a Calendly or booking link, make the email invite them to meet in those words; never invent or paste a URL the rule did not give you. '
                         + 'Keep every fact true to the context supplied. His request may change tone, length, content and emphasis; it can never override the NEVER rules or the MEETING RULE above. '
                         + 'Return ONLY a JSON object, no fences: {"subject":"","body":"the whole revised email, plain text, no signature","sms":"a text-message version under 480 characters, or empty","note":"one sentence: what you changed"}',
                     userContent: _oppFactsText(oppReadForm(), oppState.editing, new Date()) + '\n\n' + (found.lines || []).join('\n')
@@ -24216,7 +24471,7 @@ Example:
             if (typeof obj.sms === 'string' && obj.sms) document.getElementById('oppAiSms').value = obj.sms;
             if (q && !preset) q.value = '';
             const undo = document.getElementById('oppAiUndoBtn'); if (undo) undo.style.display = '';
-            const pv = document.getElementById('oppAiPreview'); if (pv) pv.style.display = 'none';
+            oppRenderLive();
             _oppSay('oppAiStatus', (obj.note ? String(obj.note) + ' ' : 'Revised. ') + mtgUsageText({ model: r.model, inTok: r.inputTokens, outTok: r.outputTokens }), false);
         }
         function oppAiUndo() {
@@ -24226,7 +24481,7 @@ Example:
             document.getElementById('oppAiBody').value = v.body;
             document.getElementById('oppAiSms').value = v.sms;
             const undo = document.getElementById('oppAiUndoBtn'); if (undo && !(oppState.versions || []).length) undo.style.display = 'none';
-            const pv = document.getElementById('oppAiPreview'); if (pv) pv.style.display = 'none';
+            oppRenderLive();
             _oppSay('oppAiStatus', 'Back to the version before that change.', false);
         }
         async function oppAiSaveDraft() {
@@ -32460,7 +32715,11 @@ Make sure your suggestions directly address the specific root cause and discussi
                 const label = d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
                 if (!seen[label] && days.length < 5) { seen[label] = 1; days.push(label); }
             });
-            const out = { inPerson: inPerson, days: days, coffeeUrl: '', lunchUrl: '', remoteUrl: '' };
+            // coffeeAny / lunchAny = his generic pages whether or not the RULE offered them. The rule
+            // decides what the AI is told to offer; these decide what gets LINKED, because an email
+            // that says "coffee or lunch" must link both even when the title only said coffee (his
+            // real draft, 2026-09-17: only one of the two words would have been a link).
+            const out = { inPerson: inPerson, days: days, coffeeUrl: '', lunchUrl: '', remoteUrl: '', coffeeAny: links.coffee || '', lunchAny: links.lunch || '' };
             if (inPerson) {
                 const both = !saidCoffee && !saidLunch;
                 if (saidCoffee || both) out.coffeeUrl = links.coffee || '';
