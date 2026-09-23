@@ -13,5 +13,9 @@ window.EOS_CONFIG = {
     // supabaseAnonKey is a PUBLISHABLE key by design - safe in client-side code.
     // Row Level Security in the database is the real security boundary, not key secrecy.
     supabaseUrl: "https://fhmvvnwubzqfgdokenog.supabase.co",
-    supabaseAnonKey: "sb_publishable_4dwVyTyhpdzjsaMDry-68Q_Ifq45T7S"
+    supabaseAnonKey: "sb_publishable_4dwVyTyhpdzjsaMDry-68Q_Ifq45T7S",
+    // Notifications (v5.27.0, schema.sql PART 8): the PUBLIC half of the Web Push signing
+    // pair. Safe in the browser by design - it only lets a phone recognise pushes signed
+    // by the matching private key, which lives as a secret on the push Edge Function.
+    vapidPublicKey: "BBRwJ8WxUrYmxT8qlUgy4LdqFXWEVxDIt3bXYqr6roM0b4NmbJMAzA2ginG8E6_yUeEZyFIDOorB0EULoKvUtm4"
 };

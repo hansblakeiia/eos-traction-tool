@@ -13,7 +13,12 @@
          Marketing tab; the rest of the app is untouched by this. -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%231a365d' width='100' height='100' rx='15'/%3E%3Ctext x='50' y='50' font-family='Arial, sans-serif' font-size='45' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='central'%3EEOS%3C/text%3E%3Ccircle cx='85' cy='15' r='8' fill='%233182ce'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="styles.css?v=5.26.0">
+    <link rel="stylesheet" href="styles.css?v=5.27.0">
+    <!-- v5.27.0: installable + notifications. The manifest makes "Add to Home screen" a
+         real app icon; sw.js (registered from _pushInit) receives Web Push. The worker
+         caches NOTHING — see the note at the top of sw.js. -->
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" content="#1a365d">
 </head>
 <body>
     <div class="container">
@@ -3316,6 +3321,44 @@
                         </select>
                     </div>
                     </div>
+                    <div class="set-band" id="setBand-push">
+                    <!-- v5.27.0: notifications that reach the phone with the tool CLOSED — Web Push
+                         through sw.js and the "push" Edge Function. The ntfy block further down
+                         stays for the Pomodoro chime; this band is the morning brief and the
+                         Rule-of-3 nudge (per-task reminders come next). -->
+                    <h4 style="color: #1e40af; margin-bottom: 4px; font-size: 0.95rem;">🔔 Notifications on this device</h4>
+                    <p class="set-scope set-scope-local">Turning notifications on is <strong>per device</strong> &mdash; do it once on each phone or computer you want them on. The times below are yours and follow you between your devices.</p>
+                    <div id="pushStatus" style="font-size: 0.85rem; margin-bottom: 10px;">Checking&hellip;</div>
+                    <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom: 12px;">
+                        <button type="button" class="btn btn-primary" id="pushEnableBtn" onclick="pushEnableThisDevice()" style="padding: 6px 12px; font-size: 0.85rem;">Turn on for this device</button>
+                        <button type="button" class="btn btn-secondary" id="pushTestBtn" onclick="pushSendTest()" style="padding: 6px 12px; font-size: 0.85rem; display:none;">Send a test</button>
+                        <button type="button" class="btn btn-secondary" id="pushPreviewBtn" onclick="pushPreviewBrief()" style="padding: 6px 12px; font-size: 0.85rem; display:none;">What would the brief say?</button>
+                        <button type="button" class="btn btn-secondary" id="pushDisableBtn" onclick="pushDisableThisDevice()" style="padding: 6px 12px; font-size: 0.85rem; display:none;">Turn off on this device</button>
+                    </div>
+                    <div style="padding: 12px; background: white; border-radius: 6px; border: 1px solid #bfdbfe;">
+                        <label style="display:flex; align-items:center; gap:8px; margin-bottom: 8px; flex-wrap:wrap;">
+                            <input type="checkbox" id="pushBriefEnabled" checked style="width:16px; height:16px;" onchange="pushSavePrefs()">
+                            <span style="font-size: 0.85rem;">Morning brief at</span>
+                            <input type="time" id="pushBriefTime" value="07:00" style="font-size: 0.85rem; width: auto; margin: 0;" onchange="pushSavePrefs()">
+                        </label>
+                        <label style="display:flex; align-items:center; gap:8px; margin-bottom: 8px; flex-wrap:wrap;">
+                            <input type="checkbox" id="pushRule3Enabled" checked style="width:16px; height:16px;" onchange="pushSavePrefs()">
+                            <span style="font-size: 0.85rem;">Nudge me if my Rule of 3 isn&rsquo;t set by</span>
+                            <input type="time" id="pushRule3Time" value="09:30" style="font-size: 0.85rem; width: auto; margin: 0;" onchange="pushSavePrefs()">
+                        </label>
+                        <label style="display:flex; align-items:center; gap:8px;">
+                            <input type="checkbox" id="pushWeekdaysOnly" checked style="width:16px; height:16px;" onchange="pushSavePrefs()">
+                            <span style="font-size: 0.85rem;">Weekdays only</span>
+                        </label>
+                        <p style="font-size: 0.75rem; color: var(--gray-500); margin: 10px 0 0;">
+                            The brief says how many of your tasks are due today and overdue, names the first
+                            three, and whether your Rule of 3 is set. No email content and no client name is
+                            ever put in a notification.
+                        </p>
+                    </div>
+                    <div id="pushDevices" style="margin-top: 10px; font-size: 0.8rem; color: var(--gray-500);"></div>
+                    <div id="pushPreviewOut" style="display:none; margin-top:10px; padding:10px; background:#eff6ff; border-radius:6px; font-size:0.85rem; white-space:pre-wrap;"></div>
+                    </div>
                     <div class="set-band" id="setBand-pomodoro">
                     <h4 style="color: #b45309; margin-bottom: 10px; font-size: 0.95rem;">Pomodoro Timer Durations</h4>
                     <div class="input-row">
@@ -4379,9 +4422,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '5.26.0';
-        const EOS_BUILD_DATE = '2026-09-17';
-        const EOS_BUILD_TIME = '19:40'; // v5.26.0: THE COMPOSER — his fourth live test, same day, grade a D: "you didn't find him in Redtail, the whole workflow is clunky. The email doesn't include Calendly links." His screenshot showed a draft opening "I don't think we've had the chance to sit down together yet" to a man who had been a GUEST ON HIS PODCAST; he typed the missing fact himself and asked why there was no Calendly link. HONEST DIAGNOSIS: this session cannot see his live Redtail or the Read line his screenshot cropped, so the exact live cause is UNCONFIRMED — but Redtail's documented contact-emails shape was re-checked and matches the code, so the lookup was sound WHEN it had a contact to look up. The draft's false claim proves it found NOBODY and read NOTHING: the record had no usable linked contact and the tool drafted blind. This release makes that path robust AND makes it explain itself, rather than asserting a cause. WHO: linked contacts are read from whichever key Redtail used (oppContactIdsOf — opportunity_contacts/linked_contacts/contacts; null means the record did not say, so a save never sends a list it was not given). With nobody linked, the NAME IS NOW READ FROM THE OPPORTUNITY TITLE (oppNameFromTitle — capitalised word runs, title-building verbs/nouns stripped, punctuation ends a name) and found through the SAME shared contactSearchAll the Meeting Processor's referral finder uses — his own pointer, half-applied one round early. Two Redtail contacts by that name -> a popup asks with evidence beside each; an unrelated surname is never offered. The found person is queued to link on the NEXT save, ONLY when Redtail said the contact list was empty, never when unknown — adding a name to an unknown list could silently replace others. The address finder now works for a person with no Redtail id at all. ASK, NEVER INVENT: with no email, no meeting, nothing typed or logged, the composer ASKS one question — how he knows them and why now — instead of calling the AI; Draft it again goes ahead regardless. The prompt may no longer state or imply they have never met, or how long, unless the context PROVES it. THE COMPOSER moved OUT of the CRM form into one focused window (#oppComposeModal), opened by every row's "AI email" and a button on the record: who it is for and how known, every lookup as a step ending ticked or explained, the email on the left and EXACTLY what will land in Gmail on the right — links visible, signature included, built by the SAME expression as the save (oppRenderLive/oppDraftHtml) — a plain line naming attached booking links, turning into a warning with the fix the moment the invitation is deleted. "Add booking link" chip. "Write the follow-up to Redtail" applies stage, next step, look-again date and a dated log line through the FORM'S OWN verified oppSave, never a second writer. Text message and the raw trail sit in expanders. LINKS, FIXED TWICE: v5.25.0 hid links behind plain words with no indication, and separately "coffee or lunch" linked only coffee when the title said coffee alone — now the WORD IN THE EMAIL decides what links (oppInviteLinksFor), the rule still decides what the AI is told to offer. THE TRAIL now keeps a RECORD line listing the keys the live Redtail record carried, in the trace expander and Copy diagnostic — the probe caught the composer WIPING it right after writing it; it now survives a reset on purpose. TWO HARNESS LESSONS: a hit-test taken while the modal is still animating in measures the animation, not the layout (rule 6); a "dead Save button" was a fixture whose record lacked the description the list row carried, so the composer correctly asked its question instead. NOT YET CONFIRMED LIVE: whether his contact is now found and the drafts read better is his to judge next try — if still not found, the RECORD and WHO lines say why. NOT BUILT: writing a found address back to Redtail; the daily-brief "who to touch today" section; touch counting. CLIENT-ONLY, TWO-FILE (styles.css bumps too, ?v=5.26.0) — backend UNCHANGED at .gs v3.78.0, NO CLASP ROUND, NOTHING FOR HANS TO DEPLOY. Probes: opportunities-probe 21/21 (O16 rewritten again incl. a real mouse-position hit-test of Save; O21 new); mail-agent-probe 39/39 unchanged.
+        const EOS_VERSION = '5.27.0';
+        const EOS_BUILD_DATE = '2026-09-23';
+        const EOS_BUILD_TIME = '14:30'; // v5.27.0: NOTIFICATIONS ON THE PHONE — his ask 2026-09-23: "an android notification for EOS Tool ... very important tasks ... a daily brief sent in the morning". Three options were priced (ntfy + a scheduled Apps Script job; nothing new; real Web Push); he asked whether #3 costs anything (no — Google's push service, GitHub Pages and Supabase's free tier all cover it) and said "Build it". WHAT SHIPS: a service worker (sw.js) that receives Web Push and opens the tool on tap — it caches NOTHING, deliberately, because the stale-build strip, the ?v= styles link and the drift check all assume the network is the truth and a caching worker is exactly how a phone ends up on a three-week-old build; a manifest + PNG icons (drawn by .claude/scripts/make-icons.js with zlib alone) so "Add to Home screen" gives a real app icon; a Settings > Me band "Notifications on this device": Turn on / Send a test / What would the brief say? / Turn off, a morning-brief time, a Rule-of-3 nudge time, weekdays-only, and a list of the person's devices with remove; three Supabase tables (schema.sql PART 8): push_subscriptions per device, push_prefs per person (times + IANA time zone + initials + app URL — the three facts only a browser knows), push_sent as the once-per-day ledger (a primary-key insert either lands or does not, so however many 5-minute ticks fall inside the hour window, one brief goes out); and the "push" Edge Function (supabase/functions/push/index.ts) — RFC 8291 payload encryption and RFC 8292 VAPID written against WebCrypto only, no npm package to break, proven by .claude/probes/push-crypto-test.js which decrypts the envelope the way a browser would and verifies the JWT (8/8). The function serves three actions: tick (Cron, every 5 min, x-push-secret) computes each person's LOCAL time and sends the brief — N due today, N overdue, Rule of 3 set or not, the first three task names — or the nudge when the Rule of 3 has nothing open; test (as the signed-in person, to one endpoint); preview (what the brief would say now). Task ownership uses the Today page's own rule (owner === initials || 'Both' || 'HB/AB'). Nothing from an email and no client name is ever in a notification. THE PRIVATE KEY NEVER REACHES A BROWSER: config.js carries vapidPublicKey (public by design, like the anon key); the private half is a function secret. REQUIRES FOUR THINGS FROM HANS BEFORE A SINGLE PUSH ARRIVES (docs/plans/push-notifications.md, click by click): paste PART 8 in the SQL editor; create the Edge Function "push" from the dashboard editor with Verify JWT OFF; add its four secrets; schedule the Cron job. Until then the band explains exactly which step is missing instead of failing quietly. Client-only for the site (index.html + config.js + sw.js + manifest + icons); backend .gs UNCHANGED at 3.78.0, NO CLASP ROUND. NOT BUILT YET, in order: a per-task "remind me at" on the task row (push_sent already keys on 'task:<id>'), an instant push when the other person assigns you a task (a database webhook on tasks -> the same function), the Opportunities "who to touch today" line in the brief. OLD: THE COMPOSER — his fourth live test, same day, grade a D: "you didn't find him in Redtail, the whole workflow is clunky. The email doesn't include Calendly links." His screenshot showed a draft opening "I don't think we've had the chance to sit down together yet" to a man who had been a GUEST ON HIS PODCAST; he typed the missing fact himself and asked why there was no Calendly link. HONEST DIAGNOSIS: this session cannot see his live Redtail or the Read line his screenshot cropped, so the exact live cause is UNCONFIRMED — but Redtail's documented contact-emails shape was re-checked and matches the code, so the lookup was sound WHEN it had a contact to look up. The draft's false claim proves it found NOBODY and read NOTHING: the record had no usable linked contact and the tool drafted blind. This release makes that path robust AND makes it explain itself, rather than asserting a cause. WHO: linked contacts are read from whichever key Redtail used (oppContactIdsOf — opportunity_contacts/linked_contacts/contacts; null means the record did not say, so a save never sends a list it was not given). With nobody linked, the NAME IS NOW READ FROM THE OPPORTUNITY TITLE (oppNameFromTitle — capitalised word runs, title-building verbs/nouns stripped, punctuation ends a name) and found through the SAME shared contactSearchAll the Meeting Processor's referral finder uses — his own pointer, half-applied one round early. Two Redtail contacts by that name -> a popup asks with evidence beside each; an unrelated surname is never offered. The found person is queued to link on the NEXT save, ONLY when Redtail said the contact list was empty, never when unknown — adding a name to an unknown list could silently replace others. The address finder now works for a person with no Redtail id at all. ASK, NEVER INVENT: with no email, no meeting, nothing typed or logged, the composer ASKS one question — how he knows them and why now — instead of calling the AI; Draft it again goes ahead regardless. The prompt may no longer state or imply they have never met, or how long, unless the context PROVES it. THE COMPOSER moved OUT of the CRM form into one focused window (#oppComposeModal), opened by every row's "AI email" and a button on the record: who it is for and how known, every lookup as a step ending ticked or explained, the email on the left and EXACTLY what will land in Gmail on the right — links visible, signature included, built by the SAME expression as the save (oppRenderLive/oppDraftHtml) — a plain line naming attached booking links, turning into a warning with the fix the moment the invitation is deleted. "Add booking link" chip. "Write the follow-up to Redtail" applies stage, next step, look-again date and a dated log line through the FORM'S OWN verified oppSave, never a second writer. Text message and the raw trail sit in expanders. LINKS, FIXED TWICE: v5.25.0 hid links behind plain words with no indication, and separately "coffee or lunch" linked only coffee when the title said coffee alone — now the WORD IN THE EMAIL decides what links (oppInviteLinksFor), the rule still decides what the AI is told to offer. THE TRAIL now keeps a RECORD line listing the keys the live Redtail record carried, in the trace expander and Copy diagnostic — the probe caught the composer WIPING it right after writing it; it now survives a reset on purpose. TWO HARNESS LESSONS: a hit-test taken while the modal is still animating in measures the animation, not the layout (rule 6); a "dead Save button" was a fixture whose record lacked the description the list row carried, so the composer correctly asked its question instead. NOT YET CONFIRMED LIVE: whether his contact is now found and the drafts read better is his to judge next try — if still not found, the RECORD and WHO lines say why. NOT BUILT: writing a found address back to Redtail; the daily-brief "who to touch today" section; touch counting. CLIENT-ONLY, TWO-FILE (styles.css bumps too, ?v=5.26.0) — backend UNCHANGED at .gs v3.78.0, NO CLASP ROUND, NOTHING FOR HANS TO DEPLOY. Probes: opportunities-probe 21/21 (O16 rewritten again incl. a real mouse-position hit-test of Save; O21 new); mail-agent-probe 39/39 unchanged.
         // v5.25.0 (18:10):Two build-outs from Hans's third live test of Opportunities, same day. FINDING THE ADDRESS — his words, hitting a linked Redtail contact with no email on file: “Is there not a way for you to try and find out what his email is? …a popup… should ask me, hey, I found two… pick which one… I don't want this to spend 8 minutes trying to sort through 1,000 contacts.” oppResolveEmail now asks Redtail FIRST and ALONE (the emails sub-resource plus oppDeepAddrs scanning the whole contact record); only when Redtail has nothing do two more lookups run IN PARALLEL — the shared contactSearchAll (same one the Meetings referral finder and the Gmail drafter use) and ONE name-only search of his own past mail, oppMineAddrs, reading From/To headers (the name must sit beside the address, or the address's local part must carry it; his own team addresses and other people on the thread are excluded via oppOwnAddrs). One candidate -> used, and the Read line says where it came from. Several -> an eosChoose popup, evidence beside each. Cancel -> no address, no mail read, says so. None -> says what was tried. A pick is remembered on the device (oppState.people) so it is never asked twice; no crawl through Redtail's contact list anywhere. The To box moved ABOVE the Plan button so he can type an address the tool could not find. THIS DEPENDS ON .gs v3.78.0's searchMail nameOnly mode — DEPLOYED to both accounts 2026-09-17 but NOT YET CONFIRMED by his own Access check; the client gates on RT_OPP_NAMEMAIL_GS_MIN via _calGsAtLeast, so against an OLDER backend the name-search step is simply skipped (Redtail and Google Contacts still run) rather than failing. THE DRAFT IS HIS TO SHAPE — the boxes now say they are editable; “tell the AI what to change” (oppAiRevise) sends his hand-edited draft plus his instruction under the same rules and REUSES the already-gathered context, so a revision never re-reads his mail; quick chips (Shorter, Warmer, More direct, Less salesy, Seasonal line) and Undo. “Preview with my signature and links” (oppAiPreview) and the Gmail-drafts save (oppAiSaveDraft) both build the email through the SAME function, oppDraftHtml, so preview and save cannot differ. THE INVITATION RULE moved into the shared meeting module (meetInviteFacts, beside meetFallbackLink) so this block never reads a scheduling link itself: his verdict on a draft listing three clock times with per-slot Calendly links was “why you didn't just have the general 1 hour coffee chat link… give him the generic link to allow him to choose” — so an outbound nudge now offers his GENERIC coffee/lunch pages (the plain words coffee/lunch, turned into links by the existing v3.46.0 assembler) or his scheduling page, and at most ONE suggested day that really has openings — NEVER a clock time, NEVER a per-slot link. LEARNING HIS VOICE: an edited-then-saved draft is kept ON THE DEVICE ONLY (up to five) and the next draft's prompt is told to match its voice, never its content; an unedited save teaches nothing. The three context reads (mail, calendar, Calendly) in oppGatherContext now run in Promise.all rather than in sequence. BUG CAUGHT BEFORE SHIPPING: the preview called sanitizeEmailHtml_ as if it returned a string; it returns {html, blockedImages}, and the preview would have shown “[object Object]”. NOT BUILT: writing a found address back onto the Redtail contact, the daily-brief “who to touch today” section, touch counting. Probes: opportunities-probe 20/20 (O16 rewritten per rule 78, O17 updated, O18/O19/O20 new); mail-agent-probe 39/39 unchanged.
         // v5.24.0 (16:20):ONE READER OF HIS CORRESPONDENCE — THE NUDGE READS HIS MAIL TOO (client-only, TWO-FILE — styles.css bumps too, link becomes ?v=5.24.0; backend UNCHANGED at .gs v3.77.0, NO CLASP ROUND). His second live test, same afternoon, backend confirmed 3.77.0 by his own Access check: "Plan the next nudge" on a real prospect, and close to verbatim: "the email is a bit flat. Now that you know his email address, why can't you look back at our email chain for better context to reach out with more context? That is the whole point of this section of the EOS Tool. The goal is to get more clients and do a lot of the grunt work for me." MY OWN RATING, given to him plainly: a C — it ignored the reason-for-writing-now he had typed into the note, dropped his own best phrase, offered nothing concrete, and its "Missing" line asked whether the prospect had replied to an earlier email, a question the tool could have answered by reading his mail. v5.23.0 had wired mail-reading into the row's "AI email" button but NOT into this panel: ONE BEHAVIOUR, TWO ENTRY POINTS, WIRED TO ONE — the same class as §5.87, §5.91 and §5.93, committed again. FIX, BY REUSE NOT COPY: gmReadCorrespondence, gmContactFactLines and gmCorrespondenceLines were extracted out of gmailAgentRun, wording UNCHANGED; gmailAgentRun calls them (mail-agent-probe 39/39 before and after, proving the extraction changed nothing), and the nudge's oppGatherContext calls the same three. O17 reads the SOURCE of both and FAILS if either grows a private searchMail call. THE NUDGE NOW GATHERS BEFORE IT WRITES: finds the address in Redtail and fills To; reads the thread (a year, then five if empty; bulk dropped; newest bodies in full); states how long ago and WHO SPOKE LAST as facts the code proves; the last meeting from the Meeting Processor and the calendar, and the next calendar entry; his real Calendly openings. The chain and meetings travel in the USER block as data; the openings are trusted facts and ride in the SYSTEM prompt (the v5.17.0 lesson). EACH SOURCE DEGRADES TO A SENTENCE — none can block the plan. THE PROMPT IS BRIEFING-FIRST (the v5.11.0 lesson): 4-7 sourced, dated bullets for Hans, THEN the email FROM them, built around his own typed reason for writing now. "A FLAT EMAIL IS A FAILED EMAIL": a specific opening, the reason now, one concrete useful thing, one easy ask, 90-150 words, banned filler; anything of THEIRS unanswered is acknowledged first; "missing" lists only what could not be found in anything supplied. HE IS SHOWN THE WORK: a "Read:" line and a "What I found" bullet list. NOT YET CONFIRMED LIVE: whether the drafts are BETTER is his own judgement on his next try — the probe proves the context REACHES the model, not that the prose is good. The Calendly type offered is still the shared picker's GUESS (a 30-minute video type), which may not be his discovery-meeting type — the Read line names it. PRIVACY, unchanged: email bodies reach the AI provider for that one call, as the Gmail-page drafter has done since v5.2.0; nothing is stored beyond the device. Probes: opportunities-probe 17/17 (O17 new), mail-agent 39/39 unchanged.
         // v5.23.0 (15:30):THE LIST, AS A TABLE HE ALREADY KNOWS — PLUS BULK, DELETE, "AI EMAIL" (client-only; TWO-FILE — styles.css bumps too, new .opp-table/.opp-bulk rules, link becomes ?v=5.23.0; pairs with .gs v3.77.0, DEPLOYED TO BOTH ACCOUNTS 2026-09-17 BUT NOT YET CONFIRMED LIVE per rule 12 — the only accepted proof is HIS OWN Access check reading 3.77.0, which has not run as of this writing; until it does, Delete refuses by name and points at Closed Lost instead of failing silently). His first live test of v5.22.0, same afternoon: pressed Refresh, then "Review my pipeline with AI" and got "The AI answered in a shape the tool could not read — try again." Then, in his own words: a checkmark to delete and do "other administrative responses," make it "look like it does in Redtail," a simple "AI email" this person, filters — "built more professionally to leverage AI." (1) THE AI FAILURE, diagnosed from the code before anything was touched: v5.22.0 capped the review at 3,000 output tokens with no effort setting and never read stopReason — current models THINK before writing and thinking counts against the cap, the exact failure .gs v3.73.0's own header documents from v5.5.0, so a reply that had simply run out of room was reported as "a shape the tool could not read," a WRONG-CAUSE diagnostic (rule 63). Both AI helpers now ask for the FULL 8192-token allowance at effort medium and read stopReason FIRST; _oppAiUnreadable names which way it failed — ran out of room (with the token count), returned no text, or genuinely unreadable — and "Copy diagnostic" now carries the raw AI answer, not just the last Redtail read. The review no longer demands a `today` array — a complete review with nothing for today was being refused. THIS IS NOT YET CONFIRMED as the cause of HIS failure — his next press is the test; if it fails again the status line names which way and Copy diagnostic carries the raw answer. (2) THE LIST IS NOW A TABLE in Redtail's own column order (tick, Name with description snippet and flags, Linked contacts, Assigned to, Next steps, Stage, Source, Prob., Close date red when passed, Amount, AI email), sortable heads (asc, desc, back to needs-attention), Active/Closed/All, a search box matching linked-contact names too, filters for stage/type/source/assigned, totals that follow the filters. Every control is STATIC (rule 15) — only the table body re-renders, nothing loses focus. Cards on a phone. Linked contacts are NOT in Redtail's documented LIST response, only the by-id record, so they load in the background after the table paints (oppHydrate), cached, re-read only when the record's last-change stamp moves — a race the probe found (a refresh landing mid-load) is fixed: the older pass now defers to the newer one instead of the new rows never loading. (3) TICK BOXES + A BULK BAR: move to a stage, Closed Won, Closed Lost, set close date, assign, "AI review of these" (scoped to ticked rows when any are ticked), Delete, Clear. Every write is HIS click behind a confirm that NAMES the rows; each record is read then put back — Redtail's own record, unknown fields kept — then the list is RE-READ and any row Redtail did not keep is named rather than silently trusted. Cancel writes nothing, keeps the ticks. DATA-SAFETY FIX found while building: a record that comes back WITHOUT its contact list is now saved WITHOUT linked_contacts, in both the bulk path and the editor (contactsKnown/contactsTouched) — v5.22.0's editor would have sent an empty array and could have UNLINKED EVERYONE the day Redtail ever omitted that field. (4) DELETE, HIS DECISION BY NAME: backend v3.77.0 adds ONE whitelist row (DELETE opportunities/{numeric id}, classic base, no query string; gs-auditor: safe, no blockers). Client gates on 3.77.0 — on an older backend it names BOTH versions and points at Closed Lost without even asking. Reachable from exactly one function; NO AI OR BACKGROUND FUNCTION CAN WRITE TO REDTAIL AT ALL (probe O10, REWRITTEN not deleted, rule 78 — the old "no delete anywhere" claim is retired deliberately, not silently). (5) "AI EMAIL" on every row REUSES the Gmail-page drafter (gmailAgentRun) instead of a second one — it already reads his real threads with the person, the last meeting, the calendar and his Calendly openings. The button resolves linked contacts, RE-READING the record if the cached link predates the record's last change (an email is addressed to a PERSON, a stale cache is not good enough), fills the request with the opportunity, stage, his log and the no-repeat/no-pressure/no-performance-claims rules, fills To from Redtail, names the second contact of a couple, starts the drafter with the chosen address; with no linked contact it opens the record instead of drafting to nobody. This is v5.22.0's "read his Gmail correspondence into the nudge" next-step, closed by reuse. (6) MEASURED at 375/768/1280 with screenshots; one defect found and fixed: the global rule stretching every select to full width put each filter on its own row — the opp-toolbar selects now carry their own width:auto. NOT BUILT THIS RELEASE: the daily-brief "who to touch today" section (his stated next step); touch counting; bulk snooze; inline cell editing. Probe opportunities-probe 16/16 (O10 rewritten; O12 cut AI reply; O13 table/sort/filters/contacts; O14 bulk with a stateful fake backend; O15 delete; O16 AI email hand-off incl. a planted stale link).
@@ -8192,7 +8235,18 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.26.0 &mdash; 2026-09-17 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.27.0 &mdash; 2026-09-23 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Real phone notifications: a morning brief and a Rule-of-3 nudge, on your own schedule.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Settings &gt; Me now has a &ldquo;Notifications on this device&rdquo; band.</strong> Turn it on per device, pick a morning-brief time and a Rule-of-3 nudge time, send yourself a test, or see what the brief would say right now.</li>'
+                + '<li><strong>The brief never puts email content or a client name in a notification</strong> &mdash; only counts, whether your Rule of 3 is set, and the first few task names.</li>'
+                + '<li><strong>&ldquo;Add to Home screen&rdquo; now gives a real app icon</strong> instead of a generic browser one, and the tool opens without the browser bar.</li>'
+                + '<li>Notifications will not arrive until the one-time Supabase setup in docs/plans/push-notifications.md is done &mdash; the Settings band says which step is still missing.</li>'
+                + '</ul>'
+                + '</div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.26.0 &mdash; 2026-09-17</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">The nudge now finds a person even when nobody is linked in Redtail, asks instead of guessing when it has nothing to go on, and lives in its own window with the exact email always in view.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>When no one is linked to an opportunity, the tool now reads the name out of the opportunity&rsquo;s own title and looks them up in Redtail</strong> &mdash; two matches and it asks you which one, with the evidence beside each; one match and it is used, remembered for next time, and only offered to be linked back onto the opportunity when Redtail&rsquo;s own contact list was genuinely empty.</li>'
@@ -43438,7 +43492,9 @@ Make sure your suggestions directly address the specific root cause and discussi
                       // fit it, and the order here must match the markup order or the jump
                       // chips highlight the wrong corner.
                       ['briefMail', 'Morning Brief mail'],
-                      ['bottomBar', 'Phone bottom bar'], ['defaultTab', 'Landing tab'], ['pomodoro', 'Timers & alerts']] },
+                      ['bottomBar', 'Phone bottom bar'], ['defaultTab', 'Landing tab'],
+                      // v5.27.0: sits before Timers in the markup, so before it here too.
+                      ['push', 'Notifications'], ['pomodoro', 'Timers & alerts']] },
             { key: 'ai', short: 'AI &amp; APIs', label: 'AI &amp; APIs', icon: '&#129504;', tint: '#ede9fe', ink: '#6d28d9',
               bands: [['aiKeys', 'Keys & models'], ['aiRouting', 'Which AI does what'],
                       // v4.59.0: Redtail sits in this hub because the Meetings feature that
@@ -43764,6 +43820,9 @@ Make sure your suggestions directly address the specific root cause and discussi
             const _myNtfyIdx = myTeamMemberIndex();
             const _myNtfyField = document.getElementById('myNtfyTopic');
             if (_myNtfyField) _myNtfyField.value = (_myNtfyIdx >= 0 && (settings.teamMembers[_myNtfyIdx].ntfyTopic || '')) || '';
+            // v5.27.0: the Notifications band reads its own state (browser permission, this
+            // device's subscription, my times in Supabase) — nothing of it lives in `settings`.
+            if (typeof pushRefreshBand === 'function') pushRefreshBand();
 
             // Backup reminder settings
             document.getElementById('backupReminderDays').value = settings.backupReminderDays || 7;
@@ -47271,6 +47330,9 @@ Return ONLY the JSON array:`;
                 // Realtime subscriptions and the first tasks sync belong here too
                 // (the v4.34.1 lesson: anything attached at boot races the session).
                 if (typeof _rtInit === 'function') _rtInit();
+                // v5.27.0: same reasoning — the push band and the worker registration
+                // need the profile (user id, firm id), so they attach here, not at boot.
+                if (typeof _pushInit === 'function') _pushInit();
                 if (typeof tasksSyncBlocker === 'function' && !tasksSyncBlocker()) tasksSync();
                 // v4.57.0 — the brief's VIP/muted lists, same reasoning as everything else
                 // attached here: anything bound at boot races the session (the v4.34.1
@@ -47636,6 +47698,244 @@ Return ONLY the JSON array:`;
             } finally {
                 _tsSyncing = false;
             }
+        }
+
+        // ==================== v5.27.0 — NOTIFICATIONS ON THE PHONE (Web Push) ==============
+        // His ask (2026-09-23): "an android notification for EOS Tool ... very important
+        // tasks ... a daily brief sent in the morning". Built as real Web Push rather than
+        // the existing ntfy topic because it needs nothing installed and another firm can
+        // use it as-is. The pieces, and where each lives:
+        //   sw.js                      — the service worker: shows the push, opens the tool.
+        //                                It caches NOTHING (the stale-build story depends on that).
+        //   manifest.webmanifest/icons — "Add to Home screen" gives a real app icon.
+        //   schema.sql PART 8          — push_subscriptions (per device), push_prefs (per
+        //                                person: times + time zone), push_sent (once-a-day ledger).
+        //   supabase/functions/push    — the Edge Function. Supabase Cron calls it every 5 min;
+        //                                it works out whose brief/nudge is due in THEIR zone.
+        //   config.js vapidPublicKey   — public half of the signing pair; the private half is
+        //                                a function secret and never reaches a browser.
+        // Every path is guarded: no worker support, no https, no session, no key in config —
+        // the band names what is missing and nothing else in the app notices.
+        function _pushSupported() {
+            return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
+                && (location.protocol === 'https:' || location.hostname === 'localhost');
+        }
+        function _pushVapidKey() { return ((window.EOS_CONFIG || {}).vapidPublicKey || '').trim(); }
+        function _pushKeyBytes(b64u) {
+            const pad = '='.repeat((4 - b64u.length % 4) % 4);
+            const raw = atob((b64u + pad).replace(/-/g, '+').replace(/_/g, '/'));
+            const out = new Uint8Array(raw.length);
+            for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+            return out;
+        }
+        let _pushReg = null;
+        async function _pushRegistration() {
+            if (!_pushSupported()) return null;
+            if (_pushReg) return _pushReg;
+            try {
+                // Relative to the page: on GitHub Pages that is /eos-traction-tool/sw.js with
+                // scope /eos-traction-tool/, so the notification's "open the tool" URL and
+                // the manifest's start_url resolve to the same place.
+                _pushReg = await navigator.serviceWorker.register('sw.js');
+                return _pushReg;
+            } catch (e) { console.warn('push: service worker registration failed', e); return null; }
+        }
+        // From _dpOnSessionResolved: identity has landed, so the band (if open) can be
+        // painted with this person's devices, and the worker is registered early enough
+        // that "Turn on" is one tap later.
+        function _pushInit() {
+            if (!_pushSupported()) return;
+            _pushRegistration().then(function () { pushRefreshBand(); });
+        }
+        function _pushDeviceLabel() {
+            const ua = navigator.userAgent || '';
+            const os = /Android/i.test(ua) ? 'Android' : /iPhone|iPad/i.test(ua) ? 'iPhone' : /Windows/i.test(ua) ? 'Windows' : /Mac/i.test(ua) ? 'Mac' : 'Device';
+            const br = /Edg\//i.test(ua) ? 'Edge' : /Chrome\//i.test(ua) ? 'Chrome' : /Firefox\//i.test(ua) ? 'Firefox' : /Safari\//i.test(ua) ? 'Safari' : 'Browser';
+            return os + ' · ' + br;
+        }
+        function _pushSetStatus(html) { const el = document.getElementById('pushStatus'); if (el) el.innerHTML = html; }
+        function _pushShowButtons(enable, test, disable, preview) {
+            const show = function (id, on) { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
+            show('pushEnableBtn', enable); show('pushTestBtn', test); show('pushDisableBtn', disable); show('pushPreviewBtn', preview);
+        }
+        let _pushRows = [];
+        // Paints the band from three facts: can this browser do it, is THIS device on,
+        // and what are my times. Safe to call any time; a no-op when the band is not mounted.
+        async function pushRefreshBand() {
+            if (!document.getElementById('pushStatus')) return;
+            const sb = mktGetSupabaseClient();
+            if (!_pushSupported()) {
+                _pushSetStatus('<span style="color:var(--gray-500);">This browser can&rsquo;t receive notifications here'
+                    + (location.protocol === 'https:' ? '' : ' (it needs the https address)')
+                    + '. On Android use Chrome; on an iPhone add the tool to the Home Screen first, then open it from there.</span>');
+                _pushShowButtons(false, false, false, false); return;
+            }
+            if (!_pushVapidKey()) {
+                _pushSetStatus('<span style="color:#b45309;">Not set up for this deployment yet &mdash; <code>vapidPublicKey</code> is missing from config.js.</span>');
+                _pushShowButtons(false, false, false, false); return;
+            }
+            if (!sb || !mktSupabaseProfile) {
+                _pushSetStatus('<span style="color:var(--gray-500);">Sign in with Google first &mdash; notifications are tied to your account.</span>');
+                _pushShowButtons(false, false, false, false); return;
+            }
+            let sub = null;
+            try { const reg = await _pushRegistration(); sub = reg ? await reg.pushManager.getSubscription() : null; } catch (e) { }
+            let prefs = null, rows = [];
+            try {
+                const p = await sb.from('push_prefs').select('*').eq('user_id', mktSupabaseProfile.id).maybeSingle();
+                prefs = p.data || null;
+                const d = await sb.from('push_subscriptions').select('endpoint,device_label,created_at,last_ok_at,last_error')
+                    .eq('user_id', mktSupabaseProfile.id).order('created_at');
+                rows = d.data || [];
+                if (p.error && /relation .* does not exist|schema cache/i.test(p.error.message || '')) {
+                    _pushSetStatus('<span style="color:#b45309;">The database is not set up for notifications yet (schema.sql PART 8 has not been run).</span>');
+                    _pushShowButtons(false, false, false, false); return;
+                }
+            } catch (e) { }
+            _pushRows = rows;
+            const mineOn = !!(sub && rows.some(function (r) { return r.endpoint === sub.endpoint; }));
+            if (Notification.permission === 'denied') {
+                _pushSetStatus('<span style="color:#b91c1c;">Notifications are blocked for this site in the browser. Allow them in the site settings (the lock icon by the address), then come back here.</span>');
+                _pushShowButtons(false, false, false, true);
+            } else {
+                _pushSetStatus(mineOn
+                    ? '<span style="color:#047857;">&#10003; On for this device (' + escapeHtml(_pushDeviceLabel()) + ').</span>'
+                    : '<span style="color:var(--gray-500);">Off on this device.</span>');
+                _pushShowButtons(!mineOn, mineOn, mineOn, true);
+            }
+            const set = function (id, v, isCheck) { const el = document.getElementById(id); if (!el) return; if (isCheck) el.checked = !!v; else el.value = v; };
+            set('pushBriefEnabled', prefs ? prefs.brief_enabled : true, true);
+            set('pushBriefTime', (prefs && prefs.brief_time) || '07:00');
+            set('pushRule3Enabled', prefs ? prefs.rule3_enabled : true, true);
+            set('pushRule3Time', (prefs && prefs.rule3_time) || '09:30');
+            set('pushWeekdaysOnly', prefs ? prefs.weekdays_only : true, true);
+            const list = document.getElementById('pushDevices');
+            if (list) {
+                list.innerHTML = rows.length
+                    ? 'Your devices: ' + rows.map(function (r, i) {
+                        const me = sub && r.endpoint === sub.endpoint;
+                        return '<span style="white-space:nowrap;">' + escapeHtml(r.device_label || 'Device') + (me ? ' (this one)' : '')
+                            + (r.last_error ? ' <span style="color:#b91c1c;" title="' + escapeHtml(r.last_error) + '">&#9888;</span>' : '')
+                            + (me ? '' : ' <a href="#" onclick="pushForgetDevice(' + i + ');return false;" style="color:#6b7280;">remove</a>')
+                            + '</span>';
+                    }).join(' &middot; ')
+                    : 'No device is receiving notifications yet.';
+            }
+        }
+        async function pushForgetDevice(i) {
+            const r = _pushRows[i]; const sb = mktGetSupabaseClient();
+            if (!r || !sb) return;
+            if (!confirm('Stop sending notifications to "' + (r.device_label || 'this device') + '"?')) return;
+            await sb.from('push_subscriptions').delete().eq('endpoint', r.endpoint);
+            pushRefreshBand();
+        }
+        // First time: a prefs row with the defaults. Every time: refresh the three facts
+        // only a browser knows — my initials, my time zone, the URL a tap should open.
+        async function _pushEnsurePrefs(sb) {
+            let tz = 'America/New_York';
+            try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || tz; } catch (e) { }
+            const appUrl = location.origin + location.pathname.replace(/index\.html$/, '');
+            const initials = (meMember() || {}).initials || '';
+            const { data: cur } = await sb.from('push_prefs').select('user_id').eq('user_id', mktSupabaseProfile.id).maybeSingle();
+            if (cur) return sb.from('push_prefs').update({ initials: initials, tz: tz, app_url: appUrl, updated_at: new Date().toISOString() }).eq('user_id', mktSupabaseProfile.id);
+            return sb.from('push_prefs').insert({ user_id: mktSupabaseProfile.id, firm_id: mktSupabaseProfile.firm_id, initials: initials, tz: tz, app_url: appUrl });
+        }
+        async function pushEnableThisDevice() {
+            const sb = mktGetSupabaseClient();
+            if (!sb || !mktSupabaseProfile) { alert('Sign in with Google first.'); return; }
+            const key = _pushVapidKey();
+            if (!key) { alert('vapidPublicKey is missing from config.js.'); return; }
+            _pushSetStatus('Asking the browser&hellip;');
+            try {
+                const perm = await Notification.requestPermission();
+                if (perm !== 'granted') { pushRefreshBand(); return; }
+                const reg = await _pushRegistration();
+                if (!reg) { _pushSetStatus('<span style="color:#b91c1c;">The service worker did not register &mdash; is sw.js next to index.html?</span>'); return; }
+                await navigator.serviceWorker.ready;
+                let sub = await reg.pushManager.getSubscription();
+                if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: _pushKeyBytes(key) });
+                const j = sub.toJSON();
+                const row = { endpoint: sub.endpoint, user_id: mktSupabaseProfile.id, firm_id: mktSupabaseProfile.firm_id,
+                    p256dh: j.keys.p256dh, auth: j.keys.auth, device_label: _pushDeviceLabel() };
+                const { error } = await sb.from('push_subscriptions').upsert(row, { onConflict: 'endpoint' });
+                if (error) throw error;
+                const pe = await _pushEnsurePrefs(sb);
+                if (pe && pe.error) throw pe.error;
+                await pushRefreshBand();
+            } catch (e) {
+                console.warn('push: enable failed', e);
+                _pushSetStatus('<span style="color:#b91c1c;">Could not turn on: ' + escapeHtml((e && e.message) || String(e)) + '</span>');
+            }
+        }
+        async function pushDisableThisDevice() {
+            const sb = mktGetSupabaseClient();
+            try {
+                const reg = await _pushRegistration();
+                const sub = reg ? await reg.pushManager.getSubscription() : null;
+                if (sub) {
+                    if (sb) await sb.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
+                    await sub.unsubscribe();
+                }
+            } catch (e) { console.warn('push: disable failed', e); }
+            pushRefreshBand();
+        }
+        let _pushPrefsTimer = null;
+        function pushSavePrefs() {
+            clearTimeout(_pushPrefsTimer);
+            _pushPrefsTimer = setTimeout(async function () {
+                const sb = mktGetSupabaseClient();
+                if (!sb || !mktSupabaseProfile) return;
+                const g = function (id) { return document.getElementById(id); };
+                const patch = {
+                    brief_enabled: !!(g('pushBriefEnabled') && g('pushBriefEnabled').checked),
+                    brief_time: (g('pushBriefTime') && g('pushBriefTime').value) || '07:00',
+                    rule3_enabled: !!(g('pushRule3Enabled') && g('pushRule3Enabled').checked),
+                    rule3_time: (g('pushRule3Time') && g('pushRule3Time').value) || '09:30',
+                    weekdays_only: !!(g('pushWeekdaysOnly') && g('pushWeekdaysOnly').checked),
+                    updated_at: new Date().toISOString()
+                };
+                try {
+                    const pe = await _pushEnsurePrefs(sb);
+                    if (pe && pe.error) throw pe.error;
+                    const { error } = await sb.from('push_prefs').update(patch).eq('user_id', mktSupabaseProfile.id);
+                    if (error) throw error;
+                } catch (e) { alert('Could not save the notification times: ' + ((e && e.message) || e)); }
+            }, 400);
+        }
+        // The Edge Function, as me: supabase-js attaches my session token.
+        async function _pushInvoke(body) {
+            const sb = mktGetSupabaseClient();
+            if (!sb || !mktSupabaseProfile) return { error: 'Sign in with Google first.' };
+            if (!sb.functions || typeof sb.functions.invoke !== 'function') return { error: 'This build of the Supabase client cannot call functions.' };
+            try {
+                const { data, error } = await sb.functions.invoke('push', { body: body });
+                if (error) {
+                    // A non-2xx carries the function's own JSON; surface its message, not "non-2xx status code".
+                    let msg = error.message || String(error);
+                    try { const j = error.context && await error.context.json(); if (j && j.error) msg = j.error; } catch (e) { }
+                    return { error: msg };
+                }
+                return data || {};
+            } catch (e) { return { error: (e && e.message) || String(e) }; }
+        }
+        async function pushSendTest() {
+            _pushSetStatus('Sending a test&hellip;');
+            let endpoint = null;
+            try { const reg = await _pushRegistration(); const sub = reg ? await reg.pushManager.getSubscription() : null; endpoint = sub ? sub.endpoint : null; } catch (e) { }
+            const r = await _pushInvoke({ action: 'test', endpoint: endpoint });
+            if (r.error) _pushSetStatus('<span style="color:#b91c1c;">Test failed: ' + escapeHtml(r.error) + '</span>');
+            else if (r.ok) _pushSetStatus('<span style="color:#047857;">Test sent &mdash; it should show on this device within a few seconds.</span>');
+            else _pushSetStatus('<span style="color:#b45309;">The server accepted the request but sent nothing'
+                + (r.errors && r.errors.length ? ': ' + escapeHtml(r.errors.join(', ')) : r.dropped ? ' &mdash; this device had unsubscribed; turn it on again.' : '.') + '</span>');
+            setTimeout(pushRefreshBand, 5000);
+        }
+        async function pushPreviewBrief() {
+            const out = document.getElementById('pushPreviewOut');
+            if (!out) return;
+            out.style.display = ''; out.textContent = 'Working it out…';
+            const r = await _pushInvoke({ action: 'preview' });
+            if (r.error || !r.ok) { out.textContent = 'Could not build the brief: ' + (r.error || 'turn on a device first so your settings exist.'); return; }
+            out.textContent = r.brief.title + '\n' + r.brief.body;
         }
 
         // ---------- Realtime (v4.36.0, Hans's "any change should trigger an
