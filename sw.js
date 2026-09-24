@@ -1,7 +1,9 @@
 // EOS Traction Tool — service worker (v5.30.1, 2026-09-24)
 //
-// NOTIFICATIONS ONLY. There is deliberately NO fetch handler here: this worker
-// never caches index.html, styles.css or anything else. The tool's whole
+// NOTIFICATIONS ONLY (plus one named exception, the splash logo — see LOGO_CACHE
+// below). The fetch handler touches exactly that one file and lets everything
+// else fall through to the network: this worker never caches index.html,
+// styles.css or any other app file. The tool's whole
 // "which version is this phone on?" story (the stale-build strip, the ?v=
 // styles link, the drift check) assumes the network is the source of truth,
 // and a caching worker is exactly how a phone ends up silently serving a
@@ -20,6 +22,34 @@
 
 self.addEventListener('install', function () { self.skipWaiting(); });
 self.addEventListener('activate', function (e) { e.waitUntil(self.clients.claim()); });
+
+// v5.31.1 — THE ONE DELIBERATE EXCEPTION to "caches nothing": the splash's animated
+// Intelligrations logo is a 9.6 MB GIF that never changes, and the installed app
+// shows it on every open. It is kept on the device after the first download.
+// Scoped to that ONE file by exact path — nothing else passes through here, so the
+// stale-build story above is untouched. If the logo is ever replaced, change the
+// cache name below and the old copy is dropped on the next activate.
+var LOGO_CACHE = 'eos-splash-logo-v1';
+var LOGO_PATH = /\/icons\/intelligrations-logo\.gif$/;
+self.addEventListener('fetch', function (e) {
+    var url;
+    try { url = new URL(e.request.url); } catch (err) { return; }
+    if (e.request.method !== 'GET' || !LOGO_PATH.test(url.pathname)) return;   // everything else: the network, untouched
+    e.respondWith(caches.open(LOGO_CACHE).then(function (cache) {
+        return cache.match(e.request).then(function (hit) {
+            if (hit) return hit;
+            return fetch(e.request).then(function (resp) {
+                if (resp && resp.ok) cache.put(e.request, resp.clone());
+                return resp;
+            });
+        });
+    }));
+});
+self.addEventListener('activate', function (e) {
+    e.waitUntil(caches.keys().then(function (keys) {
+        return Promise.all(keys.filter(function (k) { return k.indexOf('eos-splash-logo-') === 0 && k !== LOGO_CACHE; }).map(function (k) { return caches.delete(k); }));
+    }));
+});
 
 self.addEventListener('push', function (e) {
     var d = {};
