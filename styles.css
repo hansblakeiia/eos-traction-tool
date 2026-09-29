@@ -5966,3 +5966,9 @@
     #opportunities .opp-form { grid-template-columns: minmax(0, 1fr); }
     #opportunities .opp-head-btns .btn { flex: 1 1 auto; }
 }
+
+/* v5.47.2: a switched-off button must LOOK switched off. Hans clicked a disabled
+   "Approve & schedule the quote post" twice because it was as blue as a live one and
+   feared a double post (nothing was sent - a disabled button fires no click). There was
+   no :disabled style anywhere in the app. Appended last so it wins equal-specificity ties. */
+.btn:disabled, .btn[disabled] { opacity: 0.45; cursor: not-allowed; box-shadow: none; filter: grayscale(0.4); }
