@@ -4827,9 +4827,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '5.47.2';
+        const EOS_VERSION = '5.48.0';
         const EOS_BUILD_DATE = '2026-09-29';
-        const EOS_BUILD_TIME = '21:30'; // v5.47.2 (TWO-FILE, styles.css?v=5.47.2): his screenshot - he clicked "Approve & schedule the quote post" twice, nothing happened, and he feared a double post. Nothing was sent: the button was DISABLED (v5.46.2's order rule - the blog's own Facebook post was not scheduled yet) and a disabled button fires no click; had it been live, every schedule still passes a confirm dialog, the single-flight flag and the backend's 3-minute duplicate refusal. The defect was visual: styles.css had NO :disabled rule anywhere, so a disabled .btn-primary was exactly as blue as a live one. Now .btn:disabled is dimmed with a not-allowed cursor (appended last, rule 10b), and the Facebook buttons carry the reason as a hover title.
+        const EOS_BUILD_TIME = '19:45'; // v5.48.0 (styles.css UNCHANGED, link stays ?v=5.47.2): HIS GREENVILLE PAGES (§5.118). Ten service pages /greenville-* (created 2024-03-28, reorganised May-Jul 2024; audience pages linked to them 2024-06-21); he asked whether they gained views. The 28-day report cannot see that far back, so What's working gains a 'Greenville pages' block: mktGaLocalLoad -> analyticsReport mode 'pathHistory' (pathContains 'greenville', startDate 2023-07-01) -> mktGaLocalFacts (pure; FULL months only, last 12 vs the 12 before, trailing-slash paths merged, service pages vs blog posts, site total for share) -> mktGaLocalRender (per-page line + inline SVG sparkline) + mktGaLocalCopy (text for a chat). REQUIRES Google_Tasks_Sync.gs 3.86.0 ON THE GA BACKEND (gaBackendInitials = Hans) - a 3.85.0 backend ignores the mode and answers the default report, which the client detects by the missing `history` and names. No new scope, no consent run. PREVIOUSLY v5.47.2 (TWO-FILE, styles.css?v=5.47.2): his screenshot - he clicked "Approve & schedule the quote post" twice, nothing happened, and he feared a double post. Nothing was sent: the button was DISABLED (v5.46.2's order rule - the blog's own Facebook post was not scheduled yet) and a disabled button fires no click; had it been live, every schedule still passes a confirm dialog, the single-flight flag and the backend's 3-minute duplicate refusal. The defect was visual: styles.css had NO :disabled rule anywhere, so a disabled .btn-primary was exactly as blue as a live one. Now .btn:disabled is dimmed with a not-allowed cursor (appended last, rule 10b), and the Facebook buttons carry the reason as a hover title.
         // v5.47.1: gs-auditor on 3.85.0 (backend cleared for Hans only, consent between push and redeploy). Client fixes: (1) a pre-3.85.0 backend answers analyticsReport with the secret-key refusal, which _calPost rewrites as "sign-in has expired" - a wrong cause (rule 63); mktGaErr now names the backend version first, and Save & test gates on the own backend's version. (2) GA rows are (path, title) pairs, so a retitled post split into two rows and could miss the trend test or list twice; _mktGaByPath sums last7/last28 by path. Backend (same 3.85.0, not yet deployed): authorizeAnalytics re-throws so a failure is red in the editor; a disabled Analytics Data API is named before the access-list message.
         // v5.47.0: WHAT'S WORKING - GOOGLE ANALYTICS, READ-ONLY. PAIRS WITH .gs v3.85.0 (new scope analytics.readonly + AnalyticsData advanced service; Hans runs authorizeAnalytics in the editor between push and redeploy; Amanda's backend deliberately stays 3.84.0 without the scope). His ask: "this page has been trending higher, or this blog or podcast was really clicked on recently, let's use that as a backlink for a related quote (and perhaps asking me for a quote)". He supplied GA4 property 370961938 (NOT hardcoded - public repo; it is entered in Settings > Social posting > Google Analytics and rides on the firm 'marketing' row as gaPropertyId + gaBackendInitials, the fbBackendInitials routing pattern; Save & test only saves after the backend reads it). Marketing page: a collapsed "What's working" panel (loads on open, cached device-local 6h in eos_mkt_ga_cache, Refresh): Trending this week (5+ views and >=1.5x the week before, home and WP plumbing excluded), Most read 28 days, sources + Facebook's share; each page has "Quote -> link here" = a Social / Quote card whose facebookQuote.link is that page, opened with a toast ASKING him for the quote (never invented); "AI: What should I do next?" turns only the listed numbers + his recent cards into three moves (told never to invent figures or write the quote). mktFqCta: a standalone quote pointing at a BLOG post (linkKind from the site list) reads "the full post is here". Podcast: Blubrry (his answer) - downloads need Blubrry API access, phase 2; episode pages on the site are already in GA.
         // v5.46.2: HIS ORDER, ENFORCED - blog live in WordPress -> its Facebook post -> then the quote. (1) He asked what stops a social post going out before the blog: the blog's Facebook post already waited for WordPress to report the post LIVE (mktFbLiveLink = status 'publish'), but the blog's QUOTE post only waited for that too - it could be scheduled with no social post at all, or timed before it (the rhythm only SUGGESTED after). Now mktFqSocialFirst(card): a blog quote needs the blog's own post scheduled/posted and a time strictly after it, in the paint (button disabled, line says why) and in _mktFbApprove (refusal sentences). Standalone quotes unaffected. Probe F6/F7. (2) His "Shouldn't the CTA for the blog be higher up like before Finalize draft?": v5.44-5.46 had pushed the closing CTA under Related reading + both Facebook boxes inside Package & Send. It is now its own STEP 6 "Closing Call to Action" (inside #mktBlogFields, so blog cards only), directly before Finalize Draft; later steps renumbered 7-12 (Quote is now step 10), and every live "Step N" string now names the step instead of its number so the next move cannot stale them. (3) Package & Send: the WordPress / package / Drive buttons now sit ABOVE the Facebook boxes, matching the order.
@@ -8628,7 +8628,17 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.47.2 &mdash; 2026-09-29 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.48.0 &mdash; 2026-09-29 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Did the Greenville pages work? Now you can see.</div>'
+                + '<div style="font-size:0.8rem;background:#fffbeb;border:1px solid #fcd34d;color:#92400e;border-radius:6px;padding:6px 10px;margin:0 0 8px;">Needs Hans&rsquo;s backend on 3.86.0 (a plain update, no permission click). Until then the new button says so.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Marketing &rsaquo; What&rsquo;s working has a new &ldquo;Greenville pages&rdquo; section.</strong> Press Show their history to see, for every page with Greenville in its address, its views in the last 12 full months against the 12 before, how many visitors arrived straight from a search engine (mostly Google), when it was first viewed, and a small line of its monthly views. Blog posts that mention Greenville are listed separately, and a total says what share of the whole site these pages carry.</li>'
+                + '<li><strong>Copy these numbers</strong> puts the whole table on the clipboard as text, ready to paste into a chat for suggestions. Read-only: nothing on the website changes.</li>'
+                + '</ul>'
+                + '</div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.47.2 &mdash; 2026-09-29</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Buttons that can&rsquo;t be used yet now look greyed out</strong> everywhere in the tool, instead of looking clickable and doing nothing. Hover over a greyed Facebook button to see why it&rsquo;s waiting.</li>'
                 + '</ul>'
@@ -17739,6 +17749,9 @@ Example:
             h += '<div style="font-weight:600;">Where visitors come from (28 days)</div><div style="margin:2px 0 8px; color:var(--gray-600);">'
                 + (ins.sources.map(function(s) { return escapeHtml(s.sessionSource + ' / ' + s.sessionMedium) + ' ' + s.sessions; }).join(' &middot; ') || 'no visits recorded')
                 + (ins.total ? '<br>Facebook sent <strong>' + ins.fb + '</strong> of ' + ins.total + ' visits.' : '') + '</div>';
+            h += '<div style="font-weight:600;">Greenville pages</div><div id="mktGaLocalOut" style="margin:2px 0 8px; color:var(--gray-600);">'
+                + '<button class="btn btn-secondary" onclick="mktGaLocalLoad()" style="font-size:0.75rem; padding:2px 8px;">Show their history</button>'
+                + ' Monthly views and search-engine visits since 2023 for every page with &ldquo;greenville&rdquo; in its address.</div>';
             h += '<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">'
                 + '<button class="btn btn-secondary" id="mktGaCoachBtn" onclick="mktGaCoach()" style="font-size:0.78rem; padding:4px 10px; color:var(--primary);">AI: What should I do next?</button>'
                 + '<span style="font-size:0.74rem; color:var(--gray-500);">Updated ' + escapeHtml(new Date(at).toLocaleString()) + ' &middot; <a href="#" onclick="mktGaLoad(true); return false;">Refresh</a></span></div>'
@@ -17777,6 +17790,132 @@ Example:
             const q = document.getElementById('mktQuote');
             if (q) { q.scrollIntoView({ block: 'center' }); }
             showToast('What quote fits "' + title + '"? Write it (or use AI: Suggest Quotes) in the Quote step - its Facebook post will link to that page.');
+        }
+        // v5.48.0: HIS GREENVILLE PAGES. "In the past I added Greenville to several pages...
+        // show whether they gained views, which ones are doing best". The 28-day report cannot
+        // see spring 2024, so analyticsReport mode 'pathHistory' (.gs 3.86.0) returns monthly
+        // views for every path containing the phrase, Google-search entrances on them, and the
+        // site's monthly total for scale. Service pages (/greenville-...) and blog posts that
+        // merely mention Greenville are kept apart. Numbers only; nothing on the site changes.
+        const MKT_GA_LOCAL_PHRASE = 'greenville';
+        const MKT_GA_LOCAL_GS_MIN = '3.86.0';
+        let _mktGaLocalText = '';
+        async function mktGaLocalLoad() {
+            const out = document.getElementById('mktGaLocalOut');
+            const pid = mktMarketingRow().gaPropertyId;
+            if (!out || !pid) return;
+            out.textContent = 'Reading Google Analytics history...';
+            const r = await _calPost({ action: 'analyticsReport', propertyId: pid, mode: 'pathHistory', pathContains: MKT_GA_LOCAL_PHRASE, startDate: '2023-07-01' }, mktGaBackendUrl())
+                .catch(function(e) { return { success: false, error: e.message }; });
+            const retry = ' <button class="btn btn-secondary" onclick="mktGaLocalLoad()" style="font-size:0.75rem; padding:2px 8px;">Try again</button>';
+            // A backend older than 3.86.0 ignores the mode and answers the ordinary report.
+            if (r && r.success && !r.history) {
+                const ini = mktMarketingRow().gaBackendInitials;
+                out.innerHTML = '<span style="color:#b91c1c;">Page history needs backend ' + MKT_GA_LOCAL_GS_MIN + (ini ? ' on ' + escapeHtml(ini) + '’s backend' : '') + ' (a plain update, no permission click).</span>' + retry;
+                return;
+            }
+            if (!r || !r.success) { out.innerHTML = '<span style="color:#b91c1c;">' + escapeHtml(mktGaErr(r)) + '</span>' + retry; return; }
+            mktGaLocalRender(r);
+        }
+        function _mktGaYm(d) { return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0'); }
+        function _mktGaYmLabel(ym) { return new Date(+ym.slice(0, 4), +ym.slice(4) - 1, 1).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }); }
+        function _mktGaSlugTitle(path) {
+            const s = String(path).replace(/^\/+|\/+$/g, '').split('/').pop().replace(/^greenville-/, '').replace(/-/g, ' ');
+            return s ? s.charAt(0).toUpperCase() + s.slice(1) : path;
+        }
+        // Pure: the report -> per-page facts. Windows are FULL months only (the current month
+        // is partial and would read as a drop): last 12 full months vs the 12 before.
+        function mktGaLocalFacts(r, now) {
+            now = now || new Date();
+            const h = r.history || {};
+            const months = [];
+            for (let i = 24; i >= 1; i--) months.push(_mktGaYm(new Date(now.getFullYear(), now.getMonth() - i, 1)));
+            const last12 = months.slice(12), prev12 = months.slice(0, 12);
+            const norm = function(p) { return String(p || '').toLowerCase().split('?')[0].replace(/\/?$/, '/'); };
+            const pages = {};
+            (h.views || []).forEach(function(x) {
+                const k = norm(x.pagePath);
+                const p = pages[k] || (pages[k] = { path: k, byMonth: {}, organic: {} });
+                p.byMonth[x.yearMonth] = (p.byMonth[x.yearMonth] || 0) + x.n;
+            });
+            (h.organic || []).forEach(function(x) {
+                const k = norm(x.landingPage);
+                const p = pages[k] || (pages[k] = { path: k, byMonth: {}, organic: {} });
+                p.organic[x.yearMonth] = (p.organic[x.yearMonth] || 0) + x.n;
+            });
+            const sum = function(obj, list) { return list.reduce(function(s, m) { return s + (obj[m] || 0); }, 0); };
+            const site = {};
+            (h.site || []).forEach(function(x) { site[x.yearMonth] = (site[x.yearMonth] || 0) + x.n; });
+            const allMonths = Object.keys(site).sort();
+            const list = Object.keys(pages).map(function(k) {
+                const p = pages[k];
+                const seen = Object.keys(p.byMonth).filter(function(m) { return p.byMonth[m] > 0; }).sort();
+                return {
+                    path: k, title: _mktGaSlugTitle(k), service: /^\/greenville-/.test(k),
+                    last12: sum(p.byMonth, last12), prev12: sum(p.byMonth, prev12),
+                    google12: sum(p.organic, last12), googlePrev12: sum(p.organic, prev12),
+                    first: seen[0] || '', byMonth: p.byMonth
+                };
+            }).filter(function(p) { return p.last12 || p.prev12 || p.google12; })
+              .sort(function(a, b) { return b.last12 - a.last12; });
+            const svc = list.filter(function(p) { return p.service; });
+            const tot = function(key) { return svc.reduce(function(s, p) { return s + p[key]; }, 0); };
+            return {
+                site: r.siteUrl || '', last12: last12, prev12: prev12, allMonths: allMonths,
+                firstData: allMonths[0] || '', service: svc, posts: list.filter(function(p) { return !p.service; }),
+                svcLast12: tot('last12'), svcPrev12: tot('prev12'), svcGoogle12: tot('google12'), svcGooglePrev12: tot('googlePrev12'),
+                siteLast12: sum(site, last12), sitePrev12: sum(site, prev12)
+            };
+        }
+        function _mktGaChange(now, before) {
+            if (!before) return now ? 'new' : '';
+            const pct = Math.round((now - before) / before * 100);
+            return (pct >= 0 ? '+' : '') + pct + '%';
+        }
+        function _mktGaSpark(p, months) {
+            const vals = months.map(function(m) { return p.byMonth[m] || 0; });
+            const max = Math.max.apply(null, vals.concat([1]));
+            const w = 96, hgt = 18, step = w / Math.max(1, vals.length - 1);
+            const pts = vals.map(function(v, i) { return (i * step).toFixed(1) + ',' + (hgt - v / max * hgt).toFixed(1); }).join(' ');
+            return '<svg width="' + w + '" height="' + (hgt + 2) + '" viewBox="0 -1 ' + w + ' ' + (hgt + 2) + '" style="vertical-align:middle;" aria-hidden="true"><polyline points="' + pts + '" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>';
+        }
+        function mktGaLocalRender(r) {
+            const out = document.getElementById('mktGaLocalOut');
+            const f = mktGaLocalFacts(r);
+            const span = f.allMonths.filter(function(m) { return m >= (f.prev12[0] || ''); }).slice(0, 24);
+            const pageRow = function(p) {
+                return '<li style="margin:4px 0; list-style:none;"><a href="' + escapeHtml(f.site + p.path) + '" target="_blank" rel="noopener">' + escapeHtml(p.title) + '</a>'
+                    + ' <span style="color:var(--gray-600); white-space:nowrap;">' + _mktGaSpark(p, span) + '</span>'
+                    + '<div style="font-size:0.74rem; color:var(--gray-500);">' + p.last12 + ' views in the last 12 months (' + p.prev12 + ' the 12 before, ' + _mktGaChange(p.last12, p.prev12) + ')'
+                    + ' &middot; ' + p.google12 + ' arrived from a search engine' + (p.first ? ' &middot; first view ' + escapeHtml(_mktGaYmLabel(p.first)) : '') + '</div></li>';
+            };
+            const share = function(a, b) { return b ? (Math.round(a / b * 1000) / 10) + '%' : '-'; };
+            let h = '<div style="color:var(--gray-700); margin:2px 0 6px;">The ' + f.service.length + ' Greenville service pages had <strong>' + f.svcLast12 + '</strong> views in the last 12 full months'
+                + ' (' + f.svcPrev12 + ' the 12 before, ' + (_mktGaChange(f.svcLast12, f.svcPrev12) || 'no change') + '), of which <strong>' + f.svcGoogle12 + '</strong> visits came straight from a search engine, almost all Google (' + f.svcGooglePrev12 + ' before).'
+                + ' That is ' + share(f.svcLast12, f.siteLast12) + ' of all site views (' + share(f.svcPrev12, f.sitePrev12) + ' the year before).'
+                + (f.firstData ? ' Analytics data starts ' + escapeHtml(_mktGaYmLabel(f.firstData)) + '.' : '') + '</div>';
+            h += f.service.length ? '<ul style="margin:0 0 6px; padding:0;">' + f.service.map(pageRow).join('') + '</ul>'
+                : '<div style="color:var(--gray-500);">No views recorded on any /greenville-&hellip; page.</div>';
+            if (f.posts.length) h += '<div style="font-weight:600; font-size:0.8rem; margin-top:4px;">Blog posts with Greenville in the address</div><ul style="margin:0 0 6px; padding:0;">' + f.posts.slice(0, 8).map(pageRow).join('') + '</ul>';
+            h += '<div style="font-size:0.74rem; color:var(--gray-500);">Lines show monthly views, oldest on the left. '
+                + '<a href="#" onclick="mktGaLocalCopy(); return false;">Copy these numbers</a> to paste into a chat for suggestions.</div>';
+            out.innerHTML = h;
+            _mktGaLocalText = mktGaLocalAsText(f);
+        }
+        function mktGaLocalAsText(f) {
+            const line = function(p) {
+                return p.path + ' | last12 ' + p.last12 + ' | prev12 ' + p.prev12 + ' | google12 ' + p.google12 + ' | googlePrev12 ' + p.googlePrev12 + ' | first ' + (p.first || '-')
+                    + ' | monthly ' + f.allMonths.map(function(m) { return m.slice(2) + ':' + (p.byMonth[m] || 0); }).join(' ');
+            };
+            return 'Greenville pages, Google Analytics, full months ' + f.prev12[0] + '-' + f.last12[11] + ' (data from ' + (f.firstData || '?') + ')\n'
+                + 'Service pages total: last12 ' + f.svcLast12 + ', prev12 ' + f.svcPrev12 + ', google12 ' + f.svcGoogle12 + ', googlePrev12 ' + f.svcGooglePrev12
+                + '; site views last12 ' + f.siteLast12 + ', prev12 ' + f.sitePrev12 + '\n'
+                + f.service.map(line).join('\n') + (f.posts.length ? '\nBlog posts:\n' + f.posts.map(line).join('\n') : '');
+        }
+        function mktGaLocalCopy() {
+            if (!_mktGaLocalText) return;
+            navigator.clipboard.writeText(_mktGaLocalText).then(function() { showToast('Copied. Paste it into the chat.'); })
+                .catch(function() { showToast('Could not copy on this device.'); });
         }
         async function mktGaCoach() {
             const ins = _mktGaLast;
