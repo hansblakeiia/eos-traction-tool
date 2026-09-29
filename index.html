@@ -2352,10 +2352,32 @@
                             <button type="button" class="btn btn-secondary" id="mktWorkInUndoBtn" onclick="mktUndoWorkIn()" style="display:none; font-size:0.75rem; padding:4px 10px; margin-bottom:14px;">&#8630; Undo &ldquo;Work this in&rdquo;</button>
                         </div>
 
-                        <!-- ============ STEP 6 — FINALIZE DRAFT ============ -->
+                        <!-- ============ STEP 6 — CLOSING CALL TO ACTION (v5.46.2, Hans: "Shouldn't
+                             the CTA for the blog be higher up like before Finalize draft?") ============
+                             The blog's own ending, so it belongs with the blog, not down in
+                             Package & Send under the Facebook boxes (where v5.44-5.46 had pushed it).
+                             It still needs the draft above - "AI: Suggest CTA" reads it.
+                             v3.84.0 origin: the close used to be hardcoded and identical on every
+                             post. Left blank it publishes the house default, so nothing changes for
+                             a card nobody edits. The button underneath it ("Schedule a Conversation")
+                             is fixed brand furniture and is not editable here on purpose. -->
+                        <div class="mkt-step" id="mktStepCta">
+                            <div class="mkt-step-head">
+                                <span class="mkt-step-num">6</span> Closing Call to Action
+                                <button type="button" class="btn btn-secondary" id="mktCtaBtn" onclick="mktSuggestCta()" style="font-size:0.75rem; padding:4px 10px; margin-left:auto; color:var(--primary);">AI: Suggest CTA</button>
+                            </div>
+                            <p style="font-size:0.78rem; color:var(--gray-500); margin:0 0 6px;">Make it match THIS blog. Leave both boxes empty and the post closes with:<br><em>&ldquo;Did something in this post resonate with you? Grab 15 minutes on our calendar&mdash;let&rsquo;s chat over the phone, grab a virtual or local coffee.&rdquo;</em> &mdash; plus the button.</p>
+                            <input type="text" id="mktCtaHeading" placeholder="Blank = the standard close, shown above"
+                                style="width:100%; padding:7px; border:1px solid var(--gray-200); border-radius:6px; font-size:0.88rem; box-sizing:border-box; margin-bottom:6px;">
+                            <textarea id="mktCtaBody" rows="3" placeholder="One or two sentences inviting the reader to talk, about what this post was actually about."
+                                style="width:100%; padding:7px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; font-size:0.85rem; box-sizing:border-box; resize:vertical;"></textarea>
+                            <p style="font-size:0.72rem; color:var(--gray-500); margin:6px 0 14px;">The &ldquo;Schedule a Conversation&rdquo; button is added automatically below this.</p>
+                        </div>
+
+                        <!-- ============ STEP 7 — FINALIZE DRAFT ============ -->
                         <div class="mkt-step" id="mktStepFinalize">
                             <div class="mkt-step-head">
-                                <span class="mkt-step-num">6</span> Finalize Draft
+                                <span class="mkt-step-num">7</span> Finalize Draft
                                 <button type="button" class="btn btn-secondary" id="mktTightenBtn" onclick="mktTightenBlog()" style="font-size:0.75rem; padding:4px 10px; margin-left:auto; color:var(--primary);">AI: Tighten</button>
                             </div>
                             <div style="font-size:0.8rem; color:var(--gray-500); margin-bottom:14px;">Hand-edit the draft above until it's yours. &ldquo;AI: Tighten&rdquo; does one editorial pass &mdash; grammar, flow, cutting fluff &mdash; without changing your meaning.</div>
@@ -2364,7 +2386,7 @@
                         <!-- ============ STEP 7 — TITLE / HEADLINE ============ -->
                         <div class="mkt-step" id="mktStepTitle">
                             <div class="mkt-step-head">
-                                <span class="mkt-step-num">7</span> Title / Headline
+                                <span class="mkt-step-num">8</span> Title / Headline
                                 <button type="button" class="btn btn-secondary" id="mktTitlesBtn" onclick="mktSuggestTitles()" style="font-size:0.75rem; padding:4px 10px; margin-left:auto; color:var(--primary);">AI: Suggest Titles</button>
                             </div>
                             <input type="text" id="mktTitle" placeholder="Generated last, from the finished blog."
@@ -2376,7 +2398,7 @@
                     <!-- ============ STEP 8 — SOCIAL POST COPY ============ -->
                     <div class="mkt-step" id="mktStepSocial">
                         <div class="mkt-step-head">
-                            <span class="mkt-step-num">8</span> Social Post Copy
+                            <span class="mkt-step-num">9</span> Social Post Copy
                             <button type="button" class="btn btn-secondary" id="mktSocialBtn" onclick="mktSuggestSocial()" style="font-size:0.75rem; padding:4px 10px; margin-left:auto; color:var(--primary);">AI: Write Social</button>
                         </div>
                         <textarea id="mktSocial" rows="4" placeholder="LinkedIn / Facebook wording. Generated from the final blog, or written directly for a standalone post."
@@ -2386,7 +2408,7 @@
                     <!-- ============ STEP 9 — QUOTES ============ -->
                     <div class="mkt-step" id="mktStepQuote">
                         <div class="mkt-step-head">
-                            <span class="mkt-step-num">9</span> Quote (for IntelliQuotes)
+                            <span class="mkt-step-num">10</span> Quote (for IntelliQuotes)
                             <button type="button" class="btn btn-secondary" id="mktQuotesBtn" onclick="mktSuggestQuotes()" style="font-size:0.75rem; padding:4px 10px; margin-left:auto; color:var(--primary);">AI: Suggest Quotes</button>
                         </div>
                         <div id="mktQuoteOptions" style="display:none; margin-bottom:8px;"></div>
@@ -2430,7 +2452,7 @@
                          photo, and the prompt is told to build around it rather than replace it. -->
                     <div class="mkt-step" id="mktStepImage">
                         <div class="mkt-step-head">
-                            <span class="mkt-step-num">10</span> Image
+                            <span class="mkt-step-num">11</span> Image
                             <button type="button" class="btn btn-secondary" id="mktImageBtn" onclick="mktSuggestImagePrompts()" style="font-size:0.75rem; padding:4px 10px; margin-left:auto;">AI: Suggest 3 image ideas</button>
                         </div>
                         <label style="font-size:0.78rem;font-weight:400;color:var(--gray-500); display:block; margin-bottom:4px;">Something in mind? A photo you already have, a scene, an object &mdash; or leave blank and let it read the blog.</label>
@@ -2467,11 +2489,10 @@
                         </div>
                     </div>
 
-                    <!-- ============ STEP 11 — PACKAGE & SEND ============ -->
+                    <!-- ============ STEP 12 — PACKAGE & SEND ============ -->
                     <div class="mkt-step" id="mktStepPackage">
                         <div class="mkt-step-head">
-                            <span class="mkt-step-num">11</span> Package &amp; Send
-                            <button type="button" class="btn btn-secondary" id="mktCtaBtn" onclick="mktSuggestCta()" style="font-size:0.75rem; padding:4px 10px; margin-left:auto; color:var(--primary);">AI: Suggest CTA</button>
+                            <span class="mkt-step-num">12</span> Package &amp; Send
                         </div>
                         <!-- v5.44.0: RELATED READING. His ask: "If you found this blog interesting,
                              check out our other blog here" with a link. The list is the site's
@@ -2486,6 +2507,15 @@
                             <div id="mktRelOptions" style="display:none; margin-top:6px;"></div>
                             <div id="mktRelInfo" style="font-size:0.72rem; color:var(--gray-500); margin-top:4px;">Adds &ldquo;If you found this interesting, you may also like: <em>(linked title)</em>&rdquo; to the end of the Blog Draft.</div>
                         </div>
+                        <!-- v5.46.2 (his order: the blog to WordPress first, then the social post,
+                             then the quote): the send buttons sit ABOVE the Facebook boxes now. -->
+                        <div id="mktWpInfo" style="display:none; margin-bottom:8px; padding:8px 10px; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:6px; font-size:0.82rem;"></div>
+                        <div id="mktPackagedInfo" style="display:none; margin-bottom:8px; padding:8px 10px; background:#fef3c7; border:1px solid #fde68a; border-radius:6px; font-size:0.82rem;"></div>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+                            <button class="btn btn-secondary" id="mktWpBtn" onclick="mktSendToWordPress()" style="color:var(--primary);">Send Blog to WordPress</button>
+                            <button class="btn btn-secondary" id="mktTrevorBtn" onclick="mktPackageToTrevor()" style="color:var(--primary);">Package for your marketing person</button>
+                            <button class="btn btn-secondary" id="mktDriveBtn" onclick="mktSaveBlogToDrive()">Save to Drive</button>
+                        </div>
                         <!-- v5.45.0: THE FACEBOOK POST. Waits until the blog is Live; the text starts
                              from Step 8 and the blog's live link rides along (Facebook shows the
                              featured picture as the preview). Nothing goes out until Hans or
@@ -2496,7 +2526,7 @@
                                 <label style="font-size:0.78rem; font-weight:600; color:var(--gray-500); margin:0;">Facebook post &mdash; Intelligent Investing Page</label>
                                 <span id="mktFbState" style="font-size:0.72rem; margin-left:auto;"></span>
                             </div>
-                            <textarea id="mktFbText" rows="4" placeholder="Starts from your Social Post Copy (Step 8). Edit it for Facebook if you like." oninput="mktFbDraftChanged('facebook')"
+                            <textarea id="mktFbText" rows="4" placeholder="Starts from your Social Post Copy step. Edit it for Facebook if you like." oninput="mktFbDraftChanged('facebook')"
                                 style="width:100%; padding:7px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; font-size:0.85rem; box-sizing:border-box; resize:vertical;"></textarea>
                             <div id="mktFbLinkLine" style="font-size:0.74rem; color:var(--gray-500); margin:4px 0 6px; word-break:break-all;"></div>
                             <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
@@ -2532,27 +2562,6 @@
                                 <button type="button" class="btn btn-primary" id="mktFqApproveBtn" onclick="mktFbApprove('facebookQuote')" style="font-size:0.78rem; padding:6px 12px;">Approve &amp; schedule the quote post</button>
                             </div>
                             <div id="mktFqInfo" style="font-size:0.75rem; color:var(--gray-500); margin-top:6px;"></div>
-                        </div>
-                        <!-- v3.84.0: the closing call-to-action, which used to be hardcoded and
-                             identical on every post. Left blank it publishes the house default,
-                             so nothing changes for a card nobody edits. The button underneath
-                             it ("Schedule a Conversation") is fixed brand furniture and is not
-                             editable here on purpose. -->
-                        <div style="background:#fff; border:1px solid var(--gray-200); border-radius:6px; padding:10px; margin-bottom:10px;">
-                            <label style="font-size:0.78rem; font-weight:600; color:var(--gray-500); display:block; margin-bottom:4px;">Closing call to action &mdash; make it match THIS blog</label>
-                            <p style="font-size:0.72rem; color:var(--gray-500); margin:0 0 6px;">Leave both boxes empty and the post closes with:<br><em>&ldquo;Did something in this post resonate with you? Grab 15 minutes on our calendar&mdash;let&rsquo;s chat over the phone, grab a virtual or local coffee.&rdquo;</em> &mdash; plus the button.</p>
-                            <input type="text" id="mktCtaHeading" placeholder="Blank = the standard close, shown below"
-                                style="width:100%; padding:7px; border:1px solid var(--gray-200); border-radius:6px; font-size:0.88rem; box-sizing:border-box; margin-bottom:6px;">
-                            <textarea id="mktCtaBody" rows="3" placeholder="One or two sentences inviting the reader to talk — about what this post was actually about."
-                                style="width:100%; padding:7px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; font-size:0.85rem; box-sizing:border-box; resize:vertical;"></textarea>
-                            <p style="font-size:0.72rem; color:var(--gray-500); margin:6px 0 0;">The &ldquo;Schedule a Conversation&rdquo; button is added automatically below this.</p>
-                        </div>
-                        <div id="mktWpInfo" style="display:none; margin-bottom:8px; padding:8px 10px; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:6px; font-size:0.82rem;"></div>
-                        <div id="mktPackagedInfo" style="display:none; margin-bottom:8px; padding:8px 10px; background:#fef3c7; border:1px solid #fde68a; border-radius:6px; font-size:0.82rem;"></div>
-                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                            <button class="btn btn-secondary" id="mktWpBtn" onclick="mktSendToWordPress()" style="color:var(--primary);">Send Blog to WordPress</button>
-                            <button class="btn btn-secondary" id="mktTrevorBtn" onclick="mktPackageToTrevor()" style="color:var(--primary);">Package for your marketing person</button>
-                            <button class="btn btn-secondary" id="mktDriveBtn" onclick="mktSaveBlogToDrive()">Save to Drive</button>
                         </div>
                     </div>
                 </div>
@@ -4798,9 +4807,10 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '5.46.1';
+        const EOS_VERSION = '5.46.2';
         const EOS_BUILD_DATE = '2026-09-29';
-        const EOS_BUILD_TIME = '19:05'; // v5.46.1: gs-auditor findings on 3.84.0, before deploy. The quote post now asks the backend that HOLDS the Page key (facebookInfo -> gsVersion, new _gsVerAtLeast) instead of trusting our own probe - Amanda on 3.84 approving through Hans's 3.83 would have scheduled a picture-less post reported as success; and a picture-bearing request whose reply lacks withImage:true is an error naming the post id to delete. Backend 3.84.0 also deletes the uploaded photo when /feed fails or the is_published re-check fires; hook 6b pins published:'false' on the /feed params object again (the /photos upload had masked it).
+        const EOS_BUILD_TIME = '19:40'; // v5.46.2: HIS ORDER, ENFORCED - blog live in WordPress -> its Facebook post -> then the quote. (1) He asked what stops a social post going out before the blog: the blog's Facebook post already waited for WordPress to report the post LIVE (mktFbLiveLink = status 'publish'), but the blog's QUOTE post only waited for that too - it could be scheduled with no social post at all, or timed before it (the rhythm only SUGGESTED after). Now mktFqSocialFirst(card): a blog quote needs the blog's own post scheduled/posted and a time strictly after it, in the paint (button disabled, line says why) and in _mktFbApprove (refusal sentences). Standalone quotes unaffected. Probe F6/F7. (2) His "Shouldn't the CTA for the blog be higher up like before Finalize draft?": v5.44-5.46 had pushed the closing CTA under Related reading + both Facebook boxes inside Package & Send. It is now its own STEP 6 "Closing Call to Action" (inside #mktBlogFields, so blog cards only), directly before Finalize Draft; later steps renumbered 7-12 (Quote is now step 10), and every live "Step N" string now names the step instead of its number so the next move cannot stale them. (3) Package & Send: the WordPress / package / Drive buttons now sit ABOVE the Facebook boxes, matching the order.
+        // v5.46.1: gs-auditor findings on 3.84.0, before deploy. The quote post now asks the backend that HOLDS the Page key (facebookInfo -> gsVersion, new _gsVerAtLeast) instead of trusting our own probe - Amanda on 3.84 approving through Hans's 3.83 would have scheduled a picture-less post reported as success; and a picture-bearing request whose reply lacks withImage:true is an error naming the post id to delete. Backend 3.84.0 also deletes the uploaded photo when /feed fails or the is_published re-check fires; hook 6b pins published:'false' on the /feed params object again (the /photos upload had masked it).
         // v5.46.0: THE QUOTE-IMAGE POST — PAIRS WITH .gs v3.84.0. His ask after connecting Facebook (Connected, approvers Hans + Amanda, Tue/Thu 09:00 rhythm saved): the quote graphic on its OWN time slot (his answer: its own weekly rhythm, default Sat 10:00, always after that blog's post), and — with three of his own posts as the model — a different call to action by kind: a quote ABOUT a blog points back to that blog ("If this one resonates, the full post is here: <link>"), a STANDALONE quote (Social / Quote card) points to a relevant PAGE on investedwithyou.com ("Learn what makes us different: /four-unique-factors/"). Built: MKT_FB_KINDS {facebook, facebookQuote}; every Facebook function takes the kind; a second box #mktFqBox on every card (the blog box stays blog-only) with a thumbnail of the redrawn quote image, the caption, the suggested slot, and on a standalone card a page picker (listWordPressPosts type 'pages' + recent posts) and "AI: pick a page & write the call to action" (the AI returns an index into the real list, never a URL of its own); the image is drawn by the same mktQuoteImageAttachment as Package. Backend: facebookSchedule uploads the picture to /photos UNPUBLISHED + TEMPORARY and attaches it to the one scheduled /feed post. Hook check 6b + rule 14b extended to pin /photos (named to Hans). Two rhythms in Settings. OLD: v5.45.1:gs-auditor's findings on the first PUBLIC-post surface, fixed before anything reached the Page. .gs 3.83.0 (DEPLOYED by Claude: Hans @147, Amanda @39) now: an APPROVER LIST enforced server-side (FB_APPROVERS, sent by the owner's Connect = the team members' emails, i.e. Hans and Amanda, plus the deployment owner); facebookSchedule REFUSES steering fields, caps the text at 5,000, requires the link to be on WP_SITE_URL, refuses the same post twice within 3 minutes, re-reads is_published and deletes + fails loudly if Facebook went live instead of scheduling, and logs every approval to the shared Sheet's SocialPosts tab; facebookPostStatus only reads this Page's posts and returns an ERROR on an expired/revoked key (190/10/200) instead of "still scheduled". Client: Connect sends the approvers; Approve is single-flight (a double click cannot reach the backend twice); an expired key is toasted once. New hook check 6b + rule 14b pin the public-post surface (told to Hans by name). Noted, not changed: the long-standing Google tokeninfo call puts a Google token in a URL (line ~2636) - separate from Facebook. OLD: v5.45.0:FACEBOOK PAGE POSTING, HUMAN-APPROVED — PAIRS WITH .gs v3.83.0 + SUPABASE PART 14 (social_posts jsonb on marketing_cards; until pasted, push retries without it and the status stays on the scheduling device). His ask: post each blog to the Intelligent Investing Facebook Page on a regular schedule once it is live in WordPress, reviewed by someone at the firm first; LinkedIn company page too. His answers (asked): Hans OR Amanda approves; the tool suggests the next slot on a weekly rhythm (default Tue+Thu 09:00, Settings) he can change; the post carries the blog LINK (Facebook's preview shows the featured image). Built: Settings > Social posting connects the Page ONCE (App ID + App secret + a Graph API Explorer token go straight to the backend's owner-gated facebookConnect, which keeps only the non-expiring Page token; the boxes are cleared; which backend holds it is recorded as fbBackendInitials on the firm 'marketing' brand row, so Amanda's approvals route there - _calPost gained an overrideUrl); a Facebook box on every blog card in Step 11 (text from Step 8, live link from the v5.44.0 WordPress status, suggested slot); Approve & schedule = a confirm showing exactly what, where, when and who, then facebookSchedule (UNPUBLISHED + scheduled_publish_time, 15 min-29 days) - the only caller of the only publish action; state + approver + time stored on card.socialPosts.facebook; a compliance .md record into the company's archive folder; "Facebook scheduled" / "Facebook ✓" badges, refreshed on each Marketing pull (removed-on-Facebook detected). mktSavePerson now MERGES into the marketing row (it would have wiped the rhythm). LinkedIn: Settings explains the Community Management API application; nothing built until LinkedIn approves. OLD: v5.44.1:gs-auditor follow-ups on the 3.82.0 round (DEPLOYED by Claude: Hans @146, Amanda @38 - not yet confirmed by his Access check). A post trashed or deleted in WordPress never comes back from getWordPressPostStatuses, so its card kept its last status forever; now it is marked 'missing' and the card says "not found in WordPress any more". Backend side (same 3.82.0 deploy): listWordPressPosts names WordPress's own message and, on 401/403, the WP_USERNAME / WP_APP_PASSWORD Script Properties; ids must be safe integers. Amanda's deployment has no WP_ Script Properties as far as known, so on HER sign-in Related reading / Live badges would say WordPress refused - code parity only. OLD: v5.44.0:PAIRS WITH .gs v3.82.0. His three asks: (1) "always reference these summary mds but also grab the 5 latest blogs we've posted" - the _ files were already always loaded; the five writing samples now come from the Blog Archives subfolder FIRST (getFirmContext), other files only fill the rest, and Test Folder says how many came from the archive (ctx.sampleArchivedCount). That also makes the stray Intelligrations summary in the IIA folder harmless. (2) RELATED READING: Step 11 box "AI: Suggest related posts" reads the site's PUBLISHED posts (listWordPressPosts), the AI proposes three, he clicks one or two (or picks any from a list), and ONE line - "*If you found this interesting, you may also like: [Title](link) and [Title](link)*" - is written at the end of the Blog Draft (mktRelApply replaces, never stacks; mktRelParse re-reads it); mdToHtml now turns [title](https://...) into a link. (3) IS IT LIVE: getWordPressPostStatuses for the newest 50 sent cards (on every Marketing pull and card open, at most every 3 min, cached device-local in eos_mkt_wp_status): a "Live ✓" / "Scheduled" badge on the card, and the card's WordPress line says "Live on the website since ... View the post" with a Move to Done button (never automatic - social may still be pending). All three version-gated on 3.82.0 and quiet below it. OLD: v5.43.0:THE PUBLISHED-BLOG ARCHIVE FOLDER FOLLOWS HIM TOO. Setting up the Intelligrations Firm Context folder at his request (Drive work done from the shell, not in this file: Intelligrations_Summary.md -> "_Firm Summary.md" so it loads as firm facts - it is titled "Firm Summary - Intelligrations" and says "load before every draft"; an empty "Market Commentary Archives" subfolder; his IIA client commentary PDF left loose at the root on purpose, it is off-audience for advisors) showed the compliance archive setting (publishedArchiveFolderId_ii/_ig) was device-local exactly like the context folder. mktShareFolderIds now also carries it as archiveFolderId on the brand row; getArchiveFolderId falls back to it; Settings shows the shared value. Intelligrations' "Blog Archives- Do Not Delete" id was read from Drive and handed to him to paste once. OLD: v5.42.0:(1) 🚨 HIS YES: SHORT BOXES TYPE IN PLACE ON THE PHONE TOO. _cmpShortBox (any INPUT, or a textarea/contenteditable under CMP_INLINE_MIN_H) returns before openComposer on a coarse pointer; only a real writing box (blog draft, takes, long notes) still opens the composer on a phone. Probe M1 rewritten per rule 78 (Name now types in place), M2 new (the blog box still opens the composer, on top). (2) HIS "Use this one" ERROR: "No Firm Context folder is set for this company". Cause read in the Settings band itself: the Firm Context folder setting is saved ON EACH DEVICE ONLY - the PC had it, his phone never did (blog drafting on the phone was running without firm context for the same reason). Now each company's folder also rides on that company's brand_profiles row: mktShareFolderIds (on every Marketing pull) merges THIS device's folder ids into rows it has READ from the cloud (never a partial write - that would wipe the brand's colours and addresses); getCompanyFolderId falls back to the row; Settings shows the shared value; _mktImageStore uses the Company box, re-reads the row, and its message names the company and says the picture is kept (it is - the candidate strip is untouched on failure). NOT CONFIRMED which company his card was; if it was Intelligrations and no device has that folder, the message now says so by name. quote-image-probe 22/22. OLD: v5.41.0:PACKAGE CHOOSES, AND ATTACHES. His two questions: "Should clicking Package first have a popup where you can choose all things to send?" (yes) and "is there still not a way to have attachments included in Gmail drafts?" - there WAS since .gs 3.81.0, but v5.36.0's Package attached the quote image only when it happened to be on screen, so in practice nothing was attached. Now "Package for Zachary" opens #mktPkgModal: tick boxes for what the card HAS (social copy, quote text, quote image, blog picture, WordPress link; missing ones greyed with the reason) + an optional note, then ONE draft via mktDraftToPerson. The quote image is REDRAWN off-screen from the card's words and the card's company brand (mktQuoteImageAttachment - same engine and file name as Step 9); the blog picture comes from this device's full-size IndexedDB copy, else Drive via getBlogImage (.gs 3.80.0) - mktBlogPictureBytes, the lightbox's path. A file that cannot be fetched asks before drafting without it. Body-level at z 9994 (below the composer, v5.37.0's rule). quote-image-probe 21/21 (P3 rewritten per rule 78: the chooser + both files + the note), mail-agent 39/39. OLD: v5.40.1:HIS ORIGINAL LOGO FILE. He supplied the Claude project's preview.webp (and a PNG copy, byte-identical): 1568x308, wordmark on black with a 26px WHITE STRIP along the bottom that would have drawn as a bar. icons/iia-wordmark.png is now cut from it (strip trimmed; every pixel un-mixed against black as white ink or green ink (163,198,56) - a first pass using a plain brightness key visibly turned the green yellow, caught in a side-by-side crop and redone). 1455x184, 3x the v5.40.0 lifted copy; renders 514x65 vs the Claude project's 517x65. ?v=5.40.1 on the path so cached devices refetch it. quote-image-probe 21/21. OLD: v5.40.0:EACH COMPANY ITS OWN BRAND + "WITH ZACHARY". His three, after comparing a tool image with two from his Claude project: (1) the logo - his original instructions name the white+green IIA wordmark and v5.35.0 used the Intelligrations i-infinity mark for BOTH companies. No usable wordmark exists in his Drive (IIA-Logo-New.png is 200x41; the big IIA file is the blue Embellish one he excluded), so icons/iia-wordmark.png was LIFTED from his Claude project's 1080px "Patience" image against this engine's pixel-identical background (white/green alpha unmix; recomposited within 7/255). QB_BUILTIN_LOGO {ii: wordmark, ig: i-infinity}; QB_COMPANY_DEFAULTS gives ig the spec colours; qbBrand turns the v5.35.0 seed's ii logo into the wordmark (no second paste). The step says which brand it uses; the card's Company box drives it even before save (qbCompany), and switching company drops a picture drawn with the other brand. RESULT: his Patience quote is now 0.000% different from the Claude project's image, logo included. (2) Wrapping, from his Graham image: keeping a long green phrase whole now may cost at most ~10% of the size, otherwise it wraps at full size (v5.35.0 shrank to 58px and left "The" alone). The Graham original was hand-broken into 4 lines; ours is 5 at 90px - offered him manual breaks, not built. (3) "With Trevor" follows the saved Marketing person (mktSyncHandoffColumn: only while the column is still named "With <name>", so a hand-rename survives), on save and on every Marketing pull. Deploy ships icons/iia-wordmark.png too. quote-image-probe 21/21 (B1/B2 new). OLD: v5.39.0:HIS PC REPORT after v5.38.0 CONFIRMED the Marketing sync (cloud 7 = phone 7). (1) 🚨 REVERSAL, HIS WORDS: "a waste of time that the popup window occurs for short answers ... I could have just typed Zachary over Trevor." On a FINE pointer the composer no longer opens on focus at all: big boxes keep v5.3.1's inline strip (mic + sparkle, the sparkle still opens the composer), short boxes (names, emails, titles, one-line inputs) are typed in place. The phone is UNCHANGED - his note was about the PC; asked, not assumed. The old fine-pointer "clicked or tabbed into it within 1s" gate is gone with it. (2) "Highlight the name, let go outside the window, and it goes away": the generic .modal-overlay handler has had the press-started-on-the-backdrop guard for a long time, but six windows close through their OWN handler and lacked it (quote Brand settings, Marketing person, picture lightbox, the composer - which is ALSO a .modal-overlay, so the generic guard was bypassed by its inline onclick - and two JS-built modals). One capture-phase pointerdown records window._eosDownTarget; each now closes only when the press began on the backdrop. NOT reproduced in Playwright on either build (its synthetic drag does not deliver the click to the backdrop), so this is the proven house guard applied, not a reproduced fix. composer-inline-probe was ALREADY crashing on v5.38.0 (waits for a #gmAgentIntent strip that no longer appears) - stale, not caused here. quote-image-probe 19/19, mail-agent 39/39. OLD: v5.38.0:THE REAL MARKETING SYNC CAUSE, FROM HIS SCREENSHOT - v5.37.0's badge tap surfaced it: "insert or update on table marketing_cards violates foreign key constraint marketing_cards_column_id_fkey". schema.sql PART 5 had already named this "the live failure this schema still carries" and it was never fixed. mktPushToCloud upserted CARDS before COLUMNS, so a card in a column the cloud lacked (made on the phone) or in a column deleted elsewhere failed the FK, the throw skipped the column upsert, and EVERY push from that device failed identically - nothing from the phone ever reached the cloud. Now columns go first; a card whose column exists nowhere on the device is moved to Ideas (toast says how many) rather than wedging the board; a column delete refused by the same FK drops its tombstone instead of failing every push. Probe Y3 enforces the FK in a fake cloud and reproduces his exact message against v5.37.0; quote-image-probe 19/19. OLD: v5.37.0:TWO OF HIS REPORTS. (1) "All my marketing work on my mobile device is not synced to my PC" - with BOTH badges reading Synced. Cause read in the code: mktPullFromCloud kept cards that existed only on this device ("Local-only cards not yet pushed survive") but NOTHING uploaded them - a push ran only on the device's next mktSave, so cards made while a device was local-only sat there indefinitely while its pull painted "Synced". Now a pull that finds only-here cards (or a card edited here after the cloud copy, compared as TIMES - Supabase returns "+00:00" where the device wrote "Z", and as strings every card looked newer) uploads them at once, and never paints Synced over a failed upload. The badge tap now syncs live and SAYS who the device is signed in as, cloud vs device card counts per company, what it just uploaded, and which company this device is showing (the company switch is per device - a second way two devices look different while synced). NOT CONFIRMED that this was his cause - his tap on the phone badge after this deploy is the test. (2) "It won't let me click into the Name or email address on mobile": REPRODUCED with real touch taps. On a phone every text box opens the composer (#composerModal, z 9996); the v5.35/5.36 windows sat at z 100002/100003, so the composer opened HIDDEN underneath and took the typing. Brand settings 9993, Marketing person 9994 - above the card modal, below the composer. Probe quote-image-probe 18/18 (Y1/Y2/M1 new, all three FAIL on v5.36.0). OLD: v5.36.0:THE MARKETING PERSON. His ask after pasting PART 13: choose in the tool who marketing work is handed to (Trevor -> Zachary, cc Amanda and himself). His decision (asked, "Gmail drafts"): EVERY handoff is a Gmail DRAFT he sends - the quote image, "Package" (was the backend's automatic notifyTrevorPackage MailApp mail) and the WordPress handoff (notifyEditor is now always false; the draft is made after WordPress answers). One firm-wide person (name, email, cc list, validated - his "amanda@investedwithyou" would be refused for the missing .com) saved as the 'marketing' row of brand_profiles (no new paste), opened from Marketing ... > Marketing person or Brand settings > Change. mktDraftToPerson is THE one drafter (signed via draftBodyHtml on the call line, cc + attachments gated on 3.81.0); draftBodyHtml gained opts.links for the WordPress edit link. Package attaches the quote image when one was just made for that card's words. Labels name him ("Package for Zachary", "Yes, send to Zachary", the WordPress choice). The per-company emailTo fields left Brand settings (values carried through untouched; used only as the fallback before a person is saved). No backend change; WP_EDITOR_EMAIL / notifyTrevorPackage are now unused by the client. Column "With Trevor" is HIS data - rename it in Manage Columns, never automatically. Probe quote-image-probe 15/15 (P1-P3 new), mail-agent 39/39, mail-actions 12/12. OLD: v5.35.0:THE BRANDED QUOTE IMAGE IN STEP 9 — PAIRS WITH .gs v3.81.0 (createEmailDraft takes cc + attachments) + SUPABASE PART 13 (brand_profiles, docs/PASTE-INTO-SUPABASE-PART13.sql). His ask: bake the IIA quote-generator instructions (a separate Claude project) into Marketing Step 9. The image is drawn IN THE BROWSER (qbRender: canvas + Google Fonts), ported from engine.py + Text Wrapper.py and measured against his reference PNG (every line within 1-4px, gradient within 1 colour unit - that PNG was made with the Intelligrations spec colours, so ii keeps the IIA instruction colours and ig the spec's). Tap words to turn them green (or (parentheses) / word(green)); Make the image cleans the text (no quotation marks, sentence case for Title Case/ALL CAPS only, closing period) and with no green words asks the AI for 1-3 first; the preview is the confirmation. Yes, send to <name> = ONE Gmail draft, cc, PNG attached under his file-name convention, signed via draftBodyHtml on the call line (mail-agent C2), hidden IIA_QUOTE_LOG block for the Quote Tracker sheet; Needs changes; Approve but don't email = download; approving refuses if the words changed after the image was made. Brand settings per company (colours, background style, curated font, logo upload with flat black/white key-out, placement, size, attribution, recipient, cc, preferred/avoided authors) in Supabase brand_profiles, cached in eos_quote_brand; before PART 13 it says 'this device only'. Suggest Quotes: green words pre-marked, quotes already on other cards off limits, the brand's author lists, and with no blog it offers classics (old step 0) with a verify-the-wording warning. Package to Trevor strips the markup. styles.css unchanged. Probe quote-image-probe 12/12, mail-agent 39/39, mail-actions 12/12. OLD: v5.34.0:THE PLAN LEAVES THE PUBLIC PAGE, AND SKIP GOES. Client + REQUIRES SUPABASE PART 12 (docs/PASTE-INTO-SUPABASE-PART12.sql, also appended to schema.sql) - until Hans pastes it the Vision badge says so and the plan stays exactly as it was (device-local); nothing is lost either way. No .gs. His two yeses 2026-09-29. (1) seededData's "2026" carried the firm's real Vision, 1-Year Plan (revenue/profit/AUM targets) and Q1 Rocks, and index.html is published in a PUBLIC repo - now an empty skeleton; the old block is kept ONLY in the private Drive folder (docs/plans/legacy-seed-2026.js). GIT HISTORY STILL HOLDS IT (separate cleanup, offered). (2) eos_plan table, one row per SECTION (vision, plan, Qn.rocks, Qn.scorecard - measurables+values together, rule 46), RLS = owners + an 'eos_plan' access grant (can_use_eos_plan), NOT firm membership, so a Marketing guest cannot read the targets; Amanda granted by the paste. planSync(): read -> merge -> push per section (rule 48); same content modulo rock ids/blank keys -> adopt (ids converge, rule 77); blank local never pushes over content (rule 53); untouched-since-sync -> adopt; changed-here-only -> push; first sync with the UNTOUCHED old starter copy (PLAN_LEGACY_FP fingerprints of the removed seed) -> adopt quietly, and a cloud holding only the starter copy loses to typed work; BOTH changed -> eosChoose asks, the loser always kept in the device-local ring eos_plan_backups (rule 54; "Earlier versions" link on the Vision header downloads it). Adopt never lands while focus is inside that page, and never calls saveData() (it gathers the Vision/Plan FROM THE FORM and would write the old screen back over the adopt) - loadVision/loadPlan/renderQuarter repaint instead. Triggers: saveData() debounce 2.5s, _dpOnSessionResolved, visibility + 2 min. Seventh sync surface: planSyncBlocker() + #syncBadge-plan (rule 25). (3) "Skip for now" REMOVED (button, skipGoogleSignIn, the eos_signin_skipped read): it revealed the app with no identity and walked past the 2FA gate. Honest scope, said to Hans: a web page can never lock itself - the real boundary is the backend (SECRET_KEY / Supabase RLS); this removes the casual bypass and the public copy of the plan. 19 probes used skipGoogleSignIn to pass the gate - repointed to appRevealApp(); gsi-retry-bound C REWRITTEN (rule 78) to assert no bypass exists. Probe plan-sync-probe 12/12.
         // v5.33.0: THE SPLASH ON THE PC. Client only. His answer: an ordinary browser tab now shows the v5.31.0 splash once per browser SESSION (sessionStorage 'eos_splash_seen'), so a refresh never costs 3.2s; the installed app still shows it on every launch; ?splash=1 still forces it. sessionStorage unavailable = treated as seen (never block on a storage throw). Measured at 1280: flex on first open, removed after ~3.7s, 'none' after reload.
         // v5.32.3: THE OWNER REFUSED AT THE DOOR. Client only, no .gs. Hans: "Signed in as hans@investedwithyou.com, but that email isn't set up as a team member yet... This happens every time I log in... I should never get this message" (he had been clicking Skip for now, i.e. using the app with NO identity). The cloud roster was correct (checked: HB = hans@investedwithyou.com). Cause: applySignedInUser() decided membership from the LOCAL settings cache only; the baked-in default roster (seededData._settings and getSettings()'s fallback) carries initials and names but NO emails, and the cloud roster is only fetched AFTER appRevealApp() - so any browser whose cache had not been filled refused a real member, and Skip never fixed it for the next fresh sign-in on a new tab/profile. "I have no roster" read as "you are not on the roster" (rule 53's shape). Fix: findTeamMemberAuthoritative(email) - local hit = unchanged fast path with zero fetches; local miss = await loadTeamSettingsFromCloud() and re-check; cloud unreachable = a distinct sentence ("couldn't check the team roster just now"), never "not a member" (rule 63). applySignedInUser is now async (no caller used its return). Same blind spot fixed in checkAppWideSupabaseSession(), which demoted an uncached member to the guest branch (every tab hidden but Marketing). Probe: .claude/probes/signin-roster-probe.js 4/4; v5.32.2 scores 2/4 (P1 prints his exact message, P3 wrong cause). gsi-retry-bound-probe 9/9.
@@ -8595,7 +8605,16 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.46.1 &mdash; 2026-09-29 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.46.2 &mdash; 2026-09-29 (Current)</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>The order is enforced now: blog, then its Facebook post, then the quote.</strong> The blog&rsquo;s Facebook post already waited for the blog to be live on the website; the blog&rsquo;s quote post now also waits until that Facebook post is scheduled, and must go out after it.</li>'
+                + '<li><strong>The closing call to action is its own step again, right before Finalize Draft</strong>, instead of at the bottom under the Facebook boxes. The later steps moved down one number (the Quote is now step 10).</li>'
+                + '<li>In Package &amp; Send, the WordPress and package buttons now come before the Facebook posts.</li>'
+                + '</ul>'
+                + '</div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.46.1 &mdash; 2026-09-29</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>The quote post can no longer lose its picture.</strong> Before scheduling, the tool checks that the backend holding the Facebook key is new enough to carry the image, and afterwards it checks Facebook confirmed the image &mdash; if either fails, it says so instead of reporting success.</li>'
                 + '</ul>'
@@ -16665,10 +16684,10 @@ Example:
             if (!p.email) { mktOpenPerson(); showToast('Choose your marketing person first.'); return; }
             const title = document.getElementById('mktTitle').value.trim() || (card.title || 'the current post');
             const items = [
-                { key: 'social', label: 'Social post copy', on: !!social, why: 'Step 8 is empty', hint: social.slice(0, 90) },
-                { key: 'quote', label: 'Quote text', on: !!quote, why: 'Step 9 is empty', hint: quote.replace(/\n/g, ' ').slice(0, 90) },
+                { key: 'social', label: 'Social post copy', on: !!social, why: 'the Social Post Copy step is empty', hint: social.slice(0, 90) },
+                { key: 'quote', label: 'Quote text', on: !!quote, why: 'the Quote step is empty', hint: quote.replace(/\n/g, ' ').slice(0, 90) },
                 { key: 'quoteImg', label: 'Quote image (PNG, attached)', on: !!quote, why: 'no quote on this card', hint: 'Drawn with the ' + ((MKT_COMPANIES[qbCompany()] || {}).name || '') + ' brand' },
-                { key: 'blogPic', label: 'Blog picture (attached)', on: !!card.imageFileId, why: 'no picture chosen in Step 10', hint: card.imageAlt || '' },
+                { key: 'blogPic', label: 'Blog picture (attached)', on: !!card.imageFileId, why: 'no picture chosen in the Image step', hint: card.imageAlt || '' },
                 { key: 'wp', label: 'WordPress draft link', on: !!card.wordpressEditUrl, why: 'not sent to WordPress yet', hint: '' }
             ];
             _mktPkg = { cardId: card.id, title: title, social: social, quote: quote };
@@ -16930,6 +16949,11 @@ Example:
         // points back to that blog; a STANDALONE quote (a Social / Quote card) points to a
         // relevant page on the website - "Learn what makes us different: <page>".
         function mktFqGeneric(card) { return !!card && card.kind !== 'blog'; }
+        // The blog's own Facebook post, when it is scheduled or out - the quote follows it.
+        function mktFqSocialFirst(card) {
+            const bp = card && card.socialPosts && card.socialPosts.facebook;
+            return (bp && (bp.status === 'scheduled' || bp.status === 'posted') && bp.when) ? bp : null;
+        }
         function mktFqLink(card) {
             if (!mktFqGeneric(card)) return mktFbLiveLink(card);
             const f = (card.socialPosts && card.socialPosts.facebookQuote) || {};
@@ -16997,7 +17021,7 @@ Example:
             if (!card) return;
             const info = document.getElementById('mktFqInfo'), btn = document.getElementById('mktFqAiBtn');
             const parts = qbSplit(document.getElementById('mktQuote').value || card.quote || '');
-            if (!parts.body) { info.textContent = 'Put a quote in Step 9 first.'; return; }
+            if (!parts.body) { info.textContent = 'Put a quote in the Quote step first.'; return; }
             if (!requireAI('marketing', 'Marketing AI')) return;
             const label = btn.textContent; btn.disabled = true; btn.textContent = 'Reading your website...';
             try {
@@ -17056,17 +17080,21 @@ Example:
             if (document.activeElement !== when) when.value = f.when ? _mktLocalInput(new Date(f.when)) : _mktLocalInput(mktFbSuggestSlot(card.id, kind, after));
             ta.readOnly = done; when.disabled = done;
             const hasQuote = kind !== 'facebookQuote' || !!qbSplit(document.getElementById('mktQuote').value || card.quote || '').body;
-            linkLine.innerHTML = !hasQuote ? 'Needs a quote in Step 9 first.'
+            // v5.46.2 (his order: blog live -> its social post -> then the quote): a blog's
+            // quote post waits until that blog's own Facebook post is scheduled.
+            const waitsForSocial = kind === 'facebookQuote' && !generic && !done && !!link && !mktFqSocialFirst(card);
+            linkLine.innerHTML = !hasQuote ? 'Needs a quote in the Quote step first.'
+                : waitsForSocial ? 'Waits until the blog&rsquo;s own Facebook post (above) is scheduled &mdash; the quote goes out after it.'
                 : generic
-                ? (link ? 'The quote image from Step 9 is attached; the caption links to <a href="' + escapeHtml(link) + '" target="_blank" rel="noopener">' + escapeHtml(link) + '</a>.'
+                ? (link ? 'The quote image from the Quote step is attached; the caption links to <a href="' + escapeHtml(link) + '" target="_blank" rel="noopener">' + escapeHtml(link) + '</a>.'
                         : 'Pick the page on your website this quote should point to &mdash; or let the AI choose it and write the line.')
                 : link
                 ? (kind === 'facebookQuote'
-                    ? 'The quote image from Step 9 is attached; the caption links back to <a href="' + escapeHtml(link) + '" target="_blank" rel="noopener">the blog</a>.'
+                    ? 'The quote image from the Quote step is attached; the caption links back to <a href="' + escapeHtml(link) + '" target="_blank" rel="noopener">the blog</a>.'
                     : 'Link: <a href="' + escapeHtml(link) + '" target="_blank" rel="noopener">' + escapeHtml(link) + '</a> (Facebook shows the blog&rsquo;s picture and title as the preview)')
                 : (card.wordpressPostId ? 'Waits until the blog is <strong>live</strong> on the website (the card shows Live &#10003;).' : 'Waits until the blog has been sent to WordPress and is live.');
             btn.style.display = done ? 'none' : '';
-            btn.disabled = !link || !hasQuote;
+            btn.disabled = !link || !hasQuote || waitsForSocial;
             if (kind === 'facebookQuote') mktFqThumb(card);
             if (f.status === 'posted') {
                 state.innerHTML = '<span style="color:#15803d; font-weight:600;">Posted &#10003;</span>';
@@ -17082,8 +17110,8 @@ Example:
                 info.textContent = 'This post is no longer on Facebook (deleted or cancelled there). You can schedule it again.';
                 btn.style.display = ''; ta.readOnly = false; when.disabled = false;
             } else {
-                state.textContent = (link && hasQuote) ? 'Ready for review' : '';
-                info.textContent = (link && hasQuote) ? 'Nothing is posted until you or Amanda clicks Approve.' : '';
+                state.textContent = (link && hasQuote && !waitsForSocial) ? 'Ready for review' : '';
+                info.textContent = (link && hasQuote && !waitsForSocial) ? 'Nothing is posted until you or Amanda clicks Approve.' : '';
             }
         }
         // A small preview of the quote image this post will carry (drawn once per card open).
@@ -17137,6 +17165,15 @@ Example:
             if (!whenD || whenD.getTime() < Date.now() + 15 * 60 * 1000 || whenD.getTime() > Date.now() + 29 * 86400 * 1000) {
                 info.textContent = 'Pick a time between 15 minutes and 29 days from now (Facebook\u2019s scheduling window).'; return;
             }
+            // v5.46.2: the order is enforced, not only suggested - blog live (the link above),
+            // then its Facebook post, then the quote, strictly after it.
+            if (kind === 'facebookQuote' && !mktFqGeneric(card)) {
+                const bp = mktFqSocialFirst(card);
+                if (!bp) { info.textContent = 'Schedule the blog’s own Facebook post first - the quote goes out after it.'; return; }
+                if (whenD.getTime() <= new Date(bp.when).getTime()) {
+                    info.textContent = 'Pick a time after the blog’s Facebook post (' + new Date(bp.when).toLocaleString() + ').'; return;
+                }
+            }
             await _gsEnsureVersion();
             const v = _calGsAtLeast(MKT_FB_GS_MIN);
             if (v === null) { info.textContent = _gsUnknownSentence('Scheduling on Facebook'); return; }
@@ -17159,7 +17196,7 @@ Example:
             }
             // The review itself: exactly what goes out, where and when, and who is approving.
             if (!confirm('Schedule this on the Intelligent Investing Facebook Page?\n\n'
-                + (kind === 'facebookQuote' ? 'WITH: the quote image from Step 9\n' : '') + 'WHEN: ' + whenD.toLocaleString()
+                + (kind === 'facebookQuote' ? 'WITH: the quote image from the Quote step\n' : '') + 'WHEN: ' + whenD.toLocaleString()
                 + '\n\n' + text + (kind === 'facebookQuote' ? '' : '\n\n' + link) + '\n\nApproved by: ' + who)) return;
             const btn = document.getElementById(P + 'ApproveBtn');
             btn.disabled = true; info.textContent = kind === 'facebookQuote' ? 'Drawing the quote image and scheduling...' : 'Scheduling on Facebook...';
@@ -17201,7 +17238,7 @@ Example:
             const what = kind === 'facebookQuote' ? 'Facebook quote post' : 'Facebook post';
             const body = '# ' + what + ' - ' + (card.title || '') + '\n\nPage: Intelligent Investing\nScheduled for: ' + d.toString()
                 + '\nApproved by: ' + f.approvedBy + ' on ' + new Date(f.approvedAt).toString() + '\nFacebook post id: ' + f.postId
-                + '\nLink: ' + (kind === 'facebookQuote' ? mktFqLink(card) : mktFbLiveLink(card)) + (kind === 'facebookQuote' ? '\nPicture: the Step 9 quote image' : '') + '\n\n---\n\n' + f.text + '\n';
+                + '\nLink: ' + (kind === 'facebookQuote' ? mktFqLink(card) : mktFbLiveLink(card)) + (kind === 'facebookQuote' ? '\nPicture: the quote image' : '') + '\n\n---\n\n' + f.text + '\n';
             await fetch(member.webAppUrl, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({ action: 'saveBlogToDrive', secretKey: member.webAppSecret || '', folderId: folderId,
                     title: ymd + ' ' + what + ' - ' + (card.title || 'blog'), content: body }) });
