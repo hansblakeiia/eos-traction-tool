@@ -2218,6 +2218,13 @@
                     </div>
                 </div>
             </div>
+            <!-- v5.47.0: WHAT'S WORKING (his ask: "this page has been trending higher, or this
+                 blog was really clicked on recently, let's use that as a backlink for a related
+                 quote"). Google Analytics, read-only; collapsed until asked. -->
+            <details id="mktGaPanel" style="background:#fff; border:1px solid var(--gray-200); border-radius:8px; padding:8px 12px; margin-bottom:12px; overflow-wrap:anywhere;" ontoggle="if (this.open) mktGaLoad(false)">
+                <summary><strong>What&rsquo;s working</strong> <span id="mktGaSummary" style="font-weight:400; color:var(--gray-500); font-size:0.8rem;">&mdash; your website traffic, with ideas</span></summary>
+                <div id="mktGaBody" style="margin-top:8px; font-size:0.84rem;"></div>
+            </details>
             <div id="mktBoard" class="mkt-board"></div>
             <!-- v3.69.0: mobile-only hint, because the pill row above scrolls and two of
                  the six columns start off-screen on a 412px phone. -->
@@ -4069,6 +4076,19 @@
                                 </div>
                             </div>
                         </div>
+                        <!-- v5.47.0: GOOGLE ANALYTICS, read-only, for the Marketing page's "What's
+                             working". The property id is not a secret; it rides on the firm
+                             'marketing' row with the initials of the backend that can read it. -->
+                        <div style="padding:10px; border:1px solid var(--gray-200); border-radius:8px; margin-bottom:10px; font-size:0.82rem;">
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                                <strong>Google Analytics</strong>
+                                <span id="gaConnState" style="font-size:0.75rem; color:var(--gray-500);"></span>
+                            </div>
+                            <div style="font-size:0.78rem; color:var(--gray-500); margin-bottom:6px;">The property ID is the number under <em>Properties &amp; Apps</em> in Analytics (not the G- tag). The tool only reads page and traffic totals; it cannot change anything in Analytics.</div>
+                            <input type="text" id="gaPropertyId" inputmode="numeric" placeholder="Property ID, e.g. 123456789" autocomplete="off" style="padding:6px; width:100%; box-sizing:border-box;">
+                            <button class="btn btn-secondary" onclick="mktGaSaveProperty()" style="margin-top:8px; padding:5px 10px; font-size:0.8rem;">Save &amp; test</button>
+                            <div id="gaConnInfo" style="margin-top:6px; font-size:0.78rem; color:var(--gray-500);"></div>
+                        </div>
                         <div class="set-notconnected">
                             <span class="set-nc-title">LinkedIn company page</span><span class="set-nc-tag">needs LinkedIn&rsquo;s approval first</span>
                             <p>Posting as the Intelligent Investing Advisors page needs LinkedIn&rsquo;s <em>Community Management API</em>. At <a href="https://www.linkedin.com/developers/apps" target="_blank" rel="noopener">linkedin.com/developers/apps</a>: create an app linked to the company page (a page admin verifies it), add the <strong>Community Management API</strong> product, and fill in the access form (legal name, address, website, privacy policy, business email). LinkedIn reviews it; once approved, it is added here the same way as Facebook.</p>
@@ -4807,9 +4827,10 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '5.46.2';
+        const EOS_VERSION = '5.47.0';
         const EOS_BUILD_DATE = '2026-09-29';
-        const EOS_BUILD_TIME = '19:40'; // v5.46.2: HIS ORDER, ENFORCED - blog live in WordPress -> its Facebook post -> then the quote. (1) He asked what stops a social post going out before the blog: the blog's Facebook post already waited for WordPress to report the post LIVE (mktFbLiveLink = status 'publish'), but the blog's QUOTE post only waited for that too - it could be scheduled with no social post at all, or timed before it (the rhythm only SUGGESTED after). Now mktFqSocialFirst(card): a blog quote needs the blog's own post scheduled/posted and a time strictly after it, in the paint (button disabled, line says why) and in _mktFbApprove (refusal sentences). Standalone quotes unaffected. Probe F6/F7. (2) His "Shouldn't the CTA for the blog be higher up like before Finalize draft?": v5.44-5.46 had pushed the closing CTA under Related reading + both Facebook boxes inside Package & Send. It is now its own STEP 6 "Closing Call to Action" (inside #mktBlogFields, so blog cards only), directly before Finalize Draft; later steps renumbered 7-12 (Quote is now step 10), and every live "Step N" string now names the step instead of its number so the next move cannot stale them. (3) Package & Send: the WordPress / package / Drive buttons now sit ABOVE the Facebook boxes, matching the order.
+        const EOS_BUILD_TIME = '20:30'; // v5.47.0: WHAT'S WORKING - GOOGLE ANALYTICS, READ-ONLY. PAIRS WITH .gs v3.85.0 (new scope analytics.readonly + AnalyticsData advanced service; Hans runs authorizeAnalytics in the editor between push and redeploy; Amanda's backend deliberately stays 3.84.0 without the scope). His ask: "this page has been trending higher, or this blog or podcast was really clicked on recently, let's use that as a backlink for a related quote (and perhaps asking me for a quote)". He supplied GA4 property 370961938 (NOT hardcoded - public repo; it is entered in Settings > Social posting > Google Analytics and rides on the firm 'marketing' row as gaPropertyId + gaBackendInitials, the fbBackendInitials routing pattern; Save & test only saves after the backend reads it). Marketing page: a collapsed "What's working" panel (loads on open, cached device-local 6h in eos_mkt_ga_cache, Refresh): Trending this week (5+ views and >=1.5x the week before, home and WP plumbing excluded), Most read 28 days, sources + Facebook's share; each page has "Quote -> link here" = a Social / Quote card whose facebookQuote.link is that page, opened with a toast ASKING him for the quote (never invented); "AI: What should I do next?" turns only the listed numbers + his recent cards into three moves (told never to invent figures or write the quote). mktFqCta: a standalone quote pointing at a BLOG post (linkKind from the site list) reads "the full post is here". Podcast: Blubrry (his answer) - downloads need Blubrry API access, phase 2; episode pages on the site are already in GA.
+        // v5.46.2: HIS ORDER, ENFORCED - blog live in WordPress -> its Facebook post -> then the quote. (1) He asked what stops a social post going out before the blog: the blog's Facebook post already waited for WordPress to report the post LIVE (mktFbLiveLink = status 'publish'), but the blog's QUOTE post only waited for that too - it could be scheduled with no social post at all, or timed before it (the rhythm only SUGGESTED after). Now mktFqSocialFirst(card): a blog quote needs the blog's own post scheduled/posted and a time strictly after it, in the paint (button disabled, line says why) and in _mktFbApprove (refusal sentences). Standalone quotes unaffected. Probe F6/F7. (2) His "Shouldn't the CTA for the blog be higher up like before Finalize draft?": v5.44-5.46 had pushed the closing CTA under Related reading + both Facebook boxes inside Package & Send. It is now its own STEP 6 "Closing Call to Action" (inside #mktBlogFields, so blog cards only), directly before Finalize Draft; later steps renumbered 7-12 (Quote is now step 10), and every live "Step N" string now names the step instead of its number so the next move cannot stale them. (3) Package & Send: the WordPress / package / Drive buttons now sit ABOVE the Facebook boxes, matching the order.
         // v5.46.1: gs-auditor findings on 3.84.0, before deploy. The quote post now asks the backend that HOLDS the Page key (facebookInfo -> gsVersion, new _gsVerAtLeast) instead of trusting our own probe - Amanda on 3.84 approving through Hans's 3.83 would have scheduled a picture-less post reported as success; and a picture-bearing request whose reply lacks withImage:true is an error naming the post id to delete. Backend 3.84.0 also deletes the uploaded photo when /feed fails or the is_published re-check fires; hook 6b pins published:'false' on the /feed params object again (the /photos upload had masked it).
         // v5.46.0: THE QUOTE-IMAGE POST — PAIRS WITH .gs v3.84.0. His ask after connecting Facebook (Connected, approvers Hans + Amanda, Tue/Thu 09:00 rhythm saved): the quote graphic on its OWN time slot (his answer: its own weekly rhythm, default Sat 10:00, always after that blog's post), and — with three of his own posts as the model — a different call to action by kind: a quote ABOUT a blog points back to that blog ("If this one resonates, the full post is here: <link>"), a STANDALONE quote (Social / Quote card) points to a relevant PAGE on investedwithyou.com ("Learn what makes us different: /four-unique-factors/"). Built: MKT_FB_KINDS {facebook, facebookQuote}; every Facebook function takes the kind; a second box #mktFqBox on every card (the blog box stays blog-only) with a thumbnail of the redrawn quote image, the caption, the suggested slot, and on a standalone card a page picker (listWordPressPosts type 'pages' + recent posts) and "AI: pick a page & write the call to action" (the AI returns an index into the real list, never a URL of its own); the image is drawn by the same mktQuoteImageAttachment as Package. Backend: facebookSchedule uploads the picture to /photos UNPUBLISHED + TEMPORARY and attaches it to the one scheduled /feed post. Hook check 6b + rule 14b extended to pin /photos (named to Hans). Two rhythms in Settings. OLD: v5.45.1:gs-auditor's findings on the first PUBLIC-post surface, fixed before anything reached the Page. .gs 3.83.0 (DEPLOYED by Claude: Hans @147, Amanda @39) now: an APPROVER LIST enforced server-side (FB_APPROVERS, sent by the owner's Connect = the team members' emails, i.e. Hans and Amanda, plus the deployment owner); facebookSchedule REFUSES steering fields, caps the text at 5,000, requires the link to be on WP_SITE_URL, refuses the same post twice within 3 minutes, re-reads is_published and deletes + fails loudly if Facebook went live instead of scheduling, and logs every approval to the shared Sheet's SocialPosts tab; facebookPostStatus only reads this Page's posts and returns an ERROR on an expired/revoked key (190/10/200) instead of "still scheduled". Client: Connect sends the approvers; Approve is single-flight (a double click cannot reach the backend twice); an expired key is toasted once. New hook check 6b + rule 14b pin the public-post surface (told to Hans by name). Noted, not changed: the long-standing Google tokeninfo call puts a Google token in a URL (line ~2636) - separate from Facebook. OLD: v5.45.0:FACEBOOK PAGE POSTING, HUMAN-APPROVED — PAIRS WITH .gs v3.83.0 + SUPABASE PART 14 (social_posts jsonb on marketing_cards; until pasted, push retries without it and the status stays on the scheduling device). His ask: post each blog to the Intelligent Investing Facebook Page on a regular schedule once it is live in WordPress, reviewed by someone at the firm first; LinkedIn company page too. His answers (asked): Hans OR Amanda approves; the tool suggests the next slot on a weekly rhythm (default Tue+Thu 09:00, Settings) he can change; the post carries the blog LINK (Facebook's preview shows the featured image). Built: Settings > Social posting connects the Page ONCE (App ID + App secret + a Graph API Explorer token go straight to the backend's owner-gated facebookConnect, which keeps only the non-expiring Page token; the boxes are cleared; which backend holds it is recorded as fbBackendInitials on the firm 'marketing' brand row, so Amanda's approvals route there - _calPost gained an overrideUrl); a Facebook box on every blog card in Step 11 (text from Step 8, live link from the v5.44.0 WordPress status, suggested slot); Approve & schedule = a confirm showing exactly what, where, when and who, then facebookSchedule (UNPUBLISHED + scheduled_publish_time, 15 min-29 days) - the only caller of the only publish action; state + approver + time stored on card.socialPosts.facebook; a compliance .md record into the company's archive folder; "Facebook scheduled" / "Facebook ✓" badges, refreshed on each Marketing pull (removed-on-Facebook detected). mktSavePerson now MERGES into the marketing row (it would have wiped the rhythm). LinkedIn: Settings explains the Community Management API application; nothing built until LinkedIn approves. OLD: v5.44.1:gs-auditor follow-ups on the 3.82.0 round (DEPLOYED by Claude: Hans @146, Amanda @38 - not yet confirmed by his Access check). A post trashed or deleted in WordPress never comes back from getWordPressPostStatuses, so its card kept its last status forever; now it is marked 'missing' and the card says "not found in WordPress any more". Backend side (same 3.82.0 deploy): listWordPressPosts names WordPress's own message and, on 401/403, the WP_USERNAME / WP_APP_PASSWORD Script Properties; ids must be safe integers. Amanda's deployment has no WP_ Script Properties as far as known, so on HER sign-in Related reading / Live badges would say WordPress refused - code parity only. OLD: v5.44.0:PAIRS WITH .gs v3.82.0. His three asks: (1) "always reference these summary mds but also grab the 5 latest blogs we've posted" - the _ files were already always loaded; the five writing samples now come from the Blog Archives subfolder FIRST (getFirmContext), other files only fill the rest, and Test Folder says how many came from the archive (ctx.sampleArchivedCount). That also makes the stray Intelligrations summary in the IIA folder harmless. (2) RELATED READING: Step 11 box "AI: Suggest related posts" reads the site's PUBLISHED posts (listWordPressPosts), the AI proposes three, he clicks one or two (or picks any from a list), and ONE line - "*If you found this interesting, you may also like: [Title](link) and [Title](link)*" - is written at the end of the Blog Draft (mktRelApply replaces, never stacks; mktRelParse re-reads it); mdToHtml now turns [title](https://...) into a link. (3) IS IT LIVE: getWordPressPostStatuses for the newest 50 sent cards (on every Marketing pull and card open, at most every 3 min, cached device-local in eos_mkt_wp_status): a "Live ✓" / "Scheduled" badge on the card, and the card's WordPress line says "Live on the website since ... View the post" with a Move to Done button (never automatic - social may still be pending). All three version-gated on 3.82.0 and quiet below it. OLD: v5.43.0:THE PUBLISHED-BLOG ARCHIVE FOLDER FOLLOWS HIM TOO. Setting up the Intelligrations Firm Context folder at his request (Drive work done from the shell, not in this file: Intelligrations_Summary.md -> "_Firm Summary.md" so it loads as firm facts - it is titled "Firm Summary - Intelligrations" and says "load before every draft"; an empty "Market Commentary Archives" subfolder; his IIA client commentary PDF left loose at the root on purpose, it is off-audience for advisors) showed the compliance archive setting (publishedArchiveFolderId_ii/_ig) was device-local exactly like the context folder. mktShareFolderIds now also carries it as archiveFolderId on the brand row; getArchiveFolderId falls back to it; Settings shows the shared value. Intelligrations' "Blog Archives- Do Not Delete" id was read from Drive and handed to him to paste once. OLD: v5.42.0:(1) 🚨 HIS YES: SHORT BOXES TYPE IN PLACE ON THE PHONE TOO. _cmpShortBox (any INPUT, or a textarea/contenteditable under CMP_INLINE_MIN_H) returns before openComposer on a coarse pointer; only a real writing box (blog draft, takes, long notes) still opens the composer on a phone. Probe M1 rewritten per rule 78 (Name now types in place), M2 new (the blog box still opens the composer, on top). (2) HIS "Use this one" ERROR: "No Firm Context folder is set for this company". Cause read in the Settings band itself: the Firm Context folder setting is saved ON EACH DEVICE ONLY - the PC had it, his phone never did (blog drafting on the phone was running without firm context for the same reason). Now each company's folder also rides on that company's brand_profiles row: mktShareFolderIds (on every Marketing pull) merges THIS device's folder ids into rows it has READ from the cloud (never a partial write - that would wipe the brand's colours and addresses); getCompanyFolderId falls back to the row; Settings shows the shared value; _mktImageStore uses the Company box, re-reads the row, and its message names the company and says the picture is kept (it is - the candidate strip is untouched on failure). NOT CONFIRMED which company his card was; if it was Intelligrations and no device has that folder, the message now says so by name. quote-image-probe 22/22. OLD: v5.41.0:PACKAGE CHOOSES, AND ATTACHES. His two questions: "Should clicking Package first have a popup where you can choose all things to send?" (yes) and "is there still not a way to have attachments included in Gmail drafts?" - there WAS since .gs 3.81.0, but v5.36.0's Package attached the quote image only when it happened to be on screen, so in practice nothing was attached. Now "Package for Zachary" opens #mktPkgModal: tick boxes for what the card HAS (social copy, quote text, quote image, blog picture, WordPress link; missing ones greyed with the reason) + an optional note, then ONE draft via mktDraftToPerson. The quote image is REDRAWN off-screen from the card's words and the card's company brand (mktQuoteImageAttachment - same engine and file name as Step 9); the blog picture comes from this device's full-size IndexedDB copy, else Drive via getBlogImage (.gs 3.80.0) - mktBlogPictureBytes, the lightbox's path. A file that cannot be fetched asks before drafting without it. Body-level at z 9994 (below the composer, v5.37.0's rule). quote-image-probe 21/21 (P3 rewritten per rule 78: the chooser + both files + the note), mail-agent 39/39. OLD: v5.40.1:HIS ORIGINAL LOGO FILE. He supplied the Claude project's preview.webp (and a PNG copy, byte-identical): 1568x308, wordmark on black with a 26px WHITE STRIP along the bottom that would have drawn as a bar. icons/iia-wordmark.png is now cut from it (strip trimmed; every pixel un-mixed against black as white ink or green ink (163,198,56) - a first pass using a plain brightness key visibly turned the green yellow, caught in a side-by-side crop and redone). 1455x184, 3x the v5.40.0 lifted copy; renders 514x65 vs the Claude project's 517x65. ?v=5.40.1 on the path so cached devices refetch it. quote-image-probe 21/21. OLD: v5.40.0:EACH COMPANY ITS OWN BRAND + "WITH ZACHARY". His three, after comparing a tool image with two from his Claude project: (1) the logo - his original instructions name the white+green IIA wordmark and v5.35.0 used the Intelligrations i-infinity mark for BOTH companies. No usable wordmark exists in his Drive (IIA-Logo-New.png is 200x41; the big IIA file is the blue Embellish one he excluded), so icons/iia-wordmark.png was LIFTED from his Claude project's 1080px "Patience" image against this engine's pixel-identical background (white/green alpha unmix; recomposited within 7/255). QB_BUILTIN_LOGO {ii: wordmark, ig: i-infinity}; QB_COMPANY_DEFAULTS gives ig the spec colours; qbBrand turns the v5.35.0 seed's ii logo into the wordmark (no second paste). The step says which brand it uses; the card's Company box drives it even before save (qbCompany), and switching company drops a picture drawn with the other brand. RESULT: his Patience quote is now 0.000% different from the Claude project's image, logo included. (2) Wrapping, from his Graham image: keeping a long green phrase whole now may cost at most ~10% of the size, otherwise it wraps at full size (v5.35.0 shrank to 58px and left "The" alone). The Graham original was hand-broken into 4 lines; ours is 5 at 90px - offered him manual breaks, not built. (3) "With Trevor" follows the saved Marketing person (mktSyncHandoffColumn: only while the column is still named "With <name>", so a hand-rename survives), on save and on every Marketing pull. Deploy ships icons/iia-wordmark.png too. quote-image-probe 21/21 (B1/B2 new). OLD: v5.39.0:HIS PC REPORT after v5.38.0 CONFIRMED the Marketing sync (cloud 7 = phone 7). (1) 🚨 REVERSAL, HIS WORDS: "a waste of time that the popup window occurs for short answers ... I could have just typed Zachary over Trevor." On a FINE pointer the composer no longer opens on focus at all: big boxes keep v5.3.1's inline strip (mic + sparkle, the sparkle still opens the composer), short boxes (names, emails, titles, one-line inputs) are typed in place. The phone is UNCHANGED - his note was about the PC; asked, not assumed. The old fine-pointer "clicked or tabbed into it within 1s" gate is gone with it. (2) "Highlight the name, let go outside the window, and it goes away": the generic .modal-overlay handler has had the press-started-on-the-backdrop guard for a long time, but six windows close through their OWN handler and lacked it (quote Brand settings, Marketing person, picture lightbox, the composer - which is ALSO a .modal-overlay, so the generic guard was bypassed by its inline onclick - and two JS-built modals). One capture-phase pointerdown records window._eosDownTarget; each now closes only when the press began on the backdrop. NOT reproduced in Playwright on either build (its synthetic drag does not deliver the click to the backdrop), so this is the proven house guard applied, not a reproduced fix. composer-inline-probe was ALREADY crashing on v5.38.0 (waits for a #gmAgentIntent strip that no longer appears) - stale, not caused here. quote-image-probe 19/19, mail-agent 39/39. OLD: v5.38.0:THE REAL MARKETING SYNC CAUSE, FROM HIS SCREENSHOT - v5.37.0's badge tap surfaced it: "insert or update on table marketing_cards violates foreign key constraint marketing_cards_column_id_fkey". schema.sql PART 5 had already named this "the live failure this schema still carries" and it was never fixed. mktPushToCloud upserted CARDS before COLUMNS, so a card in a column the cloud lacked (made on the phone) or in a column deleted elsewhere failed the FK, the throw skipped the column upsert, and EVERY push from that device failed identically - nothing from the phone ever reached the cloud. Now columns go first; a card whose column exists nowhere on the device is moved to Ideas (toast says how many) rather than wedging the board; a column delete refused by the same FK drops its tombstone instead of failing every push. Probe Y3 enforces the FK in a fake cloud and reproduces his exact message against v5.37.0; quote-image-probe 19/19. OLD: v5.37.0:TWO OF HIS REPORTS. (1) "All my marketing work on my mobile device is not synced to my PC" - with BOTH badges reading Synced. Cause read in the code: mktPullFromCloud kept cards that existed only on this device ("Local-only cards not yet pushed survive") but NOTHING uploaded them - a push ran only on the device's next mktSave, so cards made while a device was local-only sat there indefinitely while its pull painted "Synced". Now a pull that finds only-here cards (or a card edited here after the cloud copy, compared as TIMES - Supabase returns "+00:00" where the device wrote "Z", and as strings every card looked newer) uploads them at once, and never paints Synced over a failed upload. The badge tap now syncs live and SAYS who the device is signed in as, cloud vs device card counts per company, what it just uploaded, and which company this device is showing (the company switch is per device - a second way two devices look different while synced). NOT CONFIRMED that this was his cause - his tap on the phone badge after this deploy is the test. (2) "It won't let me click into the Name or email address on mobile": REPRODUCED with real touch taps. On a phone every text box opens the composer (#composerModal, z 9996); the v5.35/5.36 windows sat at z 100002/100003, so the composer opened HIDDEN underneath and took the typing. Brand settings 9993, Marketing person 9994 - above the card modal, below the composer. Probe quote-image-probe 18/18 (Y1/Y2/M1 new, all three FAIL on v5.36.0). OLD: v5.36.0:THE MARKETING PERSON. His ask after pasting PART 13: choose in the tool who marketing work is handed to (Trevor -> Zachary, cc Amanda and himself). His decision (asked, "Gmail drafts"): EVERY handoff is a Gmail DRAFT he sends - the quote image, "Package" (was the backend's automatic notifyTrevorPackage MailApp mail) and the WordPress handoff (notifyEditor is now always false; the draft is made after WordPress answers). One firm-wide person (name, email, cc list, validated - his "amanda@investedwithyou" would be refused for the missing .com) saved as the 'marketing' row of brand_profiles (no new paste), opened from Marketing ... > Marketing person or Brand settings > Change. mktDraftToPerson is THE one drafter (signed via draftBodyHtml on the call line, cc + attachments gated on 3.81.0); draftBodyHtml gained opts.links for the WordPress edit link. Package attaches the quote image when one was just made for that card's words. Labels name him ("Package for Zachary", "Yes, send to Zachary", the WordPress choice). The per-company emailTo fields left Brand settings (values carried through untouched; used only as the fallback before a person is saved). No backend change; WP_EDITOR_EMAIL / notifyTrevorPackage are now unused by the client. Column "With Trevor" is HIS data - rename it in Manage Columns, never automatically. Probe quote-image-probe 15/15 (P1-P3 new), mail-agent 39/39, mail-actions 12/12. OLD: v5.35.0:THE BRANDED QUOTE IMAGE IN STEP 9 — PAIRS WITH .gs v3.81.0 (createEmailDraft takes cc + attachments) + SUPABASE PART 13 (brand_profiles, docs/PASTE-INTO-SUPABASE-PART13.sql). His ask: bake the IIA quote-generator instructions (a separate Claude project) into Marketing Step 9. The image is drawn IN THE BROWSER (qbRender: canvas + Google Fonts), ported from engine.py + Text Wrapper.py and measured against his reference PNG (every line within 1-4px, gradient within 1 colour unit - that PNG was made with the Intelligrations spec colours, so ii keeps the IIA instruction colours and ig the spec's). Tap words to turn them green (or (parentheses) / word(green)); Make the image cleans the text (no quotation marks, sentence case for Title Case/ALL CAPS only, closing period) and with no green words asks the AI for 1-3 first; the preview is the confirmation. Yes, send to <name> = ONE Gmail draft, cc, PNG attached under his file-name convention, signed via draftBodyHtml on the call line (mail-agent C2), hidden IIA_QUOTE_LOG block for the Quote Tracker sheet; Needs changes; Approve but don't email = download; approving refuses if the words changed after the image was made. Brand settings per company (colours, background style, curated font, logo upload with flat black/white key-out, placement, size, attribution, recipient, cc, preferred/avoided authors) in Supabase brand_profiles, cached in eos_quote_brand; before PART 13 it says 'this device only'. Suggest Quotes: green words pre-marked, quotes already on other cards off limits, the brand's author lists, and with no blog it offers classics (old step 0) with a verify-the-wording warning. Package to Trevor strips the markup. styles.css unchanged. Probe quote-image-probe 12/12, mail-agent 39/39, mail-actions 12/12. OLD: v5.34.0:THE PLAN LEAVES THE PUBLIC PAGE, AND SKIP GOES. Client + REQUIRES SUPABASE PART 12 (docs/PASTE-INTO-SUPABASE-PART12.sql, also appended to schema.sql) - until Hans pastes it the Vision badge says so and the plan stays exactly as it was (device-local); nothing is lost either way. No .gs. His two yeses 2026-09-29. (1) seededData's "2026" carried the firm's real Vision, 1-Year Plan (revenue/profit/AUM targets) and Q1 Rocks, and index.html is published in a PUBLIC repo - now an empty skeleton; the old block is kept ONLY in the private Drive folder (docs/plans/legacy-seed-2026.js). GIT HISTORY STILL HOLDS IT (separate cleanup, offered). (2) eos_plan table, one row per SECTION (vision, plan, Qn.rocks, Qn.scorecard - measurables+values together, rule 46), RLS = owners + an 'eos_plan' access grant (can_use_eos_plan), NOT firm membership, so a Marketing guest cannot read the targets; Amanda granted by the paste. planSync(): read -> merge -> push per section (rule 48); same content modulo rock ids/blank keys -> adopt (ids converge, rule 77); blank local never pushes over content (rule 53); untouched-since-sync -> adopt; changed-here-only -> push; first sync with the UNTOUCHED old starter copy (PLAN_LEGACY_FP fingerprints of the removed seed) -> adopt quietly, and a cloud holding only the starter copy loses to typed work; BOTH changed -> eosChoose asks, the loser always kept in the device-local ring eos_plan_backups (rule 54; "Earlier versions" link on the Vision header downloads it). Adopt never lands while focus is inside that page, and never calls saveData() (it gathers the Vision/Plan FROM THE FORM and would write the old screen back over the adopt) - loadVision/loadPlan/renderQuarter repaint instead. Triggers: saveData() debounce 2.5s, _dpOnSessionResolved, visibility + 2 min. Seventh sync surface: planSyncBlocker() + #syncBadge-plan (rule 25). (3) "Skip for now" REMOVED (button, skipGoogleSignIn, the eos_signin_skipped read): it revealed the app with no identity and walked past the 2FA gate. Honest scope, said to Hans: a web page can never lock itself - the real boundary is the backend (SECRET_KEY / Supabase RLS); this removes the casual bypass and the public copy of the plan. 19 probes used skipGoogleSignIn to pass the gate - repointed to appRevealApp(); gsi-retry-bound C REWRITTEN (rule 78) to assert no bypass exists. Probe plan-sync-probe 12/12.
         // v5.33.0: THE SPLASH ON THE PC. Client only. His answer: an ordinary browser tab now shows the v5.31.0 splash once per browser SESSION (sessionStorage 'eos_splash_seen'), so a refresh never costs 3.2s; the installed app still shows it on every launch; ?splash=1 still forces it. sessionStorage unavailable = treated as seen (never block on a storage throw). Measured at 1280: flex on first open, removed after ~3.7s, 'none' after reload.
@@ -8605,7 +8626,17 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.46.2 &mdash; 2026-09-29 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.47.0 &mdash; 2026-09-29 (Current)</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>New: &ldquo;What&rsquo;s working&rdquo; on the Marketing page.</strong> Your website&rsquo;s Google Analytics, read-only: pages trending this week, the most-read pages this month, and where visitors come from (including how many Facebook sent).</li>'
+                + '<li><strong>&ldquo;Quote &rarr; link here&rdquo;</strong> on any of those pages starts a quote card whose Facebook post links back to it, and asks you for the quote.</li>'
+                + '<li><strong>AI: What should I do next?</strong> turns those numbers into three specific suggestions. It uses only the real numbers and never writes the quote for you.</li>'
+                + '<li>Connect it once in Settings &rsaquo; Social posting &rsaquo; Google Analytics (your property ID).</li>'
+                + '</ul>'
+                + '</div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.46.2 &mdash; 2026-09-29</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>The order is enforced now: blog, then its Facebook post, then the quote.</strong> The blog&rsquo;s Facebook post already waited for the blog to be live on the website; the blog&rsquo;s quote post now also waits until that Facebook post is scheduled, and must go out after it.</li>'
                 + '<li><strong>The closing call to action is its own step again, right before Finalize Draft</strong>, instead of at the bottom under the Facebook boxes. The later steps moved down one number (the Quote is now step 10).</li>'
@@ -16961,7 +16992,9 @@ Example:
         }
         function mktFqCta(card, link) {
             if (!link) return '';
-            return mktFqGeneric(card) ? 'Learn more about how we help: ' + link : 'If this one resonates, the full post is here: ' + link;
+            const f = (card.socialPosts && card.socialPosts.facebookQuote) || {};
+            const toPage = mktFqGeneric(card) && f.linkKind !== 'blog';
+            return toPage ? 'Learn more about how we help: ' + link : 'If this one resonates, the full post is here: ' + link;
         }
         function mktFqDefaultText(card, link) {
             const parts = qbSplit(document.getElementById('mktQuote').value || card.quote || '');
@@ -16997,6 +17030,10 @@ Example:
         function mktFqSetLink(card, link, ctaLine) {
             card.socialPosts = card.socialPosts || {};
             const f = card.socialPosts.facebookQuote || {};
+            // v5.47.0: a standalone quote can point at a BLOG post too (What's working's
+            // "trending" links) - then its line reads like a blog backlink, not a service page.
+            const hit = (_mktSitePages || []).find(function(p) { return p.link === link; });
+            if (hit) card.socialPosts.facebookQuote = Object.assign(f, { linkKind: hit.kind });
             const ta = document.getElementById('mktFqText');
             let text = ta.value || mktFqDefaultText(card, '');
             if (ctaLine) {
@@ -17543,6 +17580,201 @@ Example:
                 showToast('Could not save marketing data.');
             }
             mktScheduleCloudPush();
+        }
+
+        // ==================== v5.47.0 — WHAT'S WORKING (Google Analytics, read-only) ====================
+        // His ask: "Hey Hans, this page has been trending higher, or this blog was really clicked
+        // on recently, let's use that as a backlink for a related quote (and perhaps asking me for
+        // a quote)". analyticsReport (.gs 3.85.0) on the backend whose account can read the
+        // property (gaBackendInitials, the Facebook routing pattern). The NUMBERS come from
+        // Analytics and are computed here; the AI only turns them into advice, and never writes
+        // the quote - it asks him for one.
+        const MKT_GA_GS_MIN = '3.85.0';
+        const MKT_GA_CACHE_KEY = 'eos_mkt_ga_cache';   // device-local: { pid, at, r } - the last report
+        const MKT_GA_FRESH_MS = 6 * 3600 * 1000;
+        let _mktGaLast = null;
+        function mktGaBackendUrl() {
+            const ini = mktMarketingRow().gaBackendInitials;
+            const members = (getSettings() || {}).teamMembers || [];
+            const m = ini && members.find(function(x) { return x.initials === ini && x.webAppUrl; });
+            return (m && m.webAppUrl) || myMailBackendUrl();
+        }
+        function _mktGaCacheGet() { try { return JSON.parse(localStorage.getItem(MKT_GA_CACHE_KEY) || 'null'); } catch (e) { return null; } }
+        function _mktGaCachePut(pid, r) { try { localStorage.setItem(MKT_GA_CACHE_KEY, JSON.stringify({ pid: pid, at: Date.now(), r: r })); } catch (e) { } }
+        function mktGaErr(r) {
+            const e = (r && r.error) || 'The backend did not answer.';
+            if (/Unknown action/i.test(e)) return 'Reading Google Analytics needs backend ' + MKT_GA_GS_MIN + ' (with its one-time permission click).';
+            return e;
+        }
+        async function mktGaSaveProperty() {
+            const info = document.getElementById('gaConnInfo');
+            const pid = document.getElementById('gaPropertyId').value.replace(/\D/g, '');
+            if (!/^\d{6,15}$/.test(pid)) { info.textContent = 'That does not look like a property ID - it is a number of 6 to 15 digits.'; return; }
+            info.textContent = 'Asking Google Analytics...';
+            // To THIS person's own backend: the one saving it must be able to read it.
+            const r = await _calPost({ action: 'analyticsReport', propertyId: pid }).catch(function(e) { return { success: false, error: e.message }; });
+            if (!r || !r.success) { info.textContent = mktGaErr(r); return; }
+            const me = document.getElementById('dailyPlanUser')?.value || '';
+            const res = await mktMarketingRowPatch({ gaPropertyId: pid, gaBackendInitials: me });
+            _mktGaCachePut(pid, r);
+            const views = (r.pages.last28 || []).reduce(function(s, p) { return s + p.screenPageViews; }, 0);
+            info.textContent = 'Connected. ' + views.toLocaleString() + ' page views in the last 28 days across your top pages. '
+                + (res && res.ok ? 'Saved for the firm - see Marketing › What’s working.' : ((res && res.note) || ''));
+            mktGaRenderSettings();
+        }
+        function mktGaRenderSettings() {
+            const el = document.getElementById('gaPropertyId');
+            if (!el) return;
+            const row = mktMarketingRow();
+            if (document.activeElement !== el) el.value = row.gaPropertyId || '';
+            document.getElementById('gaConnState').innerHTML = row.gaPropertyId
+                ? '<span style="color:#15803d; font-weight:600;">Set</span> (read through ' + escapeHtml(row.gaBackendInitials || 'your') + '’s backend)'
+                : 'not set';
+        }
+        async function mktGaLoad(force) {
+            const body = document.getElementById('mktGaBody');
+            if (!body) return;
+            await qbEnsureBrandPulled(MKT_PERSON_ROW).catch(function() { });
+            const pid = mktMarketingRow().gaPropertyId;
+            if (!pid) {
+                body.innerHTML = 'Connect Google Analytics once in <a href="#" onclick="openSettings(); return false;">Settings &rsaquo; Social posting</a> (your property ID) and this shows what people are reading, with ideas.';
+                return;
+            }
+            const c = _mktGaCacheGet();
+            if (!force && c && c.pid === pid && c.r && Date.now() - c.at < MKT_GA_FRESH_MS) { mktGaRender(c.r, c.at); return; }
+            body.textContent = 'Reading Google Analytics...';
+            const r = await _calPost({ action: 'analyticsReport', propertyId: pid }, mktGaBackendUrl()).catch(function(e) { return { success: false, error: e.message }; });
+            if (!r || !r.success) {
+                const had = c && c.pid === pid && c.r;
+                const err = '<div style="margin-bottom:6px;"><span style="color:#b91c1c;">' + escapeHtml(mktGaErr(r)) + '</span>'
+                    + (had ? ' Showing the last report, from ' + escapeHtml(new Date(c.at).toLocaleString()) + '.' : '')
+                    + ' <button class="btn btn-secondary" onclick="mktGaLoad(true)" style="font-size:0.75rem; padding:2px 8px;">Try again</button></div>';
+                if (had) { mktGaRender(c.r, c.at); body.insertAdjacentHTML('afterbegin', err); }
+                else body.innerHTML = err;
+                return;
+            }
+            _mktGaCachePut(pid, r);
+            mktGaRender(r, Date.now());
+        }
+        // Pages worth pointing a quote at: not the home page, not WordPress plumbing.
+        function _mktGaContent(p) {
+            const path = String(p.pagePath || '');
+            return path !== '/' && !/^\/(wp-|feed|tag\/|category\/|author\/|page\/\d|search|\?)|\/feed\/?$|preview=|[?&]p=\d/i.test(path);
+        }
+        function mktGaInsights(r) {
+            const prev = {};
+            (r.pages.prev7 || []).forEach(function(p) { prev[p.pagePath] = (prev[p.pagePath] || 0) + p.screenPageViews; });
+            const last7 = (r.pages.last7 || []).filter(_mktGaContent);
+            const trending = last7.map(function(p) { return Object.assign({ before: prev[p.pagePath] || 0 }, p); })
+                .filter(function(p) { return p.screenPageViews >= 5 && p.screenPageViews >= 1.5 * p.before; })
+                .sort(function(a, b) { return (b.screenPageViews - b.before) - (a.screenPageViews - a.before); })
+                .slice(0, 3);
+            const top = (r.pages.last28 || []).filter(_mktGaContent).slice(0, 5);
+            const sources = (r.sources || []).slice(0, 6);
+            const fb = (r.sources || []).filter(function(s) { return /facebook|^fb$|^m\.facebook|^l\.facebook|^lm\.facebook/i.test(s.sessionSource); })
+                .reduce(function(n, s) { return n + s.sessions; }, 0);
+            const total = (r.sources || []).reduce(function(n, s) { return n + s.sessions; }, 0);
+            return { trending: trending, top: top, sources: sources, fb: fb, total: total, site: r.siteUrl || '' };
+        }
+        function _mktGaTitle(p) { return String(p.pageTitle || '').replace(/\s*[|–—-]\s*(Intelligent Investing|Invested With You)[^|]*$/i, '').trim() || p.pagePath; }
+        function mktGaRender(r, at) {
+            const body = document.getElementById('mktGaBody');
+            const ins = mktGaInsights(r);
+            _mktGaLast = ins;
+            const row = function(p, i, list, extra) {
+                return '<li style="margin:4px 0;"><a href="' + escapeHtml(ins.site + p.pagePath) + '" target="_blank" rel="noopener">' + escapeHtml(_mktGaTitle(p)) + '</a>'
+                    + ' <span style="color:var(--gray-500);">' + extra + '</span>'
+                    + ' <button class="btn btn-secondary" onclick="mktGaQuoteFor(\'' + list + '\',' + i + ')" style="font-size:0.72rem; padding:1px 7px; margin-left:4px;">Quote &rarr; link here</button></li>';
+            };
+            let h = '';
+            h += '<div style="font-weight:600; margin-top:2px;">Trending this week</div>';
+            h += ins.trending.length
+                ? '<ul style="margin:2px 0 8px 18px; padding:0;">' + ins.trending.map(function(p, i) {
+                    return row(p, i, 'trending', p.screenPageViews + ' views this week' + (p.before ? ' (' + p.before + ' the week before)' : ' (new this week)'));
+                }).join('') + '</ul>'
+                : '<div style="color:var(--gray-500); margin:2px 0 8px;">Nothing is climbing sharply this week (a page needs 5+ views and 1.5&times; the week before).</div>';
+            h += '<div style="font-weight:600;">Most read, last 28 days</div>';
+            h += ins.top.length
+                ? '<ul style="margin:2px 0 8px 18px; padding:0;">' + ins.top.map(function(p, i) { return row(p, i, 'top', p.screenPageViews + ' views'); }).join('') + '</ul>'
+                : '<div style="color:var(--gray-500); margin:2px 0 8px;">No page views recorded yet.</div>';
+            h += '<div style="font-weight:600;">Where visitors come from (28 days)</div><div style="margin:2px 0 8px; color:var(--gray-600);">'
+                + (ins.sources.map(function(s) { return escapeHtml(s.sessionSource + ' / ' + s.sessionMedium) + ' ' + s.sessions; }).join(' &middot; ') || 'no visits recorded')
+                + (ins.total ? '<br>Facebook sent <strong>' + ins.fb + '</strong> of ' + ins.total + ' visits.' : '') + '</div>';
+            h += '<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">'
+                + '<button class="btn btn-secondary" id="mktGaCoachBtn" onclick="mktGaCoach()" style="font-size:0.78rem; padding:4px 10px; color:var(--primary);">AI: What should I do next?</button>'
+                + '<span style="font-size:0.74rem; color:var(--gray-500);">Updated ' + escapeHtml(new Date(at).toLocaleString()) + ' &middot; <a href="#" onclick="mktGaLoad(true); return false;">Refresh</a></span></div>'
+                + '<div id="mktGaCoachOut" style="margin-top:8px;"></div>';
+            body.innerHTML = h;
+            const sum = document.getElementById('mktGaSummary');
+            if (sum) sum.textContent = ins.trending.length ? '— ' + ins.trending.length + ' page' + (ins.trending.length > 1 ? 's' : '') + ' trending this week' : '— your website traffic, with ideas';
+        }
+        // "Let's use that as a backlink for a related quote (and perhaps asking me for a quote)":
+        // a Social / Quote card whose Facebook quote post already links to that page, opened on
+        // the Quote step with the question. The quote itself is HIS - nothing is invented.
+        function mktGaQuoteFor(list, i) {
+            const p = _mktGaLast && _mktGaLast[list] && _mktGaLast[list][i];
+            if (!p) return;
+            const link = _mktGaLast.site + p.pagePath;
+            const title = _mktGaTitle(p);
+            mktNewCard('standalone');
+            const card = mktGetCard(mktEditingId);
+            if (!card) return;
+            card.title = 'Quote → ' + title;
+            card.socialPosts = { facebookQuote: { link: link, status: 'draft', text: '' } };
+            card.updated = new Date().toISOString();
+            mktSave(); mktRender();
+            mktOpenCard(card.id);
+            // Look the card up AGAIN when the list lands: opening it reloads mktData, so the
+            // object held above can be a stale copy and a write to it would be lost.
+            const cardId = card.id;
+            mktFqLoadPages().then(function(pages) {
+                const hit = pages.find(function(x) { return x.link === link; });
+                const live = mktGetCard(cardId);
+                if (!hit || !live || !live.socialPosts || !live.socialPosts.facebookQuote) return;
+                live.socialPosts.facebookQuote.linkKind = hit.kind;
+                mktSave();
+                if (mktEditingId === cardId) _mktFbPaintKind(live, 'facebookQuote');
+            }).catch(function() { });
+            const q = document.getElementById('mktQuote');
+            if (q) { q.scrollIntoView({ block: 'center' }); }
+            showToast('What quote fits "' + title + '"? Write it (or use AI: Suggest Quotes) in the Quote step - its Facebook post will link to that page.');
+        }
+        async function mktGaCoach() {
+            const ins = _mktGaLast;
+            if (!ins) return;
+            if (!requireAI('marketing', 'Marketing AI')) return;
+            const out = document.getElementById('mktGaCoachOut'), btn = document.getElementById('mktGaCoachBtn');
+            btn.disabled = true; out.textContent = 'Thinking...';
+            try {
+                mktLoad();
+                const fmt = function(p) { return '- ' + _mktGaTitle(p) + ' (' + p.pagePath + '): ' + p.screenPageViews + ' views' + (p.before !== undefined ? ', ' + p.before + ' the week before' : ''); };
+                const recent = mktData.cards.filter(function(c) { return c.title; })
+                    .sort(function(a, b) { return String(b.updated || b.created || '').localeCompare(String(a.updated || a.created || '')); })
+                    .slice(0, 12).map(function(c) {
+                        const fb = c.socialPosts || {};
+                        return '- ' + c.title + ' [' + c.kind + ', column ' + c.columnId + (fb.facebook ? ', FB post ' + fb.facebook.status : '') + (fb.facebookQuote && fb.facebookQuote.status ? ', FB quote ' + fb.facebookQuote.status : '') + ']';
+                    }).join('\n');
+                const prompt = 'You are the marketing coach for Hans Blake, an independent fee-only RIA (Intelligent Investing). '
+                    + 'Below are REAL numbers from his website\'s Google Analytics and his current marketing cards.\n\n'
+                    + 'TRENDING THIS WEEK (views this week vs the week before):\n' + (ins.trending.map(fmt).join('\n') || '(none)') + '\n\n'
+                    + 'MOST READ, LAST 28 DAYS:\n' + (ins.top.map(fmt).join('\n') || '(none)') + '\n\n'
+                    + 'TRAFFIC SOURCES, 28 DAYS (sessions):\n' + ins.sources.map(function(s) { return '- ' + s.sessionSource + ' / ' + s.sessionMedium + ': ' + s.sessions; }).join('\n')
+                    + '\nFacebook sent ' + ins.fb + ' of ' + ins.total + ' visits.\n\n'
+                    + 'HIS RECENT MARKETING CARDS:\n' + (recent || '(none)') + '\n\n'
+                    + 'Give him THREE specific next moves, most valuable first, each 2-3 sentences, addressed to him ("Hans, ..."). '
+                    + 'Each must name the page or card and cite the number behind it. Good moves: a quote post that links back to a trending or well-read page '
+                    + '(ask him what quote or story fits it - do NOT write or invent a quote yourself); a follow-up blog on a topic that is drawing readers; '
+                    + 'resharing a strong older post; noticing a channel that under- or over-performs. '
+                    + 'Use ONLY the numbers above - never invent figures, click rates or benchmarks. No hype, never promise returns or outperformance (regulated RIA). '
+                    + 'Plain text, numbered 1-3, no headings.';
+                const raw = await callAI('marketing', prompt, { featureLabel: 'Marketing AI', temperature: 0.5, maxTokens: 700 });
+                out.innerHTML = '<div style="padding:8px 10px; background:#f8fafc; border:1px solid var(--gray-200); border-radius:6px; white-space:pre-wrap;">'
+                    + escapeHtml(String(raw || '').replace(/```[a-z]*\s*/gi, '').trim()) + '</div>';
+            } catch (e) {
+                out.innerHTML = '<span style="color:#b91c1c;">' + escapeHtml(e.message || String(e)) + '</span>';
+            } finally {
+                btn.disabled = false;
+            }
         }
 
         function mktNewCard(kind) {
@@ -46894,6 +47126,7 @@ Make sure your suggestions directly address the specific root cause and discussi
             renderSyncSettingsState();   // v3.98.0 - the auto-sync flag has a control here now
             renderSettingsYearRow();   // v4.15.0 (Q4) - year chips beside Save Year, from #yearSelect
             if (typeof mktFbRenderSettings === 'function') mktFbRenderSettings().catch(function() { });   // v5.45.0 Social posting
+            if (typeof mktGaRenderSettings === 'function') qbEnsureBrandPulled(MKT_PERSON_ROW).then(mktGaRenderSettings).catch(function() { });   // v5.47.0 Google Analytics
 
             // Quarter dates
             document.getElementById('q1Start').value = settings.quarterStarts?.Q1 || '01/01';
