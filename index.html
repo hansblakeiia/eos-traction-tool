@@ -13,7 +13,7 @@
          Marketing tab; the rest of the app is untouched by this. -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%231a365d' width='100' height='100' rx='15'/%3E%3Ctext x='50' y='50' font-family='Arial, sans-serif' font-size='45' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='central'%3EEOS%3C/text%3E%3Ccircle cx='85' cy='15' r='8' fill='%233182ce'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="styles.css?v=5.47.2">
+    <link rel="stylesheet" href="styles.css?v=5.49.0">
     <!-- v5.27.0: installable + notifications. The manifest makes "Add to Home screen" a
          real app icon; sw.js (registered from _pushInit) receives Web Push. The worker
          caches NOTHING — see the note at the top of sw.js. -->
@@ -1249,6 +1249,9 @@
                 <div class="daily-plan-column dp-col-today">
                     <h3>🚀 Today's Execution</h3>
                     <div class="today-date" id="todayDateDisplay"></div>
+                    <!-- v5.49.0: the blog rhythm line + (only when behind) the catch-up task.
+                         Drawn by mktRhythmPaintToday; never stored in dailyPlanData. -->
+                    <div id="dpBlogLine"></div>
                     
                     <div class="rule-of-3">
                         <div class="rule-of-3-header">
@@ -2218,6 +2221,8 @@
                     </div>
                 </div>
             </div>
+            <!-- v5.49.0: the blog rhythm strip (Intelligent Investing only). -->
+            <div id="mktRhythmStrip" class="mkt-rhythm" style="display:none;"></div>
             <!-- v5.47.0: WHAT'S WORKING (his ask: "this page has been trending higher, or this
                  blog was really clicked on recently, let's use that as a backlink for a related
                  quote"). Google Analytics, read-only; collapsed until asked. -->
@@ -4827,9 +4832,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '5.48.0';
+        const EOS_VERSION = '5.49.0';
         const EOS_BUILD_DATE = '2026-09-29';
-        const EOS_BUILD_TIME = '19:45'; // v5.48.0 (styles.css UNCHANGED, link stays ?v=5.47.2): HIS GREENVILLE PAGES (§5.118). Ten service pages /greenville-* (created 2024-03-28, reorganised May-Jul 2024; audience pages linked to them 2024-06-21); he asked whether they gained views. The 28-day report cannot see that far back, so What's working gains a 'Greenville pages' block: mktGaLocalLoad -> analyticsReport mode 'pathHistory' (pathContains 'greenville', startDate 2023-07-01) -> mktGaLocalFacts (pure; FULL months only, last 12 vs the 12 before, trailing-slash paths merged, service pages vs blog posts, site total for share) -> mktGaLocalRender (per-page line + inline SVG sparkline) + mktGaLocalCopy (text for a chat). REQUIRES Google_Tasks_Sync.gs 3.86.0 ON THE GA BACKEND (gaBackendInitials = Hans) - a 3.85.0 backend ignores the mode and answers the default report, which the client detects by the missing `history` and names. No new scope, no consent run. PREVIOUSLY v5.47.2 (TWO-FILE, styles.css?v=5.47.2): his screenshot - he clicked "Approve & schedule the quote post" twice, nothing happened, and he feared a double post. Nothing was sent: the button was DISABLED (v5.46.2's order rule - the blog's own Facebook post was not scheduled yet) and a disabled button fires no click; had it been live, every schedule still passes a confirm dialog, the single-flight flag and the backend's 3-minute duplicate refusal. The defect was visual: styles.css had NO :disabled rule anywhere, so a disabled .btn-primary was exactly as blue as a live one. Now .btn:disabled is dimmed with a not-allowed cursor (appended last, rule 10b), and the Facebook buttons carry the reason as a hover title.
+        const EOS_BUILD_TIME = '20:30'; // v5.49.0 (TWO-FILE, styles.css?v=5.49.0): THE BLOG RHYTHM + MARKETING CALENDAR (§5.119), designed with him first (mockup + four answers, all the recommended ones). mktBlogStep reads the step off the card (the step AFTER the furthest filled one; Finalize and Title give no signal - a card carries its title from birth); mktRhythmFacts is PURE over (cards, WP statuses, last published post, now): ii blogs only, current = furthest along not live/scheduled/done, behind = 14+ days since the last live post AND nothing scheduled ahead, unknown history never nags, aim = anchor + 7. Last published comes from listWordPressPosts perPage 1 (eos_mkt_last_published, device-local) so blogs made outside the tool count. Today: #dpBlogLine under the date - the line + a DRAWN catch-up task (never stored in dailyPlanData: rules 49/53/75), tick hides it for the day (eos_blog_nudge_done). Marketing: #mktRhythmStrip, 12-segment bar, ii only. Calendar: CAL_EOS_LAYERS 'marketing' -> _calMktItemsFor (WP go-live, facebook + facebookQuote `when`, due/overdue marker), agenda bubble + week chip (data-cal-mkt) open the card via mktRhythmGoCard. mktRhythmRefresh is throttled 3h (Today also pulls marketing cards from the cloud, 15 min). Probe blog-rhythm-probe 9/9. No backend change. PREVIOUSLY v5.48.0 (styles.css UNCHANGED, link stays ?v=5.47.2): HIS GREENVILLE PAGES (§5.118). Ten service pages /greenville-* (created 2024-03-28, reorganised May-Jul 2024; audience pages linked to them 2024-06-21); he asked whether they gained views. The 28-day report cannot see that far back, so What's working gains a 'Greenville pages' block: mktGaLocalLoad -> analyticsReport mode 'pathHistory' (pathContains 'greenville', startDate 2023-07-01) -> mktGaLocalFacts (pure; FULL months only, last 12 vs the 12 before, trailing-slash paths merged, service pages vs blog posts, site total for share) -> mktGaLocalRender (per-page line + inline SVG sparkline) + mktGaLocalCopy (text for a chat). REQUIRES Google_Tasks_Sync.gs 3.86.0 ON THE GA BACKEND (gaBackendInitials = Hans) - a 3.85.0 backend ignores the mode and answers the default report, which the client detects by the missing `history` and names. No new scope, no consent run. PREVIOUSLY v5.47.2 (TWO-FILE, styles.css?v=5.47.2): his screenshot - he clicked "Approve & schedule the quote post" twice, nothing happened, and he feared a double post. Nothing was sent: the button was DISABLED (v5.46.2's order rule - the blog's own Facebook post was not scheduled yet) and a disabled button fires no click; had it been live, every schedule still passes a confirm dialog, the single-flight flag and the backend's 3-minute duplicate refusal. The defect was visual: styles.css had NO :disabled rule anywhere, so a disabled .btn-primary was exactly as blue as a live one. Now .btn:disabled is dimmed with a not-allowed cursor (appended last, rule 10b), and the Facebook buttons carry the reason as a hover title.
         // v5.47.1: gs-auditor on 3.85.0 (backend cleared for Hans only, consent between push and redeploy). Client fixes: (1) a pre-3.85.0 backend answers analyticsReport with the secret-key refusal, which _calPost rewrites as "sign-in has expired" - a wrong cause (rule 63); mktGaErr now names the backend version first, and Save & test gates on the own backend's version. (2) GA rows are (path, title) pairs, so a retitled post split into two rows and could miss the trend test or list twice; _mktGaByPath sums last7/last28 by path. Backend (same 3.85.0, not yet deployed): authorizeAnalytics re-throws so a failure is red in the editor; a disabled Analytics Data API is named before the access-list message.
         // v5.47.0: WHAT'S WORKING - GOOGLE ANALYTICS, READ-ONLY. PAIRS WITH .gs v3.85.0 (new scope analytics.readonly + AnalyticsData advanced service; Hans runs authorizeAnalytics in the editor between push and redeploy; Amanda's backend deliberately stays 3.84.0 without the scope). His ask: "this page has been trending higher, or this blog or podcast was really clicked on recently, let's use that as a backlink for a related quote (and perhaps asking me for a quote)". He supplied GA4 property 370961938 (NOT hardcoded - public repo; it is entered in Settings > Social posting > Google Analytics and rides on the firm 'marketing' row as gaPropertyId + gaBackendInitials, the fbBackendInitials routing pattern; Save & test only saves after the backend reads it). Marketing page: a collapsed "What's working" panel (loads on open, cached device-local 6h in eos_mkt_ga_cache, Refresh): Trending this week (5+ views and >=1.5x the week before, home and WP plumbing excluded), Most read 28 days, sources + Facebook's share; each page has "Quote -> link here" = a Social / Quote card whose facebookQuote.link is that page, opened with a toast ASKING him for the quote (never invented); "AI: What should I do next?" turns only the listed numbers + his recent cards into three moves (told never to invent figures or write the quote). mktFqCta: a standalone quote pointing at a BLOG post (linkKind from the site list) reads "the full post is here". Podcast: Blubrry (his answer) - downloads need Blubrry API access, phase 2; episode pages on the site are already in GA.
         // v5.46.2: HIS ORDER, ENFORCED - blog live in WordPress -> its Facebook post -> then the quote. (1) He asked what stops a social post going out before the blog: the blog's Facebook post already waited for WordPress to report the post LIVE (mktFbLiveLink = status 'publish'), but the blog's QUOTE post only waited for that too - it could be scheduled with no social post at all, or timed before it (the rhythm only SUGGESTED after). Now mktFqSocialFirst(card): a blog quote needs the blog's own post scheduled/posted and a time strictly after it, in the paint (button disabled, line says why) and in _mktFbApprove (refusal sentences). Standalone quotes unaffected. Probe F6/F7. (2) His "Shouldn't the CTA for the blog be higher up like before Finalize draft?": v5.44-5.46 had pushed the closing CTA under Related reading + both Facebook boxes inside Package & Send. It is now its own STEP 6 "Closing Call to Action" (inside #mktBlogFields, so blog cards only), directly before Finalize Draft; later steps renumbered 7-12 (Quote is now step 10), and every live "Step N" string now names the step instead of its number so the next move cannot stale them. (3) Package & Send: the WordPress / package / Drive buttons now sit ABOVE the Facebook boxes, matching the order.
@@ -8628,7 +8633,18 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.48.0 &mdash; 2026-09-29 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.49.0 &mdash; 2026-09-29 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">When does everything go out, and is this week&rsquo;s blog on track?</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>A Marketing layer on the Calendar.</strong> Each blog&rsquo;s WordPress go-live, its Facebook post and its quote post sit on their days, in green, blue and violet. Solid means it is out; dashed means scheduled but not out yet. Click any of them to open that blog&rsquo;s card. Untick &ldquo;Marketing&rdquo; in the sidebar to hide them.</li>'
+                + '<li><strong>The blog rhythm, for Intelligent Investing.</strong> The aim is one blog a week. The Calendar marks when the next one is due, and &ldquo;Blog overdue&rdquo; appears on today once two weeks pass with nothing live or scheduled. A blog scheduled in WordPress counts as on track.</li>'
+                + '<li><strong>Today says where the current blog is</strong>, for example &ldquo;at Step 4, Blog Draft&rdquo;. The current blog is the one furthest along that is not out yet. When it falls behind, a catch-up task appears under it and updates as the blog moves; ticking it hides it for today, and it goes away once a blog is scheduled.</li>'
+                + '<li><strong>The Marketing page has the same line above the board</strong>, with a 12-step bar showing how far the current blog has come.</li>'
+                + '</ul>'
+                + '</div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.48.0 &mdash; 2026-09-29</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Did the Greenville pages work? Now you can see.</div>'
                 + '<div style="font-size:0.8rem;background:#fffbeb;border:1px solid #fcd34d;color:#92400e;border-radius:6px;padding:6px 10px;margin:0 0 8px;">Needs Hans&rsquo;s backend on 3.86.0 (a plain update, no permission click). Until then the new button says so.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
@@ -12425,6 +12441,8 @@ Example:
             } else if (pageId === 'dailyPlan') {
                 initDailyPlan();
                 loadDailyPlan();
+                // v5.49.0: the blog line paints from what this device knows, then refreshes.
+                try { mktRhythmPaintToday(); mktRhythmRefresh({ pull: true }); } catch (e) { console.warn('blog line', e); }
             } else if (pageId === 'kanban') {
                 renderKanban();
                 pullKanbanFromCloud(false); // silent background refresh; re-renders only if cloud has newer data
@@ -12434,6 +12452,7 @@ Example:
                 // v4.23.0: renders from cache instantly, revalidates in the background.
                 // Reads state only — never calls another page's persisting render*() (rule 41).
                 renderCalendarPage();
+                if (_calLayerPrefs().marketing) mktRhythmRefresh().then(function(ch) { if (ch) _calRenderAll(); }).catch(function() { });
             } else if (pageId === 'gmail') {
                 // v5.2.0: render from the brief's cache; a refresh re-scans through the
                 // same briefMailRefresh the brief uses, and _briefPaintMail repaints here.
@@ -17912,6 +17931,208 @@ Example:
                 + '; site views last12 ' + f.siteLast12 + ', prev12 ' + f.sitePrev12 + '\n'
                 + f.service.map(line).join('\n') + (f.posts.length ? '\nBlog posts:\n' + f.posts.map(line).join('\n') : '');
         }
+        // ==================== v5.49.0 — THE BLOG RHYTHM + MARKETING CALENDAR ====================
+        // His ask (2026-09-29, designed with him first): see when everything goes out, tied to a
+        // blog rhythm for Intelligent Investing only - "aim for one blog every week, but only warn
+        // me once two weeks go by without one" - with Today and Marketing saying where the current
+        // blog is in the 12 steps, and a task in the daily plan when it falls behind. HIS ANSWERS:
+        // the current blog = the ii blog card furthest along that is not out yet; a blog
+        // SCHEDULED in WordPress resets the clock; the behind task is ONE row that updates itself,
+        // goes when a blog is scheduled, and a tick hides it for today only.
+        // The behind task is DRAWN, never stored in dailyPlanData: a stored synthetic task would
+        // walk into rules 49/53/75 (prune, emptiness, a fourth pool) for no gain.
+        const MKT_RHYTHM_AIM_DAYS = 7;
+        const MKT_RHYTHM_WARN_DAYS = 14;
+        const MKT_LAST_PUB_KEY = 'eos_mkt_last_published';   // device-local: { date, title, link, at }
+        const MKT_NUDGE_DONE_KEY = 'eos_blog_nudge_done';     // device-local: the YMD the task was ticked
+        const MKT_STEP_NAMES = ['Brainstorming', 'Angles', 'My Initial Take', 'Blog Draft', 'My Additional Take', 'Closing Call to Action',
+            'Finalize Draft', 'Title / Headline', 'Social Post Copy', 'Quote', 'Image', 'Package & Send'];
+        let _mktRhythmAt = 0, _mktRhythmPullAt = 0, _mktRhythmMemo = null;
+        // Which step a blog is on, read off what is filled in: the step AFTER the furthest one
+        // with content (so a skipped optional step never holds a blog back). Finalize (7) and
+        // Title (8) give no signal: Finalize has no field, and a card carries its title from the
+        // day it is made, so reading it would jump every draft to Step 9.
+        function mktBlogStep(c) {
+            const has = [
+                !!(c.brainstormIdeas || c.brainstormSources || (c.brainstormTopics || []).length),
+                !!c.chosenTopic, !!c.take, !!c.blog, !!c.additionalTake, !!(c.ctaHeading || c.ctaBody), false,
+                false, !!c.social, !!c.quote, !!(c.imageFileId || c.imagePrompt || c.wpImageMediaId),
+                !!(c.packagedToTrevorAt || c.wordpressSentAt || c.wordpressPostId)
+            ];
+            let hi = 0;
+            has.forEach(function(v, i) { if (v) hi = i + 1; });
+            if (hi >= 12) return { n: 12, sent: true, name: MKT_STEP_NAMES[11] };
+            const n = Math.max(1, hi + 1);
+            return { n: n, sent: false, name: MKT_STEP_NAMES[n - 1] };
+        }
+        function _mktLastPubGet() { try { return JSON.parse(localStorage.getItem(MKT_LAST_PUB_KEY) || 'null'); } catch (e) { return null; } }
+        function _mktDay(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
+        function _mktYmd(d) { const x = new Date(d); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); }
+        // Pure over (cards, WordPress statuses, last published post, now).
+        function mktRhythmFacts(cards, wp, lastPub, now) {
+            now = now || new Date();
+            const blogs = (cards || []).filter(function(c) { return (c.kind || 'blog') === 'blog' && (c.company || 'ii') === 'ii'; });
+            let lastOut = null, nextOut = null;
+            const consider = function(dateStr, title, cardId) {
+                const d = new Date(dateStr);
+                if (isNaN(d.getTime())) return;
+                if (d > now) { if (!nextOut || d < nextOut.date) nextOut = { date: d, title: title, cardId: cardId }; }
+                else if (!lastOut || d > lastOut.date) lastOut = { date: d, title: title, cardId: cardId };
+            };
+            const outIds = {};
+            blogs.forEach(function(c) {
+                const s = c.wordpressPostId && wp[c.wordpressPostId];
+                if (s && (s.status === 'publish' || s.status === 'future') && s.date) { consider(s.date, c.title, c.id); outIds[c.id] = s.status; }
+            });
+            if (lastPub && lastPub.date) consider(lastPub.date, lastPub.title, null);
+            const inProgress = blogs.filter(function(c) { return !outIds[c.id] && c.columnId !== 'done'; })
+                .map(function(c) { return { card: c, step: mktBlogStep(c) }; })
+                .sort(function(a, b) { return (b.step.n - a.step.n) || String(b.card.updated || '').localeCompare(String(a.card.updated || '')); });
+            const cur = inProgress[0] || null;
+            const daysSince = lastOut ? Math.round((_mktDay(now) - _mktDay(lastOut.date)) / 864e5) : null;
+            // Unknown history never nags: no date at all means we cannot say it is late.
+            const behind = !nextOut && daysSince !== null && daysSince >= MKT_RHYTHM_WARN_DAYS;
+            const anchor = nextOut ? nextOut.date : (lastOut ? lastOut.date : null);
+            const dueBy = anchor ? new Date(_mktDay(anchor).getTime() + MKT_RHYTHM_AIM_DAYS * 864e5) : null;
+            return { blogs: blogs.length, current: cur, lastOut: lastOut, nextOut: nextOut, daysSince: daysSince, behind: behind, dueBy: dueBy };
+        }
+        function mktRhythmNow() {
+            if (_mktRhythmMemo && Date.now() - _mktRhythmMemo.t < 1500) return _mktRhythmMemo.f;
+            mktLoad();
+            const f = mktRhythmFacts(mktData.cards, mktWpStatusMap(), _mktLastPubGet(), new Date());
+            _mktRhythmMemo = { t: Date.now(), f: f };
+            return f;
+        }
+        function _mktFmtDay(d) { return new Date(d).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }); }
+        function _mktStepPhrase(cur) {
+            if (!cur) return '';
+            return cur.step.sent ? 'is packaged and sent, waiting to be scheduled in WordPress'
+                : 'is at Step ' + cur.step.n + ', ' + cur.step.name;
+        }
+        function _mktLastOutPhrase(f) {
+            if (f.nextOut) return 'Next one goes live ' + _mktFmtDay(f.nextOut.date) + '.';
+            if (!f.lastOut) return 'The last blog&rsquo;s date is not known yet.';
+            return 'Last one out ' + _mktFmtDay(f.lastOut.date) + ' (' + (f.daysSince === 0 ? 'today' : f.daysSince + ' day' + (f.daysSince === 1 ? '' : 's') + ' ago') + ').';
+        }
+        // Reads WordPress (latest published post + the statuses of the tool's own posts) and,
+        // from Today, the marketing cards from the cloud. Quiet and throttled; resolves true
+        // when something may have changed.
+        async function mktRhythmRefresh(opts) {
+            opts = opts || {};
+            if (!opts.force && Date.now() - _mktRhythmAt < 3 * 3600 * 1000) return false;
+            _mktRhythmAt = Date.now();
+            let changed = false;
+            try {
+                if (opts.pull && Date.now() - _mktRhythmPullAt > 15 * 60 * 1000 && typeof mktPullFromCloud === 'function' && !mktSyncBlocker()) {
+                    _mktRhythmPullAt = Date.now();
+                    await mktPullFromCloud().catch(function() { });
+                    changed = true;
+                }
+                await _gsEnsureVersion();
+                if (_calGsAtLeast('3.82.0') === true) {
+                    const r = await _calPost({ action: 'listWordPressPosts', perPage: 1 }).catch(function() { return null; });
+                    const p = r && r.success && r.posts && r.posts[0];
+                    if (p && p.date) {
+                        const prev = _mktLastPubGet();
+                        if (!prev || prev.date !== p.date) changed = true;
+                        localStorage.setItem(MKT_LAST_PUB_KEY, JSON.stringify({ date: p.date, title: p.title || '', link: p.link || '', at: Date.now() }));
+                    }
+                    if (await mktWpRefreshStatuses(true)) changed = true;
+                }
+            } catch (e) { console.warn('mktRhythmRefresh', e); }
+            _mktRhythmMemo = null;
+            if (changed) { mktRhythmPaintToday(); mktRhythmPaintStrip(); }
+            return changed;
+        }
+        function mktRhythmGoCard(id) {
+            if (!id) { showPage('marketing'); return; }
+            showPage('marketing');
+            setTimeout(function() { if (mktGetCard(id)) mktOpenCard(id); }, 0);
+        }
+        function mktRhythmStartBlog() { showPage('marketing'); setTimeout(function() { mktNewCard('blog'); }, 0); }
+        // TODAY: one line always (once this person uses Marketing); the behind task only
+        // after two weeks with nothing out or scheduled, hidden for the day by its tick.
+        function mktRhythmPaintToday() {
+            const el = document.getElementById('dpBlogLine');
+            if (!el) return;
+            let f;
+            try { f = mktRhythmNow(); } catch (e) { el.innerHTML = ''; return; }
+            if (!f.blogs && !f.lastOut && !f.nextOut) { el.innerHTML = ''; return; }
+            const cur = f.current;
+            let h = '<div class="dp-blog-line">&#128221; <strong>Blog:</strong> ';
+            h += cur ? '<a href="#" onclick="mktRhythmGoCard(\'' + escapeHtml(cur.card.id) + '\'); return false;">&ldquo;' + escapeHtml(cur.card.title || cur.card.chosenTopic || 'Untitled blog') + '&rdquo;</a> ' + _mktStepPhrase(cur) + '. '
+                : 'nothing in progress. <a href="#" onclick="mktRhythmStartBlog(); return false;">Start the next one</a>. ';
+            h += '<span class="dp-blog-meta">' + _mktLastOutPhrase(f) + '</span></div>';
+            let doneYmd = '';
+            try { doneYmd = localStorage.getItem(MKT_NUDGE_DONE_KEY) || ''; } catch (e) { }
+            if (f.behind && doneYmd !== _mktYmd(new Date())) {
+                const what = cur
+                    ? (cur.step.sent ? 'schedule &ldquo;' + escapeHtml(cur.card.title || 'the packaged blog') + '&rdquo; in WordPress'
+                        : 'move &ldquo;' + escapeHtml(cur.card.title || cur.card.chosenTopic || 'the current blog') + '&rdquo; on from Step ' + cur.step.n + ', ' + escapeHtml(cur.step.name))
+                    : 'start the next blog';
+                h += '<label class="dp-blog-nudge"><input type="checkbox" onchange="mktRhythmNudgeDone()"> '
+                    + '<span>Blog is behind (' + f.daysSince + ' days since the last one): ' + what + '</span>'
+                    + ' <a href="#" onclick="' + (cur ? 'mktRhythmGoCard(\'' + escapeHtml(cur.card.id) + '\')' : 'mktRhythmStartBlog()') + '; return false;">Open</a></label>';
+            }
+            el.innerHTML = h;
+        }
+        function mktRhythmNudgeDone() {
+            try { localStorage.setItem(MKT_NUDGE_DONE_KEY, _mktYmd(new Date())); } catch (e) { }
+            mktRhythmPaintToday();
+            showToast('Hidden for today. It comes back tomorrow until a blog is scheduled in WordPress.');
+        }
+        // MARKETING: a strip above the board, Intelligent Investing only (his rhythm is ii's).
+        function mktRhythmPaintStrip() {
+            const el = document.getElementById('mktRhythmStrip');
+            if (!el) return;
+            if (typeof mktActiveCompany !== 'undefined' && mktActiveCompany !== 'ii') { el.innerHTML = ''; el.style.display = 'none'; return; }
+            const f = mktRhythmNow();
+            const cur = f.current;
+            const n = cur ? cur.step.n : 0;
+            let h = '<div class="mkt-rhythm-top"><span class="mkt-rhythm-title">'
+                + (cur ? 'Current blog: <a href="#" onclick="mktOpenCard(\'' + escapeHtml(cur.card.id) + '\'); return false;">&ldquo;' + escapeHtml(cur.card.title || cur.card.chosenTopic || 'Untitled blog') + '&rdquo;</a> ' + _mktStepPhrase(cur)
+                    : 'No blog in progress. <a href="#" onclick="mktNewCard(\'blog\'); return false;">Start one</a>')
+                + '</span><span class="mkt-rhythm-meta">' + _mktLastOutPhrase(f)
+                + (f.dueBy && !f.behind ? ' Aim: the next one by ' + _mktFmtDay(f.dueBy) + '.' : '') + '</span></div>';
+            h += '<div class="mkt-rhythm-bar" aria-hidden="true">' + MKT_STEP_NAMES.map(function(nm, i) {
+                const cls = i + 1 < n || (cur && cur.step.sent) ? ' done' : (i + 1 === n ? ' now' : '');
+                return '<span class="mkt-rhythm-seg' + cls + '" title="' + (i + 1) + ' ' + escapeHtml(nm) + '"></span>';
+            }).join('') + '</div>';
+            if (f.behind) h += '<div class="mkt-rhythm-behind">' + f.daysSince + ' days since the last blog went out &mdash; the two-week line has passed.</div>';
+            el.innerHTML = h;
+            el.style.display = '';
+        }
+        // CALENDAR: the Marketing layer. Every company's posts (the calendar is "when does
+        // everything go out"); the due marker is ii's rhythm only.
+        function _calMktItemsFor(ymd) {
+            const items = [];
+            let cards = [];
+            try { mktLoad(); cards = mktData.cards || []; } catch (e) { return items; }
+            const wp = mktWpStatusMap();
+            const now = new Date();
+            const tag = function(c) { return (c.company || 'ii') === 'ii' ? '' : ' (Intelligrations)'; };
+            const time = function(d) { return new Date(d).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); };
+            cards.forEach(function(c) {
+                const title = c.title || c.chosenTopic || 'Untitled';
+                const s = c.wordpressPostId && wp[c.wordpressPostId];
+                if (s && (s.status === 'publish' || s.status === 'future') && s.date && _mktYmd(s.date) === ymd) {
+                    items.push({ kind: 'mkt', sub: 'blog', text: title + tag(c), time: time(s.date), out: s.status === 'publish', cardId: c.id });
+                }
+                const sp = c.socialPosts || {};
+                [['facebook', 'fb'], ['facebookQuote', 'quote']].forEach(function(k) {
+                    const p = sp[k[0]];
+                    if (p && p.when && (p.status === 'scheduled' || p.status === 'posted') && _mktYmd(p.when) === ymd) {
+                        items.push({ kind: 'mkt', sub: k[1], text: title + tag(c), time: time(p.when), out: p.status === 'posted' || new Date(p.when) <= now, cardId: c.id });
+                    }
+                });
+            });
+            const f = mktRhythmNow();
+            const todayYmd = _mktYmd(now);
+            if (f.behind && ymd === todayYmd) items.push({ kind: 'mkt', sub: 'due', text: 'Blog overdue (' + f.daysSince + ' days)', time: '', out: false, cardId: f.current ? f.current.card.id : '' });
+            else if (f.dueBy && !f.behind && _mktYmd(f.dueBy) === ymd && ymd >= todayYmd) items.push({ kind: 'mkt', sub: 'due', text: 'Next blog due', time: '', out: false, cardId: f.current ? f.current.card.id : '' });
+            return items;
+        }
+        const MKT_CAL_TAGS = { blog: 'Blog live', fb: 'Facebook post', quote: 'Quote post', due: 'Blog rhythm' };
         function mktGaLocalCopy() {
             if (!_mktGaLocalText) return;
             navigator.clipboard.writeText(_mktGaLocalText).then(function() { showToast('Copied. Paste it into the chat.'); })
@@ -18208,6 +18429,9 @@ Example:
             const visible = mktData.cards.filter(function(c) {
                 return (c.company || 'ii') === mktActiveCompany;
             });
+            // v5.49.0: the blog rhythm strip repaints with the board (a card edit can move the
+            // step); the WordPress read behind it is throttled inside mktRhythmRefresh.
+            try { _mktRhythmMemo = null; mktRhythmPaintStrip(); mktRhythmRefresh(); } catch (e) { console.warn('rhythm strip', e); }
 
             // Shared card-HTML builder (identical markup desktop + mobile). draggable
             // (v3.54.0): dragstart records the id, dragend just clears the visual state -
@@ -39968,7 +40192,8 @@ Make sure your suggestions directly address the specific root cause and discussi
             { key: 'ruleOf3', label: 'Rule of 3',     hint: "Today's three priorities, pinned above the first event" },
             { key: 'rocks',   label: 'Rocks',         hint: "Unfinished Rocks on the quarter's last day" },
             { key: 'meeting', label: 'Weekly Meeting', hint: 'The Weekly Pulse Meeting, linking to the Agenda page' },
-            { key: 'kanban',  label: 'Kanban',        hint: 'Kanban cards with a due date' }
+            { key: 'kanban',  label: 'Kanban',        hint: 'Kanban cards with a due date' },
+            { key: 'marketing', label: 'Marketing',   hint: 'Blog go-live dates, Facebook and quote posts, and the blog rhythm' }
         ];
         let _calState = {
             inited: false,
@@ -40418,6 +40643,9 @@ Make sure your suggestions directly address the specific root cause and discussi
                 const time = String((getSettings() || {}).meetingTime || '').trim();
                 items.push({ kind: 'meeting', text: 'Weekly Pulse Meeting', time: time });
             }
+            if (prefs.marketing && typeof _calMktItemsFor === 'function') {
+                try { _calMktItemsFor(ymd).forEach(function (it) { items.push(it); }); } catch (e) { console.warn('marketing layer', e); }
+            }
             return items;
         }
 
@@ -40778,6 +41006,15 @@ Make sure your suggestions directly address the specific root cause and discussi
                     + '<div class="cal-ev-main"><span class="cal-ev-time">' + escapeHtml(it.time || 'Meeting') + '</span>'
                     + '<span class="cal-ev-title">Weekly Pulse Meeting</span>'
                     + '<span class="cal-ev-go">Agenda ›</span></div></div>';
+            }
+            if (it.kind === 'mkt') {
+                // v5.49.0: solid = out (live / posted), dashed = scheduled or due. Opens the card.
+                return '<div class="cal-ev cal-ev-eos cal-ev-mkt cal-ev-mkt-' + it.sub + (it.out ? '' : ' cal-ev-mkt-plan') + '"'
+                    + ' onclick="mktRhythmGoCard(\'' + escapeHtml(it.cardId || '') + '\')" role="link" tabindex="0">'
+                    + '<div class="cal-ev-main"><span class="cal-ev-tag">' + escapeHtml(MKT_CAL_TAGS[it.sub] || 'Marketing') + '</span>'
+                    + (it.time ? '<span class="cal-ev-time">' + escapeHtml(it.time) + '</span>' : '')
+                    + '<span class="cal-ev-title">' + escapeHtml(it.text || '') + '</span>'
+                    + '<span class="cal-ev-go">Open ›</span></div></div>';
             }
             const cls = { todo: 'cal-ev-todo', rock: 'cal-ev-rock', kanban: 'cal-ev-kanban' }[it.kind] || 'cal-ev-todo';
             const tag = { todo: 'To-do', rock: 'Rock', kanban: (it.board || 'Kanban') }[it.kind];
@@ -43095,7 +43332,7 @@ Make sure your suggestions directly address the specific root cause and discussi
             const col = e.target && e.target.closest ? e.target.closest('[data-cal-wk-col]') : null;
             if (!col) return;
             // An event box or a link chip owns its own handler — never start a create there.
-            if (e.target.closest && e.target.closest('.cal-wk-ev, [data-cal-evkey], [data-cal-go]')) return;
+            if (e.target.closest && e.target.closest('.cal-wk-ev, [data-cal-evkey], [data-cal-go], [data-cal-mkt]')) return;
             // A press MAY land on a "+ Block" gap — they cover the free working window and
             // are opacity:0 at rest, so the column looks empty. A DRAG there still creates a
             // new event; a plain CLICK there is left to the gap's own Block-it handler
@@ -43316,6 +43553,12 @@ Make sure your suggestions directly address the specific root cause and discussi
                 });
                 _calEosItemsFor(day.ymd, day.d, prefs, qEnds).forEach(function (it) {
                     hasAllDay = true;
+                    if (it.kind === 'mkt') {
+                        cell += '<span class="cal-wk-chip cal-wk-chip-mkt cal-wk-chip-mkt-' + it.sub + (it.out ? '' : ' cal-wk-chip-mkt-plan') + '"'
+                            + ' data-cal-mkt="' + escapeHtml(it.cardId || '') + '" role="link" title="' + escapeHtml(MKT_CAL_TAGS[it.sub] || 'Marketing') + '">'
+                            + escapeHtml((MKT_CAL_TAGS[it.sub] || '') + (it.time ? ' ' + it.time : '') + ': ' + (it.text || '')) + '</span>';
+                        return;
+                    }
                     const cls = { todo: 'cal-wk-chip-todo', rock: 'cal-wk-chip-rock', kanban: 'cal-wk-chip-kanban', meeting: 'cal-wk-chip-meeting' }[it.kind] || 'cal-wk-chip-todo';
                     cell += '<span class="cal-wk-chip ' + cls + '"' + (it.kind === 'meeting' ? ' data-cal-go="agenda" role="link"' : '') + '>'
                         + escapeHtml(it.text || '') + '</span>';
@@ -43565,6 +43808,8 @@ Make sure your suggestions directly address the specific root cause and discussi
                 if (gap) { calBlockTime(undefined, gap.getAttribute('data-cal-gap')); return; }
                 const go = e.target && e.target.closest ? e.target.closest('[data-cal-go]') : null;
                 if (go) { showPage(go.getAttribute('data-cal-go')); return; }
+                const mk = e.target && e.target.closest ? e.target.closest('[data-cal-mkt]') : null;
+                if (mk) { mktRhythmGoCard(mk.getAttribute('data-cal-mkt')); return; }
                 // v4.67.0: a Redtail chip opens the activity detail modal. Timed Google
                 // events open from pointerup; the rt chip never enters that path (no
                 // event resolves for it), so plain click is its whole route.

@@ -5972,3 +5972,33 @@
    feared a double post (nothing was sent - a disabled button fires no click). There was
    no :disabled style anywhere in the app. Appended last so it wins equal-specificity ties. */
 .btn:disabled, .btn[disabled] { opacity: 0.45; cursor: not-allowed; box-shadow: none; filter: grayscale(0.4); }
+
+/* v5.49.0: THE BLOG RHYTHM + MARKETING CALENDAR LAYER. Green = the blog itself, blue =
+   Facebook, violet = the quote post, amber = the rhythm. Solid = out, dashed = scheduled/due. */
+.cal-chip-dot-marketing { background: #15803d; }
+.cal-ev-mkt { cursor: pointer; border-left-color: #15803d; }
+.cal-ev-mkt-fb { border-left-color: #1d4ed8; }
+.cal-ev-mkt-quote { border-left-color: #6d28d9; }
+.cal-ev-mkt-due { border-left-color: #b45309; }
+.cal-ev-mkt-plan { border-style: dashed; border-left-style: solid; }
+.cal-wk-chip-mkt { cursor: pointer; background: #f0fdf4; border-left: 3px solid #15803d; }
+.cal-wk-chip-mkt-fb { background: #eff6ff; border-left-color: #1d4ed8; }
+.cal-wk-chip-mkt-quote { background: #f5f3ff; border-left-color: #6d28d9; }
+.cal-wk-chip-mkt-due { background: #fffbeb; border-left-color: #b45309; }
+.cal-wk-chip-mkt-plan { outline: 1px dashed currentColor; outline-offset: -1px; }
+.dp-blog-line { font-size: 0.85rem; color: var(--gray-700); margin: 6px 0 10px; overflow-wrap: anywhere; }
+.dp-blog-meta { color: var(--gray-500); }
+.dp-blog-nudge { display: flex; align-items: flex-start; gap: 8px; background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; border-radius: 6px; padding: 6px 10px; margin: 0 0 10px; font-size: 0.85rem; overflow-wrap: anywhere; cursor: pointer; }
+.dp-blog-nudge input { margin-top: 3px; flex: 0 0 auto; }
+.dp-blog-nudge > span { flex: 1 1 0; min-width: 0; }
+.mkt-rhythm { background: #fff; border: 1px solid var(--gray-200); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; font-size: 0.85rem; overflow-wrap: anywhere; }
+.mkt-rhythm-top { display: flex; justify-content: space-between; gap: 4px 12px; flex-wrap: wrap; }
+.mkt-rhythm-top > * { min-width: 0; }
+.mkt-rhythm-title { font-weight: 600; color: var(--gray-800); }
+.mkt-rhythm-meta { color: var(--gray-500); }
+.mkt-rhythm-bar { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 3px; margin-top: 8px; }
+.mkt-rhythm-bar > * { min-width: 0; }
+.mkt-rhythm-seg { height: 7px; border-radius: 2px; background: var(--gray-200); }
+.mkt-rhythm-seg.done { background: #15803d; }
+.mkt-rhythm-seg.now { background: #f59e0b; }
+.mkt-rhythm-behind { margin-top: 6px; color: #92400e; font-weight: 600; }
