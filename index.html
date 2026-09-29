@@ -71,6 +71,96 @@
             <button type="button" class="btn btn-secondary" onclick="mktImageLightboxClose()" style="font-size:0.85rem; padding:8px 14px;">Close</button>
         </div>
     </div>
+    <!-- v5.35.0: BRAND SETTINGS for the Step 9 quote image. One per company (ii / ig),
+         saved to Supabase brand_profiles (PART 13) and cached on the device. Body level
+         and above the Marketing modal, like the picture lightbox. -->
+    <div id="qbBrandModal" onclick="if (event.target === this) qbCloseBrand()" style="display:none; position:fixed; inset:0; z-index:100002; background:rgba(15,23,42,0.6); align-items:flex-start; justify-content:center; padding:16px; box-sizing:border-box; overflow:auto;">
+        <div style="background:#fff; border-radius:10px; width:100%; max-width:640px; padding:16px; box-sizing:border-box; box-shadow:0 10px 40px rgba(0,0,0,0.35);">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                <h3 id="qbBrandTitle" style="margin:0; font-size:1.05rem;">Brand for quote images</h3>
+                <button type="button" class="btn btn-secondary" onclick="qbCloseBrand()" style="margin-left:auto; font-size:0.8rem; padding:4px 10px;">Close</button>
+            </div>
+            <div id="qbBrandWhere" style="font-size:0.75rem; color:var(--gray-500); margin-bottom:10px;"></div>
+            <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:flex-start;">
+                <div style="flex:1 1 260px; min-width:0; font-size:0.82rem;">
+                    <div style="font-weight:600; margin-bottom:4px;">Colours</div>
+                    <div id="qbBrandColors" style="display:grid; grid-template-columns:auto 44px 1fr; gap:6px 8px; align-items:center; margin-bottom:10px;"></div>
+                    <label style="display:block; margin-bottom:8px;">Background
+                        <select id="qbBgStyle" onchange="qbBrandChanged()" style="width:100%; padding:5px; margin-top:2px;">
+                            <option value="radial">Radial glow (centre lighter)</option>
+                            <option value="linear">Linear gradient</option>
+                            <option value="solid">Solid colour</option>
+                        </select>
+                    </label>
+                    <label id="qbBgDirRow" style="display:block; margin-bottom:8px;">Gradient direction
+                        <select id="qbBgDirection" onchange="qbBrandChanged()" style="width:100%; padding:5px; margin-top:2px;">
+                            <option value="top-bottom">Top to bottom</option>
+                            <option value="bottom-top">Bottom to top</option>
+                            <option value="left-right">Left to right</option>
+                            <option value="right-left">Right to left</option>
+                            <option value="diagonal">Diagonal</option>
+                        </select>
+                    </label>
+                    <label style="display:block; margin-bottom:8px;">Font
+                        <select id="qbFont" onchange="qbBrandChanged()" style="width:100%; padding:5px; margin-top:2px;"></select>
+                    </label>
+                    <div style="font-weight:600; margin:10px 0 4px;">Logo</div>
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:6px;">
+                        <div style="width:64px; height:64px; border-radius:6px; background:#0f2a4a; display:flex; align-items:center; justify-content:center;"><img id="qbLogoThumb" alt="" style="max-width:56px; max-height:56px; display:none;"></div>
+                        <label class="btn btn-secondary" style="font-size:0.72rem; padding:3px 9px; cursor:pointer; margin:0;">Upload logo<input type="file" id="qbLogoFile" accept="image/png,image/jpeg,image/webp" style="display:none;" onchange="qbLogoPicked(this.files)"></label>
+                        <button type="button" class="btn btn-secondary" onclick="qbLogoSet('icons/intelligrations-mark.png')" style="font-size:0.72rem; padding:3px 9px;">Built-in mark</button>
+                        <button type="button" class="btn btn-secondary" onclick="qbLogoSet('')" style="font-size:0.72rem; padding:3px 9px;">No logo</button>
+                    </div>
+                    <div style="font-size:0.7rem; color:var(--gray-500); margin-bottom:6px;">A flat black or white background is removed automatically. Use the light version of a logo on a dark background.</div>
+                    <div style="display:flex; gap:6px;">
+                        <label style="flex:1;">Where
+                            <select id="qbLogoPlacement" onchange="qbBrandChanged()" style="width:100%; padding:5px; margin-top:2px;">
+                                <option value="bottom-right">Bottom right</option><option value="bottom-center">Bottom centre</option><option value="bottom-left">Bottom left</option>
+                                <option value="top-right">Top right</option><option value="top-center">Top centre</option><option value="top-left">Top left</option>
+                            </select>
+                        </label>
+                        <label style="flex:1;">Size
+                            <select id="qbLogoSize" onchange="qbBrandChanged()" style="width:100%; padding:5px; margin-top:2px;">
+                                <option value="small">Small</option><option value="medium">Medium</option><option value="large">Large</option>
+                            </select>
+                        </label>
+                    </div>
+                </div>
+                <div style="flex:0 1 270px; min-width:0;">
+                    <canvas id="qbBrandPreview" width="1080" height="1080" style="width:100%; max-width:270px; height:auto; display:block; border-radius:6px;"></canvas>
+                    <div id="qbBrandWarn" style="font-size:0.72rem; color:#b45309; margin-top:6px;"></div>
+                </div>
+            </div>
+            <div style="font-weight:600; font-size:0.82rem; margin:12px 0 4px;">Words and people</div>
+            <div style="display:grid; grid-template-columns:1fr; gap:6px; font-size:0.8rem;">
+                <label>Attribution when the line is ours
+                    <input type="text" id="qbAttribution" oninput="qbBrandChanged()" style="width:100%; padding:6px; box-sizing:border-box; margin-top:2px;">
+                </label>
+                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                    <label style="flex:1 1 120px;">Email goes to (name)
+                        <input type="text" id="qbEmailToName" style="width:100%; padding:6px; box-sizing:border-box; margin-top:2px;">
+                    </label>
+                    <label style="flex:2 1 200px;">Their address
+                        <input type="email" id="qbEmailTo" style="width:100%; padding:6px; box-sizing:border-box; margin-top:2px;">
+                    </label>
+                </div>
+                <label>CC (comma-separated)
+                    <input type="text" id="qbEmailCc" style="width:100%; padding:6px; box-sizing:border-box; margin-top:2px;">
+                </label>
+                <label>Authors to draw quotes from
+                    <textarea id="qbPreferredAuthors" rows="2" style="width:100%; padding:6px; box-sizing:border-box; margin-top:2px; font-family:inherit;"></textarea>
+                </label>
+                <label>Authors to never use
+                    <textarea id="qbAvoidAuthors" rows="2" style="width:100%; padding:6px; box-sizing:border-box; margin-top:2px; font-family:inherit;"></textarea>
+                </label>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center; margin-top:12px; flex-wrap:wrap;">
+                <button type="button" class="btn btn-primary" id="qbBrandSaveBtn" onclick="qbSaveBrandFromForm()" style="font-size:0.85rem; padding:7px 14px;">Save brand</button>
+                <button type="button" class="btn btn-secondary" onclick="qbCloseBrand()" style="font-size:0.85rem; padding:7px 14px;">Cancel</button>
+                <span id="qbBrandSaveInfo" style="font-size:0.75rem; color:var(--gray-500);"></span>
+            </div>
+        </div>
+    </div>
     <div class="container">
         <!-- v5.1.0: the "this tab is on an old build" strip. Static in the flow, not fixed,
              so it needs no clearance from the FAB, the save indicator or the bottom nav. -->
@@ -2258,8 +2348,35 @@
                             <button type="button" class="btn btn-secondary" id="mktQuotesBtn" onclick="mktSuggestQuotes()" style="font-size:0.75rem; padding:4px 10px; margin-left:auto; color:var(--primary);">AI: Suggest Quotes</button>
                         </div>
                         <div id="mktQuoteOptions" style="display:none; margin-bottom:8px;"></div>
-                        <textarea id="mktQuote" rows="2" placeholder="The line from the blog worth turning into a branded image. Pick one above or write your own."
-                            style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; box-sizing:border-box; resize:vertical; margin-bottom:14px;"></textarea>
+                        <textarea id="mktQuote" rows="2" placeholder="The line from the blog worth turning into a branded image. Pick one above or write your own." oninput="qbWordsRender()"
+                            style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; box-sizing:border-box; resize:vertical; margin-bottom:8px;"></textarea>
+                        <!-- v5.35.0: THE BRANDED QUOTE IMAGE, drawn in the browser from the
+                             company's brand (Supabase brand_profiles, PART 13). Tap words to
+                             turn them green -> Make the image -> approve. "Yes, send" makes ONE
+                             Gmail draft with the PNG attached and the IIA_QUOTE_LOG block the
+                             Quote Tracker sheet reads. Nothing is ever sent from here. -->
+                        <div id="mktQbWrap" style="background:#fff; border:1px solid var(--gray-200); border-radius:8px; padding:10px; margin-bottom:14px;">
+                            <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:6px;">
+                                <span style="font-size:0.8rem; font-weight:600;">Branded quote image</span>
+                                <button type="button" class="btn btn-secondary" id="mktQbBrandBtn" onclick="qbOpenBrand()" style="font-size:0.72rem; padding:3px 9px; margin-left:auto;">Brand settings</button>
+                            </div>
+                            <div style="font-size:0.72rem; color:var(--gray-500); margin-bottom:5px;">Tap words to turn them green. The last line <strong>~ Name</strong> is the attribution.</div>
+                            <div id="mktQbWords" style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px;"></div>
+                            <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+                                <button type="button" class="btn btn-secondary" id="mktQbHlBtn" onclick="qbSuggestHighlights()" style="font-size:0.75rem; padding:4px 10px; color:var(--primary);">AI: Pick green words</button>
+                                <button type="button" class="btn btn-primary" id="mktQbMakeBtn" onclick="qbMakeImage()" style="font-size:0.75rem; padding:4px 10px;">Make the image</button>
+                            </div>
+                            <div id="mktQbStatus" style="font-size:0.75rem; color:var(--gray-500); margin-top:6px;"></div>
+                            <div id="mktQbResult" style="display:none; margin-top:10px;">
+                                <canvas id="mktQbCanvas" width="1080" height="1080" style="width:100%; max-width:380px; height:auto; display:block; border-radius:6px; box-shadow:0 2px 10px rgba(0,0,0,0.18);"></canvas>
+                                <div id="mktQbFileName" style="font-size:0.72rem; color:var(--gray-500); margin:6px 0 8px; word-break:break-word;"></div>
+                                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                    <button type="button" class="btn btn-primary" id="mktQbSendBtn" onclick="qbApprove('send')" style="font-size:0.78rem; padding:6px 12px;">Yes, send to Trevor</button>
+                                    <button type="button" class="btn btn-secondary" onclick="qbApprove('changes')" style="font-size:0.78rem; padding:6px 12px;">Needs changes</button>
+                                    <button type="button" class="btn btn-secondary" onclick="qbApprove('keep')" style="font-size:0.78rem; padding:6px 12px;">Approve but don&rsquo;t email</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- ============ STEP 10 — IMAGE (v5.28.0) ============
@@ -4537,9 +4654,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '5.34.0';
+        const EOS_VERSION = '5.35.0';
         const EOS_BUILD_DATE = '2026-09-29';
-        const EOS_BUILD_TIME = '13:30'; // v5.34.0: THE PLAN LEAVES THE PUBLIC PAGE, AND SKIP GOES. Client + REQUIRES SUPABASE PART 12 (docs/PASTE-INTO-SUPABASE-PART12.sql, also appended to schema.sql) - until Hans pastes it the Vision badge says so and the plan stays exactly as it was (device-local); nothing is lost either way. No .gs. His two yeses 2026-09-29. (1) seededData's "2026" carried the firm's real Vision, 1-Year Plan (revenue/profit/AUM targets) and Q1 Rocks, and index.html is published in a PUBLIC repo - now an empty skeleton; the old block is kept ONLY in the private Drive folder (docs/plans/legacy-seed-2026.js). GIT HISTORY STILL HOLDS IT (separate cleanup, offered). (2) eos_plan table, one row per SECTION (vision, plan, Qn.rocks, Qn.scorecard - measurables+values together, rule 46), RLS = owners + an 'eos_plan' access grant (can_use_eos_plan), NOT firm membership, so a Marketing guest cannot read the targets; Amanda granted by the paste. planSync(): read -> merge -> push per section (rule 48); same content modulo rock ids/blank keys -> adopt (ids converge, rule 77); blank local never pushes over content (rule 53); untouched-since-sync -> adopt; changed-here-only -> push; first sync with the UNTOUCHED old starter copy (PLAN_LEGACY_FP fingerprints of the removed seed) -> adopt quietly, and a cloud holding only the starter copy loses to typed work; BOTH changed -> eosChoose asks, the loser always kept in the device-local ring eos_plan_backups (rule 54; "Earlier versions" link on the Vision header downloads it). Adopt never lands while focus is inside that page, and never calls saveData() (it gathers the Vision/Plan FROM THE FORM and would write the old screen back over the adopt) - loadVision/loadPlan/renderQuarter repaint instead. Triggers: saveData() debounce 2.5s, _dpOnSessionResolved, visibility + 2 min. Seventh sync surface: planSyncBlocker() + #syncBadge-plan (rule 25). (3) "Skip for now" REMOVED (button, skipGoogleSignIn, the eos_signin_skipped read): it revealed the app with no identity and walked past the 2FA gate. Honest scope, said to Hans: a web page can never lock itself - the real boundary is the backend (SECRET_KEY / Supabase RLS); this removes the casual bypass and the public copy of the plan. 19 probes used skipGoogleSignIn to pass the gate - repointed to appRevealApp(); gsi-retry-bound C REWRITTEN (rule 78) to assert no bypass exists. Probe plan-sync-probe 12/12.
+        const EOS_BUILD_TIME = '12:42'; // v5.35.0: THE BRANDED QUOTE IMAGE IN STEP 9 — PAIRS WITH .gs v3.81.0 (createEmailDraft takes cc + attachments) + SUPABASE PART 13 (brand_profiles, docs/PASTE-INTO-SUPABASE-PART13.sql). His ask: bake the IIA quote-generator instructions (a separate Claude project) into Marketing Step 9. The image is drawn IN THE BROWSER (qbRender: canvas + Google Fonts), ported from engine.py + Text Wrapper.py and measured against his reference PNG (every line within 1-4px, gradient within 1 colour unit - that PNG was made with the Intelligrations spec colours, so ii keeps the IIA instruction colours and ig the spec's). Tap words to turn them green (or (parentheses) / word(green)); Make the image cleans the text (no quotation marks, sentence case for Title Case/ALL CAPS only, closing period) and with no green words asks the AI for 1-3 first; the preview is the confirmation. Yes, send to <name> = ONE Gmail draft, cc, PNG attached under his file-name convention, signed via draftBodyHtml on the call line (mail-agent C2), hidden IIA_QUOTE_LOG block for the Quote Tracker sheet; Needs changes; Approve but don't email = download; approving refuses if the words changed after the image was made. Brand settings per company (colours, background style, curated font, logo upload with flat black/white key-out, placement, size, attribution, recipient, cc, preferred/avoided authors) in Supabase brand_profiles, cached in eos_quote_brand; before PART 13 it says 'this device only'. Suggest Quotes: green words pre-marked, quotes already on other cards off limits, the brand's author lists, and with no blog it offers classics (old step 0) with a verify-the-wording warning. Package to Trevor strips the markup. styles.css unchanged. Probe quote-image-probe 12/12, mail-agent 39/39, mail-actions 12/12. OLD: v5.34.0:THE PLAN LEAVES THE PUBLIC PAGE, AND SKIP GOES. Client + REQUIRES SUPABASE PART 12 (docs/PASTE-INTO-SUPABASE-PART12.sql, also appended to schema.sql) - until Hans pastes it the Vision badge says so and the plan stays exactly as it was (device-local); nothing is lost either way. No .gs. His two yeses 2026-09-29. (1) seededData's "2026" carried the firm's real Vision, 1-Year Plan (revenue/profit/AUM targets) and Q1 Rocks, and index.html is published in a PUBLIC repo - now an empty skeleton; the old block is kept ONLY in the private Drive folder (docs/plans/legacy-seed-2026.js). GIT HISTORY STILL HOLDS IT (separate cleanup, offered). (2) eos_plan table, one row per SECTION (vision, plan, Qn.rocks, Qn.scorecard - measurables+values together, rule 46), RLS = owners + an 'eos_plan' access grant (can_use_eos_plan), NOT firm membership, so a Marketing guest cannot read the targets; Amanda granted by the paste. planSync(): read -> merge -> push per section (rule 48); same content modulo rock ids/blank keys -> adopt (ids converge, rule 77); blank local never pushes over content (rule 53); untouched-since-sync -> adopt; changed-here-only -> push; first sync with the UNTOUCHED old starter copy (PLAN_LEGACY_FP fingerprints of the removed seed) -> adopt quietly, and a cloud holding only the starter copy loses to typed work; BOTH changed -> eosChoose asks, the loser always kept in the device-local ring eos_plan_backups (rule 54; "Earlier versions" link on the Vision header downloads it). Adopt never lands while focus is inside that page, and never calls saveData() (it gathers the Vision/Plan FROM THE FORM and would write the old screen back over the adopt) - loadVision/loadPlan/renderQuarter repaint instead. Triggers: saveData() debounce 2.5s, _dpOnSessionResolved, visibility + 2 min. Seventh sync surface: planSyncBlocker() + #syncBadge-plan (rule 25). (3) "Skip for now" REMOVED (button, skipGoogleSignIn, the eos_signin_skipped read): it revealed the app with no identity and walked past the 2FA gate. Honest scope, said to Hans: a web page can never lock itself - the real boundary is the backend (SECRET_KEY / Supabase RLS); this removes the casual bypass and the public copy of the plan. 19 probes used skipGoogleSignIn to pass the gate - repointed to appRevealApp(); gsi-retry-bound C REWRITTEN (rule 78) to assert no bypass exists. Probe plan-sync-probe 12/12.
         // v5.33.0: THE SPLASH ON THE PC. Client only. His answer: an ordinary browser tab now shows the v5.31.0 splash once per browser SESSION (sessionStorage 'eos_splash_seen'), so a refresh never costs 3.2s; the installed app still shows it on every launch; ?splash=1 still forces it. sessionStorage unavailable = treated as seen (never block on a storage throw). Measured at 1280: flex on first open, removed after ~3.7s, 'none' after reload.
         // v5.32.3: THE OWNER REFUSED AT THE DOOR. Client only, no .gs. Hans: "Signed in as hans@investedwithyou.com, but that email isn't set up as a team member yet... This happens every time I log in... I should never get this message" (he had been clicking Skip for now, i.e. using the app with NO identity). The cloud roster was correct (checked: HB = hans@investedwithyou.com). Cause: applySignedInUser() decided membership from the LOCAL settings cache only; the baked-in default roster (seededData._settings and getSettings()'s fallback) carries initials and names but NO emails, and the cloud roster is only fetched AFTER appRevealApp() - so any browser whose cache had not been filled refused a real member, and Skip never fixed it for the next fresh sign-in on a new tab/profile. "I have no roster" read as "you are not on the roster" (rule 53's shape). Fix: findTeamMemberAuthoritative(email) - local hit = unchanged fast path with zero fetches; local miss = await loadTeamSettingsFromCloud() and re-check; cloud unreachable = a distinct sentence ("couldn't check the team roster just now"), never "not a member" (rule 63). applySignedInUser is now async (no caller used its return). Same blind spot fixed in checkAppWideSupabaseSession(), which demoted an uncached member to the guest branch (every tab hidden but Marketing). Probe: .claude/probes/signin-roster-probe.js 4/4; v5.32.2 scores 2/4 (P1 prints his exact message, P3 wrong cause). gsi-retry-bound-probe 9/9.
         // v5.32.2: FULL SIZE FROM DRIVE, THROUGH THE BACKEND — PAIRS WITH .gs v3.80.0 (both accounts deployed by Claude). His follow-up to v5.32.1: "Can't it open much bigger, like the original? without having to click Open in Drive?" — the picture he tapped was chosen BEFORE v5.32.1, so this device had no local copy and the lightbox fell back to the 192px thumbnail. Now, with no local copy, the lightbox asks the backend for the bytes (getBlogImage: DriveApp.getFileById -> base64, token-gated, image files only) and keeps them in IndexedDB, so the next tap is instant; below 3.80.0 the caption says "full size needs backend 3.80.0" instead of failing quietly (rule 63). The lightbox image is now sized to the viewport (min of 96vw / 78vh / 1024px) rather than the file's own pixels, so even a thumbnail placeholder reads large while the full size arrives. styles.css unchanged (?v=5.32.2). OLD: v5.32.1: THE BLANK LIGHTBOX. His "Glitch" screenshot minutes after v5.32.0: tapping the CHOSEN picture opened a dark box with nothing in it. mktImageView('chosen') pointed the image at drive.google.com/thumbnail — which needs a Drive sign-in in that tab and renders nothing without one (a dependency on Drive's session in a GitHub Pages tab: rule 78's shape, a call from the wrong place). Now _mktImageStore keeps the chosen picture's full-size bytes in the same IndexedDB (one 'chosen_<card>' record, replaced on the next choice, never listed in the candidates strip), the lightbox shows that; a picture chosen on ANOTHER device falls back to the card's synced thumbnail plus an "Open in Drive" link. Client-only; styles.css unchanged (?v=5.32.1). OLD: v5.32.0: CANDIDATES BEFORE ANYTHING IS SAVED — his first generated picture: "I want to click on the image it generated and see a much larger picture so I can check for errors, before I save to Drive, in case I want a different prompt or picture. I don't know what I think about automatically saving it yet. If I create more than one image, it should temporarily store them so I can choose the final one." So v5.29.0's save-on-arrival is gone: Generate and drop-in both land in a CANDIDATES strip on the Image step (thumbnails; per card; IndexedDB on this device because a 1–2 MB PNG will not fit localStorage; they survive a reload), a tap opens a full-size lightbox at body level (above the Marketing modal's scroller) with the prompt as caption, and "Use this one" — on the thumbnail or in the lightbox — is the ONLY path into _mktImageStore (Drive + the card). ✕ discards a candidate. The chosen picture's thumbnail is tap-to-view too (Drive's own w1024 rendering). A chosen picture stays in Drive if he later picks another (this tool never deletes Drive files). Also today, earlier: .gs 3.79.0 is DEPLOYED for both accounts (Hans @143, Amanda @33) after the GS_VERSION constant miss; PART 8–11 pasted. Client-only; styles.css unchanged (?v=5.32.0). OLD: v5.31.0: THE APP'S FACE — Hans's icon and splash. ICON (his mock): navy #0E4470 rounded square, "EOS" white, "Tool" in the brand green #A4C739 (he typed #14C739 but gave RGB 164/199/57, which is A4C739), first with the light-blue dot from his mock, then without ("not needed unless it changes with notifications" — an icon cannot; Android draws its own badge dot), then "Tool a bit larger and bold so it doesn't get lost". Rendered by Playwright now (.claude/scripts/make-icons.js — text needs a font; the zlib drawer is gone). Manifest icon URLs carry ?v=N so a phone refetches; an ALREADY-INSTALLED app keeps its install-time icon until reinstalled — told him. SPLASH: Android's launch splash is drawn by the system from the manifest (icon on background_color) and cannot carry a logo or words, so the manifest's background is now WHITE and the page itself shows #eosSplash the instant it paints: white, EOS blue, Tool green, "A product of", the Intelligrations logo (icons/intelligrations-logo.gif when present — the animated one he wants; his chat uploads arrived as STILL frames, so the still .webp is the fallback and he drops the real GIF into icons/ himself), 3.2 s then a half-second fade. Standalone (installed) only, or ?splash=1 to preview in a tab; never on an ordinary tab. Inline styles on purpose — it must exist before styles.css arrives. theme_color / theme-color meta moved to the brand navy. Client + icons + manifest deploy; .gs UNCHANGED (3.79.0 still STAGED). OLD: v5.30.3: THE HOLDING ROW NAMES ITS CAUSE. His "Copy diagnostic" was the raw workflows body — well-formed, workflow 1093 with current step 9669 and its task 17259, exactly what the slot references — so the feed CAN load on his phone, and the raw body cannot tell me why the slot still said "waiting". The sentence was the problem: one grey "waiting for Redtail…" covered four states (rule 72's shape — one empty value, several causes). _rtPlanHoldMsg now tells them apart from the feed's own fields: "loading Redtail workflows…" (fetch in flight), the feed's OWN error sentence in amber (last fetch failed — e.g. "Workflows: Redtail answered on /workflows/my_workflow_tasks in a shape the tool could not read"), "not in Redtail workflows' current list (N loaded) — probably done or moved on" (loaded, id absent), or "waiting" only when rows === null (never loaded here). Both holding rows (Rule of 3 slot, matrix) use it. His next screenshot of slot 3 is therefore the diagnosis. Client-only; styles.css unchanged (?v=5.30.3); .gs UNCHANGED (3.79.0 still STAGED). OLD: v5.30.2: THE SLOT'S LOOK, AND THE INSTALL OFFER. (1) "Why does Rule of 3 (#3) look funny still? I thought we dealt with this" — I had only NOTED it. The Redtail holding row jammed the name and the status into one grey run against the number badge; now the name reads like a task row (dark, first line) with the status and "clear slot" small underneath. BUT his screenshot shows something the look does not explain: the step is listed under RT Workflows on the same phone yet the slot says "waiting for Redtail…" — grey means _rtPlanFeedLoaded is false (rows null, an error, or still fetching), not "not found". The cause is on his phone, not in this file; asked for the Repository segment's REDTAIL WORKFLOWS Copy diagnostic before touching the resolver (rule 63). (2) "Can the install reminder happen again?" Chrome shows its own Install bar once and suppresses it for months after a dismissal, but keeps firing beforeinstallprompt; the page now keeps that event and Settings › Me › Notifications shows an "Install the EOS Tool as an app" row with a button that re-shows Chrome's prompt; hidden when already installed (display-mode standalone / appinstalled). Client-only; styles.css unchanged (?v=5.30.2); .gs UNCHANGED (3.79.0 still STAGED). OLD: v5.30.1: THE BRIEF'S SHAPE AND ITS BUTTONS — his screenshot of the first v5.30.0 brief on the lock screen showed the budget (about eleven body lines; "Workflow steps overdue (2)…" was cut) and his four asks: indent the lines under each header; drop "Good morning" and the date if it buys space; shorter headers (Tasks, RT Activities, RT Workflows); and buttons — not Chrome's "Unsubscribe" but "EOS Tool" opening Today, "Google Tasks", "Calendar". Also, from the message before: number the Rule of 3 by what is OPEN (a done slot 1 makes yesterday's 2 today's 1.) and make the headers bold. In the Edge Function (HANS RE-PASTES index.ts): the notification TITLE is now the Rule-of-3 header itself (a title is bold already), items are indented with an em space (a plain space Android may drop), headers use the Mathematical Sans-Serif Bold block (a body is plain text; this is the only bold Android will draw), and the sections share an 11-line budget — Rule of 3 first, then each section gets a header and at least one item, "+N more" for the rest — proven by push-fn-load-test's stress case. BUTTONS: the payload carries `actions`; sw.js (redeployed with this release — a phone picks the new worker up on its next open) shows up to three and routes each tap to its URL; a plain tap opens the first (EOS Tool). Chrome's own "Unsubscribe" cannot be removed, only pushed aside. THIS FILE: `?page=dailyPlan` on the address opens that page once, beating the remembered page and the Settings default, then is dropped from the address (history.replaceState) so a reload behaves normally — the "EOS Tool" button's target. Site deploy = index.html + sw.js; .gs UNCHANGED (3.79.0 still STAGED). OLD: v5.30.0: THE BRIEF HE ACTUALLY WANTS. His first real 7 AM brief: "This is a crappy notification" — it read "0 due today · 0 overdue / Rule of 3: 3 of 3 still open" (he had not yet re-pasted the v5.28.1 function, but the point stands). What he wants, in his order, with screenshots: the Rule of 3 BY NAME; overdue Google tasks; overdue Redtail ACTIVITIES; overdue Redtail WORKFLOW STEPS. The last two are the new plumbing: the brief runs in Supabase and cannot reach Redtail, but the Today page can — so each time it loads Redtail activities / workflow steps it writes a compact copy (id, title, due YYYY-MM-DD, client or workflow name) to push_prefs.redtail_cache (schema PART 11; _pushCacheRedtail, debounced, only when a prefs row exists, unknown-column error swallowed until pasted). The Edge Function's buildBrief now takes the whole prefs row and writes four sections, each up to three names plus "+N more", with a one-line hint to open Today once if the cache is empty. CLIENT NAMES ARE NOW IN THE NOTIFICATION AT HIS EXPLICIT REQUEST (the Redtail lines) — the v5.27.0 rule that none would be is superseded by this ask; the Settings copy says so. He must re-paste supabase/functions/push/index.ts (it also carries the v5.28.1 Rule-of-3 fix he has not pasted yet) and paste PART 11. Also RECORDED: on the phone the brief's third Rule-of-3 slot is a Redtail workflow step, named via xt. Client-only for the site; .gs UNCHANGED (3.79.0 still STAGED, unpushed). OLD: v5.29.1: THE AUDIT'S TWO FINDINGS, before he tests. gs-auditor on 3.79.0: (a) wpImageMarkup_ escaped & < > but not the double quote, so a quoted phrase in a title would have closed alt="" early — WordPress would repair it quietly and report success (fixed in the .gs, &quot;); (b) THIS FILE: _mktImageStore posted uploadBlogImage with no version guard, and against a 3.78.0 backend that action falls through to the secret gate, whose "Invalid secret key" _calPost rewrites to "your sign-in has expired" — the wrong cause, on the exact path he would test first in the window between the Pages push and his clasp deploy (rule 63). Now it runs the probe and, below 3.79.0, says the true sentence: run the clasp deploy, then drop the picture in again. Client-only patch on v5.29.0; still PAIRS WITH .gs v3.79.0. OLD: v5.29.0: THE BLOG'S PICTURE — PAIRS WITH .gs v3.79.0 (HANS RUNS THE CLASP ROUND; until it lands, drop-in/Generate report "backend cannot" in a sentence and the send behaves exactly as before because an older backend ignores the new keys). His ask with two screenshots of a published post: the picture he makes in an image generator, or that the tool generates, should become the WordPress FEATURED IMAGE and a large centred image at the top of the body under the reading-time line, with a copy in Drive beside the blog (decision 2, compliance). "Yes to both" — same picture both places, and Generate in this round. WHAT SHIPS: on the Image step, a drop zone / Choose a file / "Generate the picture"; the bytes go to the firm-context folder at once (uploadBlogImage), the card keeps ONLY the Drive file id, a 192px JPEG thumbnail and alt text (schema.sql PART 10, six columns; the same unknown-column retry + device-local fallback as PART 9). Generate = _calPost generateImage: Gemini's image model (gemini-2.5-flash-image, 1:1) or OpenAI (gpt-image-1) per a new "Marketing images" routing row (Claude listed and disabled — it does not make images, rule 51); ~4¢ each, said in the row. Send to WordPress: wrapBlogForWordPress puts <!--EOS_IMAGE--> under WP_READING_TIME_TOP when the card has a picture; the backend uploads the Drive file to /wp/v2/media with alt text, sets featured_media, and replaces the marker with the classic editor's own Large+Center markup; an UPDATE with the SAME picture sends the stored media id + URL (wpImageMediaId/wpImageUrl/wpImageFileId, kept from the send result) so no duplicate upload, and status is still never sent on an update. The archive step passes imageFileId and saveBlogToDrive copies the picture beside the markdown. Capability ai.generateImage declared on BOTH sides (rule 79). NOT BUILT: alt text beyond the title; "make all three"; scheduled publishing + Facebook/LinkedIn (his question tonight — free via the official APIs, gated on Meta App Review and LinkedIn's API application; next round). TWO-FILE unchanged (styles link ?v=5.29.0, styles.css untouched). OLD: v5.28.4: THE IMAGE IDEAS ARRIVE. His third press, seconds after v5.28.3: "The model did not return the expected format" — the call reached the AI at last, and the reply was not a whole JSON array. Most likely cut off: three paragraph prompts against a 1,200-token budget. Three changes: the budget is 2,500; the prompt asks for 50–80-word prompts and a whole answer under 400 words; and the parser salvages every complete {…"prompt"…} object from a cut-off reply, and when even that yields nothing it SHOWS THE RAW REPLY in the options box (rule 63 / show the work) so the next failure names itself instead of a bare toast. Client-only, styles.css unchanged (?v=5.28.4), .gs UNCHANGED at 3.78.0. OLD: v5.28.3: THE AI SEAM WAITS FOR THE PROBE. He signed out, signed in with his work email, pressed AI: Suggest 3 image ideas and got "Failed to fetch" — the v4.84.0 class (the browser stopped a direct provider call). Cause: callAIText decides backend-vs-browser with _aiBackendReady(), a SYNC cached read that is false while the capability probe is still PENDING — rule 51's exact shape, in the AI seam. Seconds after a fresh sign-in the probe had not landed, so the call went to the browser path his machine blocks. Now, when the backend is not yet known to be ready and not known to be denied, callAIText awaits capabilityReadyChecked('ai.generateOutputs') once (which re-probes if the probe never completed) before deciding — the same three-state contract rules 51/73 wrote for the calendar. The sign-out/sign-in DID clear "Not authenticated as a team member", so that was the session, not the code; which of the gate's three reasons it was is still unnamed by the backend (v3.79.0 will name it). Client-only, styles.css unchanged (?v=5.28.3), .gs UNCHANGED at 3.78.0. OLD: v5.28.2: SIGN OUT ON THE DESKTOP. Diagnosing "Not authenticated as a team member" (it hits AI: Suggest Quotes on his PC too, so it is the session, not the image step), the reset step was "sign out and sign in with Google" — and he could not: "I can't figure out how to log out on my PC. Clicking my name does nothing." True: Sign out lives ONLY in the phone drawer's control strip, the header name was made inert at his own request (v4.x), and #signedInBadge's tooltip still says "Sign out from the menu, bottom right" — a menu the desktop does not have. Now a small underlined "Sign out" sits after the 🔒 in the header, inserted by showHeaderSecurityLink() (so the emoji-bearing markup line is never str_replaced), shown only once a session exists, with a confirm. Same signOutGoogle() the drawer uses. STILL OPEN: which of the gate's three reasons refuses his session (token / email not a team member / 2FA) — the backend's error names none of them; v3.79.0 will. He does NOT want 2FA. Client-only, styles.css unchanged (?v=5.28.2), .gs UNCHANGED at 3.78.0. OLD: v5.28.1: HIS FIRST LIVE PUSH, TWO REPORTS. He did all four Supabase steps (PART 8+9 pasted, function deployed with Verify JWT off, four secrets, cron push-tick every 5 min) and the test notification ARRIVED on his Android — the whole chain is proven live. Then: (1) "Why did it say 3 of 3 still open, and not share what is in the Rule of 3?" — buildBrief only COUNTED the Rule of 3 and named due/overdue tasks; worse, ruleOf3Status treated type 'todo' (the real kind a Google task carries) as "not a task" because it checked for 'task', so every slot became "a Today item". Fixed in the Edge Function (supabase/functions/push/index.ts — HANS RE-PASTES IT): the brief now LEADS with the three priorities by name (id -> gid -> the portable xt text, so Redtail/rock/board entries are named too), then the due/overdue count, then two of those. (2) "I was expecting a notification" from the preview — the preview shows words on screen by design, but his expectation is fair: a "Send this to my phone now" button under the preview sends the identical brief to all his devices (action preview, send:true; does NOT touch push_sent, so tomorrow's still goes out). OPEN, being diagnosed by his answer not by assertion (rule 63): "AI: Suggest 3 image ideas" on the phone returned the BACKEND's 'Not authenticated as a team member' — that gate (requireTeamMemberFromToken_) is the same one every AI call passes, so the falsifying test is whether AI: Suggest Quotes fails identically on that device and the image button works on the desktop; the two live causes are the phone session's email not matching a team member, or aal1 on a firm requiring 2FA. ALSO NOTED for the next round: the Rule-of-3 "waiting for Redtail" placeholder (rule 49's holding row) looks broken on a phone — the number badge squashed against a dashed box. Client-only, styles.css unchanged (?v=5.28.1), backend .gs UNCHANGED at 3.78.0. OLD: v5.28.0: THE IMAGE STEP, PROMPTS FIRST — his ask the same evening: "after completing a blog, before I send to Trevor, provide a suggested AI image prompt to accompany the blog … perhaps giving 3 choices". His four answers: (1) prompts first, see how he likes it; (2) the picture should land in the blog's Drive folder for compliance — revisited when pictures exist; (3) brand palette navy #0E4470 / greens #A4C739 #00A14A / white, "but it doesn't mean each image should include those colors", plus six past blog images to learn the style from, and ASK whether he has a photo of his own (his "AI: Work this in" parallel); (4) the backend round for generating images is approved when ready. WHAT SHIPS: step 10 "Image" on the blog card between Quote and Package (Package is 11 now): a "Something in mind?" box, "Suggest 3 image ideas", three chips each carrying a concept name, one line on why it fits, and a paste-ready prompt; the pick lands in an editable prompt box with Copy. MKT_IMAGE_STYLE is the house style READ OFF HIS SIX IMAGES, not invented: photorealistic stock-photo look, square, one literal everyday object standing in for the idea (the Retirement jar, the passport on the laptop, the Fed building, the 55 candles, the basketball), people only in a real professional moment, text only where it belongs on a real object, the palette used only where it occurs naturally, no real clients or living public figures. Goes through the SAME callAI('marketing') route as quotes and titles. PERSISTENCE: card.imageNote / card.imagePrompt, two columns in schema.sql PART 9 (image_note, image_prompt). Until PART 9 is run the board's cloud push would have FAILED on the unknown columns and taken every card's sync with it — so the upsert retries once without the two keys and toasts once, and a device-local copy (eos_mkt_image_prompts, keyed by card) refills the fields after a cloud pull rebuilds the card from a row that has no image columns yet. NOT BUILT (the approved .gs round, v3.79.0): generate the picture in-tool (Gemini image model via generateOutputs' seam, a "Marketing images" row in Which AI handles what), save it to the blog's Drive folder, attach it as the WordPress featured image on send, attach it to the Trevor package. Client-only; styles.css unchanged (link bumped to ?v=5.28.0); backend .gs UNCHANGED at 3.78.0, NO CLASP ROUND. Same-day sibling: v5.27.0 NOTIFICATIONS ON THE PHONE — his ask 2026-09-23: "an android notification for EOS Tool ... very important tasks ... a daily brief sent in the morning". Three options were priced (ntfy + a scheduled Apps Script job; nothing new; real Web Push); he asked whether #3 costs anything (no — Google's push service, GitHub Pages and Supabase's free tier all cover it) and said "Build it". WHAT SHIPS: a service worker (sw.js) that receives Web Push and opens the tool on tap — it caches NOTHING, deliberately, because the stale-build strip, the ?v= styles link and the drift check all assume the network is the truth and a caching worker is exactly how a phone ends up on a three-week-old build; a manifest + PNG icons (drawn by .claude/scripts/make-icons.js with zlib alone) so "Add to Home screen" gives a real app icon; a Settings > Me band "Notifications on this device": Turn on / Send a test / What would the brief say? / Turn off, a morning-brief time, a Rule-of-3 nudge time, weekdays-only, and a list of the person's devices with remove; three Supabase tables (schema.sql PART 8): push_subscriptions per device, push_prefs per person (times + IANA time zone + initials + app URL — the three facts only a browser knows), push_sent as the once-per-day ledger (a primary-key insert either lands or does not, so however many 5-minute ticks fall inside the hour window, one brief goes out); and the "push" Edge Function (supabase/functions/push/index.ts) — RFC 8291 payload encryption and RFC 8292 VAPID written against WebCrypto only, no npm package to break, proven by .claude/probes/push-crypto-test.js which decrypts the envelope the way a browser would and verifies the JWT (8/8). The function serves three actions: tick (Cron, every 5 min, x-push-secret) computes each person's LOCAL time and sends the brief — N due today, N overdue, Rule of 3 set or not, the first three task names — or the nudge when the Rule of 3 has nothing open; test (as the signed-in person, to one endpoint); preview (what the brief would say now). Task ownership uses the Today page's own rule (owner === initials || 'Both' || 'HB/AB'). Nothing from an email and no client name is ever in a notification. THE PRIVATE KEY NEVER REACHES A BROWSER: config.js carries vapidPublicKey (public by design, like the anon key); the private half is a function secret. REQUIRES FOUR THINGS FROM HANS BEFORE A SINGLE PUSH ARRIVES (docs/plans/push-notifications.md, click by click): paste PART 8 in the SQL editor; create the Edge Function "push" from the dashboard editor with Verify JWT OFF; add its four secrets; schedule the Cron job. Until then the band explains exactly which step is missing instead of failing quietly. Client-only for the site (index.html + config.js + sw.js + manifest + icons); backend .gs UNCHANGED at 3.78.0, NO CLASP ROUND. NOT BUILT YET, in order: a per-task "remind me at" on the task row (push_sent already keys on 'task:<id>'), an instant push when the other person assigns you a task (a database webhook on tasks -> the same function), the Opportunities "who to touch today" line in the brief. OLD: THE COMPOSER — his fourth live test, same day, grade a D: "you didn't find him in Redtail, the whole workflow is clunky. The email doesn't include Calendly links." His screenshot showed a draft opening "I don't think we've had the chance to sit down together yet" to a man who had been a GUEST ON HIS PODCAST; he typed the missing fact himself and asked why there was no Calendly link. HONEST DIAGNOSIS: this session cannot see his live Redtail or the Read line his screenshot cropped, so the exact live cause is UNCONFIRMED — but Redtail's documented contact-emails shape was re-checked and matches the code, so the lookup was sound WHEN it had a contact to look up. The draft's false claim proves it found NOBODY and read NOTHING: the record had no usable linked contact and the tool drafted blind. This release makes that path robust AND makes it explain itself, rather than asserting a cause. WHO: linked contacts are read from whichever key Redtail used (oppContactIdsOf — opportunity_contacts/linked_contacts/contacts; null means the record did not say, so a save never sends a list it was not given). With nobody linked, the NAME IS NOW READ FROM THE OPPORTUNITY TITLE (oppNameFromTitle — capitalised word runs, title-building verbs/nouns stripped, punctuation ends a name) and found through the SAME shared contactSearchAll the Meeting Processor's referral finder uses — his own pointer, half-applied one round early. Two Redtail contacts by that name -> a popup asks with evidence beside each; an unrelated surname is never offered. The found person is queued to link on the NEXT save, ONLY when Redtail said the contact list was empty, never when unknown — adding a name to an unknown list could silently replace others. The address finder now works for a person with no Redtail id at all. ASK, NEVER INVENT: with no email, no meeting, nothing typed or logged, the composer ASKS one question — how he knows them and why now — instead of calling the AI; Draft it again goes ahead regardless. The prompt may no longer state or imply they have never met, or how long, unless the context PROVES it. THE COMPOSER moved OUT of the CRM form into one focused window (#oppComposeModal), opened by every row's "AI email" and a button on the record: who it is for and how known, every lookup as a step ending ticked or explained, the email on the left and EXACTLY what will land in Gmail on the right — links visible, signature included, built by the SAME expression as the save (oppRenderLive/oppDraftHtml) — a plain line naming attached booking links, turning into a warning with the fix the moment the invitation is deleted. "Add booking link" chip. "Write the follow-up to Redtail" applies stage, next step, look-again date and a dated log line through the FORM'S OWN verified oppSave, never a second writer. Text message and the raw trail sit in expanders. LINKS, FIXED TWICE: v5.25.0 hid links behind plain words with no indication, and separately "coffee or lunch" linked only coffee when the title said coffee alone — now the WORD IN THE EMAIL decides what links (oppInviteLinksFor), the rule still decides what the AI is told to offer. THE TRAIL now keeps a RECORD line listing the keys the live Redtail record carried, in the trace expander and Copy diagnostic — the probe caught the composer WIPING it right after writing it; it now survives a reset on purpose. TWO HARNESS LESSONS: a hit-test taken while the modal is still animating in measures the animation, not the layout (rule 6); a "dead Save button" was a fixture whose record lacked the description the list row carried, so the composer correctly asked its question instead. NOT YET CONFIRMED LIVE: whether his contact is now found and the drafts read better is his to judge next try — if still not found, the RECORD and WHO lines say why. NOT BUILT: writing a found address back to Redtail; the daily-brief "who to touch today" section; touch counting. CLIENT-ONLY, TWO-FILE (styles.css bumps too, ?v=5.26.0) — backend UNCHANGED at .gs v3.78.0, NO CLASP ROUND, NOTHING FOR HANS TO DEPLOY. Probes: opportunities-probe 21/21 (O16 rewritten again incl. a real mouse-position hit-test of Save; O21 new); mail-agent-probe 39/39 unchanged.
@@ -8333,7 +8450,20 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.34.0 &mdash; 2026-09-29 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.35.0 &mdash; 2026-09-29 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Step 9 on a Marketing card now makes the branded quote image itself &mdash; and the draft to Trevor with the picture attached.</div>'
+                + '<div style="margin:0 0 10px;padding:8px 10px;border-radius:6px;background:#fef3c7;color:#92400e;font-size:0.8rem;">Needs one Supabase paste (PART 13) so the brand is shared by every device. Until then it works, and the brand is kept on each device.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Tap words to turn them green, then &ldquo;Make the image&rdquo;.</strong> The 1080&times;1080 picture is drawn right there: the navy glow, Raleway, the green words, the name underneath, the logo bottom right. No green words picked? It suggests some first.</li>'
+                + '<li><strong>It tidies the words for you.</strong> No quotation marks, normal sentence capitals, a full stop at the end &mdash; and the box above shows exactly what was drawn.</li>'
+                + '<li><strong>Three buttons, as before.</strong> &ldquo;Yes, send to Trevor&rdquo; makes one Gmail draft to him, copying you, with the picture attached under its proper file name and the tracking line your Quote Tracker sheet reads. &ldquo;Needs changes&rdquo; takes you back to the words. &ldquo;Approve but don&rsquo;t email&rdquo; downloads it. Nothing is ever sent from the tool.</li>'
+                + '<li><strong>Brand settings, per company.</strong> Colours, background style, font, logo (a black or white background is removed automatically), where the logo sits, who the email goes to, and which authors to use or never use. Intelligrations gets its own look.</li>'
+                + '<li><strong>Better quote suggestions.</strong> Green words come already marked, a quote used on another card is never suggested again, and with no blog written yet it offers classic quotes from respected investors and leaders &mdash; check the wording of those before posting.</li>'
+                + '</ul>'
+                + '</div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.34.0 &mdash; 2026-09-29</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Your Vision, Plan, Rocks and Scorecard now follow you to every device &mdash; and signing in is required.</div>'
                 + '<div style="margin:0 0 10px;padding:8px 10px;border-radius:6px;background:#fef3c7;color:#92400e;font-size:0.8rem;">Needs one Supabase paste (PART 12). Until then everything works exactly as before, on each device.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
@@ -15094,15 +15224,32 @@ Example:
             if (!card) return;
             const blog  = document.getElementById('mktBlog').value.trim();
             const take  = document.getElementById('mktTake').value.trim();
-            if (!blog && !take) { showToast('Draft the blog (or at least Your Take) first, so quotes have something to distill.'); return; }
+            // v5.35.0: nothing written yet is no longer a dead end - it is the old quote
+            // generator's step 0: classic lines from the brand's preferred authors.
+            const classics = !blog && !take;
 
             if (!requireAI('marketing', 'Marketing AI')) return;
 
             const companyKey = card.company || 'ii';
             const ctx = await fetchFirmContext(companyKey, false);
             const ctxBlock = buildFirmContextBlock(ctx, companyKey);
+            await qbEnsureBrandPulled(companyKey);
+            const brand = qbBrand(companyKey);
+            const ours = brand.attribution || QB_BRAND_DEFAULT.attribution;
 
-            const source = blog ? ('BLOG:\n"""\n' + blog + '\n"""') : ('HANS\'S TAKE:\n"""\n' + take + '\n"""');
+            // Old step 6b, duplicate prevention: every quote already on a card is off limits.
+            const used = mktData.cards.filter(function(c) { return c.id !== card.id && (c.quote || '').trim(); })
+                .map(function(c) { return '- ' + qbPlain(qbSplit(c.quote).body); }).slice(-60);
+            const rules =
+                (brand.preferredAuthors ? 'Authors this firm likes to feature: ' + brand.preferredAuthors + '.\n' : '') +
+                'Never use: ' + (brand.avoidAuthors || QB_BRAND_DEFAULT.avoidAuthors) + '. Keep every line conservative in tone - nothing political.\n' +
+                (used.length ? 'ALREADY USED - do not repeat these or close paraphrases:\n' + used.join('\n') + '\n' : '');
+
+            const source = classics
+                ? 'No blog yet. Offer well-known quotes from respected finance, wealth, behavioural-finance and ' +
+                  'leadership figures (for example Warren Buffett, Dale Carnegie, John Maxwell, Ray Dalio, Richard ' +
+                  'Thaler, Morgan Housel), ONLY ones whose exact wording and author you are sure of.'
+                : (blog ? ('BLOG:\n"""\n' + blog + '\n"""') : ('HANS\'S TAKE:\n"""\n' + take + '\n"""'));
 
             const btn = document.getElementById('mktQuotesBtn');
             const original = btn.textContent;
@@ -15113,22 +15260,24 @@ Example:
                     MKT_FIRM_CONTEXT + ctxBlock + '\n\n' +
                     'Produce FIVE options for a branded quote image (IntelliQuotes) drawn from the ' +
                     'piece below. Each must stand alone without context, carry a real idea (not a ' +
-                    'platitude), and be under 25 words. Each option is an object with "text" and ' +
-                    '"author":\n' +
+                    'platitude), and be under 25 words. Each option is an object with "text", ' +
+                    '"author" and "highlight" (the one to three words of "text", copied exactly, that ' +
+                    'carry the idea - they are printed in colour on the image):\n' +
                     '- Lines you distill from the piece or that express Hans\'s own view: set ' +
-                    '"author" to "Hans Blake, CFA, CPA".\n' +
+                    '"author" to "' + ours + '".\n' +
                     '- You MAY instead offer a genuinely well-known quote from a famous figure ' +
                     '(e.g. Warren Buffett, Jack Bogle, Peter Lynch, Albert Einstein, Abraham ' +
                     'Lincoln) IF it fits the theme AND you are confident of BOTH exact wording AND ' +
                     'real author. Otherwise distill an original line and attribute it to Hans. ' +
                     'Never invent a quote and attribute it to a real person - a misattributed ' +
                     'quote is worse than none.\n' +
-                    '- Do not put quotation marks inside "text".\n\n' +
+                    '- Do not put quotation marks inside "text". Sentence case, ending with a period.\n' +
+                    rules + '\n' +
                     source + '\n\n' +
-                    'Return ONLY a JSON array: [{"text":"...","author":"..."}, ...]. No fences, no preamble.';
+                    'Return ONLY a JSON array: [{"text":"...","author":"...","highlight":"..."}, ...]. No fences, no preamble.';
 
                 const raw = await callAI('marketing', prompt,
-                                         { featureLabel: 'Marketing AI', temperature: 0.8, maxTokens: 700 });
+                                         { featureLabel: 'Marketing AI', temperature: 0.8, maxTokens: 1200 });
                 const clean = String(raw).replace(/```json/gi, '').replace(/```/g, '').trim();
                 const s = clean.indexOf('['), e = clean.lastIndexOf(']');
                 if (s === -1 || e === -1) throw new Error('The model did not return the expected format.');
@@ -15136,9 +15285,11 @@ Example:
                 if (!Array.isArray(quotes) || !quotes.length) throw new Error('No quotes came back.');
 
                 const chipData = quotes.map(function(q) {
-                    const t = (q && q.text) ? String(q.text).trim() : '';
-                    const a = (q && q.author) ? String(q.author).trim() : 'Hans Blake, CFA, CPA';
-                    return t ? { text: t + '\n~ ' + a } : null;
+                    const t = (q && q.text) ? String(q.text).replace(/[()]/g, '').trim() : '';
+                    const a = (q && q.author) ? String(q.author).trim() : ours;
+                    // v5.35.0: the suggested green words arrive already in (parentheses).
+                    const marked = t ? qbApplyHighlights(t, q.highlight ? [q.highlight] : []) : '';
+                    return t ? { text: marked + '\n~ ' + a } : null;
                 }).filter(Boolean);
                 if (!chipData.length) throw new Error('No usable quotes came back.');
 
@@ -15147,7 +15298,15 @@ Example:
                     card.quote = choice;
                     card.quoteStatus = 'draft';
                     mktSave();
+                    qbWordsRender();
                 });
+                // A line put in a real person's mouth is only as good as its wording.
+                if (chipData.some(function(c) { return c.text.indexOf('~ ' + ours) === -1; })) {
+                    const warn = document.createElement('div');
+                    warn.style.cssText = 'font-size:0.72rem;color:#b45309;margin:2px 0 4px;';
+                    warn.textContent = 'Quotes credited to someone else are recalled by the AI - check the exact wording and the author before posting. (Words in brackets print in green.)';
+                    document.getElementById('mktQuoteOptions').appendChild(warn);
+                }
 
             } catch (error) {
                 showToast('Quote suggestions failed: ' + error.message);
@@ -15155,6 +15314,846 @@ Example:
             } finally {
                 btn.disabled = false; btn.textContent = original;
             }
+        }
+
+        // ==================== STEP 9 - THE BRANDED QUOTE IMAGE (v5.35.0) ====================
+        // His ask 2026-09-29: bake the IIA quote-image instructions (until now a separate
+        // Claude project: Python/Pillow + a Gmail connector) into Step 9, so an agreed quote
+        // becomes the branded 1080x1080 image and ONE Gmail draft to Trevor. Ported from that
+        // project's engine.py (IntelliQuotes) and Text Wrapper.py:
+        //   - the canvas, gradient maths, auto-fit and logo placement are engine.py's numbers;
+        //   - only GREEN phrases are atomic when wrapping, white words always wrap singly
+        //     (Text Wrapper's bug history: grouping white runs pushed text off the canvas);
+        //   - (parentheses) or word(green) mark green, and the parentheses are never drawn;
+        //   - no quotation marks, sentence case, a closing period, attribution with no dash.
+        // Everything firm-specific (colours, font, logo, who the email goes to, which authors
+        // to use or avoid) is a BRAND PROFILE per company in Supabase brand_profiles (schema
+        // PART 13), cached on the device, so another firm gets its own look (his ask). The
+        // numbers in QB_FIXED are deliberately NOT settings - IntelliQuotes spec §2: each is a
+        // knob that only makes the image look broken when turned.
+        // Drawn in the browser (canvas + Google Fonts): no backend round-trip to make the
+        // image, and the only backend use is the draft itself (.gs 3.81.0 attaches the PNG).
+        const QB_SIZE = 1080;
+        const QB_FIXED = { radius: 0.55, exponent: 0.8, lineSpacing: 1.25, marginPct: 0.09,
+            attrRatio: 0.52, attrGapPct: 0.055, startPct: 0.085, fitPct: 0.62, maxLines: 6,
+            logoPadPct: 0.04 };
+        const QB_LOGO_PCT = { small: 0.04, medium: 0.06, large: 0.08 };
+        // Curated, open-licence Google Fonts only (spec §6), each with the heavier weight the
+        // green words use - not every family ships a 600.
+        const QB_FONTS = { 'Raleway': 600, 'Montserrat': 600, 'Lato': 700, 'Open Sans': 600,
+            'Source Sans 3': 600, 'Merriweather': 700, 'Playfair Display': 600, 'Lora': 600,
+            'Poppins': 600, 'Libre Baskerville': 700 };
+        const QB_BRAND_DEFAULT = {
+            bgCenter: '#1C558C', bgEdge: '#081E3A', highlight: '#A4C739', text: '#FFFFFF',
+            bgStyle: 'radial', bgDirection: 'top-bottom', font: 'Raleway',
+            logo: 'icons/intelligrations-mark.png', logoPlacement: 'bottom-right', logoSize: 'medium',
+            attribution: 'Hans Blake, CFA, CPA', emailToName: '', emailTo: '', emailCc: '',
+            preferredAuthors: '', avoidAuthors: 'active political figures, politically divisive commentators',
+            logMarker: 'IIA_QUOTE_LOG'
+        };
+        const QB_BRAND_KEY = 'eos_quote_brand';          // device cache: { ii: {profile, savedAt, from}, ig: ... }
+        const _qbPulled = {};                            // company -> { note } once pulled this session
+        let _qbLast = null;                              // the image on screen: what it says and its file name
+
+        function qbLocalBrands() {
+            try { return JSON.parse(localStorage.getItem(QB_BRAND_KEY) || '{}') || {}; } catch (e) { return {}; }
+        }
+        function qbBrand(companyKey) {
+            const local = qbLocalBrands()[companyKey];
+            const b = Object.assign({}, QB_BRAND_DEFAULT, (local && local.profile) || {});
+            ['bgCenter', 'bgEdge', 'highlight', 'text'].forEach(function(k) {
+                if (!/^#[0-9a-f]{6}$/i.test(String(b[k]))) b[k] = QB_BRAND_DEFAULT[k];
+            });
+            if (!QB_FONTS[b.font]) b.font = 'Raleway';
+            return b;
+        }
+        function qbCloudErr(error) {
+            const m = String((error && (error.message || error.code)) || 'unknown error');
+            if ((error && (error.code === '42P01' || error.code === 'PGRST205')) || /brand_profiles/.test(m) && /does not exist|schema cache|could not find/i.test(m))
+                return 'The brand table is not in Supabase yet (paste docs/PASTE-INTO-SUPABASE-PART13.sql), so the brand is kept on this device only.';
+            return 'Supabase said: ' + m;
+        }
+        async function qbPullBrand(companyKey) {
+            const blocker = mktSyncBlocker();
+            if (blocker) return { ok: false, note: blocker };
+            try {
+                const res = await mktGetSupabaseClient().from('brand_profiles').select('profile, updated_at')
+                    .eq('firm_id', mktSupabaseProfile.firm_id).eq('company_key', companyKey).maybeSingle();
+                if (res.error) return { ok: false, note: qbCloudErr(res.error) };
+                if (res.data && res.data.profile) {
+                    const all = qbLocalBrands();
+                    all[companyKey] = { profile: res.data.profile, savedAt: res.data.updated_at, from: 'cloud' };
+                    try { localStorage.setItem(QB_BRAND_KEY, JSON.stringify(all)); } catch (e) { }
+                    return { ok: true, note: '' };
+                }
+                return { ok: true, note: 'No brand saved for this company yet, so the built-in look is used.' };
+            } catch (e) { return { ok: false, note: 'Could not reach Supabase: ' + (e.message || e) }; }
+        }
+        async function qbEnsureBrandPulled(companyKey) {
+            if (!_qbPulled[companyKey]) _qbPulled[companyKey] = qbPullBrand(companyKey);
+            return _qbPulled[companyKey];
+        }
+        async function qbPushBrand(companyKey, profile) {
+            const all = qbLocalBrands();
+            all[companyKey] = { profile: profile, savedAt: new Date().toISOString(), from: 'device' };
+            try { localStorage.setItem(QB_BRAND_KEY, JSON.stringify(all)); }
+            catch (e) { return { ok: false, note: 'This device could not store it (' + e.message + ') - try a smaller logo.' }; }
+            const blocker = mktSyncBlocker();
+            if (blocker) return { ok: false, note: 'Saved on this device only. ' + blocker };
+            try {
+                const res = await mktGetSupabaseClient().from('brand_profiles').upsert({
+                    firm_id: mktSupabaseProfile.firm_id, company_key: companyKey, profile: profile,
+                    updated_at: new Date().toISOString(), updated_by: mktSupabaseProfile.email || ''
+                });
+                if (res.error) return { ok: false, note: 'Saved on this device only. ' + qbCloudErr(res.error) };
+                all[companyKey].from = 'cloud';
+                try { localStorage.setItem(QB_BRAND_KEY, JSON.stringify(all)); } catch (e) { }
+                _qbPulled[companyKey] = Promise.resolve({ ok: true, note: '' });
+                return { ok: true, note: 'Saved for the firm - every device and teammate gets it.' };
+            } catch (e) { return { ok: false, note: 'Saved on this device only. Could not reach Supabase: ' + (e.message || e) }; }
+        }
+
+        // ---- the words: "(green) phrase" markup <-> words made of coloured runs ----------
+        // A word is an array of runs [{t, hl}] so "(interest)." is ONE word whose period
+        // stays white - the parentheses never reach the canvas.
+        function qbSplit(v) {
+            const lines = String(v || '').split(/\r?\n/).map(function(s) { return s.trim(); }).filter(Boolean);
+            let author = '';
+            if (lines.length > 1 && /^(~|—|–|-)\s*/.test(lines[lines.length - 1])) {
+                author = lines.pop().replace(/^(~|—|–|-)\s*/, '').trim();
+            }
+            return { body: lines.join(' '), author: author };
+        }
+        function qbJoin(body, author) { return author ? body + '\n~ ' + author : body; }
+        function qbParse(markup) {
+            const s = String(markup || '').replace(/(\S+?)\s*\(green\)/gi, '($1)');
+            const runs = [];
+            const re = /\(([^()]*)\)/g;
+            let i = 0, m;
+            while ((m = re.exec(s))) {
+                if (m.index > i) runs.push({ t: s.slice(i, m.index), hl: false });
+                runs.push({ t: m[1], hl: true });
+                i = re.lastIndex;
+            }
+            if (i < s.length) runs.push({ t: s.slice(i), hl: false });
+            const words = [];
+            let cur = null;
+            runs.forEach(function(r) {
+                r.t.split(/(\s+)/).forEach(function(p) {
+                    if (!p) return;
+                    if (/^\s+$/.test(p)) { cur = null; return; }
+                    if (!cur) { cur = []; words.push(cur); }
+                    cur.push({ t: p, hl: r.hl });
+                });
+            });
+            return words;
+        }
+        function qbSerialize(words) {
+            let out = '', open = false;
+            words.forEach(function(w, wi) {
+                if (wi > 0) {
+                    if (open && !(w[0] && w[0].hl)) { out += ')'; open = false; }
+                    out += ' ';
+                }
+                w.forEach(function(r) {
+                    if (r.hl && !open) { out += '('; open = true; }
+                    else if (!r.hl && open) { out += ')'; open = false; }
+                    out += r.t;
+                });
+            });
+            if (open) out += ')';
+            return out;
+        }
+        function qbWordText(w) { return w.map(function(r) { return r.t; }).join(''); }
+        function qbPlain(markup) { return qbParse(markup).map(qbWordText).join(' '); }
+        function qbHighlightList(markup) {
+            const out = [];
+            let cur = [];
+            qbParse(markup).forEach(function(w) {
+                const hlText = w.filter(function(r) { return r.hl; }).map(function(r) { return r.t; }).join('');
+                if (hlText) cur.push(hlText);
+                else if (cur.length) { out.push(cur.join(' ')); cur = []; }
+            });
+            if (cur.length) out.push(cur.join(' '));
+            return out;
+        }
+        function qbGreenWord(text) {
+            const m = String(text).match(/^([^A-Za-z0-9]*)(.*?)([^A-Za-z0-9]*)$/);
+            if (!m || !m[2]) return [{ t: text, hl: true }];
+            return [{ t: m[1], hl: false }, { t: m[2], hl: true }, { t: m[3], hl: false }].filter(function(r) { return r.t; });
+        }
+        function qbApplyHighlights(body, picks) {
+            const words = qbParse(qbPlain(body));
+            const norm = function(s) { return String(s).toLowerCase().replace(/[^a-z0-9'’]/g, ''); };
+            const keys = words.map(function(w) { return norm(qbWordText(w)); });
+            (picks || []).slice(0, 3).forEach(function(p) {
+                const pw = String(p || '').trim().split(/\s+/).map(norm).filter(Boolean);
+                if (!pw.length) return;
+                for (let i = 0; i + pw.length <= keys.length; i++) {
+                    if (pw.every(function(k, j) { return keys[i + j] === k; })) {
+                        for (let j = 0; j < pw.length; j++) words[i + j] = qbGreenWord(qbWordText(words[i + j]));
+                        break;
+                    }
+                }
+            });
+            return qbSerialize(words);
+        }
+        // Rule 3 of the old instructions: sentence case, no quotation marks, a closing period.
+        // Conservative on purpose - it only re-cases a line that is Title Case On Every Word
+        // or ALL CAPS, because a proper noun inside an ordinary sentence must survive.
+        function qbClean(body) {
+            let s = String(body || '').replace(/[“”„«»"]/g, '').replace(/\s+/g, ' ').trim();
+            const long = qbPlain(s).split(' ').filter(function(w) { return /[A-Za-z]{4,}/.test(w); });
+            const titled = long.length >= 4 && long.every(function(w) { return /^[^A-Za-z]*[A-Z]/.test(w); });
+            const shouting = /[A-Z]{3}/.test(s) && s === s.toUpperCase();
+            if (titled || shouting) {
+                let first = true;
+                s = s.replace(/[A-Za-z][A-Za-z'’]*/g, function(w) {
+                    if (first) { first = false; return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(); }
+                    return w === 'I' ? w : w.toLowerCase();
+                });
+            }
+            s = s.replace(/^([^A-Za-z]*)([a-z])/, function(m0, a, b) { return a + b.toUpperCase(); });
+            s = s.replace(/[,;:\s]+(\)*)$/, '$1');
+            if (s && !/[.!?…]\)*$/.test(s)) s += '.';
+            return s;
+        }
+
+        // ---- drawing ----------------------------------------------------------------------
+        const _qbFontLinks = {};
+        async function qbEnsureFont(name) {
+            const fam = QB_FONTS[name] ? name : 'Raleway';
+            const hw = QB_FONTS[fam];
+            if (!_qbFontLinks[fam]) {
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = 'https://fonts.googleapis.com/css2?family=' + fam.replace(/ /g, '+') + ':wght@400;' + hw + '&display=block';
+                _qbFontLinks[fam] = new Promise(function(res) {
+                    link.onload = function() { res(true); };
+                    link.onerror = function() { res(false); };
+                    setTimeout(function() { res(false); }, 9000);
+                });
+                document.head.appendChild(link);
+            }
+            await _qbFontLinks[fam];
+            try {
+                await Promise.all([document.fonts.load('400 64px "' + fam + '"', 'Ag'),
+                                   document.fonts.load(hw + ' 64px "' + fam + '"', 'Ag')]);
+            } catch (e) { }
+            // NOT document.fonts.check(): it answers true for a family that was never
+            // declared at all, which is exactly the failed-download case.
+            const loaded = function(w) {
+                let ok = false;
+                document.fonts.forEach(function(f) {
+                    if (f.family.replace(/["']/g, '') === fam && String(f.weight) === String(w) && f.status === 'loaded') ok = true;
+                });
+                return ok;
+            };
+            if (!loaded(400) || !loaded(hw)) {
+                delete _qbFontLinks[fam];
+                throw new Error('The ' + fam + ' font did not download, so the image would come out in the wrong typeface. Check the connection and try again.');
+            }
+            return { family: fam, hlWeight: hw };
+        }
+        function qbHexRgb(h) { h = String(h).replace('#', ''); return [0, 2, 4].map(function(i) { return parseInt(h.substr(i, 2), 16); }); }
+        let _qbBgCache = { key: '', data: null };
+        function qbPaintBackground(ctx, W, H, b) {
+            const key = [W, b.bgStyle, b.bgCenter, b.bgEdge, b.bgDirection].join('|');
+            if (_qbBgCache.key === key && _qbBgCache.data) { ctx.putImageData(_qbBgCache.data, 0, 0); return; }
+            if (b.bgStyle === 'solid') {
+                ctx.fillStyle = b.bgCenter; ctx.fillRect(0, 0, W, H);
+            } else if (b.bgStyle === 'linear') {
+                const d = { 'top-bottom': [0, 0, 0, H], 'bottom-top': [0, H, 0, 0], 'left-right': [0, 0, W, 0],
+                            'right-left': [W, 0, 0, 0], 'diagonal': [0, 0, W, H] }[b.bgDirection] || [0, 0, 0, H];
+                const g = ctx.createLinearGradient(d[0], d[1], d[2], d[3]);
+                g.addColorStop(0, b.bgCenter); g.addColorStop(1, b.bgEdge);
+                ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+            } else {
+                // engine.py radial_vignette, pixel for pixel: t = min(r / maxr, 1) ** exponent.
+                const c = qbHexRgb(b.bgCenter), e = qbHexRgb(b.bgEdge);
+                const img = ctx.createImageData(W, H), px = img.data;
+                const cx = W / 2, cy = H / 2;
+                const maxr = Math.hypot(cx, cy) * (QB_FIXED.radius / 0.55) * 0.92;
+                for (let y = 0; y < H; y++) {
+                    for (let x = 0; x < W; x++) {
+                        let t = Math.hypot(x - cx, y - cy) / maxr;
+                        t = Math.pow(t > 1 ? 1 : t, QB_FIXED.exponent);
+                        const i = (y * W + x) * 4;
+                        px[i] = c[0] + (e[0] - c[0]) * t;
+                        px[i + 1] = c[1] + (e[1] - c[1]) * t;
+                        px[i + 2] = c[2] + (e[2] - c[2]) * t;
+                        px[i + 3] = 255;
+                    }
+                }
+                ctx.putImageData(img, 0, 0);
+            }
+            try { _qbBgCache = { key: key, data: ctx.getImageData(0, 0, W, H) }; } catch (e) { }
+        }
+        function qbMeasurer(ctx, regFont, semiFont) {
+            const cache = {};
+            ctx.font = regFont;
+            const space = ctx.measureText(' ').width;
+            function runW(r) {
+                const k = (r.hl ? '1' : '0') + r.t;
+                if (cache[k] == null) { ctx.font = r.hl ? semiFont : regFont; cache[k] = ctx.measureText(r.t).width; }
+                return cache[k];
+            }
+            function word(w) { return w.reduce(function(a, r) { return a + runW(r); }, 0); }
+            function line(ws) { return ws.reduce(function(a, w) { return a + word(w); }, 0) + space * Math.max(0, ws.length - 1); }
+            return { space: space, runW: runW, word: word, line: line };
+        }
+        // Text Wrapper.py: consecutive green words are ONE unit, every white word its own.
+        function qbUnits(words, breakAll) {
+            const units = [];
+            words.forEach(function(w) {
+                const hl = w.some(function(r) { return r.hl; });
+                const last = units[units.length - 1];
+                if (hl && !breakAll && last && last.hl) last.words.push(w);
+                else units.push({ hl: hl, words: [w] });
+            });
+            return units;
+        }
+        function qbGreedy(units, m, width) {
+            const lines = [];
+            let cur = [];
+            units.forEach(function(u) {
+                if (cur.length && m.line(cur.concat(u.words)) > width) { lines.push(cur); cur = u.words.slice(); }
+                else cur = cur.concat(u.words);
+            });
+            if (cur.length) lines.push(cur);
+            return lines;
+        }
+        function qbWrap(words, m, maxw, breakAll) {
+            const units = qbUnits(words, breakAll);
+            const widest = Math.max.apply(null, units.map(function(u) { return m.line(u.words); }));
+            if (widest > maxw && !breakAll) return null;       // a green phrase too wide: shrink first
+            let lines = qbGreedy(units, m, maxw);
+            // A lonely last word reads as a mistake. When the last line is under half the
+            // widest, re-wrap at the narrowest width that keeps the same line count.
+            const lw = lines.map(function(l) { return m.line(l); });
+            if (lines.length > 1 && lw[lw.length - 1] < 0.5 * Math.max.apply(null, lw)) {
+                let lo = Math.min(widest, maxw), hi = maxw;
+                for (let k = 0; k < 14; k++) {
+                    const mid = (lo + hi) / 2;
+                    if (qbGreedy(units, m, mid).length <= lines.length) hi = mid; else lo = mid;
+                }
+                lines = qbGreedy(units, m, hi);
+            }
+            return lines;
+        }
+        function qbLoadImage(src) {
+            return new Promise(function(res, rej) {
+                // Only a data URL or a file shipped with the app: anything cross-origin
+                // would taint the canvas and the PNG could never be exported.
+                if (!/^data:image\//.test(src) && /^[a-z]+:|^\/\//i.test(src)) { rej(new Error('The logo must be uploaded, not linked.')); return; }
+                const img = new Image();
+                img.onload = function() { res(img); };
+                img.onerror = function() { rej(new Error('The logo could not be loaded.')); };
+                img.src = src;
+            });
+        }
+        async function qbRender(canvas, body, author, brand) {
+            const font = await qbEnsureFont(brand.font);
+            const W = QB_SIZE, H = QB_SIZE;
+            canvas.width = W; canvas.height = H;
+            const ctx = canvas.getContext('2d');
+            qbPaintBackground(ctx, W, H, brand);
+            const words = qbParse(body);
+            if (!words.length) throw new Error('There is no quote to draw.');
+            const reg = function(s) { return '400 ' + s + 'px "' + font.family + '"'; };
+            const semi = function(s) { return font.hlWeight + ' ' + s + 'px "' + font.family + '"'; };
+            const maxw = W - 2 * QB_FIXED.marginPct * W;
+            const gap = QB_FIXED.attrGapPct * H;
+            const minSize = Math.round(H * 0.035);
+            // engine.py auto-fit: start at 8.5% of the canvas and shrink 2px at a time until
+            // the block fits 62% of the height in at most six lines.
+            let size = Math.round(H * QB_FIXED.startPct), lines, lh, total, authSize, m;
+            // A green phrase stays on one line "whenever possible" - worth shrinking the
+            // text a little for, never all the way down: below 70% of the starting size the
+            // phrase is allowed to wrap instead (probe: a 20-word green phrase had driven
+            // the whole quote down to 38px).
+            const keepPhraseTo = Math.round(H * QB_FIXED.startPct * 0.7);
+            for (;;) {
+                m = qbMeasurer(ctx, reg(size), semi(size));
+                lines = qbWrap(words, m, maxw, size < keepPhraseTo);
+                lh = size * QB_FIXED.lineSpacing;
+                authSize = Math.round(size * QB_FIXED.attrRatio);
+                if (lines) {
+                    total = lh * lines.length + (author ? gap + authSize : 0);
+                    if (total <= H * QB_FIXED.fitPct && lines.length <= QB_FIXED.maxLines) break;
+                }
+                if (size <= minSize) break;
+                size -= 2;
+            }
+            // Pillow anchors text at the font's ASCENDER line; canvas 'top' is the em box,
+            // ~14px higher at this size. Drawing on the baseline at y + ascent puts every
+            // line where engine.py puts it (measured against his reference PNG).
+            ctx.textBaseline = 'alphabetic';
+            const ascent = function(f) { ctx.font = f; const mt = ctx.measureText('Ag'); return mt.fontBoundingBoxAscent || mt.actualBoundingBoxAscent; };
+            const qAsc = ascent(reg(size));
+            let y = (H - total) / 2 - H * 0.03;
+            lines.forEach(function(line) {
+                let x = (W - m.line(line)) / 2;
+                line.forEach(function(w, wi) {
+                    if (wi) x += m.space;
+                    w.forEach(function(r) {
+                        ctx.font = r.hl ? semi(size) : reg(size);
+                        ctx.fillStyle = r.hl ? brand.highlight : brand.text;
+                        ctx.fillText(r.t, x, y + qAsc);
+                        x += m.runW(r);
+                    });
+                });
+                y += lh;
+            });
+            if (author) {
+                y += gap;
+                const aAsc = ascent(reg(authSize));
+                ctx.font = reg(authSize);
+                ctx.fillStyle = brand.text;
+                ctx.fillText(author, (W - ctx.measureText(author).width) / 2, y + aAsc);
+            }
+            if (brand.logo) {
+                const img = await qbLoadImage(brand.logo);
+                const th = Math.round(H * (QB_LOGO_PCT[brand.logoSize] || 0.06));
+                const tw = Math.round(img.naturalWidth * th / img.naturalHeight);
+                const pad = Math.round(W * QB_FIXED.logoPadPct);
+                const pos = String(brand.logoPlacement || 'bottom-right').split('-');
+                const x = pos[1] === 'left' ? pad : (pos[1] === 'center' ? Math.round((W - tw) / 2) : W - tw - pad);
+                const ly = pos[0] === 'top' ? pad : H - th - pad;
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(img, x, ly, tw, th);
+            }
+            return { lines: lines.map(function(l) { return l.map(qbWordText).join(' '); }), size: size };
+        }
+        // "[First line or key phrase]- [Author Name] quote.png", his convention.
+        // The key phrase: up to the first punctuation, at most six words, and - when a green
+        // word falls inside that - ending on the last one ("An investment in knowledge").
+        function qbFileName(plain, author, highlights) {
+            let words = String(plain).split(/[,.;:!?…]/)[0].trim().split(/\s+/).slice(0, 6);
+            const norm = function(s) { return String(s).toLowerCase().replace(/[^a-z0-9'’]/g, ''); };
+            const greens = (highlights || []).join(' ').split(/\s+/).map(norm).filter(Boolean);
+            let cut = -1;
+            words.forEach(function(w, i) { if (greens.indexOf(norm(w)) !== -1) cut = i; });
+            if (cut >= 2) words = words.slice(0, cut + 1);
+            const phrase = words.join(' ');
+            const who = String(author || '').split(',')[0].trim();
+            return (phrase + '- ' + who + ' quote.png').replace(/[\\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ');
+        }
+
+        // ---- Step 9 UI ----------------------------------------------------------------------
+        function qbCard() { return mktGetCard(mktEditingId); }
+        function qbCompany() { const c = qbCard(); return (c && c.company) || mktActiveCompany || 'ii'; }
+        function qbStatus(html) { const el = document.getElementById('mktQbStatus'); if (el) el.innerHTML = html || ''; }
+        function qbCardSync() {
+            const card = qbCard();
+            if (!card) return;
+            card.quote = document.getElementById('mktQuote').value;
+            card.quoteStatus = 'draft';
+            mktSave();
+        }
+        function qbWordsRender() {
+            const wrap = document.getElementById('mktQbWords');
+            if (!wrap) return;
+            const words = qbParse(qbSplit(document.getElementById('mktQuote').value).body);
+            const green = qbBrand(qbCompany()).highlight;
+            wrap.innerHTML = '';
+            if (!words.length) {
+                wrap.innerHTML = '<span style="font-size:0.72rem;color:var(--gray-400);">Pick or write a quote above first.</span>';
+            }
+            words.forEach(function(w, i) {
+                const on = w.some(function(r) { return r.hl; });
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.textContent = qbWordText(w);
+                b.style.cssText = 'font-size:0.8rem;padding:3px 7px;border-radius:5px;cursor:pointer;line-height:1.3;'
+                    + 'border:1px solid ' + (on ? green : 'var(--gray-200)') + ';background:' + (on ? green : '#f8fafc')
+                    + ';color:' + (on ? '#fff' : '#111') + ';font-weight:' + (on ? '600' : '400') + ';';
+                b.onclick = function() { qbToggleWord(i); };
+                wrap.appendChild(b);
+            });
+            // Any edit makes the picture on screen out of date; hide it rather than let an
+            // old image be approved against new words.
+            if (_qbLast && _qbLast.markup !== document.getElementById('mktQuote').value) {
+                const r = document.getElementById('mktQbResult');
+                if (r && r.style.display !== 'none') { r.style.display = 'none'; qbStatus('The words changed - Make the image again to see them.'); }
+            }
+        }
+        function qbToggleWord(i) {
+            const ta = document.getElementById('mktQuote');
+            const parts = qbSplit(ta.value);
+            const words = qbParse(parts.body);
+            if (!words[i]) return;
+            words[i] = words[i].some(function(r) { return r.hl; })
+                ? [{ t: qbWordText(words[i]), hl: false }]
+                : qbGreenWord(qbWordText(words[i]));
+            ta.value = qbJoin(qbSerialize(words), parts.author);
+            qbCardSync();
+            qbWordsRender();
+        }
+        // Called by mktOpenCard: a fresh card shows its own words and no stale picture.
+        function qbResetForCard(card) {
+            _qbLast = null;
+            const r = document.getElementById('mktQbResult');
+            if (r) r.style.display = 'none';
+            qbStatus('');
+            qbWordsRender();
+            const company = (card && card.company) || 'ii';
+            qbEnsureBrandPulled(company).then(function() { if (mktEditingId === (card && card.id)) qbWordsRender(); });
+        }
+        async function qbSuggestHighlights(opts) {
+            opts = opts || {};
+            const ta = document.getElementById('mktQuote');
+            const parts = qbSplit(ta.value);
+            const plain = qbPlain(parts.body);
+            if (!plain) { if (!opts.auto) showToast('Pick or write a quote first.'); return false; }
+            if (!requireAI('marketing', 'Marketing AI')) return false;
+            const btn = document.getElementById('mktQbHlBtn');
+            const label = btn.textContent;
+            btn.disabled = true; btn.textContent = 'Thinking...';
+            try {
+                const raw = await callAI('marketing',
+                    'QUOTE: ' + plain + '\n\n' +
+                    'Pick the one to three words (or ONE short phrase of up to three words that sit ' +
+                    'together) that carry this quote\'s idea and would look best emphasised in colour ' +
+                    'on a quote graphic. Copy them EXACTLY as they appear in the quote. ' +
+                    'Return ONLY a JSON array of strings, for example ["long term"]. No preamble.',
+                    { featureLabel: 'Marketing AI', temperature: 0.3, maxTokens: 400 });
+                const clean = String(raw).replace(/```json/gi, '').replace(/```/g, '');
+                const s = clean.indexOf('['), e = clean.lastIndexOf(']');
+                const picks = (s !== -1 && e > s) ? JSON.parse(clean.slice(s, e + 1)) : [];
+                const next = qbApplyHighlights(parts.body, Array.isArray(picks) ? picks : []);
+                if (!qbHighlightList(next).length) throw new Error('none of the suggested words were found in the quote');
+                ta.value = qbJoin(next, parts.author);
+                qbCardSync();
+                qbWordsRender();
+                if (!opts.auto) qbStatus('Suggested in green - tap words to change them, then Make the image.');
+                return true;
+            } catch (e) {
+                qbStatus('Could not pick green words (' + escapeHtml(e.message || String(e)) + '). Tap the words yourself.');
+                return false;
+            } finally {
+                btn.disabled = false; btn.textContent = label;
+            }
+        }
+        async function qbMakeImage() {
+            const card = qbCard();
+            if (!card) return;
+            const ta = document.getElementById('mktQuote');
+            let parts = qbSplit(ta.value);
+            if (!parts.body) { showToast('Pick or write a quote first.'); return; }
+            const company = card.company || 'ii';
+            const btn = document.getElementById('mktQbMakeBtn');
+            const label = btn.textContent;
+            btn.disabled = true; btn.textContent = 'Drawing...';
+            qbStatus('');
+            try {
+                const pulled = await qbEnsureBrandPulled(company);
+                const brand = qbBrand(company);
+                // Old rule 2: no green words marked -> suggest some first. The preview IS the
+                // confirmation: nothing leaves this page until he presses one of the three buttons.
+                if (!qbHighlightList(parts.body).length && getAIProviderConfig('marketing')) {
+                    btn.textContent = 'Picking green words...';
+                    await qbSuggestHighlights({ auto: true });
+                    parts = qbSplit(ta.value);
+                    btn.textContent = 'Drawing...';
+                }
+                const body = qbClean(parts.body);
+                const author = parts.author || brand.attribution || QB_BRAND_DEFAULT.attribution;
+                ta.value = qbJoin(body, author);           // what he reads is exactly what is drawn
+                qbCardSync();
+                const canvas = document.getElementById('mktQbCanvas');
+                const out = await qbRender(canvas, body, author, brand);
+                const plain = qbPlain(body);
+                _qbLast = { cardId: card.id, company: company, markup: ta.value, plain: plain, author: author,
+                            highlights: qbHighlightList(body), fileName: qbFileName(plain, author, qbHighlightList(body)) };
+                qbWordsRender();
+                document.getElementById('mktQbResult').style.display = 'block';
+                document.getElementById('mktQbFileName').textContent = 'Saves as: ' + _qbLast.fileName;
+                document.getElementById('mktQbSendBtn').textContent = 'Yes, send to ' + (brand.emailToName || 'the reviewer');
+                const notes = [];
+                if (!_qbLast.highlights.length) notes.push('No green words - tap some above and Make the image again.');
+                if (author !== brand.attribution) notes.push('Attributed to ' + escapeHtml(author) + ' - check the exact wording and the author before it goes out.');
+                if (pulled && pulled.note) notes.push(escapeHtml(pulled.note));
+                qbStatus(notes.join('<br>'));
+            } catch (e) {
+                qbStatus('<span style="color:#b91c1c;">' + escapeHtml(e.message || String(e)) + '</span>');
+                console.error('qbMakeImage:', e);
+            } finally {
+                btn.disabled = false; btn.textContent = label;
+            }
+        }
+        function qbCanvasBlob() {
+            return new Promise(function(res, rej) {
+                document.getElementById('mktQbCanvas').toBlob(function(b) { b ? res(b) : rej(new Error('The image could not be exported.')); }, 'image/png');
+            });
+        }
+        async function qbDownload() {
+            const blob = await qbCanvasBlob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = _qbLast.fileName;
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(function() { URL.revokeObjectURL(url); }, 5000);
+        }
+        function qbCanvasBase64() {
+            return qbCanvasBlob().then(function(blob) {
+                return new Promise(function(res, rej) {
+                    const fr = new FileReader();
+                    fr.onload = function() { res(String(fr.result).split(',')[1] || ''); };
+                    fr.onerror = function() { rej(new Error('The image could not be read for the attachment.')); };
+                    fr.readAsDataURL(blob);
+                });
+            });
+        }
+        async function qbSubject(q) {
+            const who = String(q.author).split(',')[0].trim();
+            const theme = (q.highlights[0] || q.plain.split(/\s+/).slice(0, 3).join(' ')).replace(/[.,;:!?]+$/, '');
+            const fallback = theme.charAt(0).toUpperCase() + theme.slice(1) + ' – ' + who + ' Quote';
+            try {
+                const raw = await callAI('marketing',
+                    'Write ONE short, memorable email subject line for sending this quote graphic to our ' +
+                    'social media person, in the form "<two to four word theme> – ' + who + ' Quote", ' +
+                    'for example "Patience Pays – Warren Buffett Quote". Return only the subject line.\n\n' +
+                    'QUOTE: ' + q.plain,
+                    { featureLabel: 'Marketing AI', temperature: 0.7, maxTokens: 200, quiet: true });
+                const s = String(raw || '').split('\n').map(function(x) { return x.trim(); }).filter(Boolean)[0] || '';
+                const t = s.replace(/^subject:\s*/i, '').replace(/^["'“]+|["'”]+$/g, '').slice(0, 120);
+                return t || fallback;
+            } catch (e) { return fallback; }
+        }
+        // The Quote Tracker sheet (Apps Script v5.1) finds this marker in the SENT mail's
+        // HTML and decodes &amp; &lt; &gt; only, so nothing else is entity-encoded here.
+        function qbLogBlock(marker, obj) {
+            const esc = function(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+            return '<pre style="display:none">' + esc(marker) + '\n' + esc(JSON.stringify(obj)) + '</pre>';
+        }
+        async function qbApprove(kind) {
+            const ta = document.getElementById('mktQuote');
+            if (!_qbLast || _qbLast.cardId !== mktEditingId || _qbLast.markup !== ta.value) {
+                showToast('The words changed since the image was made - Make the image again first.');
+                return;
+            }
+            if (kind === 'changes') {
+                document.getElementById('mktQbResult').style.display = 'none';
+                qbStatus('Change the words above, tap different green words, or open Brand settings - then Make the image again.');
+                ta.focus();
+                return;
+            }
+            if (kind === 'keep') {
+                try { await qbDownload(); qbStatus('Approved. Downloaded as <strong>' + escapeHtml(_qbLast.fileName) + '</strong> - no email.'); }
+                catch (e) { qbStatus('<span style="color:#b91c1c;">' + escapeHtml(e.message) + '</span>'); }
+                return;
+            }
+            await qbSendDraft();
+        }
+        async function qbSendDraft() {
+            const q = _qbLast;
+            const brand = qbBrand(q.company);
+            if (!brand.emailTo) {
+                showToast('Nobody to send it to yet - fill in "Their address" in Brand settings.');
+                qbOpenBrand();
+                return;
+            }
+            const btn = document.getElementById('mktQbSendBtn');
+            const label = btn.textContent;
+            btn.disabled = true; btn.textContent = 'Creating draft...';
+            try {
+                if (!(await capabilityReadyChecked('gmail.createDraft'))) {
+                    await qbDownload();
+                    qbStatus('Gmail drafts are not available for this sign-in (Settings › Google › Check Google access says why). The image was downloaded as <strong>' + escapeHtml(q.fileName) + '</strong> instead.');
+                    return;
+                }
+                await _gsEnsureVersion();
+                const canAttach = _calGsAtLeast('3.81.0');
+                if (canAttach === null) { qbStatus(escapeHtml(_gsUnknownSentence('Attaching the image to the draft'))); return; }
+                const subject = await qbSubject(q);
+                const text = 'Hi ' + (brand.emailToName || 'there') + ',\n\n'
+                    + 'A new quote graphic is attached, ready for social:\n\n'
+                    + q.plain + '\n~ ' + q.author + '\n\n'
+                    + 'Please post it when you have a moment. Thanks!';
+                const d = new Date();
+                const ymd = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                const logHtml = qbLogBlock(brand.logMarker || QB_BRAND_DEFAULT.logMarker,
+                    { quote: q.plain, author: q.author, highlights: q.highlights.join(', '), sentDate: ymd, subject: subject });
+                const extra = canAttach
+                    ? { cc: brand.emailCc || '', attachments: [{ name: q.fileName, mimeType: 'image/png', base64: await qbCanvasBase64() }] }
+                    : null;
+                // Signed through the shared builder ON this line - mail-agent C2 reads it here.
+                const data = await postGmailDraft(brand.emailTo, subject, draftBodyHtml(text) + logHtml, extra);
+                const openUrl = data.draftUrl || data.draftsUrl || '';
+                if (openUrl) window.open(openUrl, '_blank');
+                const link = openUrl ? ' <a href="' + escapeHtml(openUrl) + '" target="_blank" rel="noopener">Open the draft</a>' : '';
+                if (canAttach) {
+                    qbStatus('Draft to ' + escapeHtml(brand.emailToName || brand.emailTo) + ' created in Gmail with <strong>' + escapeHtml(q.fileName) + '</strong> attached'
+                        + (brand.emailCc ? ', cc ' + escapeHtml(brand.emailCc) : '') + '. Review and send it there - nothing was sent.' + link);
+                } else {
+                    await qbDownload();
+                    qbStatus('Draft created, but your backend is v' + escapeHtml(String(_capabilityProbeState.gsVersion || '?'))
+                        + ' and attaching the image (and the cc) needs 3.81.0 - the image was downloaded; attach it in Gmail.' + link);
+                }
+                const card = qbCard();
+                if (card) { card.quoteStatus = 'sent'; mktSave(); }
+            } catch (e) {
+                try { await qbDownload(); } catch (e2) { }
+                qbStatus('<span style="color:#b91c1c;">The draft failed (' + escapeHtml(e.message || String(e)) + ').</span> The image was downloaded so nothing is lost.');
+                console.error('qbSendDraft:', e);
+            } finally {
+                btn.disabled = false; btn.textContent = label;
+            }
+        }
+
+        // ---- Brand settings -----------------------------------------------------------------
+        let _qbEdit = null;          // { company, profile } while the brand window is open
+        const QB_COLOR_FIELDS = [['bgCenter', 'Background centre'], ['bgEdge', 'Background edge'],
+                                 ['highlight', 'Green words'], ['text', 'Text']];
+        async function qbOpenBrand() {
+            const company = qbCompany();
+            const pulled = await qbEnsureBrandPulled(company);
+            _qbEdit = { company: company, profile: qbBrand(company) };
+            const p = _qbEdit.profile;
+            const name = (MKT_COMPANIES[company] && MKT_COMPANIES[company].name) || company;
+            document.getElementById('qbBrandTitle').textContent = 'Brand for ' + name + ' quote images';
+            const local = qbLocalBrands()[company];
+            document.getElementById('qbBrandWhere').textContent = (pulled && pulled.note)
+                ? pulled.note
+                : (local && local.from === 'cloud' ? 'Loaded from the firm’s saved brand.' : 'Not saved yet - these are the built-in defaults.');
+            document.getElementById('qbBrandColors').innerHTML = QB_COLOR_FIELDS.map(function(f) {
+                return '<span>' + f[1] + '</span>'
+                    + '<input type="color" id="qbC_' + f[0] + '" value="' + p[f[0]] + '" oninput="qbColorPicked(\'' + f[0] + '\', this.value)" style="width:44px;height:30px;padding:0;border:1px solid var(--gray-200);border-radius:4px;">'
+                    + '<input type="text" id="qbH_' + f[0] + '" value="' + p[f[0]] + '" oninput="qbColorTyped(\'' + f[0] + '\', this.value)" style="width:100%;padding:5px;box-sizing:border-box;font-family:monospace;">';
+            }).join('');
+            document.getElementById('qbFont').innerHTML = Object.keys(QB_FONTS).map(function(f) {
+                return '<option value="' + escapeHtml(f) + '">' + escapeHtml(f) + '</option>';
+            }).join('');
+            document.getElementById('qbBgStyle').value = p.bgStyle;
+            document.getElementById('qbBgDirection').value = p.bgDirection;
+            document.getElementById('qbFont').value = p.font;
+            document.getElementById('qbLogoPlacement').value = p.logoPlacement;
+            document.getElementById('qbLogoSize').value = p.logoSize;
+            document.getElementById('qbAttribution').value = p.attribution || '';
+            document.getElementById('qbEmailToName').value = p.emailToName || '';
+            document.getElementById('qbEmailTo').value = p.emailTo || '';
+            document.getElementById('qbEmailCc').value = p.emailCc || '';
+            document.getElementById('qbPreferredAuthors').value = p.preferredAuthors || '';
+            document.getElementById('qbAvoidAuthors').value = p.avoidAuthors || '';
+            document.getElementById('qbBrandSaveInfo').textContent = '';
+            document.getElementById('qbBrandModal').style.display = 'flex';
+            qbBrandChanged();
+        }
+        function qbCloseBrand() { document.getElementById('qbBrandModal').style.display = 'none'; _qbEdit = null; }
+        function qbColorPicked(k, v) { const h = document.getElementById('qbH_' + k); if (h) h.value = v.toUpperCase(); qbBrandChanged(); }
+        function qbColorTyped(k, v) {
+            v = String(v).trim(); if (v && v[0] !== '#') v = '#' + v;
+            if (/^#[0-9a-f]{6}$/i.test(v)) { document.getElementById('qbC_' + k).value = v.toLowerCase(); qbBrandChanged(); }
+        }
+        function qbReadForm() {
+            const p = Object.assign({}, _qbEdit.profile);
+            QB_COLOR_FIELDS.forEach(function(f) { p[f[0]] = document.getElementById('qbC_' + f[0]).value.toUpperCase(); });
+            ['bgStyle', 'bgDirection', 'font', 'logoPlacement', 'logoSize'].forEach(function(k) {
+                p[k] = document.getElementById('qb' + k.charAt(0).toUpperCase() + k.slice(1)).value;
+            });
+            p.attribution = document.getElementById('qbAttribution').value.trim();
+            p.emailToName = document.getElementById('qbEmailToName').value.trim();
+            p.emailTo = document.getElementById('qbEmailTo').value.trim();
+            p.emailCc = document.getElementById('qbEmailCc').value.trim();
+            p.preferredAuthors = document.getElementById('qbPreferredAuthors').value.trim();
+            p.avoidAuthors = document.getElementById('qbAvoidAuthors').value.trim();
+            return p;
+        }
+        // WCAG contrast ratio, the spec's guardrail: text on the background centre < 4.5 blocks
+        // nothing but says so; a green too close to the text colour will not read as emphasis.
+        function qbContrast(a, b) {
+            const lum = function(h) {
+                return qbHexRgb(h).map(function(c) { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); })
+                    .reduce(function(s, c, i) { return s + c * [0.2126, 0.7152, 0.0722][i]; }, 0);
+            };
+            const x = lum(a), y = lum(b);
+            return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+        }
+        let _qbPreviewTimer = null;
+        function qbBrandChanged() {
+            if (!_qbEdit) return;
+            const p = qbReadForm();
+            _qbEdit.profile = p;
+            document.getElementById('qbBgDirRow').style.display = p.bgStyle === 'linear' ? 'block' : 'none';
+            const thumb = document.getElementById('qbLogoThumb');
+            thumb.style.display = p.logo ? 'block' : 'none';
+            if (p.logo) thumb.src = p.logo;
+            const warn = [];
+            if (qbContrast(p.text, p.bgCenter) < 4.5) warn.push('The text may be hard to read on this background (contrast ' + qbContrast(p.text, p.bgCenter).toFixed(1) + ':1; aim for 4.5 or more).');
+            if (qbContrast(p.highlight, p.text) < 1.3) warn.push('The green words are almost the same colour as the text, so they will not stand out.');
+            document.getElementById('qbBrandWarn').textContent = warn.join(' ');
+            clearTimeout(_qbPreviewTimer);
+            _qbPreviewTimer = setTimeout(function() {
+                const parts = qbSplit(document.getElementById('mktQuote').value);
+                const body = parts.body || 'An investment in (knowledge) pays the best interest.';
+                const author = parts.author || p.attribution || 'Benjamin Franklin';
+                qbRender(document.getElementById('qbBrandPreview'), qbClean(body), author, Object.assign({}, QB_BRAND_DEFAULT, p))
+                    .catch(function(e) { document.getElementById('qbBrandWarn').textContent = e.message; });
+            }, 150);
+        }
+        function qbLogoSet(src) { if (!_qbEdit) return; _qbEdit.profile.logo = src; qbBrandChanged(); }
+        // Spec §4: key out a FLAT black or white background only (a colour key is reliable;
+        // guessing at anything busier leaves halos). Already-transparent files pass through.
+        function qbLogoPicked(files) {
+            const f = files && files[0];
+            if (!f || !_qbEdit) return;
+            const fr = new FileReader();
+            fr.onload = function() {
+                const img = new Image();
+                img.onload = function() {
+                    const scale = Math.min(1, 360 / img.naturalHeight);
+                    const w = Math.max(1, Math.round(img.naturalWidth * scale)), h = Math.max(1, Math.round(img.naturalHeight * scale));
+                    const c = document.createElement('canvas'); c.width = w; c.height = h;
+                    const x = c.getContext('2d'); x.drawImage(img, 0, 0, w, h);
+                    const d = x.getImageData(0, 0, w, h), px = d.data;
+                    let transparent = false;
+                    for (let i = 3; i < px.length; i += 4) { if (px[i] < 250) { transparent = true; break; } }
+                    let note = 'Logo uploaded.';
+                    if (!transparent) {
+                        const corner = function(i) { return (px[i] + px[i + 1] + px[i + 2]) / 3; };
+                        const cs = [0, (w - 1) * 4, (h - 1) * w * 4, ((h - 1) * w + w - 1) * 4].map(corner);
+                        const key = cs.every(function(v) { return v < 30; }) ? 0 : (cs.every(function(v) { return v > 225; }) ? 255 : -1);
+                        if (key === -1) note = 'The logo’s background is not flat black or white, so it was kept as is - a transparent PNG looks best.';
+                        else {
+                            for (let i = 0; i < px.length; i += 4) {
+                                if (Math.abs(px[i] - key) <= 28 && Math.abs(px[i + 1] - key) <= 28 && Math.abs(px[i + 2] - key) <= 28) px[i + 3] = 0;
+                            }
+                            x.putImageData(d, 0, 0);
+                            note = 'The ' + (key ? 'white' : 'black') + ' background was removed.';
+                        }
+                    }
+                    // Crop to what is left, so padding in the file does not shrink the logo.
+                    const dd = x.getImageData(0, 0, w, h).data;
+                    let x0 = w, y0 = h, x1 = -1, y1 = -1;
+                    for (let yy = 0; yy < h; yy++) for (let xx = 0; xx < w; xx++) {
+                        if (dd[(yy * w + xx) * 4 + 3] > 8) { if (xx < x0) x0 = xx; if (xx > x1) x1 = xx; if (yy < y0) y0 = yy; if (yy > y1) y1 = yy; }
+                    }
+                    if (x1 < 0) { document.getElementById('qbBrandSaveInfo').textContent = 'That logo came out empty once its background was removed.'; return; }
+                    const out = document.createElement('canvas'); out.width = x1 - x0 + 1; out.height = y1 - y0 + 1;
+                    out.getContext('2d').drawImage(c, x0, y0, out.width, out.height, 0, 0, out.width, out.height);
+                    _qbEdit.profile.logo = out.toDataURL('image/png');
+                    document.getElementById('qbBrandSaveInfo').textContent = note + ' Save brand to keep it.';
+                    qbBrandChanged();
+                };
+                img.onerror = function() { document.getElementById('qbBrandSaveInfo').textContent = 'That file could not be read as an image.'; };
+                img.src = fr.result;
+            };
+            fr.readAsDataURL(f);
+            document.getElementById('qbLogoFile').value = '';
+        }
+        async function qbSaveBrandFromForm() {
+            if (!_qbEdit) return;
+            const p = qbReadForm();
+            if (p.emailTo && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(p.emailTo)) { document.getElementById('qbBrandSaveInfo').textContent = 'That address does not look like an email.'; return; }
+            const btn = document.getElementById('qbBrandSaveBtn');
+            btn.disabled = true;
+            const company = _qbEdit.company;
+            const res = await qbPushBrand(company, p);
+            btn.disabled = false;
+            document.getElementById('qbBrandSaveInfo').textContent = res.note;
+            qbWordsRender();
+            if (res.ok) setTimeout(function() { if (_qbEdit && _qbEdit.company === company) qbCloseBrand(); }, 900);
         }
 
         // ==================== STEP 9 - PACKAGE TO TREVOR (v3.52.0) ====================
@@ -15168,7 +16167,9 @@ Example:
             if (!card) return;
 
             const social = document.getElementById('mktSocial').value.trim();
-            const quote  = document.getElementById('mktQuote').value.trim();
+            // v5.35.0: the (green) markup is for the image, not for Trevor to read.
+            const _qp = qbSplit(document.getElementById('mktQuote').value);
+            const quote = _qp.body ? qbJoin(qbPlain(_qp.body), _qp.author) : '';
             if (!social && !quote) {
                 showToast('Nothing to package yet - write the Social copy or pick a Quote first.');
                 return;
@@ -15395,6 +16396,7 @@ Example:
             document.getElementById('mktBlog').value   = card.blog   || '';
             document.getElementById('mktSocial').value = card.social || '';
             document.getElementById('mktQuote').value  = card.quote  || '';
+            qbResetForCard(card);   // v5.35.0: this card's green-word chips, no stale quote image
             // v5.28.0: the image step's two fields.
             // A cloud pull from a pre-PART-9 table rebuilds the card without these two
             // fields; the device-local copy fills the gap rather than losing his prompt.
@@ -29368,7 +30370,9 @@ Example:
         // so the caller's compose-URL fallback catches it. In practice this is close to
         // unreachable - capabilityReady('gmail.createDraft') can only be true if
         // probeCapabilities already reached a backend.
-        async function postGmailDraft(to, subject, htmlBody) {
+        // v5.35.0: optional `extra` = { cc, attachments:[{name, mimeType, base64}] } - needs
+        // .gs 3.81.0; the caller gates on the version (Step 9's quote image is the one user).
+        async function postGmailDraft(to, subject, htmlBody, extra) {
             const settings = getSettings();
             const currentUserInitials = document.getElementById('dailyPlanUser')?.value || 'HB';
             const member = settings.teamMembers?.find(m => m.initials === currentUserInitials)
@@ -29383,7 +30387,9 @@ Example:
                     secretKey: member.webAppSecret,
                     to: to || '',
                     subject: subject || '',
-                    htmlBody: htmlBody
+                    htmlBody: htmlBody,
+                    cc: (extra && extra.cc) || '',
+                    attachments: (extra && extra.attachments) || []
                 })
             });
             const data = await resp.json();
