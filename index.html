@@ -439,7 +439,9 @@
         <!-- VISION PAGE -->
         <div id="vision" class="page active">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h2 class="page-title" style="margin-bottom: 0;">Vision</h2>
+                <h2 class="page-title" style="margin-bottom: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">Vision
+                    <span id="syncBadge-plan" onclick="syncBadgeExplain('plan')" title="Sync state"></span>
+                    <a href="#" onclick="planDownloadBackups(); return false;" style="font-size: 0.72rem; font-weight: 500; color: #64748b;" title="Download the earlier versions of your Vision, Plan, Rocks and Scorecard kept on this device">Earlier versions</a></h2>
                 <button class="btn btn-secondary" onclick="printVision()" style="padding: 8px 14px;">🖨️ Print Vision</button>
             </div>
             
@@ -1201,9 +1203,10 @@
                 <p style="font-size: 0.85rem; color: var(--gray-500); margin-bottom: 18px;" id="signInGateSubtitle">Use your work Google account.</p>
                 <div id="googleSignInButtonContainer" style="display:flex; justify-content:center;"></div>
                 <div id="signInGateError" style="margin-top: 14px; font-size: 0.82rem; color: var(--danger); display:none;"></div>
-                <div style="margin-top: 18px;">
-                    <button class="btn btn-secondary" onclick="skipGoogleSignIn()" style="font-size: 0.78rem; padding: 6px 10px;">Skip for now</button>
-                </div>
+                <!-- v5.34.0: "Skip for now" removed at Hans's request. It revealed the app with
+                     no identity, which also walked past the 2FA gate (that only runs after a
+                     Google sign-in). Signing in once keeps you signed in until you sign out or
+                     clear this browser's data. -->
             </div>
         </div>
 
@@ -4534,9 +4537,10 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '5.33.0';
+        const EOS_VERSION = '5.34.0';
         const EOS_BUILD_DATE = '2026-09-29';
-        const EOS_BUILD_TIME = '11:45'; // v5.33.0: THE SPLASH ON THE PC. Client only. His answer: an ordinary browser tab now shows the v5.31.0 splash once per browser SESSION (sessionStorage 'eos_splash_seen'), so a refresh never costs 3.2s; the installed app still shows it on every launch; ?splash=1 still forces it. sessionStorage unavailable = treated as seen (never block on a storage throw). Measured at 1280: flex on first open, removed after ~3.7s, 'none' after reload.
+        const EOS_BUILD_TIME = '13:30'; // v5.34.0: THE PLAN LEAVES THE PUBLIC PAGE, AND SKIP GOES. Client + REQUIRES SUPABASE PART 12 (docs/PASTE-INTO-SUPABASE-PART12.sql, also appended to schema.sql) - until Hans pastes it the Vision badge says so and the plan stays exactly as it was (device-local); nothing is lost either way. No .gs. His two yeses 2026-09-29. (1) seededData's "2026" carried the firm's real Vision, 1-Year Plan (revenue/profit/AUM targets) and Q1 Rocks, and index.html is published in a PUBLIC repo - now an empty skeleton; the old block is kept ONLY in the private Drive folder (docs/plans/legacy-seed-2026.js). GIT HISTORY STILL HOLDS IT (separate cleanup, offered). (2) eos_plan table, one row per SECTION (vision, plan, Qn.rocks, Qn.scorecard - measurables+values together, rule 46), RLS = owners + an 'eos_plan' access grant (can_use_eos_plan), NOT firm membership, so a Marketing guest cannot read the targets; Amanda granted by the paste. planSync(): read -> merge -> push per section (rule 48); same content modulo rock ids/blank keys -> adopt (ids converge, rule 77); blank local never pushes over content (rule 53); untouched-since-sync -> adopt; changed-here-only -> push; first sync with the UNTOUCHED old starter copy (PLAN_LEGACY_FP fingerprints of the removed seed) -> adopt quietly, and a cloud holding only the starter copy loses to typed work; BOTH changed -> eosChoose asks, the loser always kept in the device-local ring eos_plan_backups (rule 54; "Earlier versions" link on the Vision header downloads it). Adopt never lands while focus is inside that page, and never calls saveData() (it gathers the Vision/Plan FROM THE FORM and would write the old screen back over the adopt) - loadVision/loadPlan/renderQuarter repaint instead. Triggers: saveData() debounce 2.5s, _dpOnSessionResolved, visibility + 2 min. Seventh sync surface: planSyncBlocker() + #syncBadge-plan (rule 25). (3) "Skip for now" REMOVED (button, skipGoogleSignIn, the eos_signin_skipped read): it revealed the app with no identity and walked past the 2FA gate. Honest scope, said to Hans: a web page can never lock itself - the real boundary is the backend (SECRET_KEY / Supabase RLS); this removes the casual bypass and the public copy of the plan. 19 probes used skipGoogleSignIn to pass the gate - repointed to appRevealApp(); gsi-retry-bound C REWRITTEN (rule 78) to assert no bypass exists. Probe plan-sync-probe 12/12.
+        // v5.33.0: THE SPLASH ON THE PC. Client only. His answer: an ordinary browser tab now shows the v5.31.0 splash once per browser SESSION (sessionStorage 'eos_splash_seen'), so a refresh never costs 3.2s; the installed app still shows it on every launch; ?splash=1 still forces it. sessionStorage unavailable = treated as seen (never block on a storage throw). Measured at 1280: flex on first open, removed after ~3.7s, 'none' after reload.
         // v5.32.3: THE OWNER REFUSED AT THE DOOR. Client only, no .gs. Hans: "Signed in as hans@investedwithyou.com, but that email isn't set up as a team member yet... This happens every time I log in... I should never get this message" (he had been clicking Skip for now, i.e. using the app with NO identity). The cloud roster was correct (checked: HB = hans@investedwithyou.com). Cause: applySignedInUser() decided membership from the LOCAL settings cache only; the baked-in default roster (seededData._settings and getSettings()'s fallback) carries initials and names but NO emails, and the cloud roster is only fetched AFTER appRevealApp() - so any browser whose cache had not been filled refused a real member, and Skip never fixed it for the next fresh sign-in on a new tab/profile. "I have no roster" read as "you are not on the roster" (rule 53's shape). Fix: findTeamMemberAuthoritative(email) - local hit = unchanged fast path with zero fetches; local miss = await loadTeamSettingsFromCloud() and re-check; cloud unreachable = a distinct sentence ("couldn't check the team roster just now"), never "not a member" (rule 63). applySignedInUser is now async (no caller used its return). Same blind spot fixed in checkAppWideSupabaseSession(), which demoted an uncached member to the guest branch (every tab hidden but Marketing). Probe: .claude/probes/signin-roster-probe.js 4/4; v5.32.2 scores 2/4 (P1 prints his exact message, P3 wrong cause). gsi-retry-bound-probe 9/9.
         // v5.32.2: FULL SIZE FROM DRIVE, THROUGH THE BACKEND — PAIRS WITH .gs v3.80.0 (both accounts deployed by Claude). His follow-up to v5.32.1: "Can't it open much bigger, like the original? without having to click Open in Drive?" — the picture he tapped was chosen BEFORE v5.32.1, so this device had no local copy and the lightbox fell back to the 192px thumbnail. Now, with no local copy, the lightbox asks the backend for the bytes (getBlogImage: DriveApp.getFileById -> base64, token-gated, image files only) and keeps them in IndexedDB, so the next tap is instant; below 3.80.0 the caption says "full size needs backend 3.80.0" instead of failing quietly (rule 63). The lightbox image is now sized to the viewport (min of 96vw / 78vh / 1024px) rather than the file's own pixels, so even a thumbnail placeholder reads large while the full size arrives. styles.css unchanged (?v=5.32.2). OLD: v5.32.1: THE BLANK LIGHTBOX. His "Glitch" screenshot minutes after v5.32.0: tapping the CHOSEN picture opened a dark box with nothing in it. mktImageView('chosen') pointed the image at drive.google.com/thumbnail — which needs a Drive sign-in in that tab and renders nothing without one (a dependency on Drive's session in a GitHub Pages tab: rule 78's shape, a call from the wrong place). Now _mktImageStore keeps the chosen picture's full-size bytes in the same IndexedDB (one 'chosen_<card>' record, replaced on the next choice, never listed in the candidates strip), the lightbox shows that; a picture chosen on ANOTHER device falls back to the card's synced thumbnail plus an "Open in Drive" link. Client-only; styles.css unchanged (?v=5.32.1). OLD: v5.32.0: CANDIDATES BEFORE ANYTHING IS SAVED — his first generated picture: "I want to click on the image it generated and see a much larger picture so I can check for errors, before I save to Drive, in case I want a different prompt or picture. I don't know what I think about automatically saving it yet. If I create more than one image, it should temporarily store them so I can choose the final one." So v5.29.0's save-on-arrival is gone: Generate and drop-in both land in a CANDIDATES strip on the Image step (thumbnails; per card; IndexedDB on this device because a 1–2 MB PNG will not fit localStorage; they survive a reload), a tap opens a full-size lightbox at body level (above the Marketing modal's scroller) with the prompt as caption, and "Use this one" — on the thumbnail or in the lightbox — is the ONLY path into _mktImageStore (Drive + the card). ✕ discards a candidate. The chosen picture's thumbnail is tap-to-view too (Drive's own w1024 rendering). A chosen picture stays in Drive if he later picks another (this tool never deletes Drive files). Also today, earlier: .gs 3.79.0 is DEPLOYED for both accounts (Hans @143, Amanda @33) after the GS_VERSION constant miss; PART 8–11 pasted. Client-only; styles.css unchanged (?v=5.32.0). OLD: v5.31.0: THE APP'S FACE — Hans's icon and splash. ICON (his mock): navy #0E4470 rounded square, "EOS" white, "Tool" in the brand green #A4C739 (he typed #14C739 but gave RGB 164/199/57, which is A4C739), first with the light-blue dot from his mock, then without ("not needed unless it changes with notifications" — an icon cannot; Android draws its own badge dot), then "Tool a bit larger and bold so it doesn't get lost". Rendered by Playwright now (.claude/scripts/make-icons.js — text needs a font; the zlib drawer is gone). Manifest icon URLs carry ?v=N so a phone refetches; an ALREADY-INSTALLED app keeps its install-time icon until reinstalled — told him. SPLASH: Android's launch splash is drawn by the system from the manifest (icon on background_color) and cannot carry a logo or words, so the manifest's background is now WHITE and the page itself shows #eosSplash the instant it paints: white, EOS blue, Tool green, "A product of", the Intelligrations logo (icons/intelligrations-logo.gif when present — the animated one he wants; his chat uploads arrived as STILL frames, so the still .webp is the fallback and he drops the real GIF into icons/ himself), 3.2 s then a half-second fade. Standalone (installed) only, or ?splash=1 to preview in a tab; never on an ordinary tab. Inline styles on purpose — it must exist before styles.css arrives. theme_color / theme-color meta moved to the brand navy. Client + icons + manifest deploy; .gs UNCHANGED (3.79.0 still STAGED). OLD: v5.30.3: THE HOLDING ROW NAMES ITS CAUSE. His "Copy diagnostic" was the raw workflows body — well-formed, workflow 1093 with current step 9669 and its task 17259, exactly what the slot references — so the feed CAN load on his phone, and the raw body cannot tell me why the slot still said "waiting". The sentence was the problem: one grey "waiting for Redtail…" covered four states (rule 72's shape — one empty value, several causes). _rtPlanHoldMsg now tells them apart from the feed's own fields: "loading Redtail workflows…" (fetch in flight), the feed's OWN error sentence in amber (last fetch failed — e.g. "Workflows: Redtail answered on /workflows/my_workflow_tasks in a shape the tool could not read"), "not in Redtail workflows' current list (N loaded) — probably done or moved on" (loaded, id absent), or "waiting" only when rows === null (never loaded here). Both holding rows (Rule of 3 slot, matrix) use it. His next screenshot of slot 3 is therefore the diagnosis. Client-only; styles.css unchanged (?v=5.30.3); .gs UNCHANGED (3.79.0 still STAGED). OLD: v5.30.2: THE SLOT'S LOOK, AND THE INSTALL OFFER. (1) "Why does Rule of 3 (#3) look funny still? I thought we dealt with this" — I had only NOTED it. The Redtail holding row jammed the name and the status into one grey run against the number badge; now the name reads like a task row (dark, first line) with the status and "clear slot" small underneath. BUT his screenshot shows something the look does not explain: the step is listed under RT Workflows on the same phone yet the slot says "waiting for Redtail…" — grey means _rtPlanFeedLoaded is false (rows null, an error, or still fetching), not "not found". The cause is on his phone, not in this file; asked for the Repository segment's REDTAIL WORKFLOWS Copy diagnostic before touching the resolver (rule 63). (2) "Can the install reminder happen again?" Chrome shows its own Install bar once and suppresses it for months after a dismissal, but keeps firing beforeinstallprompt; the page now keeps that event and Settings › Me › Notifications shows an "Install the EOS Tool as an app" row with a button that re-shows Chrome's prompt; hidden when already installed (display-mode standalone / appinstalled). Client-only; styles.css unchanged (?v=5.30.2); .gs UNCHANGED (3.79.0 still STAGED). OLD: v5.30.1: THE BRIEF'S SHAPE AND ITS BUTTONS — his screenshot of the first v5.30.0 brief on the lock screen showed the budget (about eleven body lines; "Workflow steps overdue (2)…" was cut) and his four asks: indent the lines under each header; drop "Good morning" and the date if it buys space; shorter headers (Tasks, RT Activities, RT Workflows); and buttons — not Chrome's "Unsubscribe" but "EOS Tool" opening Today, "Google Tasks", "Calendar". Also, from the message before: number the Rule of 3 by what is OPEN (a done slot 1 makes yesterday's 2 today's 1.) and make the headers bold. In the Edge Function (HANS RE-PASTES index.ts): the notification TITLE is now the Rule-of-3 header itself (a title is bold already), items are indented with an em space (a plain space Android may drop), headers use the Mathematical Sans-Serif Bold block (a body is plain text; this is the only bold Android will draw), and the sections share an 11-line budget — Rule of 3 first, then each section gets a header and at least one item, "+N more" for the rest — proven by push-fn-load-test's stress case. BUTTONS: the payload carries `actions`; sw.js (redeployed with this release — a phone picks the new worker up on its next open) shows up to three and routes each tap to its URL; a plain tap opens the first (EOS Tool). Chrome's own "Unsubscribe" cannot be removed, only pushed aside. THIS FILE: `?page=dailyPlan` on the address opens that page once, beating the remembered page and the Settings default, then is dropped from the address (history.replaceState) so a reload behaves normally — the "EOS Tool" button's target. Site deploy = index.html + sw.js; .gs UNCHANGED (3.79.0 still STAGED). OLD: v5.30.0: THE BRIEF HE ACTUALLY WANTS. His first real 7 AM brief: "This is a crappy notification" — it read "0 due today · 0 overdue / Rule of 3: 3 of 3 still open" (he had not yet re-pasted the v5.28.1 function, but the point stands). What he wants, in his order, with screenshots: the Rule of 3 BY NAME; overdue Google tasks; overdue Redtail ACTIVITIES; overdue Redtail WORKFLOW STEPS. The last two are the new plumbing: the brief runs in Supabase and cannot reach Redtail, but the Today page can — so each time it loads Redtail activities / workflow steps it writes a compact copy (id, title, due YYYY-MM-DD, client or workflow name) to push_prefs.redtail_cache (schema PART 11; _pushCacheRedtail, debounced, only when a prefs row exists, unknown-column error swallowed until pasted). The Edge Function's buildBrief now takes the whole prefs row and writes four sections, each up to three names plus "+N more", with a one-line hint to open Today once if the cache is empty. CLIENT NAMES ARE NOW IN THE NOTIFICATION AT HIS EXPLICIT REQUEST (the Redtail lines) — the v5.27.0 rule that none would be is superseded by this ask; the Settings copy says so. He must re-paste supabase/functions/push/index.ts (it also carries the v5.28.1 Rule-of-3 fix he has not pasted yet) and paste PART 11. Also RECORDED: on the phone the brief's third Rule-of-3 slot is a Redtail workflow step, named via xt. Client-only for the site; .gs UNCHANGED (3.79.0 still STAGED, unpushed). OLD: v5.29.1: THE AUDIT'S TWO FINDINGS, before he tests. gs-auditor on 3.79.0: (a) wpImageMarkup_ escaped & < > but not the double quote, so a quoted phrase in a title would have closed alt="" early — WordPress would repair it quietly and report success (fixed in the .gs, &quot;); (b) THIS FILE: _mktImageStore posted uploadBlogImage with no version guard, and against a 3.78.0 backend that action falls through to the secret gate, whose "Invalid secret key" _calPost rewrites to "your sign-in has expired" — the wrong cause, on the exact path he would test first in the window between the Pages push and his clasp deploy (rule 63). Now it runs the probe and, below 3.79.0, says the true sentence: run the clasp deploy, then drop the picture in again. Client-only patch on v5.29.0; still PAIRS WITH .gs v3.79.0. OLD: v5.29.0: THE BLOG'S PICTURE — PAIRS WITH .gs v3.79.0 (HANS RUNS THE CLASP ROUND; until it lands, drop-in/Generate report "backend cannot" in a sentence and the send behaves exactly as before because an older backend ignores the new keys). His ask with two screenshots of a published post: the picture he makes in an image generator, or that the tool generates, should become the WordPress FEATURED IMAGE and a large centred image at the top of the body under the reading-time line, with a copy in Drive beside the blog (decision 2, compliance). "Yes to both" — same picture both places, and Generate in this round. WHAT SHIPS: on the Image step, a drop zone / Choose a file / "Generate the picture"; the bytes go to the firm-context folder at once (uploadBlogImage), the card keeps ONLY the Drive file id, a 192px JPEG thumbnail and alt text (schema.sql PART 10, six columns; the same unknown-column retry + device-local fallback as PART 9). Generate = _calPost generateImage: Gemini's image model (gemini-2.5-flash-image, 1:1) or OpenAI (gpt-image-1) per a new "Marketing images" routing row (Claude listed and disabled — it does not make images, rule 51); ~4¢ each, said in the row. Send to WordPress: wrapBlogForWordPress puts <!--EOS_IMAGE--> under WP_READING_TIME_TOP when the card has a picture; the backend uploads the Drive file to /wp/v2/media with alt text, sets featured_media, and replaces the marker with the classic editor's own Large+Center markup; an UPDATE with the SAME picture sends the stored media id + URL (wpImageMediaId/wpImageUrl/wpImageFileId, kept from the send result) so no duplicate upload, and status is still never sent on an update. The archive step passes imageFileId and saveBlogToDrive copies the picture beside the markdown. Capability ai.generateImage declared on BOTH sides (rule 79). NOT BUILT: alt text beyond the title; "make all three"; scheduled publishing + Facebook/LinkedIn (his question tonight — free via the official APIs, gated on Meta App Review and LinkedIn's API application; next round). TWO-FILE unchanged (styles link ?v=5.29.0, styles.css untouched). OLD: v5.28.4: THE IMAGE IDEAS ARRIVE. His third press, seconds after v5.28.3: "The model did not return the expected format" — the call reached the AI at last, and the reply was not a whole JSON array. Most likely cut off: three paragraph prompts against a 1,200-token budget. Three changes: the budget is 2,500; the prompt asks for 50–80-word prompts and a whole answer under 400 words; and the parser salvages every complete {…"prompt"…} object from a cut-off reply, and when even that yields nothing it SHOWS THE RAW REPLY in the options box (rule 63 / show the work) so the next failure names itself instead of a bare toast. Client-only, styles.css unchanged (?v=5.28.4), .gs UNCHANGED at 3.78.0. OLD: v5.28.3: THE AI SEAM WAITS FOR THE PROBE. He signed out, signed in with his work email, pressed AI: Suggest 3 image ideas and got "Failed to fetch" — the v4.84.0 class (the browser stopped a direct provider call). Cause: callAIText decides backend-vs-browser with _aiBackendReady(), a SYNC cached read that is false while the capability probe is still PENDING — rule 51's exact shape, in the AI seam. Seconds after a fresh sign-in the probe had not landed, so the call went to the browser path his machine blocks. Now, when the backend is not yet known to be ready and not known to be denied, callAIText awaits capabilityReadyChecked('ai.generateOutputs') once (which re-probes if the probe never completed) before deciding — the same three-state contract rules 51/73 wrote for the calendar. The sign-out/sign-in DID clear "Not authenticated as a team member", so that was the session, not the code; which of the gate's three reasons it was is still unnamed by the backend (v3.79.0 will name it). Client-only, styles.css unchanged (?v=5.28.3), .gs UNCHANGED at 3.78.0. OLD: v5.28.2: SIGN OUT ON THE DESKTOP. Diagnosing "Not authenticated as a team member" (it hits AI: Suggest Quotes on his PC too, so it is the session, not the image step), the reset step was "sign out and sign in with Google" — and he could not: "I can't figure out how to log out on my PC. Clicking my name does nothing." True: Sign out lives ONLY in the phone drawer's control strip, the header name was made inert at his own request (v4.x), and #signedInBadge's tooltip still says "Sign out from the menu, bottom right" — a menu the desktop does not have. Now a small underlined "Sign out" sits after the 🔒 in the header, inserted by showHeaderSecurityLink() (so the emoji-bearing markup line is never str_replaced), shown only once a session exists, with a confirm. Same signOutGoogle() the drawer uses. STILL OPEN: which of the gate's three reasons refuses his session (token / email not a team member / 2FA) — the backend's error names none of them; v3.79.0 will. He does NOT want 2FA. Client-only, styles.css unchanged (?v=5.28.2), .gs UNCHANGED at 3.78.0. OLD: v5.28.1: HIS FIRST LIVE PUSH, TWO REPORTS. He did all four Supabase steps (PART 8+9 pasted, function deployed with Verify JWT off, four secrets, cron push-tick every 5 min) and the test notification ARRIVED on his Android — the whole chain is proven live. Then: (1) "Why did it say 3 of 3 still open, and not share what is in the Rule of 3?" — buildBrief only COUNTED the Rule of 3 and named due/overdue tasks; worse, ruleOf3Status treated type 'todo' (the real kind a Google task carries) as "not a task" because it checked for 'task', so every slot became "a Today item". Fixed in the Edge Function (supabase/functions/push/index.ts — HANS RE-PASTES IT): the brief now LEADS with the three priorities by name (id -> gid -> the portable xt text, so Redtail/rock/board entries are named too), then the due/overdue count, then two of those. (2) "I was expecting a notification" from the preview — the preview shows words on screen by design, but his expectation is fair: a "Send this to my phone now" button under the preview sends the identical brief to all his devices (action preview, send:true; does NOT touch push_sent, so tomorrow's still goes out). OPEN, being diagnosed by his answer not by assertion (rule 63): "AI: Suggest 3 image ideas" on the phone returned the BACKEND's 'Not authenticated as a team member' — that gate (requireTeamMemberFromToken_) is the same one every AI call passes, so the falsifying test is whether AI: Suggest Quotes fails identically on that device and the image button works on the desktop; the two live causes are the phone session's email not matching a team member, or aal1 on a firm requiring 2FA. ALSO NOTED for the next round: the Rule-of-3 "waiting for Redtail" placeholder (rule 49's holding row) looks broken on a phone — the number badge squashed against a dashed box. Client-only, styles.css unchanged (?v=5.28.1), backend .gs UNCHANGED at 3.78.0. OLD: v5.28.0: THE IMAGE STEP, PROMPTS FIRST — his ask the same evening: "after completing a blog, before I send to Trevor, provide a suggested AI image prompt to accompany the blog … perhaps giving 3 choices". His four answers: (1) prompts first, see how he likes it; (2) the picture should land in the blog's Drive folder for compliance — revisited when pictures exist; (3) brand palette navy #0E4470 / greens #A4C739 #00A14A / white, "but it doesn't mean each image should include those colors", plus six past blog images to learn the style from, and ASK whether he has a photo of his own (his "AI: Work this in" parallel); (4) the backend round for generating images is approved when ready. WHAT SHIPS: step 10 "Image" on the blog card between Quote and Package (Package is 11 now): a "Something in mind?" box, "Suggest 3 image ideas", three chips each carrying a concept name, one line on why it fits, and a paste-ready prompt; the pick lands in an editable prompt box with Copy. MKT_IMAGE_STYLE is the house style READ OFF HIS SIX IMAGES, not invented: photorealistic stock-photo look, square, one literal everyday object standing in for the idea (the Retirement jar, the passport on the laptop, the Fed building, the 55 candles, the basketball), people only in a real professional moment, text only where it belongs on a real object, the palette used only where it occurs naturally, no real clients or living public figures. Goes through the SAME callAI('marketing') route as quotes and titles. PERSISTENCE: card.imageNote / card.imagePrompt, two columns in schema.sql PART 9 (image_note, image_prompt). Until PART 9 is run the board's cloud push would have FAILED on the unknown columns and taken every card's sync with it — so the upsert retries once without the two keys and toasts once, and a device-local copy (eos_mkt_image_prompts, keyed by card) refills the fields after a cloud pull rebuilds the card from a row that has no image columns yet. NOT BUILT (the approved .gs round, v3.79.0): generate the picture in-tool (Gemini image model via generateOutputs' seam, a "Marketing images" row in Which AI handles what), save it to the blog's Drive folder, attach it as the WordPress featured image on send, attach it to the Trevor package. Client-only; styles.css unchanged (link bumped to ?v=5.28.0); backend .gs UNCHANGED at 3.78.0, NO CLASP ROUND. Same-day sibling: v5.27.0 NOTIFICATIONS ON THE PHONE — his ask 2026-09-23: "an android notification for EOS Tool ... very important tasks ... a daily brief sent in the morning". Three options were priced (ntfy + a scheduled Apps Script job; nothing new; real Web Push); he asked whether #3 costs anything (no — Google's push service, GitHub Pages and Supabase's free tier all cover it) and said "Build it". WHAT SHIPS: a service worker (sw.js) that receives Web Push and opens the tool on tap — it caches NOTHING, deliberately, because the stale-build strip, the ?v= styles link and the drift check all assume the network is the truth and a caching worker is exactly how a phone ends up on a three-week-old build; a manifest + PNG icons (drawn by .claude/scripts/make-icons.js with zlib alone) so "Add to Home screen" gives a real app icon; a Settings > Me band "Notifications on this device": Turn on / Send a test / What would the brief say? / Turn off, a morning-brief time, a Rule-of-3 nudge time, weekdays-only, and a list of the person's devices with remove; three Supabase tables (schema.sql PART 8): push_subscriptions per device, push_prefs per person (times + IANA time zone + initials + app URL — the three facts only a browser knows), push_sent as the once-per-day ledger (a primary-key insert either lands or does not, so however many 5-minute ticks fall inside the hour window, one brief goes out); and the "push" Edge Function (supabase/functions/push/index.ts) — RFC 8291 payload encryption and RFC 8292 VAPID written against WebCrypto only, no npm package to break, proven by .claude/probes/push-crypto-test.js which decrypts the envelope the way a browser would and verifies the JWT (8/8). The function serves three actions: tick (Cron, every 5 min, x-push-secret) computes each person's LOCAL time and sends the brief — N due today, N overdue, Rule of 3 set or not, the first three task names — or the nudge when the Rule of 3 has nothing open; test (as the signed-in person, to one endpoint); preview (what the brief would say now). Task ownership uses the Today page's own rule (owner === initials || 'Both' || 'HB/AB'). Nothing from an email and no client name is ever in a notification. THE PRIVATE KEY NEVER REACHES A BROWSER: config.js carries vapidPublicKey (public by design, like the anon key); the private half is a function secret. REQUIRES FOUR THINGS FROM HANS BEFORE A SINGLE PUSH ARRIVES (docs/plans/push-notifications.md, click by click): paste PART 8 in the SQL editor; create the Edge Function "push" from the dashboard editor with Verify JWT OFF; add its four secrets; schedule the Cron job. Until then the band explains exactly which step is missing instead of failing quietly. Client-only for the site (index.html + config.js + sw.js + manifest + icons); backend .gs UNCHANGED at 3.78.0, NO CLASP ROUND. NOT BUILT YET, in order: a per-task "remind me at" on the task row (push_sent already keys on 'task:<id>'), an instant push when the other person assigns you a task (a database webhook on tasks -> the same function), the Opportunities "who to touch today" line in the brief. OLD: THE COMPOSER — his fourth live test, same day, grade a D: "you didn't find him in Redtail, the whole workflow is clunky. The email doesn't include Calendly links." His screenshot showed a draft opening "I don't think we've had the chance to sit down together yet" to a man who had been a GUEST ON HIS PODCAST; he typed the missing fact himself and asked why there was no Calendly link. HONEST DIAGNOSIS: this session cannot see his live Redtail or the Read line his screenshot cropped, so the exact live cause is UNCONFIRMED — but Redtail's documented contact-emails shape was re-checked and matches the code, so the lookup was sound WHEN it had a contact to look up. The draft's false claim proves it found NOBODY and read NOTHING: the record had no usable linked contact and the tool drafted blind. This release makes that path robust AND makes it explain itself, rather than asserting a cause. WHO: linked contacts are read from whichever key Redtail used (oppContactIdsOf — opportunity_contacts/linked_contacts/contacts; null means the record did not say, so a save never sends a list it was not given). With nobody linked, the NAME IS NOW READ FROM THE OPPORTUNITY TITLE (oppNameFromTitle — capitalised word runs, title-building verbs/nouns stripped, punctuation ends a name) and found through the SAME shared contactSearchAll the Meeting Processor's referral finder uses — his own pointer, half-applied one round early. Two Redtail contacts by that name -> a popup asks with evidence beside each; an unrelated surname is never offered. The found person is queued to link on the NEXT save, ONLY when Redtail said the contact list was empty, never when unknown — adding a name to an unknown list could silently replace others. The address finder now works for a person with no Redtail id at all. ASK, NEVER INVENT: with no email, no meeting, nothing typed or logged, the composer ASKS one question — how he knows them and why now — instead of calling the AI; Draft it again goes ahead regardless. The prompt may no longer state or imply they have never met, or how long, unless the context PROVES it. THE COMPOSER moved OUT of the CRM form into one focused window (#oppComposeModal), opened by every row's "AI email" and a button on the record: who it is for and how known, every lookup as a step ending ticked or explained, the email on the left and EXACTLY what will land in Gmail on the right — links visible, signature included, built by the SAME expression as the save (oppRenderLive/oppDraftHtml) — a plain line naming attached booking links, turning into a warning with the fix the moment the invitation is deleted. "Add booking link" chip. "Write the follow-up to Redtail" applies stage, next step, look-again date and a dated log line through the FORM'S OWN verified oppSave, never a second writer. Text message and the raw trail sit in expanders. LINKS, FIXED TWICE: v5.25.0 hid links behind plain words with no indication, and separately "coffee or lunch" linked only coffee when the title said coffee alone — now the WORD IN THE EMAIL decides what links (oppInviteLinksFor), the rule still decides what the AI is told to offer. THE TRAIL now keeps a RECORD line listing the keys the live Redtail record carried, in the trace expander and Copy diagnostic — the probe caught the composer WIPING it right after writing it; it now survives a reset on purpose. TWO HARNESS LESSONS: a hit-test taken while the modal is still animating in measures the animation, not the layout (rule 6); a "dead Save button" was a fixture whose record lacked the description the list row carried, so the composer correctly asked its question instead. NOT YET CONFIRMED LIVE: whether his contact is now found and the drafts read better is his to judge next try — if still not found, the RECORD and WHO lines say why. NOT BUILT: writing a found address back to Redtail; the daily-brief "who to touch today" section; touch counting. CLIENT-ONLY, TWO-FILE (styles.css bumps too, ?v=5.26.0) — backend UNCHANGED at .gs v3.78.0, NO CLASP ROUND, NOTHING FOR HANS TO DEPLOY. Probes: opportunities-probe 21/21 (O16 rewritten again incl. a real mouse-position hit-test of Save; O21 new); mail-agent-probe 39/39 unchanged.
         // v5.25.0 (18:10):Two build-outs from Hans's third live test of Opportunities, same day. FINDING THE ADDRESS — his words, hitting a linked Redtail contact with no email on file: “Is there not a way for you to try and find out what his email is? …a popup… should ask me, hey, I found two… pick which one… I don't want this to spend 8 minutes trying to sort through 1,000 contacts.” oppResolveEmail now asks Redtail FIRST and ALONE (the emails sub-resource plus oppDeepAddrs scanning the whole contact record); only when Redtail has nothing do two more lookups run IN PARALLEL — the shared contactSearchAll (same one the Meetings referral finder and the Gmail drafter use) and ONE name-only search of his own past mail, oppMineAddrs, reading From/To headers (the name must sit beside the address, or the address's local part must carry it; his own team addresses and other people on the thread are excluded via oppOwnAddrs). One candidate -> used, and the Read line says where it came from. Several -> an eosChoose popup, evidence beside each. Cancel -> no address, no mail read, says so. None -> says what was tried. A pick is remembered on the device (oppState.people) so it is never asked twice; no crawl through Redtail's contact list anywhere. The To box moved ABOVE the Plan button so he can type an address the tool could not find. THIS DEPENDS ON .gs v3.78.0's searchMail nameOnly mode — DEPLOYED to both accounts 2026-09-17 but NOT YET CONFIRMED by his own Access check; the client gates on RT_OPP_NAMEMAIL_GS_MIN via _calGsAtLeast, so against an OLDER backend the name-search step is simply skipped (Redtail and Google Contacts still run) rather than failing. THE DRAFT IS HIS TO SHAPE — the boxes now say they are editable; “tell the AI what to change” (oppAiRevise) sends his hand-edited draft plus his instruction under the same rules and REUSES the already-gathered context, so a revision never re-reads his mail; quick chips (Shorter, Warmer, More direct, Less salesy, Seasonal line) and Undo. “Preview with my signature and links” (oppAiPreview) and the Gmail-drafts save (oppAiSaveDraft) both build the email through the SAME function, oppDraftHtml, so preview and save cannot differ. THE INVITATION RULE moved into the shared meeting module (meetInviteFacts, beside meetFallbackLink) so this block never reads a scheduling link itself: his verdict on a draft listing three clock times with per-slot Calendly links was “why you didn't just have the general 1 hour coffee chat link… give him the generic link to allow him to choose” — so an outbound nudge now offers his GENERIC coffee/lunch pages (the plain words coffee/lunch, turned into links by the existing v3.46.0 assembler) or his scheduling page, and at most ONE suggested day that really has openings — NEVER a clock time, NEVER a per-slot link. LEARNING HIS VOICE: an edited-then-saved draft is kept ON THE DEVICE ONLY (up to five) and the next draft's prompt is told to match its voice, never its content; an unedited save teaches nothing. The three context reads (mail, calendar, Calendly) in oppGatherContext now run in Promise.all rather than in sequence. BUG CAUGHT BEFORE SHIPPING: the preview called sanitizeEmailHtml_ as if it returned a string; it returns {html, blockedImages}, and the preview would have shown “[object Object]”. NOT BUILT: writing a found address back onto the Redtail contact, the daily-brief “who to touch today” section, touch counting. Probes: opportunities-probe 20/20 (O16 rewritten per rule 78, O17 updated, O18/O19/O20 new); mail-agent-probe 39/39 unchanged.
@@ -4631,48 +4635,18 @@ Example:
                     "Q4": "10/01"
                 }
             },
+            // v5.34.0: this USED to carry the firm's real 2026 Vision, 1-Year Plan and Q1 Rocks,
+            // and this file is published in a PUBLIC repo. The plan now lives in Supabase
+            // (eos_plan, behind sign-in) and in each browser's own saved copy; nothing about
+            // the firm belongs here. A private copy of the old block is in the Drive folder.
             "2026": {
                 "name": "2026 Annual Plan",
                 "savedAt": "2025-12-11T17:26:54.028Z",
-                "vision": {
-                    "orgName": "Intelligent Investing LLC",
-                    "cv1": "Compassion", "cv2": "Legacy", "cv3": "Integrity",
-                    "cv4": "Excellence", "cv5": "Nimbleness", "cv6": "Truth",
-                    "cf_purpose": "We minimize financial stress to maximize your life.",
-                    "cf_niche": "We are a boutique wealth management firm serving high-net-worth individuals and families. We organize their financial junk drawers by intelligently integrating their financial lives with Intelligrations©.",
-                    "ten_target": "$75 Million AUM with $500k operating profit after paying for technology and salaries before paying ourselves. Working 4 days a week. Possibly 5th employee.",
-                    "ty_date": "12/31/2028",
-                    "ty_revenue": "$65M AUM",
-                    "ty_profit": "500000",
-                    "ty_measurables": "50 clients",
-                    "ty_look": "• $60M in AUM\n• 50 clients\n• Working 25-30 hours/week\n• Fridays off\n• 3-4 employees",
-                    "ms_target": "A Christian 50-65 year old executive and professional couple that is in transition or is 5-10 years from retirement with $1-$5M of investable assets. This couple needs help with communication and emotional/psychological issues as they head towards retirement as they haven't thought much about it much before.",
-                    "ms_u1": "Fees - Minimize fees",
-                    "ms_u2": "Families - Unite families through financial communication",
-                    "ms_u3": "Time - Maximize time",
-                    "ms_u4": "Technology - Leverage technology to improve behavior",
-                    "ms_process": "Intelligent Investing Onboarding Process (Traditional Finance → Behavioral Finance → Values-based Finance)",
-                    "ms_guarantee": "We guarantee that we will organize your \"financial junk drawers\" and be at the forefront of financial technology."
-                },
-                "plan": {
-                    "oy_date": "12/31/2026",
-                    "oy_revenue": "$450,000",
-                    "oy_profit": "325000",
-                    "oy_measurables": "$55M AUM",
-                    "oy_g1": "$55M in AUM",
-                    "oy_g2": "Revenue of $450k",
-                    "oy_g3": "5 New Clients",
-                    "oy_g4": "", "oy_g5": "", "oy_g6": "", "oy_g7": "",
-                    "i1": "", "i2": "", "i3": "", "i4": "", "i5": ""
-                },
+                "vision": {},
+                "plan": {},
                 "quarters": {
                     "Q1": {
-                        "rocks": [
-                            { "text": "Compliance Wrapped up mostly by Mid-February", "owner": "HB", "status": "" },
-                            { "text": "Speaking/Networking in January", "owner": "HB", "status": "" },
-                            { "text": "COI Meetings: 3/month", "owner": "HB", "status": "" },
-                            { "text": "New Clients: 1", "owner": "HB", "status": "" }
-                        ],
+                        "rocks": [],
                         "measurables": JSON.parse(JSON.stringify(defaultMeasurables)),
                         "scorecard": {},
                         "todos": [],
@@ -8359,7 +8333,19 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.33.0 &mdash; 2026-09-29 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.34.0 &mdash; 2026-09-29 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Your Vision, Plan, Rocks and Scorecard now follow you to every device &mdash; and signing in is required.</div>'
+                + '<div style="margin:0 0 10px;padding:8px 10px;border-radius:6px;background:#fef3c7;color:#92400e;font-size:0.8rem;">Needs one Supabase paste (PART 12). Until then everything works exactly as before, on each device.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Your Vision, 1-Year Plan, Rocks and Scorecard sync between devices.</strong> Sign in on a new phone or PC and they&rsquo;re there. They&rsquo;re stored behind sign-in, and only owners and people you give access to can see them.</li>'
+                + '<li><strong>Nothing you typed is lost.</strong> Each device uploads its copy the first time. If two devices have different versions of the same section, the tool asks which one to keep. The other one is saved as an earlier version (&ldquo;Earlier versions&rdquo; next to the Vision title).</li>'
+                + '<li><strong>Your plan is no longer written into the app&rsquo;s public page file.</strong></li>'
+                + '<li><strong>&ldquo;Skip for now&rdquo; is gone from the sign-in screen.</strong> You sign in once and stay signed in until you sign out or clear this browser&rsquo;s data.</li>'
+                + '</ul>'
+                + '</div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.33.0 &mdash; 2026-09-29</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">The EOS Tool welcome screen now shows on the PC too.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Opening the tool in a browser tab shows the welcome screen once.</strong> Refreshing the page skips it, so it never slows you down twice in a session.</li>'
@@ -11514,8 +11500,8 @@ Example:
 
         // What to show when the script never arrives. The gate is OPENED rather than
         // skipped past: revealing the app would look like sign-in had succeeded, and this
-        // person is not signed in. "Skip for now" is already sitting under this message —
-        // it is the existing escape hatch and it still works, so nobody is stuck.
+        // person is not signed in. v5.34.0: there is no "Skip for now" under it any more
+        // (his decision) — Try again is the only way forward, by design.
         function _gsiScriptUnavailable() {
             const gate = document.getElementById('googleSignInGate');
             if (gate) gate.classList.add('active');
@@ -11536,12 +11522,6 @@ Example:
             const err = document.getElementById('signInGateError');
             if (err) { err.style.display = 'none'; err.innerHTML = ''; }
             initGoogleSignIn();
-        }
-
-        function skipGoogleSignIn() {
-            sessionStorage.setItem('eos_signin_skipped', 'true');
-            document.getElementById('googleSignInGate').classList.remove('active');
-            appRevealApp();
         }
 
         function decodeJwt(token) {
@@ -11687,7 +11667,6 @@ Example:
                 applySignedInUser(rememberedEmail);
                 return;
             }
-            if (sessionStorage.getItem('eos_signin_skipped')) { appRevealApp(); return; }
             if (typeof google === 'undefined' || !google.accounts) {
                 // v4.55.1: BOUNDED, and it says what happened. This retried every 500ms
                 // FOREVER whenever Google's Identity Services script had not loaded — and
@@ -11834,7 +11813,7 @@ Example:
             if (!member) {
                 localStorage.removeItem('eos_signed_in_email');
                 if (!found.checked) {
-                    showSignInGateError('Signed in as ' + email + ', but the app couldn\'t check the team roster just now (the backend didn\'t answer). Reload to try again, or use Skip for now.');
+                    showSignInGateError('Signed in as ' + email + ', but the app couldn\'t check the team roster just now (the backend didn\'t answer). Reload the page to try again.');
                     return;
                 }
                 showSignInGateError('Signed in as ' + email + ', but that email isn\'t set up as a team member yet. Ask your admin to add it in Settings \u2192 Team Members.');
@@ -27930,8 +27909,11 @@ Example:
             yearData.savedAt = new Date().toISOString();
             seededData[currentYear] = yearData;
             localStorage.setItem('eos_traction_data', JSON.stringify(seededData));
+            // v5.34.0: the plan syncs through Supabase now; debounced, and planSync works
+            // out itself which sections actually changed.
+            if (typeof planQueueSync === 'function') planQueueSync();
         }
-        
+
         function autoSave() {
             saveData();
             showSaveIndicator();
@@ -31243,7 +31225,7 @@ Example:
         // 'error' (a call failed - with the message). Tapping the badge says the detail
         // out loud rather than hiding it in the console.
         const SYNC_SURFACE_LABEL = { issues: 'Issues', marketing: 'Marketing', daily: 'Daily Plan',
-                                     tasks: 'Tasks', brief: 'Brief senders' };
+                                     tasks: 'Tasks', brief: 'Brief senders', plan: 'Vision & Plan' };
         const _syncState = {
             issues:    { state: 'unknown', detail: '', at: 0 },
             marketing: { state: 'unknown', detail: '', at: 0 },
@@ -31256,7 +31238,10 @@ Example:
             brief:     { state: 'unknown', detail: '', at: 0 },
             // v4.98.0 — the sixth, and rule 25's instruction followed rather than recalled:
             // a surface that gains a cloud path gets a blocker and a badge id BEFORE it ships.
-            meetings:  { state: 'unknown', detail: '', at: 0 }
+            meetings:  { state: 'unknown', detail: '', at: 0 },
+            // v5.34.0 — the seventh: Vision, 1-Year Plan, Rocks, Scorecard (#syncBadge-plan,
+            // static markup on the Vision page).
+            plan:      { state: 'unknown', detail: '', at: 0 }
         };
 
         function setSyncState(surface, state, detail) {
@@ -31323,6 +31308,13 @@ Example:
             // v4.36.0: the tasks badge gets the same live re-check as daily — a tap
             // is a person asking "so sync it, then", not a request for the last
             // painted sentence.
+            if (surface === 'plan' && typeof planSyncBlocker === 'function') {
+                const live = planSyncBlocker();
+                if (!live) { showToast(name + ': checking now…'); _planLastRunAt = 0; planSync(); return; }
+                setSyncState('plan', 'local', live);
+                showToast(name + ': ' + live, 'info', 8000);
+                return;
+            }
             if (surface === 'tasks' && typeof tasksSyncBlocker === 'function') {
                 const live = tasksSyncBlocker();
                 if (!live) { showToast(name + ': checking now…'); tasksSync(true); return; }
@@ -48197,6 +48189,8 @@ Return ONLY the JSON array:`;
                     briefScanInbox().then(function () { _briefPaintMail(); })
                         .catch(function () { /* the section carries its own error */ });
                 }
+                // v5.34.0 — the Vision/Plan/Rocks/Scorecard, same reasoning: identity just landed.
+                if (typeof planSync === 'function') planSync();
                 if (dailyPlanSyncBlocker()) return;
                 _dpLastPullAt = 0;
                 _dpMaybePull();
@@ -48295,6 +48289,356 @@ Return ONLY the JSON array:`;
         setInterval(function () {
             if (!document.hidden && !dailyPlanSyncBlocker()) _dpMaybePull();
         }, 120000);
+
+        // ==================== v5.34.0 — THE PLAN IN SUPABASE (Vision, 1-Year Plan, Rocks, Scorecard) ====================
+        // His ask (2026-09-29), after learning that the page file in the PUBLIC repo carried
+        // the 2026 plan as its starting data: "If I take it out of the page, can I still see
+        // it in my own Vision after logging in? ... don't lose what I've already typed ...
+        // Would you add that to Supabase?" Until now these lived ONLY in each browser.
+        //
+        // Table eos_plan (schema PART 12), one row per SECTION: 'vision', 'plan', and per
+        // quarter 'Qn.rocks' and 'Qn.scorecard' (measurables + weekly values travel TOGETHER
+        // — rule 46: the values are keyed by the measurable's index). Sections are separate
+        // rows so a Vision edit on the phone can never overwrite a Rock changed on the PC.
+        // RLS: owners + an 'eos_plan' grant only — a Marketing guest in the same firm can't
+        // read the firm's targets.
+        //
+        // Per-row read → merge → push (rule 48). The per-section decision:
+        //   same content                      -> nothing to do
+        //   same apart from ids / blank keys  -> take the cloud's (rock ids converge, rule 77)
+        //   local blank, cloud has content    -> take the cloud's (rule 53: never push emptiness)
+        //   untouched here since last sync    -> take the cloud's
+        //   changed here, cloud unchanged     -> push
+        //   this device's first sync and its copy is the UNTOUCHED old starter plan -> take
+        //     the cloud's; if the CLOUD is the untouched starter plan -> push ours
+        //   anything else (both changed)      -> ASK, never guess. He was promised "keeps both
+        //     and asks": the copy that loses is kept in a device-local backup ring either way.
+        const PLAN_LEGACY_FP = { vision: 'j9cqi11rvrx9h16j', plan: 'yys5li1ghya9a72', 'Q1.rocks': '1y1zed81f2unyy76' };
+        const PLAN_SECTIONS = ['vision', 'plan', 'Q1.rocks', 'Q1.scorecard', 'Q2.rocks', 'Q2.scorecard',
+                               'Q3.rocks', 'Q3.scorecard', 'Q4.rocks', 'Q4.scorecard'];
+        let _planSyncing = false, _planAsking = false, _planPushTimer = null, _planLastRunAt = 0;
+        let _planTableMissing = false, _planDenied = false;
+
+        function _planStable(v) {
+            if (v === null || v === undefined || typeof v !== 'object') return JSON.stringify(v === undefined ? null : v);
+            if (Array.isArray(v)) return '[' + v.map(_planStable).join(',') + ']';
+            return '{' + Object.keys(v).sort().filter(function (k) { return v[k] !== undefined; })
+                .map(function (k) { return JSON.stringify(k) + ':' + _planStable(v[k]); }).join(',') + '}';
+        }
+        // Two 32-bit mixes + length: a fingerprint for "did this change", not security.
+        // Postgres jsonb reorders keys, hence the sorted-key stable form above.
+        function _planHash(v) {
+            const s = _planStable(v);
+            let a = 5381, b = 52711;
+            for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); a = ((a * 33) ^ c) >>> 0; b = ((b * 31) + c) >>> 0; }
+            return a.toString(36) + b.toString(36) + s.length.toString(36);
+        }
+        // The comparison form: what a PERSON would call the same content. Rock ids are
+        // minted per device, blank fields and the retired orgName carry nothing.
+        function _planCmp(section, data) {
+            if (data == null) return null;
+            if (section === 'vision' || section === 'plan') {
+                const o = {};
+                Object.keys(data).forEach(function (k) { if (k !== 'orgName' && String(data[k] == null ? '' : data[k]) !== '') o[k] = data[k]; });
+                return o;
+            }
+            if (/\.rocks$/.test(section)) {
+                return (Array.isArray(data) ? data : []).map(function (r) { const o = Object.assign({}, r); delete o.id; return o; });
+            }
+            return data;
+        }
+        function _planIsEmpty(section, data) {
+            if (data == null) return true;
+            if (section === 'vision' || section === 'plan') {
+                return !Object.keys(data).some(function (k) { return k !== 'orgName' && String(data[k] == null ? '' : data[k]).trim() !== ''; });
+            }
+            if (/\.rocks$/.test(section)) return !Array.isArray(data) || !data.some(function (r) { return r && String(r.text || '').trim(); });
+            if (/\.scorecard$/.test(section)) {
+                const sc = data.scorecard || {};
+                const anyValue = Object.keys(sc).some(function (k) { return String(sc[k] == null ? '' : sc[k]).trim() !== ''; });
+                return !anyValue && _planStable(data.measurables || []) === _planStable(defaultMeasurables);
+            }
+            return true;
+        }
+        function _planIsLegacy(section, data) {
+            return !!PLAN_LEGACY_FP[section] && _planHash(_planCmp(section, data)) === PLAN_LEGACY_FP[section];
+        }
+        function _planLabel(year, section) {
+            if (section === 'vision') return 'Vision (' + year + ')';
+            if (section === 'plan') return '1-Year Plan (' + year + ')';
+            const p = section.split('.');
+            return p[0] + ' ' + (p[1] === 'rocks' ? 'Rocks' : 'Scorecard') + ' (' + year + ')';
+        }
+        function _planSummary(section, data) {
+            if (_planIsEmpty(section, data)) return 'empty';
+            if (section === 'vision' || section === 'plan') {
+                const filled = Object.keys(data).filter(function (k) { return k !== 'orgName' && String(data[k] || '').trim(); });
+                const first = String(data[filled[0]] || '').replace(/\s+/g, ' ');
+                return filled.length + ' fields filled — "' + (first.length > 70 ? first.slice(0, 70) + '…' : first) + '"';
+            }
+            if (/\.rocks$/.test(section)) {
+                const t = data.filter(function (r) { return r && String(r.text || '').trim(); }).map(function (r) { return String(r.text).trim(); });
+                const s = t.join(' · ');
+                return t.length + ' rocks: ' + (s.length > 110 ? s.slice(0, 110) + '…' : s);
+            }
+            const n = Object.keys(data.scorecard || {}).filter(function (k) { return String(data.scorecard[k] || '').trim(); }).length;
+            return (data.measurables || []).length + ' measurables, ' + n + ' weekly numbers entered';
+        }
+
+        function _planMeta() { try { return JSON.parse(localStorage.getItem('eos_plan_sync') || '{}') || {}; } catch (e) { return {}; } }
+        function _planMetaSave(m) { try { localStorage.setItem('eos_plan_sync', JSON.stringify(m)); } catch (e) { } }
+
+        // The year object for `year`, keeping the live `yearData` and seededData as ONE
+        // object — loadYear() can leave them apart until the first saveData().
+        function _planYearObj(year, create) {
+            if (typeof currentYear !== 'undefined' && year === currentYear && typeof yearData !== 'undefined' && yearData) {
+                seededData[year] = yearData;
+            }
+            if (!seededData[year] && create) {
+                seededData[year] = { name: year + ' Annual Plan', savedAt: new Date().toISOString(), vision: {}, plan: {}, quarters: {} };
+            }
+            return seededData[year] || null;
+        }
+        function _planEmptyQuarter() {
+            return { rocks: [], measurables: JSON.parse(JSON.stringify(defaultMeasurables)), scorecard: {}, todos: [], completedTodos: [],
+                     weeklyIssues: [], meetings: [], currentMeeting: { agenda: [], rating: null, notes: '' } };
+        }
+        function _planGet(year, section) {
+            const y = _planYearObj(year, false);
+            if (!y) return null;
+            if (section === 'vision') return y.vision || {};
+            if (section === 'plan') return y.plan || {};
+            const p = section.split('.');
+            const qd = y.quarters && y.quarters[p[0]];
+            if (!qd) return null;
+            if (p[1] === 'rocks') return qd.rocks || [];
+            return { measurables: qd.measurables || [], scorecard: qd.scorecard || {} };
+        }
+        function _planSet(year, section, data) {
+            const y = _planYearObj(year, true);
+            const copy = JSON.parse(JSON.stringify(data == null ? null : data));
+            if (section === 'vision') { y.vision = copy || {}; return; }
+            if (section === 'plan') { y.plan = copy || {}; return; }
+            const p = section.split('.');
+            y.quarters = y.quarters || {};
+            if (!y.quarters[p[0]]) y.quarters[p[0]] = _planEmptyQuarter();
+            const qd = y.quarters[p[0]];
+            if (p[1] === 'rocks') qd.rocks = Array.isArray(copy) ? copy : [];
+            else { qd.measurables = (copy && copy.measurables) || []; qd.scorecard = (copy && copy.scorecard) || {}; }
+        }
+        // Device-local, never synced (rule 54): its value is being the copy a remote write
+        // cannot reach. Blank copies are never kept — ten blanks would evict a real plan.
+        function _planBackup(year, section, data, why) {
+            if (_planIsEmpty(section, data)) return;
+            try {
+                const ring = JSON.parse(localStorage.getItem('eos_plan_backups') || '[]') || [];
+                ring.unshift({ at: new Date().toISOString(), year: year, section: section, why: why, data: data });
+                localStorage.setItem('eos_plan_backups', JSON.stringify(ring.slice(0, 40)));
+            } catch (e) { }
+        }
+        function planDownloadBackups() {
+            let ring = [];
+            try { ring = JSON.parse(localStorage.getItem('eos_plan_backups') || '[]') || []; } catch (e) { }
+            if (!ring.length) { showToast('No earlier versions are stored on this device yet.', 'info'); return; }
+            const blob = new Blob([JSON.stringify(ring, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'eos-plan-earlier-versions-' + new Date().toISOString().slice(0, 10) + '.json';
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+        }
+
+        function planSyncBlocker() {
+            const sb = mktGetSupabaseClient();
+            if (!sb) return 'This deployment has no Supabase configured, so the Vision, Plan, Rocks and Scorecard stay on this device.';
+            if (!mktSupabaseProfile) return 'You are not signed in on this device, so the Vision, Plan, Rocks and Scorecard are saved here only. Reload and sign in with Google to sync them.';
+            if (!mktSupabaseProfile.firm_id) return 'Your account has no firm set, so the plan cannot sync yet. Ask an owner to check the Supabase profiles table.';
+            if (_planTableMissing) return 'The plan table has not been created in Supabase yet (docs/PASTE-INTO-SUPABASE-PART12.sql), so the plan stays on this device until it is.';
+            if (_planDenied) return 'Your account does not have access to the firm plan, so nothing was read or sent. An owner can grant it (the eos_plan grant in Supabase).';
+            return null;
+        }
+        function planQueueSync() {
+            clearTimeout(_planPushTimer);
+            _planPushTimer = setTimeout(function () { planSync(); }, 2500);
+        }
+        function _planMaybeSync() {
+            if (planSyncBlocker()) return;
+            if (Date.now() - _planLastRunAt < 30000) return;
+            planSync();
+        }
+        function _planFocusInside(section) {
+            const a = document.activeElement;
+            if (!a || !a.closest) return false;
+            if (section === 'vision') return !!a.closest('#vision');
+            if (section === 'plan') return !!a.closest('#plan');
+            return !!a.closest('#quarterly');
+        }
+        function _planPersistLocal() {
+            _planYearObj(typeof currentYear !== 'undefined' ? currentYear : '', false);
+            try { localStorage.setItem('eos_traction_data', JSON.stringify(seededData)); } catch (e) { }
+        }
+        // Repaint what an adopt changed. Never saveData() here — it gathers the Vision and
+        // Plan FROM THE FORM, so calling it before the form is refilled writes the old
+        // on-screen values straight back over what was just adopted.
+        function _planRepaint(sections) {
+            try {
+                if (typeof currentYear === 'undefined' || !seededData[currentYear]) return;
+                yearData = seededData[currentYear];
+                if (sections.vision && typeof loadVision === 'function') loadVision();
+                if (sections.plan && typeof loadPlan === 'function') loadPlan();
+                if (sections.quarter && typeof renderQuarter === 'function') renderQuarter();
+                if (typeof updateYearReference === 'function' && document.getElementById('yearGoalsRef')) updateYearReference();
+            } catch (e) { /* a repaint must never break a sync */ }
+        }
+
+        async function planSync() {
+            if (_planSyncing || _planAsking) return false;
+            const blocker = planSyncBlocker();
+            if (blocker) { setSyncState('plan', 'local', blocker); return false; }
+            _planSyncing = true;
+            _planLastRunAt = Date.now();
+            setSyncState('plan', 'syncing');
+            const sb = mktGetSupabaseClient();
+            const firm = mktSupabaseProfile.firm_id;
+            const conflicts = [];
+            try {
+                const { data: rows, error } = await sb.from('eos_plan')
+                    .select('year, section, data, saved_at, saved_by').eq('firm_id', firm);
+                if (error) throw error;
+                const cloud = {};
+                (rows || []).forEach(function (r) { cloud[r.year + '/' + r.section] = r; });
+                const meta = _planMeta();
+                const keys = {};
+                Object.keys(seededData).filter(function (k) { return /^\d{4}$/.test(k); })
+                    .forEach(function (y) { PLAN_SECTIONS.forEach(function (s) { keys[y + '/' + s] = 1; }); });
+                Object.keys(cloud).forEach(function (k) { keys[k] = 1; });
+
+                const pushes = [], repaint = {};
+                const adopt = function (k, year, section, local, c, why) {
+                    if (year === currentYear && _planFocusInside(section)) return;   // he is typing there; next round
+                    if (!_planIsEmpty(section, local)) _planBackup(year, section, local, why);
+                    _planSet(year, section, c.data);
+                    meta[k] = { h: _planHash(_planGet(year, section)), at: Number(c.saved_at) || 0 };
+                    if (year === currentYear) repaint[/\./.test(section) ? 'quarter' : section] = true;
+                };
+                Object.keys(keys).forEach(function (k) {
+                    const i = k.indexOf('/');
+                    const year = k.slice(0, i), section = k.slice(i + 1);
+                    if (PLAN_SECTIONS.indexOf(section) === -1 || !/^\d{4}$/.test(year)) return;
+                    const local = _planGet(year, section);
+                    const c = cloud[k];
+                    const m = meta[k];
+                    const lEmpty = _planIsEmpty(section, local);
+                    const hL = _planHash(local);
+                    if (!c) {
+                        if (!lEmpty) pushes.push({ k: k, year: year, section: section, data: local, h: hL });
+                        return;
+                    }
+                    const hC = _planHash(c.data);
+                    const cAt = Number(c.saved_at) || 0;
+                    if (hC === hL) { meta[k] = { h: hL, at: cAt }; return; }
+                    if (_planStable(_planCmp(section, local)) === _planStable(_planCmp(section, c.data))) { adopt(k, year, section, local, c, 'same content, cloud ids'); return; }
+                    const cEmpty = _planIsEmpty(section, c.data);
+                    if (lEmpty) { adopt(k, year, section, local, c, 'this device was blank'); return; }
+                    if (cEmpty) { pushes.push({ k: k, year: year, section: section, data: local, h: hL }); return; }
+                    const localChanged = !m || m.h !== hL;
+                    const cloudChanged = !m || m.at !== cAt;
+                    if (m && !localChanged) { adopt(k, year, section, local, c, 'newer in the cloud'); return; }
+                    if (m && !cloudChanged) { pushes.push({ k: k, year: year, section: section, data: local, h: hL }); return; }
+                    if (!m && _planIsLegacy(section, local)) { adopt(k, year, section, local, c, 'untouched starter copy here'); return; }
+                    if (!m && _planIsLegacy(section, c.data)) { pushes.push({ k: k, year: year, section: section, data: local, h: hL }); return; }
+                    conflicts.push({ k: k, year: year, section: section, local: local, cloud: c });
+                });
+
+                if (Object.keys(repaint).length) { _planPersistLocal(); _planRepaint(repaint); }
+                if (pushes.length) {
+                    const now = Date.now();
+                    const by = (mktSupabaseProfile.email || '').toLowerCase();
+                    const { error: upErr } = await sb.from('eos_plan').upsert(pushes.map(function (p) {
+                        return { firm_id: firm, year: p.year, section: p.section, data: p.data, saved_at: now, saved_by: by,
+                                 updated_at: new Date().toISOString() };
+                    }));
+                    if (upErr) throw upErr;
+                    pushes.forEach(function (p) { meta[p.k] = { h: p.h, at: now }; });
+                }
+                _planMetaSave(meta);
+                setSyncState('plan', conflicts.length ? 'local' : 'synced',
+                    conflicts.length ? conflicts.length + ' section(s) differ between this device and the cloud — waiting for your choice.' : '');
+            } catch (e) {
+                const msg = (e && e.message) ? e.message : 'Unknown error';
+                const code = e && e.code;
+                if (code === '42P01' || code === 'PGRST205' || /eos_plan/.test(msg) && /does not exist|could not find/i.test(msg)) {
+                    _planTableMissing = true;
+                    setSyncState('plan', 'local', planSyncBlocker());
+                } else if (code === '42501' || /row-level security/i.test(msg)) {
+                    _planDenied = true;
+                    setSyncState('plan', 'local', planSyncBlocker());
+                } else {
+                    setSyncState('plan', 'error', msg);
+                }
+                return false;
+            } finally {
+                _planSyncing = false;
+            }
+            if (conflicts.length) await _planResolveConflicts(conflicts);
+            return true;
+        }
+
+        // Both sides changed: ask, one section at a time. Dismissing leaves it undecided —
+        // nothing is written, and the next sync asks again.
+        async function _planResolveConflicts(conflicts) {
+            if (_planAsking) return;
+            _planAsking = true;
+            let decided = 0;
+            try {
+                for (let i = 0; i < conflicts.length; i++) {
+                    const cf = conflicts[i];
+                    const when = cf.cloud.saved_at ? new Date(Number(cf.cloud.saved_at)).toLocaleString() : 'an earlier date';
+                    const who = cf.cloud.saved_by ? cf.cloud.saved_by : 'another device';
+                    const pick = await eosChoose({
+                        title: 'Two versions of your ' + _planLabel(cf.year, cf.section),
+                        message: 'This device and the cloud have different versions. Pick the one to keep everywhere. '
+                            + 'The other one is not deleted — it is kept as an earlier version on this device.',
+                        options: [
+                            { label: 'Keep the version on this device', hint: _planSummary(cf.section, cf.local), value: 'local' },
+                            { label: 'Use the cloud version', hint: 'Saved by ' + who + ', ' + when + ' — ' + _planSummary(cf.section, cf.cloud.data), value: 'cloud' }
+                        ]
+                    });
+                    if (pick !== 'local' && pick !== 'cloud') continue;
+                    const meta = _planMeta();
+                    if (pick === 'cloud') {
+                        _planBackup(cf.year, cf.section, cf.local, 'you chose the cloud version');
+                        _planSet(cf.year, cf.section, cf.cloud.data);
+                        meta[cf.k] = { h: _planHash(_planGet(cf.year, cf.section)), at: Number(cf.cloud.saved_at) || 0 };
+                        _planPersistLocal();
+                        if (cf.year === currentYear) {
+                            const rp = {}; rp[/\./.test(cf.section) ? 'quarter' : cf.section] = true; _planRepaint(rp);
+                        }
+                    } else {
+                        _planBackup(cf.year, cf.section, cf.cloud.data, 'you kept this device\'s version');
+                        const now = Date.now();
+                        const sb = mktGetSupabaseClient();
+                        const { error } = await sb.from('eos_plan').upsert({
+                            firm_id: mktSupabaseProfile.firm_id, year: cf.year, section: cf.section, data: cf.local,
+                            saved_at: now, saved_by: (mktSupabaseProfile.email || '').toLowerCase(), updated_at: new Date().toISOString()
+                        });
+                        if (error) { showToast('Could not save your choice for ' + _planLabel(cf.year, cf.section) + ': ' + error.message, 'error'); continue; }
+                        meta[cf.k] = { h: _planHash(cf.local), at: now };
+                    }
+                    _planMetaSave(meta);
+                    decided++;
+                }
+            } finally {
+                _planAsking = false;
+            }
+            if (decided === conflicts.length) setSyncState('plan', 'synced', '');
+        }
+
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden) _planMaybeSync();
+        });
+        setInterval(function () { if (!document.hidden) _planMaybeSync(); }, 120000);
+
 
         // ==================== v4.36.0 — TASKS IN SUPABASE (task identity + Realtime) ====================
         // Hans's direction (2026-08-13 evening, design session same night): Supabase is
