@@ -2517,7 +2517,7 @@
                                 <button type="button" class="btn btn-secondary" id="mktRelBtn" onclick="mktSuggestRelated()" style="font-size:0.72rem; padding:3px 9px; margin-left:auto; color:var(--primary);">AI: Suggest related posts</button>
                             </div>
                             <div id="mktRelOptions" style="display:none; margin-top:6px;"></div>
-                            <div id="mktRelInfo" style="font-size:0.72rem; color:var(--gray-500); margin-top:4px;">Adds &ldquo;If you found this interesting, you may also like: <em>(linked title)</em>&rdquo; to the end of the Blog Draft.</div>
+                            <div id="mktRelInfo" style="font-size:0.72rem; color:var(--gray-500); margin-top:4px;">Adds &ldquo;If you found this interesting, you may also like: <em>(linked title)</em>&rdquo; to the end of the Blog Draft. On the website it sits under the Schedule a Conversation button, above the disclosure.</div>
                         </div>
                         <!-- v5.46.2 (his order: the blog to WordPress first, then the social post,
                              then the quote): the send buttons sit ABOVE the Facebook boxes now. -->
@@ -4832,9 +4832,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '5.49.1';
+        const EOS_VERSION = '5.50.0';
         const EOS_BUILD_DATE = '2026-09-29';
-        const EOS_BUILD_TIME = '08:20'; // v5.49.1 (styles.css UNCHANGED, link stays ?v=5.49.0): HIS DIVERSIFICATION BLOG WENT TO WORDPRESS WITHOUT ITS PICTURE. Cause, confirmed from the code: the Image step's "Use this one" found no Firm Context folder for Intelligent Investing on his PC (Settings box empty AND the ii brand row without contextFolderId), so the picture stayed in IndexedDB and card.imageFileId stayed '' - and postToWordPress only attaches a picture that is in Drive, silently. Two fixes: (1) the send chooser now SAYS whether a picture goes; when the device holds candidates for the card but none reached Drive it adds a recommended "Stop - fix the picture first" and names the two steps; (2) the folder warning names BOTH places it looked (device box / brand row, and whether the row was readable) instead of one generic sentence he could not "shake". No data change; the folder id itself is his to paste (EOS Intelligent Investing Firm Context, found in his Drive). PREVIOUSLY v5.49.0 (TWO-FILE, styles.css?v=5.49.0): THE BLOG RHYTHM + MARKETING CALENDAR (§5.119), designed with him first (mockup + four answers, all the recommended ones). mktBlogStep reads the step off the card (the step AFTER the furthest filled one; Finalize and Title give no signal - a card carries its title from birth); mktRhythmFacts is PURE over (cards, WP statuses, last published post, now): ii blogs only, current = furthest along not live/scheduled/done, behind = 14+ days since the last live post AND nothing scheduled ahead, unknown history never nags, aim = anchor + 7. Last published comes from listWordPressPosts perPage 1 (eos_mkt_last_published, device-local) so blogs made outside the tool count. Today: #dpBlogLine under the date - the line + a DRAWN catch-up task (never stored in dailyPlanData: rules 49/53/75), tick hides it for the day (eos_blog_nudge_done). Marketing: #mktRhythmStrip, 12-segment bar, ii only. Calendar: CAL_EOS_LAYERS 'marketing' -> _calMktItemsFor (WP go-live, facebook + facebookQuote `when`, due/overdue marker), agenda bubble + week chip (data-cal-mkt) open the card via mktRhythmGoCard. mktRhythmRefresh is throttled 3h (Today also pulls marketing cards from the cloud, 15 min). Probe blog-rhythm-probe 9/9. No backend change. PREVIOUSLY v5.48.0 (styles.css UNCHANGED, link stays ?v=5.47.2): HIS GREENVILLE PAGES (§5.118). Ten service pages /greenville-* (created 2024-03-28, reorganised May-Jul 2024; audience pages linked to them 2024-06-21); he asked whether they gained views. The 28-day report cannot see that far back, so What's working gains a 'Greenville pages' block: mktGaLocalLoad -> analyticsReport mode 'pathHistory' (pathContains 'greenville', startDate 2023-07-01) -> mktGaLocalFacts (pure; FULL months only, last 12 vs the 12 before, trailing-slash paths merged, service pages vs blog posts, site total for share) -> mktGaLocalRender (per-page line + inline SVG sparkline) + mktGaLocalCopy (text for a chat). REQUIRES Google_Tasks_Sync.gs 3.86.0 ON THE GA BACKEND (gaBackendInitials = Hans) - a 3.85.0 backend ignores the mode and answers the default report, which the client detects by the missing `history` and names. No new scope, no consent run. PREVIOUSLY v5.47.2 (TWO-FILE, styles.css?v=5.47.2): his screenshot - he clicked "Approve & schedule the quote post" twice, nothing happened, and he feared a double post. Nothing was sent: the button was DISABLED (v5.46.2's order rule - the blog's own Facebook post was not scheduled yet) and a disabled button fires no click; had it been live, every schedule still passes a confirm dialog, the single-flight flag and the backend's 3-minute duplicate refusal. The defect was visual: styles.css had NO :disabled rule anywhere, so a disabled .btn-primary was exactly as blue as a live one. Now .btn:disabled is dimmed with a not-allowed cursor (appended last, rule 10b), and the Facebook buttons carry the reason as a hover title.
+        const EOS_BUILD_TIME = '14:30'; // v5.50.0 (styles.css UNCHANGED, link stays ?v=5.49.0): HIS FOUR ASKS FROM THE DIVERSIFICATION POST, PAIRS WITH .gs v3.87.0 (both accounts). (1) TAGS: pickWordPressTags after the category step - GET getWordPressTags (100 most-used), the marketing AI picks 3-5 existing + up to 2 new, one chooser (use / type my own / none), sent as tagIds + newTags; the backend creates new names and reuses term_exists; the send window names the tags. Gated on 3.87.0 (skipped with a sentence before). (2) The centred picture is 600x600 (backend wpImageMarkup_). (3) A 32px div gap after the Schedule a Conversation button (an empty <p> would be thrown away by the classic editor). (4) The related-reading line moves OUT of the draft at send time (mktRelApply(body, []) + buildRelatedLine(mktRelParse(body))) to sit under the button, above the disclosure, with a gap each side; the draft text and the archive copy are unchanged. PREVIOUSLY v5.49.1 (styles.css UNCHANGED, link stays ?v=5.49.0): HIS DIVERSIFICATION BLOG WENT TO WORDPRESS WITHOUT ITS PICTURE. Cause, confirmed from the code: the Image step's "Use this one" found no Firm Context folder for Intelligent Investing on his PC (Settings box empty AND the ii brand row without contextFolderId), so the picture stayed in IndexedDB and card.imageFileId stayed '' - and postToWordPress only attaches a picture that is in Drive, silently. Two fixes: (1) the send chooser now SAYS whether a picture goes; when the device holds candidates for the card but none reached Drive it adds a recommended "Stop - fix the picture first" and names the two steps; (2) the folder warning names BOTH places it looked (device box / brand row, and whether the row was readable) instead of one generic sentence he could not "shake". No data change; the folder id itself is his to paste (EOS Intelligent Investing Firm Context, found in his Drive). PREVIOUSLY v5.49.0 (TWO-FILE, styles.css?v=5.49.0): THE BLOG RHYTHM + MARKETING CALENDAR (§5.119), designed with him first (mockup + four answers, all the recommended ones). mktBlogStep reads the step off the card (the step AFTER the furthest filled one; Finalize and Title give no signal - a card carries its title from birth); mktRhythmFacts is PURE over (cards, WP statuses, last published post, now): ii blogs only, current = furthest along not live/scheduled/done, behind = 14+ days since the last live post AND nothing scheduled ahead, unknown history never nags, aim = anchor + 7. Last published comes from listWordPressPosts perPage 1 (eos_mkt_last_published, device-local) so blogs made outside the tool count. Today: #dpBlogLine under the date - the line + a DRAWN catch-up task (never stored in dailyPlanData: rules 49/53/75), tick hides it for the day (eos_blog_nudge_done). Marketing: #mktRhythmStrip, 12-segment bar, ii only. Calendar: CAL_EOS_LAYERS 'marketing' -> _calMktItemsFor (WP go-live, facebook + facebookQuote `when`, due/overdue marker), agenda bubble + week chip (data-cal-mkt) open the card via mktRhythmGoCard. mktRhythmRefresh is throttled 3h (Today also pulls marketing cards from the cloud, 15 min). Probe blog-rhythm-probe 9/9. No backend change. PREVIOUSLY v5.48.0 (styles.css UNCHANGED, link stays ?v=5.47.2): HIS GREENVILLE PAGES (§5.118). Ten service pages /greenville-* (created 2024-03-28, reorganised May-Jul 2024; audience pages linked to them 2024-06-21); he asked whether they gained views. The 28-day report cannot see that far back, so What's working gains a 'Greenville pages' block: mktGaLocalLoad -> analyticsReport mode 'pathHistory' (pathContains 'greenville', startDate 2023-07-01) -> mktGaLocalFacts (pure; FULL months only, last 12 vs the 12 before, trailing-slash paths merged, service pages vs blog posts, site total for share) -> mktGaLocalRender (per-page line + inline SVG sparkline) + mktGaLocalCopy (text for a chat). REQUIRES Google_Tasks_Sync.gs 3.86.0 ON THE GA BACKEND (gaBackendInitials = Hans) - a 3.85.0 backend ignores the mode and answers the default report, which the client detects by the missing `history` and names. No new scope, no consent run. PREVIOUSLY v5.47.2 (TWO-FILE, styles.css?v=5.47.2): his screenshot - he clicked "Approve & schedule the quote post" twice, nothing happened, and he feared a double post. Nothing was sent: the button was DISABLED (v5.46.2's order rule - the blog's own Facebook post was not scheduled yet) and a disabled button fires no click; had it been live, every schedule still passes a confirm dialog, the single-flight flag and the backend's 3-minute duplicate refusal. The defect was visual: styles.css had NO :disabled rule anywhere, so a disabled .btn-primary was exactly as blue as a live one. Now .btn:disabled is dimmed with a not-allowed cursor (appended last, rule 10b), and the Facebook buttons carry the reason as a hover title.
         // v5.47.1: gs-auditor on 3.85.0 (backend cleared for Hans only, consent between push and redeploy). Client fixes: (1) a pre-3.85.0 backend answers analyticsReport with the secret-key refusal, which _calPost rewrites as "sign-in has expired" - a wrong cause (rule 63); mktGaErr now names the backend version first, and Save & test gates on the own backend's version. (2) GA rows are (path, title) pairs, so a retitled post split into two rows and could miss the trend test or list twice; _mktGaByPath sums last7/last28 by path. Backend (same 3.85.0, not yet deployed): authorizeAnalytics re-throws so a failure is red in the editor; a disabled Analytics Data API is named before the access-list message.
         // v5.47.0: WHAT'S WORKING - GOOGLE ANALYTICS, READ-ONLY. PAIRS WITH .gs v3.85.0 (new scope analytics.readonly + AnalyticsData advanced service; Hans runs authorizeAnalytics in the editor between push and redeploy; Amanda's backend deliberately stays 3.84.0 without the scope). His ask: "this page has been trending higher, or this blog or podcast was really clicked on recently, let's use that as a backlink for a related quote (and perhaps asking me for a quote)". He supplied GA4 property 370961938 (NOT hardcoded - public repo; it is entered in Settings > Social posting > Google Analytics and rides on the firm 'marketing' row as gaPropertyId + gaBackendInitials, the fbBackendInitials routing pattern; Save & test only saves after the backend reads it). Marketing page: a collapsed "What's working" panel (loads on open, cached device-local 6h in eos_mkt_ga_cache, Refresh): Trending this week (5+ views and >=1.5x the week before, home and WP plumbing excluded), Most read 28 days, sources + Facebook's share; each page has "Quote -> link here" = a Social / Quote card whose facebookQuote.link is that page, opened with a toast ASKING him for the quote (never invented); "AI: What should I do next?" turns only the listed numbers + his recent cards into three moves (told never to invent figures or write the quote). mktFqCta: a standalone quote pointing at a BLOG post (linkKind from the site list) reads "the full post is here". Podcast: Blubrry (his answer) - downloads need Blubrry API access, phase 2; episode pages on the site are already in GA.
         // v5.46.2: HIS ORDER, ENFORCED - blog live in WordPress -> its Facebook post -> then the quote. (1) He asked what stops a social post going out before the blog: the blog's Facebook post already waited for WordPress to report the post LIVE (mktFbLiveLink = status 'publish'), but the blog's QUOTE post only waited for that too - it could be scheduled with no social post at all, or timed before it (the rhythm only SUGGESTED after). Now mktFqSocialFirst(card): a blog quote needs the blog's own post scheduled/posted and a time strictly after it, in the paint (button disabled, line says why) and in _mktFbApprove (refusal sentences). Standalone quotes unaffected. Probe F6/F7. (2) His "Shouldn't the CTA for the blog be higher up like before Finalize draft?": v5.44-5.46 had pushed the closing CTA under Related reading + both Facebook boxes inside Package & Send. It is now its own STEP 6 "Closing Call to Action" (inside #mktBlogFields, so blog cards only), directly before Finalize Draft; later steps renumbered 7-12 (Quote is now step 10), and every live "Step N" string now names the step instead of its number so the next move cannot stale them. (3) Package & Send: the WordPress / package / Drive buttons now sit ABOVE the Facebook boxes, matching the order.
@@ -8633,7 +8633,18 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.49.1 &mdash; 2026-09-30 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.50.0 &mdash; 2026-09-30 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Tags, a 600px picture, and a tidier foot on every blog you send.</div>'
+                + '<div style="font-size:0.8rem;background:#fffbeb;border:1px solid #fcd34d;color:#92400e;border-radius:6px;padding:6px 10px;margin:0 0 8px;">Tags and the 600px picture need backend 3.87.0 (a plain update, no permission click). Until then the tag step is skipped and the send window says so.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Tags, suggested like the category.</strong> After you pick the category, the tool suggests 3&ndash;5 of your existing WordPress tags that fit the draft (and at most 2 new ones). Use them, type your own, or skip. New names are created in WordPress; existing ones are reused.</li>'
+                + '<li><strong>The picture under the reading time is now 600 &times; 600</strong> instead of 1024.</li>'
+                + '<li><strong>The foot of the post is in the order you asked for:</strong> the call to action and its button, a proper gap, then &ldquo;If you found this interesting, you may also like&hellip;&rdquo;, another gap, then the disclosure. The Related reading line still shows at the end of your draft in the tool; it moves when the post is sent.</li>'
+                + '</ul>'
+                + '</div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.49.1 &mdash; 2026-09-30</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">A blog can no longer go to WordPress without its picture in silence.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Send to WordPress now says whether a picture goes with the post.</strong> If the card has a picture on this device that never reached Drive (because no Firm Context folder was set), the send window says so, offers &ldquo;Stop &ndash; fix the picture first&rdquo; as the recommended button, and names the two steps: set the folder in Settings, then press &ldquo;Use this one&rdquo; on the picture.</li>'
@@ -19673,15 +19684,75 @@ Example:
 
         // Wraps converted blog HTML with the standard top and bottom boilerplate.
         // Kept separate from mdToHtml so the body conversion stays pure.
-        function wrapBlogForWordPress(bodyHtml, card) {
+        // v5.50.0 (his screenshot): the order at the foot is body -> call to action -> a real
+        // gap -> the "you may also like" line -> a gap -> disclosure. The related line used to
+        // ride at the END OF THE DRAFT, which put it above the heading. The spacer is a div,
+        // not an empty <p>, because the classic editor throws empty paragraphs away.
+        const WP_FOOT_GAP = '<div style="height: 32px;"></div>';
+        function buildRelatedLine(picks) {
+            if (!picks || !picks.length) return '';
+            return '<p><em>' + escapeHtml(MKT_REL_LEAD) + ' ' + picks.map(function(p) {
+                return '<a href="' + escapeHtml(p.link) + '">' + escapeHtml(p.title) + '</a>';
+            }).join(' and ') + '</em></p>';
+        }
+        function wrapBlogForWordPress(bodyHtml, card, relatedHtml) {
             // v5.29.0: the picture's place — directly under the reading-time line, as in
             // his published example. The backend replaces the marker with WordPress's own
-            // Large + Center markup, or removes it when the card has no picture.
+            // centred markup (600x600 since .gs 3.87.0), or removes it when the card has no picture.
             return WP_READING_TIME_TOP + '\n\n'
                  + (card && card.imageFileId ? '<!--EOS_IMAGE-->\n\n' : '')
                  + bodyHtml + '\n\n'
                  + buildCtaBlock(card) + '\n\n'
+                 + WP_FOOT_GAP + '\n\n'
+                 + (relatedHtml ? relatedHtml + '\n\n' + WP_FOOT_GAP + '\n\n' : '')
                  + WP_DISCLOSURE;
+        }
+
+        // v5.50.0: TAGS, the same shape as the category step. The site's 100 most-used tags
+        // are offered to the AI with the draft; it picks up to 5 existing ones and may propose
+        // up to 2 new ones. One chooser: use them / type your own / none. Needs .gs 3.87.0;
+        // on an older backend the step is skipped and the send says so.
+        async function pickWordPressTags(member, title, body) {
+            if (typeof _calGsAtLeast !== 'function' || _calGsAtLeast('3.87.0') !== true) return { skipped: 'Tags need backend 3.87.0.' };
+            let tags = [];
+            try {
+                const res = await fetch(member.webAppUrl + '?action=getWordPressTags&secretKey=' + encodeURIComponent(member.webAppSecret || ''));
+                const json = await res.json();
+                if (json.success && Array.isArray(json.tags)) tags = json.tags;
+            } catch (e) { console.warn('Could not fetch WP tags:', e); }
+            let existing = [], fresh = [];
+            try {
+                if (aiIsConfigured('marketing') && tags.length) {
+                    const list = tags.map(function(t) { return t.id + ': ' + t.name; }).join('\n');
+                    const prompt = 'You are tagging a blog post for a fee-only RIA in Greenville, SC.\n\nTITLE: ' + title + '\n\nEXCERPT:\n' + String(body).slice(0, 2500)
+                        + '\n\nExisting tags (id: name), most used first:\n' + list
+                        + '\n\nPick 3 to 5 EXISTING tags that genuinely fit (prefer these), and at most 2 NEW tags only if an important topic has no existing tag. '
+                        + 'Return ONLY JSON: {"existing":[ids as numbers],"new":["name"]}. No markdown, no preamble.';
+                    const raw = await callAI('marketing', prompt, { featureLabel: 'Marketing AI', temperature: 0, maxTokens: 200, quiet: true });
+                    const clean = String(raw).replace(/```json/gi, '').replace(/```/g, '');
+                    const s = clean.indexOf('{'), e = clean.lastIndexOf('}');
+                    const j = (s !== -1 && e !== -1) ? JSON.parse(clean.slice(s, e + 1)) : {};
+                    existing = (j.existing || []).map(function(n) { return parseInt(n, 10); })
+                        .map(function(id) { return tags.find(function(t) { return t.id === id; }); }).filter(Boolean).slice(0, 5);
+                    fresh = (j.new || []).map(function(n) { return String(n || '').trim().slice(0, 40); }).filter(Boolean).slice(0, 2);
+                }
+            } catch (e) { console.warn('AI tag suggestion skipped:', e); }
+            const names = existing.map(function(t) { return t.name; }).concat(fresh.map(function(n) { return n + ' (new)'; }));
+            const opts = [];
+            if (names.length) opts.push({ label: 'Use these ' + names.length + ' tags', value: 'use', recommended: true, hint: names.join(', ') });
+            opts.push({ label: 'Type my own tags', value: 'own', hint: 'Comma-separated; existing names are reused, new ones created' });
+            opts.push({ label: 'No tags', value: '__none__', hint: 'Leave the post untagged' });
+            const picked = await eosChoose({ title: 'Tags for this post', message: names.length ? 'Suggested from the draft.' : 'No suggestion available.', options: opts });
+            if (picked === null || picked === '__none__') return null;
+            if (picked === 'use') return { tagIds: existing.map(function(t) { return t.id; }), newTags: fresh, names: names };
+            const typed = prompt('Tags, separated by commas:', names.length ? existing.map(function(t) { return t.name; }).concat(fresh).join(', ') : '');
+            if (!typed) return null;
+            const ids = [], news = [];
+            typed.split(',').map(function(s) { return s.trim(); }).filter(Boolean).slice(0, 12).forEach(function(n) {
+                const hit = tags.find(function(t) { return t.name.toLowerCase() === n.toLowerCase(); });
+                if (hit) ids.push(hit.id); else news.push(n);
+            });
+            return { tagIds: ids, newTags: news, names: typed.split(',').map(function(s) { return s.trim(); }).filter(Boolean) };
         }
 
         // Fetches site categories, optionally asks the marketing AI to suggest the
@@ -19826,6 +19897,12 @@ Example:
             } catch (e) {
                 console.warn('Category selection skipped:', e);
             }
+            // v5.50.0: tags, right after the category. Cancelling the tag step cancels nothing
+            // else - the post simply goes untagged, and the send window says so.
+            let chosenTags = null;
+            try { chosenTags = await pickWordPressTags(member, title, body); } catch (e) { console.warn('Tag selection skipped:', e); }
+            const tagNote = (chosenTags && chosenTags.skipped) ? chosenTags.skipped
+                : (chosenTags && chosenTags.names && chosenTags.names.length ? 'Tags: ' + chosenTags.names.join(', ') + '.' : 'No tags.');
 
             // ---- Send options (v3.39.0): three explicit choices instead of OK/Cancel.
             const archiveFolderId = getArchiveFolderId(company);
@@ -19883,7 +19960,7 @@ Example:
             if (stranded) sendOptions.unshift({ label: 'Stop - fix the picture first', value: 'stop', recommended: true, hint: 'Nothing is sent' });
             const choice = await eosChoose({
                 title: updatePostId ? 'Update the existing WordPress post' : 'Send this WordPress draft',
-                message: picNote + '\n' + archiveNote,
+                message: picNote + '\n' + tagNote + '\n' + archiveNote,
                 options: sendOptions
             });
             if (choice === null || choice === 'stop') { showToast(choice === 'stop' ? 'Not sent. Set the folder in Settings, then press "Use this one" in the Image step.' : 'Cancelled.'); return; }
@@ -19907,8 +19984,12 @@ Example:
                         // entirely - so an un-deployed backend behaves exactly as it always has.
                         postId: updatePostId || '',
                         title: title,
-                        content: wrapBlogForWordPress(mdToHtml(body), card),
+                        // v5.50.0: the related-reading line leaves the draft and goes under
+                        // the call to action (buildRelatedLine); the draft itself is unchanged.
+                        content: wrapBlogForWordPress(mdToHtml(mktRelApply(body, [])), card, buildRelatedLine(mktRelParse(body))),
                         categoryIds: chosenCategoryIds,
+                        tagIds: chosenTags && !chosenTags.skipped ? (chosenTags.tagIds || []) : undefined,
+                        newTags: chosenTags && !chosenTags.skipped ? (chosenTags.newTags || []) : undefined,
                         notifyEditor: false,   // v5.36.0: the draft below replaces the backend's automatic mail
                         // v5.29.0: the picture. A new or changed picture is sent as the Drive
                         // file (the backend uploads it); an unchanged one as the media id and
