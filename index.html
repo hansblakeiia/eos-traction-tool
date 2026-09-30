@@ -19748,7 +19748,7 @@ Example:
             const typed = prompt('Tags, separated by commas:', names.length ? existing.map(function(t) { return t.name; }).concat(fresh).join(', ') : '');
             if (!typed) return null;
             const ids = [], news = [];
-            typed.split(',').map(function(s) { return s.trim(); }).filter(Boolean).slice(0, 12).forEach(function(n) {
+            typed.split(',').map(function(s) { return s.trim(); }).filter(Boolean).slice(0, 10).forEach(function(n) {
                 const hit = tags.find(function(t) { return t.name.toLowerCase() === n.toLowerCase(); });
                 if (hit) ids.push(hit.id); else news.push(n);
             });
@@ -20008,6 +20008,10 @@ Example:
                     showToast('WordPress error: ' + (result.error || 'unknown'));
                     console.error('postToWordPress failed:', result);
                     return;
+                }
+                // v5.50.0: a tag WordPress refused to create is NAMED, not dropped in silence.
+                if (Array.isArray(result.tagsFailed) && result.tagsFailed.length) {
+                    showToast('The post went, but WordPress would not create these tags: ' + result.tagsFailed.join(', ') + '. Add them in WordPress if you want them.');
                 }
 
                 // ---- Optional Drive archive. Non-blocking: a failed archive must not
