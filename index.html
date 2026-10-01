@@ -17866,7 +17866,7 @@ Example:
             if (!ins) return;
             mktLoad();
             if (kind === 'open') { mktOpenCard(String(arg)); return; }
-            let title = '', notes = '', cardKind = 'standalone', sources = '';
+            let title = '', notes = '', cardKind = 'standalone';
             if (kind === 'broken') {
                 const nf = ins.notFound || [];
                 title = 'Website: fix ' + nf.length + ' broken address' + (nf.length === 1 ? '' : 'es');
@@ -17881,15 +17881,15 @@ Example:
                 if (!p) return;
                 cardKind = 'blog';
                 title = 'Follow-up: ' + _mktGaTitle(p);
-                sources = ins.site + p.pagePath;
-                notes = '"' + _mktGaTitle(p) + '" is being read more this week (' + p.screenPageViews + ' views, ' + (p.before || 0) + ' the week before). A follow-up on the same subject: what has changed since, the question readers are asking now, or the next step for someone who read it. Link back to the original.';
+                // The Source box is a dropdown of source TYPES, so the address goes in the notes.
+                notes = 'Original: ' + ins.site + p.pagePath + '\n\n"' + _mktGaTitle(p) + '" is being read more this week (' + p.screenPageViews + ' views, ' + (p.before || 0) + ' the week before). A follow-up on the same subject: what has changed since, the question readers are asking now, or the next step for someone who read it. Link back to the original.';
             } else return;
             const existing = mktData.cards.find(function(c) { return c.title === title && c.columnId !== 'done'; });
             if (existing) { mktOpenCard(existing.id); showToast('Already on the board - opened it.'); return; }
             mktNewCard(cardKind);
             const card = mktGetCard(mktEditingId);
             if (!card) return;
-            card.title = title; card.brainstormIdeas = notes; card.brainstormSources = sources;
+            card.title = title; card.brainstormIdeas = notes;
             card.updated = new Date().toISOString();
             mktSave(); mktRender(); mktOpenCard(card.id);
             showToast('Card made in Ideas. The numbers and the suggested next step are in its Brainstorming box.');
