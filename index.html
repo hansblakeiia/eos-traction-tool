@@ -17783,7 +17783,7 @@ Example:
             // v5.51.0: the site totals vs the 28 days before (null on a backend older than
             // 3.88.0), the broken addresses, and the home page's own row.
             const t = r.totals && r.totals.cur ? r.totals : null;
-            const home = (r.pages.last28 || []).find(function(p) { return String(p.pagePath || '') === '/'; }) || null;
+            const home = r.home || null;   // its own row on 3.88.0 (bounceRate rides only there)
             const notFound = (r.notFound || []).filter(function(p) { return p.screenPageViews > 0; });
             return { trending: trending, top: top, sources: sources, fb: fb, total: total, site: r.siteUrl || '', totals: t, home: home, notFound: notFound };
         }
