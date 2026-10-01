@@ -4832,9 +4832,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '5.50.0';
+        const EOS_VERSION = '5.51.0';
         const EOS_BUILD_DATE = '2026-09-29';
-        const EOS_BUILD_TIME = '14:30'; // v5.50.0 (styles.css UNCHANGED, link stays ?v=5.49.0): HIS FOUR ASKS FROM THE DIVERSIFICATION POST, PAIRS WITH .gs v3.87.0 (both accounts). (1) TAGS: pickWordPressTags after the category step - GET getWordPressTags (100 most-used), the marketing AI picks 3-5 existing + up to 2 new, one chooser (use / type my own / none), sent as tagIds + newTags; the backend creates new names and reuses term_exists; the send window names the tags. Gated on 3.87.0 (skipped with a sentence before). (2) The centred picture is 600x600 (backend wpImageMarkup_). (3) A 32px div gap after the Schedule a Conversation button (an empty <p> would be thrown away by the classic editor). (4) The related-reading line moves OUT of the draft at send time (mktRelApply(body, []) + buildRelatedLine(mktRelParse(body))) to sit under the button, above the disclosure, with a gap each side; the draft text and the archive copy are unchanged. PREVIOUSLY v5.49.1 (styles.css UNCHANGED, link stays ?v=5.49.0): HIS DIVERSIFICATION BLOG WENT TO WORDPRESS WITHOUT ITS PICTURE. Cause, confirmed from the code: the Image step's "Use this one" found no Firm Context folder for Intelligent Investing on his PC (Settings box empty AND the ii brand row without contextFolderId), so the picture stayed in IndexedDB and card.imageFileId stayed '' - and postToWordPress only attaches a picture that is in Drive, silently. Two fixes: (1) the send chooser now SAYS whether a picture goes; when the device holds candidates for the card but none reached Drive it adds a recommended "Stop - fix the picture first" and names the two steps; (2) the folder warning names BOTH places it looked (device box / brand row, and whether the row was readable) instead of one generic sentence he could not "shake". No data change; the folder id itself is his to paste (EOS Intelligent Investing Firm Context, found in his Drive). PREVIOUSLY v5.49.0 (TWO-FILE, styles.css?v=5.49.0): THE BLOG RHYTHM + MARKETING CALENDAR (§5.119), designed with him first (mockup + four answers, all the recommended ones). mktBlogStep reads the step off the card (the step AFTER the furthest filled one; Finalize and Title give no signal - a card carries its title from birth); mktRhythmFacts is PURE over (cards, WP statuses, last published post, now): ii blogs only, current = furthest along not live/scheduled/done, behind = 14+ days since the last live post AND nothing scheduled ahead, unknown history never nags, aim = anchor + 7. Last published comes from listWordPressPosts perPage 1 (eos_mkt_last_published, device-local) so blogs made outside the tool count. Today: #dpBlogLine under the date - the line + a DRAWN catch-up task (never stored in dailyPlanData: rules 49/53/75), tick hides it for the day (eos_blog_nudge_done). Marketing: #mktRhythmStrip, 12-segment bar, ii only. Calendar: CAL_EOS_LAYERS 'marketing' -> _calMktItemsFor (WP go-live, facebook + facebookQuote `when`, due/overdue marker), agenda bubble + week chip (data-cal-mkt) open the card via mktRhythmGoCard. mktRhythmRefresh is throttled 3h (Today also pulls marketing cards from the cloud, 15 min). Probe blog-rhythm-probe 9/9. No backend change. PREVIOUSLY v5.48.0 (styles.css UNCHANGED, link stays ?v=5.47.2): HIS GREENVILLE PAGES (§5.118). Ten service pages /greenville-* (created 2024-03-28, reorganised May-Jul 2024; audience pages linked to them 2024-06-21); he asked whether they gained views. The 28-day report cannot see that far back, so What's working gains a 'Greenville pages' block: mktGaLocalLoad -> analyticsReport mode 'pathHistory' (pathContains 'greenville', startDate 2023-07-01) -> mktGaLocalFacts (pure; FULL months only, last 12 vs the 12 before, trailing-slash paths merged, service pages vs blog posts, site total for share) -> mktGaLocalRender (per-page line + inline SVG sparkline) + mktGaLocalCopy (text for a chat). REQUIRES Google_Tasks_Sync.gs 3.86.0 ON THE GA BACKEND (gaBackendInitials = Hans) - a 3.85.0 backend ignores the mode and answers the default report, which the client detects by the missing `history` and names. No new scope, no consent run. PREVIOUSLY v5.47.2 (TWO-FILE, styles.css?v=5.47.2): his screenshot - he clicked "Approve & schedule the quote post" twice, nothing happened, and he feared a double post. Nothing was sent: the button was DISABLED (v5.46.2's order rule - the blog's own Facebook post was not scheduled yet) and a disabled button fires no click; had it been live, every schedule still passes a confirm dialog, the single-flight flag and the backend's 3-minute duplicate refusal. The defect was visual: styles.css had NO :disabled rule anywhere, so a disabled .btn-primary was exactly as blue as a live one. Now .btn:disabled is dimmed with a not-allowed cursor (appended last, rule 10b), and the Facebook buttons carry the reason as a hover title.
+        const EOS_BUILD_TIME = '16:10'; // v5.51.0 (styles.css UNCHANGED, link stays ?v=5.49.0): ANALYTICS INTO ACTIONS (§5.122), PAIRS WITH .gs v3.88.0 (Hans's backend only - it is the GA one). His ask with two GA screenshots: "bake in these Google Analytics into actionable items within marketing". His answers: an action lands as a Marketing card in Ideas; build the headline numbers vs the previous 28 days; nothing on Today. What's working now opens with four tiles (mktGaHeadlineHtml: visitors, new visitors, time on site = engagement seconds per active user, Facebook's share; each vs the 28 before) and a "Things to do" list from PLAIN RULES (mktGaActions, pure over insights + cards; the AI coach is untouched and never writes these): broken addresses (notFound rows, >= 5 visits), a page climbing (the existing trend test) with Quote->link + Follow-up blog, a well-read tool-published post with no Facebook post, the home page at >= 70% bounce on >= 100 views, Facebook under 5% of visits while a live blog has no FB post. mktGaAct makes the card (standalone with the numbers + next step in the Brainstorming box; 'followup' = a blog card with the page as its source) and OPENS an existing same-titled card instead of duplicating. A 3.87.0-or-older backend: tiles replaced by one sentence naming 3.88.0, actions still built from what the old report carries. PREVIOUSLY v5.50.0 (styles.css UNCHANGED, link stays ?v=5.49.0): HIS FOUR ASKS FROM THE DIVERSIFICATION POST, PAIRS WITH .gs v3.87.0 (both accounts). (1) TAGS: pickWordPressTags after the category step - GET getWordPressTags (100 most-used), the marketing AI picks 3-5 existing + up to 2 new, one chooser (use / type my own / none), sent as tagIds + newTags; the backend creates new names and reuses term_exists; the send window names the tags. Gated on 3.87.0 (skipped with a sentence before). (2) The centred picture is 600x600 (backend wpImageMarkup_). (3) A 32px div gap after the Schedule a Conversation button (an empty <p> would be thrown away by the classic editor). (4) The related-reading line moves OUT of the draft at send time (mktRelApply(body, []) + buildRelatedLine(mktRelParse(body))) to sit under the button, above the disclosure, with a gap each side; the draft text and the archive copy are unchanged. PREVIOUSLY v5.49.1 (styles.css UNCHANGED, link stays ?v=5.49.0): HIS DIVERSIFICATION BLOG WENT TO WORDPRESS WITHOUT ITS PICTURE. Cause, confirmed from the code: the Image step's "Use this one" found no Firm Context folder for Intelligent Investing on his PC (Settings box empty AND the ii brand row without contextFolderId), so the picture stayed in IndexedDB and card.imageFileId stayed '' - and postToWordPress only attaches a picture that is in Drive, silently. Two fixes: (1) the send chooser now SAYS whether a picture goes; when the device holds candidates for the card but none reached Drive it adds a recommended "Stop - fix the picture first" and names the two steps; (2) the folder warning names BOTH places it looked (device box / brand row, and whether the row was readable) instead of one generic sentence he could not "shake". No data change; the folder id itself is his to paste (EOS Intelligent Investing Firm Context, found in his Drive). PREVIOUSLY v5.49.0 (TWO-FILE, styles.css?v=5.49.0): THE BLOG RHYTHM + MARKETING CALENDAR (§5.119), designed with him first (mockup + four answers, all the recommended ones). mktBlogStep reads the step off the card (the step AFTER the furthest filled one; Finalize and Title give no signal - a card carries its title from birth); mktRhythmFacts is PURE over (cards, WP statuses, last published post, now): ii blogs only, current = furthest along not live/scheduled/done, behind = 14+ days since the last live post AND nothing scheduled ahead, unknown history never nags, aim = anchor + 7. Last published comes from listWordPressPosts perPage 1 (eos_mkt_last_published, device-local) so blogs made outside the tool count. Today: #dpBlogLine under the date - the line + a DRAWN catch-up task (never stored in dailyPlanData: rules 49/53/75), tick hides it for the day (eos_blog_nudge_done). Marketing: #mktRhythmStrip, 12-segment bar, ii only. Calendar: CAL_EOS_LAYERS 'marketing' -> _calMktItemsFor (WP go-live, facebook + facebookQuote `when`, due/overdue marker), agenda bubble + week chip (data-cal-mkt) open the card via mktRhythmGoCard. mktRhythmRefresh is throttled 3h (Today also pulls marketing cards from the cloud, 15 min). Probe blog-rhythm-probe 9/9. No backend change. PREVIOUSLY v5.48.0 (styles.css UNCHANGED, link stays ?v=5.47.2): HIS GREENVILLE PAGES (§5.118). Ten service pages /greenville-* (created 2024-03-28, reorganised May-Jul 2024; audience pages linked to them 2024-06-21); he asked whether they gained views. The 28-day report cannot see that far back, so What's working gains a 'Greenville pages' block: mktGaLocalLoad -> analyticsReport mode 'pathHistory' (pathContains 'greenville', startDate 2023-07-01) -> mktGaLocalFacts (pure; FULL months only, last 12 vs the 12 before, trailing-slash paths merged, service pages vs blog posts, site total for share) -> mktGaLocalRender (per-page line + inline SVG sparkline) + mktGaLocalCopy (text for a chat). REQUIRES Google_Tasks_Sync.gs 3.86.0 ON THE GA BACKEND (gaBackendInitials = Hans) - a 3.85.0 backend ignores the mode and answers the default report, which the client detects by the missing `history` and names. No new scope, no consent run. PREVIOUSLY v5.47.2 (TWO-FILE, styles.css?v=5.47.2): his screenshot - he clicked "Approve & schedule the quote post" twice, nothing happened, and he feared a double post. Nothing was sent: the button was DISABLED (v5.46.2's order rule - the blog's own Facebook post was not scheduled yet) and a disabled button fires no click; had it been live, every schedule still passes a confirm dialog, the single-flight flag and the backend's 3-minute duplicate refusal. The defect was visual: styles.css had NO :disabled rule anywhere, so a disabled .btn-primary was exactly as blue as a live one. Now .btn:disabled is dimmed with a not-allowed cursor (appended last, rule 10b), and the Facebook buttons carry the reason as a hover title.
         // v5.47.1: gs-auditor on 3.85.0 (backend cleared for Hans only, consent between push and redeploy). Client fixes: (1) a pre-3.85.0 backend answers analyticsReport with the secret-key refusal, which _calPost rewrites as "sign-in has expired" - a wrong cause (rule 63); mktGaErr now names the backend version first, and Save & test gates on the own backend's version. (2) GA rows are (path, title) pairs, so a retitled post split into two rows and could miss the trend test or list twice; _mktGaByPath sums last7/last28 by path. Backend (same 3.85.0, not yet deployed): authorizeAnalytics re-throws so a failure is red in the editor; a disabled Analytics Data API is named before the access-list message.
         // v5.47.0: WHAT'S WORKING - GOOGLE ANALYTICS, READ-ONLY. PAIRS WITH .gs v3.85.0 (new scope analytics.readonly + AnalyticsData advanced service; Hans runs authorizeAnalytics in the editor between push and redeploy; Amanda's backend deliberately stays 3.84.0 without the scope). His ask: "this page has been trending higher, or this blog or podcast was really clicked on recently, let's use that as a backlink for a related quote (and perhaps asking me for a quote)". He supplied GA4 property 370961938 (NOT hardcoded - public repo; it is entered in Settings > Social posting > Google Analytics and rides on the firm 'marketing' row as gaPropertyId + gaBackendInitials, the fbBackendInitials routing pattern; Save & test only saves after the backend reads it). Marketing page: a collapsed "What's working" panel (loads on open, cached device-local 6h in eos_mkt_ga_cache, Refresh): Trending this week (5+ views and >=1.5x the week before, home and WP plumbing excluded), Most read 28 days, sources + Facebook's share; each page has "Quote -> link here" = a Social / Quote card whose facebookQuote.link is that page, opened with a toast ASKING him for the quote (never invented); "AI: What should I do next?" turns only the listed numbers + his recent cards into three moves (told never to invent figures or write the quote). mktFqCta: a standalone quote pointing at a BLOG post (linkKind from the site list) reads "the full post is here". Podcast: Blubrry (his answer) - downloads need Blubrry API access, phase 2; episode pages on the site are already in GA.
         // v5.46.2: HIS ORDER, ENFORCED - blog live in WordPress -> its Facebook post -> then the quote. (1) He asked what stops a social post going out before the blog: the blog's Facebook post already waited for WordPress to report the post LIVE (mktFbLiveLink = status 'publish'), but the blog's QUOTE post only waited for that too - it could be scheduled with no social post at all, or timed before it (the rhythm only SUGGESTED after). Now mktFqSocialFirst(card): a blog quote needs the blog's own post scheduled/posted and a time strictly after it, in the paint (button disabled, line says why) and in _mktFbApprove (refusal sentences). Standalone quotes unaffected. Probe F6/F7. (2) His "Shouldn't the CTA for the blog be higher up like before Finalize draft?": v5.44-5.46 had pushed the closing CTA under Related reading + both Facebook boxes inside Package & Send. It is now its own STEP 6 "Closing Call to Action" (inside #mktBlogFields, so blog cards only), directly before Finalize Draft; later steps renumbered 7-12 (Quote is now step 10), and every live "Step N" string now names the step instead of its number so the next move cannot stale them. (3) Package & Send: the WordPress / package / Drive buttons now sit ABOVE the Facebook boxes, matching the order.
@@ -8633,7 +8633,18 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.50.0 &mdash; 2026-09-30 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.51.0 &mdash; 2026-09-30 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Google Analytics now tells you what to do, not just what happened.</div>'
+                + '<div style="font-size:0.8rem;background:#fffbeb;border:1px solid #fcd34d;color:#92400e;border-radius:6px;padding:6px 10px;margin:0 0 8px;">The four headline numbers need Hans&rsquo;s backend on 3.88.0 (a plain update, no permission click). The &ldquo;Things to do&rdquo; list works either way.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>What&rsquo;s working opens with four numbers</strong> &mdash; visitors, new visitors, time on site and Facebook&rsquo;s share &mdash; each against the 28 days before, the same figures Google emails you.</li>'
+                + '<li><strong>Then a &ldquo;Things to do&rdquo; list, worked out from the numbers:</strong> visitors landing on &ldquo;Page not found&rdquo; (with the broken addresses listed), a page that is climbing, a well-read post that was never shared on Facebook, a home page that loses most visitors without a click, and Facebook sending too few visitors while a live blog has no post. Each has a button.</li>'
+                + '<li><strong>Every button makes a Marketing card in Ideas</strong> with the numbers and the suggested next step written in its Brainstorming box, or opens the card it points at. Pressing it twice opens the card you already made rather than making a second one. Nothing changes on the website or on Facebook by itself.</li>'
+                + '</ul>'
+                + '</div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.50.0 &mdash; 2026-09-30</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Tags, a 600px picture, and a tidier foot on every blog you send.</div>'
                 + '<div style="font-size:0.8rem;background:#fffbeb;border:1px solid #fcd34d;color:#92400e;border-radius:6px;padding:6px 10px;margin:0 0 8px;">Tags and the 600px picture need backend 3.87.0 (a plain update, no permission click). Until then the tag step is skipped and the send window says so.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
@@ -17769,7 +17780,119 @@ Example:
             const fb = (r.sources || []).filter(function(s) { return /facebook|^fb$|^m\.facebook|^l\.facebook|^lm\.facebook/i.test(s.sessionSource); })
                 .reduce(function(n, s) { return n + s.sessions; }, 0);
             const total = (r.sources || []).reduce(function(n, s) { return n + s.sessions; }, 0);
-            return { trending: trending, top: top, sources: sources, fb: fb, total: total, site: r.siteUrl || '' };
+            // v5.51.0: the site totals vs the 28 days before (null on a backend older than
+            // 3.88.0), the broken addresses, and the home page's own row.
+            const t = r.totals && r.totals.cur ? r.totals : null;
+            const home = (r.pages.last28 || []).find(function(p) { return String(p.pagePath || '') === '/'; }) || null;
+            const notFound = (r.notFound || []).filter(function(p) { return p.screenPageViews > 0; });
+            return { trending: trending, top: top, sources: sources, fb: fb, total: total, site: r.siteUrl || '', totals: t, home: home, notFound: notFound };
+        }
+        // ==================== v5.51.0 — ANALYTICS INTO ACTIONS ====================
+        // His ask: "bake in these Google Analytics into actionable items within marketing".
+        // Answers: an action lands as a Marketing card in Ideas; the four headline numbers vs
+        // the previous 28 days; nothing on Today. The rules are PLAIN ARITHMETIC - the AI coach
+        // stays separate and never writes these. Pure over (insights, cards).
+        function mktGaActions(ins, cards) {
+            const acts = [];
+            const esc = escapeHtml;
+            const nf = ins.notFound || [];
+            const nfViews = nf.reduce(function(n, p) { return n + p.screenPageViews; }, 0);
+            if (nfViews >= 5) {
+                acts.push({ key: 'broken', icon: '&#128279;', text: nfViews + ' visits in 28 days landed on "Page not found".',
+                    sub: nf.slice(0, 6).map(function(p) { return esc(p.pagePath) + ' (' + p.screenPageViews + ')'; }).join(' &middot; ') + (nf.length > 6 ? ' &hellip;' : ''),
+                    buttons: [{ label: 'Make a card', fn: 'mktGaAct(\'broken\')' }] });
+            }
+            (ins.trending || []).forEach(function(p, i) {
+                acts.push({ key: 'trend' + i, icon: '&#128200;', text: '"' + esc(_mktGaTitle(p)) + '" is climbing: ' + p.screenPageViews + ' views this week' + (p.before ? ', ' + p.before + ' the week before.' : ', new this week.'),
+                    sub: 'A quote post linking to it, or a follow-up blog on the same subject.',
+                    buttons: [{ label: 'Quote → link', fn: 'mktGaQuoteFor(\'trending\',' + i + ')' }, { label: 'Follow-up blog', fn: 'mktGaAct(\'followup\',' + i + ')' }] });
+            });
+            // A well-read post the tool published that never got its Facebook post.
+            const wp = (typeof mktWpStatusMap === 'function') ? mktWpStatusMap() : {};
+            (ins.top || []).forEach(function(p) {
+                const link = ins.site + p.pagePath;
+                const card = (cards || []).find(function(c) {
+                    const s = c.wordpressPostId && wp[c.wordpressPostId];
+                    return s && s.link && String(s.link).replace(/\/+$/, '') === link.replace(/\/+$/, '');
+                });
+                if (!card) return;
+                const fbp = card.socialPosts && card.socialPosts.facebook;
+                if (fbp && (fbp.status === 'scheduled' || fbp.status === 'posted')) return;
+                if (acts.some(function(a) { return a.key === 'reshare'; })) return;
+                acts.push({ key: 'reshare', icon: '&#128172;', text: '"' + esc(_mktGaTitle(p)) + '" is still read (' + p.screenPageViews + ' views in 28 days) and has no Facebook post from the tool.',
+                    sub: 'Share it; you or Amanda approve the post as usual.', buttons: [{ label: 'Open the card', fn: 'mktGaAct(\'open\',\'' + esc(card.id) + '\')' }] });
+            });
+            if (ins.home && ins.home.screenPageViews >= 100 && Number(ins.home.bounceRate) >= 0.7) {
+                acts.push({ key: 'home', icon: '&#127968;', text: 'Home page: ' + ins.home.screenPageViews + ' views, ' + Math.round(ins.home.bounceRate * 100) + '% leave without a click.',
+                    sub: 'Website suggestion only: give the home page clear links to the Greenville service pages and the latest blog.',
+                    buttons: [{ label: 'Make a card', fn: 'mktGaAct(\'home\')' }] });
+            }
+            if (ins.total >= 50 && ins.fb / ins.total < 0.05) {
+                const live = (cards || []).find(function(c) {
+                    const s = c.wordpressPostId && wp[c.wordpressPostId];
+                    const fbp = c.socialPosts && c.socialPosts.facebook;
+                    return s && s.status === 'publish' && !(fbp && (fbp.status === 'scheduled' || fbp.status === 'posted'));
+                });
+                if (live) acts.push({ key: 'fbshare', icon: '&#128172;', text: 'Facebook sent ' + ins.fb + ' of ' + ins.total + ' visits (' + Math.round(ins.fb / ins.total * 100) + '%).',
+                    sub: '"' + esc(live.title || 'A live blog') + '" is live and has no Facebook post yet.', buttons: [{ label: 'Open the card', fn: 'mktGaAct(\'open\',\'' + esc(live.id) + '\')' }] });
+            }
+            return acts;
+        }
+        function _mktGaPct(cur, prev) {
+            if (!prev) return cur ? 'new' : '';
+            const p = Math.round((cur - prev) / prev * 100);
+            return (p >= 0 ? '+' : '') + p + '% vs the 28 before';
+        }
+        function mktGaHeadlineHtml(ins) {
+            if (!ins.totals) return '<div style="color:var(--gray-500); margin:2px 0 8px;">The headline numbers (visitors vs the 28 days before) need backend 3.88.0.</div>';
+            const c = ins.totals.cur || {}, p = ins.totals.prev || {};
+            const secs = function(t) { return t.activeUsers ? Math.round((t.userEngagementDuration || 0) / t.activeUsers) : 0; };
+            const tile = function(label, val, note, bad) {
+                return '<div style="background:var(--gray-50); border-radius:8px; padding:8px 10px; min-width:0;"><div style="font-size:0.72rem; color:var(--gray-500);">' + label + '</div>'
+                    + '<div style="font-size:1.25rem; font-weight:700;">' + val + '</div><div style="font-size:0.72rem; color:' + (bad ? '#92400e' : (/^\+|^new/.test(note) ? '#15803d' : 'var(--gray-500)')) + ';">' + note + '</div></div>';
+            };
+            const sc = secs(c), sp = secs(p);
+            return '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:8px; margin:4px 0 10px;">'
+                + tile('Visitors', (c.activeUsers || 0).toLocaleString(), _mktGaPct(c.activeUsers || 0, p.activeUsers || 0), (c.activeUsers || 0) < (p.activeUsers || 0))
+                + tile('New visitors', (c.newUsers || 0).toLocaleString(), _mktGaPct(c.newUsers || 0, p.newUsers || 0), (c.newUsers || 0) < (p.newUsers || 0))
+                + tile('Time on site', sc + 's', _mktGaPct(sc, sp), sc < sp)
+                + tile('From Facebook', String(ins.fb), ins.total ? Math.round(ins.fb / ins.total * 100) + '% of ' + ins.total + ' visits' : 'no visits recorded', false)
+                + '</div>';
+        }
+        // One place that turns an action into a card (or opens the card it points at). A card
+        // with the same title that is not Done is OPENED, not duplicated.
+        function mktGaAct(kind, arg) {
+            const ins = _mktGaLast;
+            if (!ins) return;
+            mktLoad();
+            if (kind === 'open') { mktOpenCard(String(arg)); return; }
+            let title = '', notes = '', cardKind = 'standalone', sources = '';
+            if (kind === 'broken') {
+                const nf = ins.notFound || [];
+                title = 'Website: fix ' + nf.length + ' broken address' + (nf.length === 1 ? '' : 'es');
+                notes = 'These addresses showed "Page not found" to visitors in the last 28 days (visits in brackets). For each one, add a redirect in WordPress to the page that replaced it, or fix the link that points at it.\n\n'
+                    + nf.map(function(p) { return ins.site + p.pagePath + ' (' + p.screenPageViews + ')'; }).join('\n');
+            } else if (kind === 'home') {
+                title = 'Website: home page loses ' + Math.round(ins.home.bounceRate * 100) + '% of visitors without a click';
+                notes = 'Home page, last 28 days: ' + ins.home.screenPageViews + ' views, bounce rate ' + Math.round(ins.home.bounceRate * 100) + '%.\n\n'
+                    + 'Suggestions (website only; nothing here changes the site): clear links from the home page to the ten Greenville service pages and to the latest blog; one sentence naming Greenville, SC in the text; a visible Schedule a Conversation button above the fold.';
+            } else if (kind === 'followup') {
+                const p = ins.trending[arg];
+                if (!p) return;
+                cardKind = 'blog';
+                title = 'Follow-up: ' + _mktGaTitle(p);
+                sources = ins.site + p.pagePath;
+                notes = '"' + _mktGaTitle(p) + '" is being read more this week (' + p.screenPageViews + ' views, ' + (p.before || 0) + ' the week before). A follow-up on the same subject: what has changed since, the question readers are asking now, or the next step for someone who read it. Link back to the original.';
+            } else return;
+            const existing = mktData.cards.find(function(c) { return c.title === title && c.columnId !== 'done'; });
+            if (existing) { mktOpenCard(existing.id); showToast('Already on the board - opened it.'); return; }
+            mktNewCard(cardKind);
+            const card = mktGetCard(mktEditingId);
+            if (!card) return;
+            card.title = title; card.brainstormIdeas = notes; card.brainstormSources = sources;
+            card.updated = new Date().toISOString();
+            mktSave(); mktRender(); mktOpenCard(card.id);
+            showToast('Card made in Ideas. The numbers and the suggested next step are in its Brainstorming box.');
         }
         function _mktGaTitle(p) { return String(p.pageTitle || '').replace(/\s*[|–—-]\s*(Intelligent Investing|Invested With You)[^|]*$/i, '').trim() || p.pagePath; }
         function mktGaRender(r, at) {
@@ -17782,6 +17905,21 @@ Example:
                     + ' <button class="btn btn-secondary" onclick="mktGaQuoteFor(\'' + list + '\',' + i + ')" style="font-size:0.72rem; padding:1px 7px; margin-left:4px;">Quote &rarr; link here</button></li>';
             };
             let h = '';
+            // v5.51.0: the headline numbers, then the actions, then the lists as before.
+            h += mktGaHeadlineHtml(ins);
+            let acts = [];
+            try { mktLoad(); acts = mktGaActions(ins, mktData.cards); } catch (e) { console.warn('mktGaActions', e); }
+            h += '<div style="font-weight:600;">Things to do</div>';
+            h += acts.length
+                ? acts.map(function(a) {
+                    return '<div style="display:flex; gap:8px; align-items:flex-start; border-top:1px solid var(--gray-100); padding:6px 0;">'
+                        + '<span aria-hidden="true">' + a.icon + '</span><div style="flex:1 1 0; min-width:0;">' + a.text
+                        + '<div style="font-size:0.74rem; color:var(--gray-500); overflow-wrap:anywhere;">' + a.sub + '</div></div>'
+                        + '<div style="display:flex; gap:4px; flex-wrap:wrap; justify-content:flex-end;">' + a.buttons.map(function(b) {
+                            return '<button class="btn btn-secondary" onclick="' + b.fn + '" style="font-size:0.72rem; padding:1px 7px;">' + b.label + '</button>';
+                        }).join('') + '</div></div>';
+                }).join('') + '<div style="margin-bottom:8px;"></div>'
+                : '<div style="color:var(--gray-500); margin:2px 0 8px;">Nothing the numbers point at this week: no broken addresses, no page climbing sharply, every well-read post already shared.</div>';
             h += '<div style="font-weight:600; margin-top:2px;">Trending this week</div>';
             h += ins.trending.length
                 ? '<ul style="margin:2px 0 8px 18px; padding:0;">' + ins.trending.map(function(p, i) {
