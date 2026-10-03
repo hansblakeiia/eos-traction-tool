@@ -6002,3 +6002,31 @@
 .mkt-rhythm-seg.done { background: #15803d; }
 .mkt-rhythm-seg.now { background: #f59e0b; }
 .mkt-rhythm-behind { margin-top: 6px; color: #92400e; font-weight: 600; }
+
+/* ============ v5.53.0: "CLAUDE IS WORKING" ROW (#aiWorking) ============
+   One fixed row for the whole app, shown by aiWorkingBegin() while an AI request is in
+   flight and hidden by aiWorkingEnd() in a finally. The picture is the firm's looping
+   Intelligrations animation at 66x50; the text is body-size in the normal ink, not the
+   muted small print status lines use. Bottom-right on a computer; on a phone it sits
+   bottom-centre above the nav, the same place as the toasts. Appended last (rule 10b). */
+.ai-working {
+    position: fixed; right: 20px; bottom: 20px; z-index: 10001;
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 14px 8px 8px;
+    background: #fff; border: 1px solid var(--gray-200); border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.14);
+    color: var(--gray-800); font-size: 0.95rem; line-height: 1.35;
+    max-width: min(440px, calc(100vw - 32px));
+}
+.ai-working[hidden] { display: none; }
+.ai-working > img { width: 66px; height: 50px; flex: 0 0 66px; object-fit: contain; }
+.ai-working-text { display: flex; flex-direction: column; min-width: 0; }
+.ai-working-text > span { font-weight: 600; color: var(--gray-800); }
+.ai-working-text > em { color: var(--gray-800); font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ai-working-text > em[hidden] { display: none; }
+@media (max-width: 768px) {
+    .ai-working {
+        right: auto; left: 50%; transform: translateX(-50%);
+        bottom: calc(74px + env(safe-area-inset-bottom, 0px));
+    }
+}
