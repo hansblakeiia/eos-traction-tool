@@ -5232,7 +5232,9 @@
                space" complaint that produced BRIEF_MAX_ROWS in the first place. Turn the mail
                section off, or have a morning with no mail that needs you, and v4.56.1's band
                comes back exactly as it was. */
-            .mb-has-mail:not(.mb-ctx-open) .mb-body .mb-sec:not([data-mb-sec="mail"]) .mb-list {
+            .mb-has-mail:not(.mb-ctx-open) .mb-body .mb-sec:not([data-mb-sec="mail"]) .mb-list,
+            .mb-has-mail:not(.mb-ctx-open) .mb-body .mb-opps,
+            .mb-has-mail:not(.mb-ctx-open) .mb-body .mb-opp-more {
                 display: none;
             }
             /* SCREENSHOT FINDING: hiding the note left "WHAT YOU LEFT YOURSELF" as a heading
@@ -5522,7 +5524,10 @@
 /* v5.55.1: the why-line is the page's own chips, not a run-on sentence — measured at 375 the
    sentence form cost 632px for four rows; chips wrap and colour-code (red = overdue/stale,
    amber = a gap, violet = the touch ceiling). */
-.mb-opp-why { flex: 1 1 100%; margin-top: 0; }
+.mb-opp-why { flex: 1 1 100%; }
+/* v5.55.2 (review, rule 10b): a bare `.mb-opp-why { margin-top: 0 }` here was DEAD — the
+   unscoped `.opp-flags { margin-top: 5px }` sits later in the sheet at equal specificity. */
+.mb-opp .opp-flags { margin-top: 2px; }
 .mb-opp-touch { font-size: 0.72rem; color: #6b7280; }
 .mb-opp-acts { margin-left: auto; gap: 12px; }
 .mb-opp-more { margin-top: 6px; }
