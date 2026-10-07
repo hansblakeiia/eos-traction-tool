@@ -13,7 +13,7 @@
          Marketing tab; the rest of the app is untouched by this. -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%231a365d' width='100' height='100' rx='15'/%3E%3Ctext x='50' y='50' font-family='Arial, sans-serif' font-size='45' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='central'%3EEOS%3C/text%3E%3Ccircle cx='85' cy='15' r='8' fill='%233182ce'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="styles.css?v=5.53.0">
+    <link rel="stylesheet" href="styles.css?v=5.55.0">
     <!-- v5.27.0: installable + notifications. The manifest makes "Add to Home screen" a
          real app icon; sw.js (registered from _pushInit) receives Web Push. The worker
          caches NOTHING — see the note at the top of sw.js. -->
@@ -4840,9 +4840,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '5.54.0';
-        const EOS_BUILD_DATE = '2026-10-03';
-        const EOS_BUILD_TIME = '14:45'; // v5.54.0 (index.html ONLY, styles.css unchanged and stays ?v=5.53.0, no .gs round; pairs with a REDEPLOY of the opportunity-intake Edge Function, which Hans pastes in the Supabase dashboard): OPPORTUNITY DESCRIPTIONS AS HTML (§5.125). Redtail's opportunity Description is a rich-text (HTML) editor, so the intake function's plain "\n" lines arrived as one solid run. The function now writes one <p> per line (empty line = <p><br></p>, & < > escaped, "Folder: <url>" an <a>), and its finder (locateBlock) recognises the Prospect Prep markers in plain text, in its own HTML and in HTML Redtail's editor rewrote (<p>/<div>/<br> wrapping, attributes, &nbsp;, entities, inline <span>). THIS FILE: the opp-desc-html block (marked >>> / <<<, loaded by .claude/probes/opportunity-intake-test.js) holds oppDescToText (HTML -> lines; plain text passes through) and oppTextToDescHtml (lines -> the SAME HTML the function writes; the probe asserts byte equality, so a tool save keeps the markers findable). oppNormalise reads description as lines, so the list, search and AI review never see tags. oppDescForSave: box untouched + Redtail holds HTML -> Redtail's own HTML is sent back (his bold/lists/links survive) and a log line is ONE appended <p>; box edited, or an old plain record -> its lines as simple HTML (Redtail formatting is flattened only then — the box is plain text). Baseline (ed.descRaw / ed.descText) is set in oppRenderEditor from the full record. Probes: opportunity-intake-test 18/18 (11 of them fail against the old plain-text writer/finder); opportunities-probe O7 rewritten to the HTML rule + new O7b, 20/22 — O11 and O16 fail identically on the deployed v5.53.0 (#eosSplash on top of the hit-test), not this release. Previous: v5.53.0 (THREE FILES: index.html + styles.css?v=5.53.0 + NEW icons/intelligrations-thinking.webp, no .gs round): THE "CLAUDE IS WORKING" ROW (§5.124). His ask: the firm's Intelligrations thinking animation (the 164x124 looping WebP from the Portfolio Dashboard, copied to icons/) shown wherever the tool waits on an AI call, with "Claude is working on it…" and the person's own words in italics when there are any, visible only while the request is in flight and hidden in a finally. Built as ONE fixed row (#aiWorking, bottom-right; bottom-centre above the nav on a phone, same spot as the toasts) rather than per-site markup: every AI request already passes _calPost (actions generateOutputs/generateImage, now a wrapper over _calPostRaw) or callAI (around callAIWithBudgetRetry), so aiWorkingBegin/aiWorkingEnd are REFERENCE-COUNTED there and no call site changed - except composerGenerate, which passes the typed ask as opts.question (payload.workingQuestion is the _calPost spelling, stripped before the body goes out). Text in var(--gray-800) at body size, not muted. THE ICON MUST SHIP WITH THE PAGE: without it the row shows a broken picture (the deploy is three files this time). Previously v5.52.0 (client-only, styles.css UNCHANGED, link stays ?v=5.49.0, no .gs round): THE RHYTHM STRIP NAMES WHAT WORDPRESS PUBLISHED (§5.123). His report: "I just posted a blog, and it wasn't the Diversification one, so I'm guessing you can't see when I've actually posted" - the tool HAD seen it (the strip read "Last one out Thu, Oct 1 (today)") but showed a bare date beside the next card's title, which read as blindness. Now _mktLastOutPhrase names + links the post; mktRhythmRefresh reads the 10 newest published posts (was 1) and mktRhythmFacts counts a SENT card as out when its title is among them (_mktTitleKey), so a post re-created or published by hand in WordPress needs no marking here; WordPress is asked every 10 minutes while a blog is sent-and-waiting (was always 3 hours); "Check WordPress now" on the strip (mktRhythmCheckNow). Probe blog-rhythm-probe 9/9. Previously v5.51.0 (styles.css UNCHANGED, link stays ?v=5.49.0): ANALYTICS INTO ACTIONS (§5.122), PAIRS WITH .gs v3.88.0 (Hans's backend only - it is the GA one). His ask with two GA screenshots: "bake in these Google Analytics into actionable items within marketing". His answers: an action lands as a Marketing card in Ideas; build the headline numbers vs the previous 28 days; nothing on Today. What's working now opens with four tiles (mktGaHeadlineHtml: visitors, new visitors, time on site = engagement seconds per active user, Facebook's share; each vs the 28 before) and a "Things to do" list from PLAIN RULES (mktGaActions, pure over insights + cards; the AI coach is untouched and never writes these): broken addresses (notFound rows, >= 5 visits), a page climbing (the existing trend test) with Quote->link + Follow-up blog, a well-read tool-published post with no Facebook post, the home page at >= 70% bounce on >= 100 views, Facebook under 5% of visits while a live blog has no FB post. mktGaAct makes the card (standalone with the numbers + next step in the Brainstorming box; 'followup' = a blog card with the page as its source) and OPENS an existing same-titled card instead of duplicating. A 3.87.0-or-older backend: tiles replaced by one sentence naming 3.88.0, actions still built from what the old report carries. PREVIOUSLY v5.50.0 (styles.css UNCHANGED, link stays ?v=5.49.0): HIS FOUR ASKS FROM THE DIVERSIFICATION POST, PAIRS WITH .gs v3.87.0 (both accounts). (1) TAGS: pickWordPressTags after the category step - GET getWordPressTags (100 most-used), the marketing AI picks 3-5 existing + up to 2 new, one chooser (use / type my own / none), sent as tagIds + newTags; the backend creates new names and reuses term_exists; the send window names the tags. Gated on 3.87.0 (skipped with a sentence before). (2) The centred picture is 600x600 (backend wpImageMarkup_). (3) A 32px div gap after the Schedule a Conversation button (an empty <p> would be thrown away by the classic editor). (4) The related-reading line moves OUT of the draft at send time (mktRelApply(body, []) + buildRelatedLine(mktRelParse(body))) to sit under the button, above the disclosure, with a gap each side; the draft text and the archive copy are unchanged. PREVIOUSLY v5.49.1 (styles.css UNCHANGED, link stays ?v=5.49.0): HIS DIVERSIFICATION BLOG WENT TO WORDPRESS WITHOUT ITS PICTURE. Cause, confirmed from the code: the Image step's "Use this one" found no Firm Context folder for Intelligent Investing on his PC (Settings box empty AND the ii brand row without contextFolderId), so the picture stayed in IndexedDB and card.imageFileId stayed '' - and postToWordPress only attaches a picture that is in Drive, silently. Two fixes: (1) the send chooser now SAYS whether a picture goes; when the device holds candidates for the card but none reached Drive it adds a recommended "Stop - fix the picture first" and names the two steps; (2) the folder warning names BOTH places it looked (device box / brand row, and whether the row was readable) instead of one generic sentence he could not "shake". No data change; the folder id itself is his to paste (EOS Intelligent Investing Firm Context, found in his Drive). PREVIOUSLY v5.49.0 (TWO-FILE, styles.css?v=5.49.0): THE BLOG RHYTHM + MARKETING CALENDAR (§5.119), designed with him first (mockup + four answers, all the recommended ones). mktBlogStep reads the step off the card (the step AFTER the furthest filled one; Finalize and Title give no signal - a card carries its title from birth); mktRhythmFacts is PURE over (cards, WP statuses, last published post, now): ii blogs only, current = furthest along not live/scheduled/done, behind = 14+ days since the last live post AND nothing scheduled ahead, unknown history never nags, aim = anchor + 7. Last published comes from listWordPressPosts perPage 1 (eos_mkt_last_published, device-local) so blogs made outside the tool count. Today: #dpBlogLine under the date - the line + a DRAWN catch-up task (never stored in dailyPlanData: rules 49/53/75), tick hides it for the day (eos_blog_nudge_done). Marketing: #mktRhythmStrip, 12-segment bar, ii only. Calendar: CAL_EOS_LAYERS 'marketing' -> _calMktItemsFor (WP go-live, facebook + facebookQuote `when`, due/overdue marker), agenda bubble + week chip (data-cal-mkt) open the card via mktRhythmGoCard. mktRhythmRefresh is throttled 3h (Today also pulls marketing cards from the cloud, 15 min). Probe blog-rhythm-probe 9/9. No backend change. PREVIOUSLY v5.48.0 (styles.css UNCHANGED, link stays ?v=5.47.2): HIS GREENVILLE PAGES (§5.118). Ten service pages /greenville-* (created 2024-03-28, reorganised May-Jul 2024; audience pages linked to them 2024-06-21); he asked whether they gained views. The 28-day report cannot see that far back, so What's working gains a 'Greenville pages' block: mktGaLocalLoad -> analyticsReport mode 'pathHistory' (pathContains 'greenville', startDate 2023-07-01) -> mktGaLocalFacts (pure; FULL months only, last 12 vs the 12 before, trailing-slash paths merged, service pages vs blog posts, site total for share) -> mktGaLocalRender (per-page line + inline SVG sparkline) + mktGaLocalCopy (text for a chat). REQUIRES Google_Tasks_Sync.gs 3.86.0 ON THE GA BACKEND (gaBackendInitials = Hans) - a 3.85.0 backend ignores the mode and answers the default report, which the client detects by the missing `history` and names. No new scope, no consent run. PREVIOUSLY v5.47.2 (TWO-FILE, styles.css?v=5.47.2): his screenshot - he clicked "Approve & schedule the quote post" twice, nothing happened, and he feared a double post. Nothing was sent: the button was DISABLED (v5.46.2's order rule - the blog's own Facebook post was not scheduled yet) and a disabled button fires no click; had it been live, every schedule still passes a confirm dialog, the single-flight flag and the backend's 3-minute duplicate refusal. The defect was visual: styles.css had NO :disabled rule anywhere, so a disabled .btn-primary was exactly as blue as a live one. Now .btn:disabled is dimmed with a not-allowed cursor (appended last, rule 10b), and the Facebook buttons carry the reason as a hover title.
+        const EOS_VERSION = '5.55.0';
+        const EOS_BUILD_DATE = '2026-10-06';
+        const EOS_BUILD_TIME = '20:55'; // v5.55.0 (TWO-FILE deploy: index.html + styles.css, whose link becomes ?v=5.55.0; NO .gs ROUND - the backend stays .gs v3.88.0 and nothing is pasted or clasp-pushed; STYLES.CSS MUST SHIP WITH THIS FILE, because the new .mb-opp rows are unstyled without it and the empty host would hold a grid column): THE MORNING BRIEF'S "WHO TO TOUCH TODAY", AND TOUCH COUNTING (§5.126) - the Opportunities track's third phase, §5.97 "NEXT, his order" (the daily-brief section first, then touch counting). (1) THE SECTION: BRIEF_SECTIONS gains key 'opps' ("Who to touch today"), on by default, with a forward migration BRIEF_SECTIONS_ADDED_IN_V4 / sectionsV 4 in briefPrefs() - the v4.57.0 mail shape, because an opt-in list cannot tell "new" from "switched off", so a stored array written before the key existed gets it appended exactly once. It reads the SAME device cache the Opportunities page paints from (oppLoadCache / oppState.rows) and runs the SAME hygiene pass (oppFlags) - ONE RANKER, TWO RENDERERS, wired to both on the day the second surface shipped rather than after (the §5.87 / §5.91 / §5.93 lesson, applied before instead of after). briefOppsDue() = oppActiveRows() that oppFlags scores above 0, un-snoozed (a snoozed row returns score 0 from oppFlags), worst first by the page's own order (score, then idle days, then name). The brief shows the top 4 (BRIEF_OPPS_MAX_ROWS) with an "N more in Opportunities" button; the section badge and the headline count ALL due ("N opportunities need a touch", "one opportunity needs a touch"). Each row: the opportunity name (opens the record on the Opportunities page via briefOppOpen), linked contact names when known (oppContactsText), the flags as a why-line, a touch line, and two text controls - "AI email" (briefOppCompose: showPage('opportunities') then oppCompose, the SAME composer window the page's own AI email button opens - one drafter) and "Snooze a week" (briefOppSnooze: writes the device-local OPP_SNOOZE_KEY map, the same snooze the Opportunities page shows, and the toast says it never goes to Redtail). NOTHING IN THE BRIEF WRITES TO REDTAIL. (2) RENDERING STATES, rule 25 and rule 73: Redtail genuinely off on the deployment (capabilityDenied('redtail.crm')) renders NOTHING AT ALL, deliberately - that is a standing condition on Amanda's deployment and must not be re-announced every morning - and contributes 0 to the headline; a backend older than RT_OPP_GS_MIN (3.76.0) renders one sentence from oppGate() naming both versions and makes no call; a failed read with NO cache renders "Couldn't read the pipeline: <the backend's words>" plus Try again (briefOppsRefresh); a failed read WITH a cache keeps painting the cache; nothing due renders no section (the birthdays rule: an empty context section costs the fold and says nothing, and the Opportunities page shows the clean state). THE HOST: a <div data-mb-opphost> is painted from the cache at band render and repainted by _briefPaintOpps() when oppFetch lands - oppFetch's finally calls it, in a try - which is the mail host's shape (v4.57.0, addressed by data attribute, never a composed id, rule 47), so a late answer repaints one host and the headline and never re-lays-out the band. The host sits INSIDE the .mb-body auto-fit grid, and an empty element is still a grid item, so styles.css gives .mb-opphost `display: contents` - without it the common empty state held a blank column and pushed Today's calendar over (the doc-writer caught this from the diff; the probe's B6d asserts it). briefOppsKick() is called from the band render, awaits capabilityReadyChecked('redtail.crm') (the ACTION re-probes; the AFFORDANCE reads capabilityDenied), stands down painting if oppGate() names a reason, and otherwise calls oppFetch(false), whose own 5-minute TTL decides whether a request goes out. _briefHeadlineFacts(over) is NEW and is the single place that computes the headline's facts (mail, carried, pending, starred, opps); the three repaint sites - band render, mail repaint, opps repaint - all go through it, where before two of them each carried their own copy of the four reads and a fifth fact would have had to be added to each. (3) TOUCH COUNTING, oppTouches(row, now): Redtail keeps NO touch counter - updated_at moves on any edit, so it is the idle clock and not a count. The opportunity description's dated log lines in his own habit ("YYYY.MM.DD- what I did"; YYYY/MM/DD and YYYY-MM-DD also read, OPP_LOG_LINE_RE) are counted as touches, and a line that says THEY came back (OPP_INBOUND_RE: replied, wrote back, called me back, got back to me, responded, heard back, reached out to me, emailed / texted / called / messaged me, their reply) RESETS the count - the playbook's rule 1 (docs/plans/opportunities-sales-playbook.md section 2) is the source. Order-independent: the newest inbound line's date is the floor and every non-inbound line dated on or after it counts, wherever the lines sit in the text; a touch logged on the SAME DAY as the reply still counts. The count is shown WITH the date it counts from ("2 touches since their reply 09/22/26, last 09/30/26", or "No touch logged" when the description holds no dated line) so a miscount is VISIBLE AND CHECKABLE against the record rather than trusted. oppFlags gains a flag at the kind's ceiling (the existing OPP_KINDS.maxTouches: 6 website lead, 5 after discovery / prospect / no stage, 3 COI getting introduced, 4 podcast; COI relationship is 0 = never): "N touches logged [since their reply on mm/dd/yy] - time for the closing-the-file note" for the breakUp kinds, "stop asking; keep a friendly quarterly touch" for the COI intro, score +2. oppFlags is the page's pass too, so THIS FLAG ALSO APPEARS ON THE OPPORTUNITIES PAGE and can by itself put a row into the brief. oppFlags now also returns .touches (null for a snoozed row, which returns before counting). DEGRADES / DEPENDS ON: the Redtail proxy at .gs 3.76.0 or newer and the redtail.crm capability (both only gate the section, nothing else changes); the brief's rows are only as current as the Opportunities page's own cache (oppFetch, 5-minute TTL); the touch count is only as good as his dated lines and the phrase list - a reply he logs in words outside OPP_INBOUND_RE does not reset the count, which is why the date it counts from is on screen. NOT BUILT, named: a tick that writes a touch to Redtail from the brief (a touch is logged through the composer's existing "Write the follow-up to Redtail" or the record's log box); inbound-reply detection beyond the phrase list; snooze syncing across devices (it stays device-local, as on the page); a Settings toggle for brief sections (none exists for ANY section). styles.css: .mb-opphost (display: contents) + .mb-opps / .mb-opp / .mb-opp-name / .mb-opp-who / .mb-opp-why / .mb-opp-touch / .mb-opp-acts beside .mb-bday, rule 8/9 guards on creation (min-width 0 on the row's children, overflow-wrap anywhere on name, contacts and why, because an opportunity name can carry an unbroken address). PROBE: NEW .claude/probes/brief-opps-probe.js, 12 assertions B1-B8b (registration + migration; pure touch counting including the reply reset and the per-kind ceilings; the render against the page's own ranker; a snooze made from the brief seen on the page; AI email landing in the page's composer; the four degrade states incl. the empty host holding no grid column; ZERO Redtail writes; 375px overflow and a hit-test; 412px overflow), screenshots at 1280 and 375. NEGATIVE CONTROL: against the DEPLOYED v5.54.0 it scores 2/11 (only the two absence assertions pass), so it catches the feature's absence rather than describing it. TWO HARNESS FIXES, each proven on the deployed v5.54.0 too (rule 72): opportunities-probe's openApp now removes #eosSplash (O11 and O16 had "failed" on the splash's hit-test since v5.31.0 - 22/22 on both builds now, which closes the "fail identically on v5.53.0" note in the line below), and brief-mail-probe reveals the app, removes the splash and clears the sign-in gate before H-hit (measured: that gate was the probe's blocked Google script exhausting initGoogleSignIn's 10-second budget - PASS at t=3s, FAIL at t=12s, identical code; 94/94 on both builds). Previous: v5.54.0 (index.html ONLY, styles.css unchanged and stays ?v=5.53.0, no .gs round; pairs with a REDEPLOY of the opportunity-intake Edge Function, which Hans pastes in the Supabase dashboard): OPPORTUNITY DESCRIPTIONS AS HTML (§5.125). Redtail's opportunity Description is a rich-text (HTML) editor, so the intake function's plain "\n" lines arrived as one solid run. The function now writes one <p> per line (empty line = <p><br></p>, & < > escaped, "Folder: <url>" an <a>), and its finder (locateBlock) recognises the Prospect Prep markers in plain text, in its own HTML and in HTML Redtail's editor rewrote (<p>/<div>/<br> wrapping, attributes, &nbsp;, entities, inline <span>). THIS FILE: the opp-desc-html block (marked >>> / <<<, loaded by .claude/probes/opportunity-intake-test.js) holds oppDescToText (HTML -> lines; plain text passes through) and oppTextToDescHtml (lines -> the SAME HTML the function writes; the probe asserts byte equality, so a tool save keeps the markers findable). oppNormalise reads description as lines, so the list, search and AI review never see tags. oppDescForSave: box untouched + Redtail holds HTML -> Redtail's own HTML is sent back (his bold/lists/links survive) and a log line is ONE appended <p>; box edited, or an old plain record -> its lines as simple HTML (Redtail formatting is flattened only then — the box is plain text). Baseline (ed.descRaw / ed.descText) is set in oppRenderEditor from the full record. Probes: opportunity-intake-test 18/18 (11 of them fail against the old plain-text writer/finder); opportunities-probe O7 rewritten to the HTML rule + new O7b, 20/22 — O11 and O16 fail identically on the deployed v5.53.0 (#eosSplash on top of the hit-test), not this release. Previous: v5.53.0 (THREE FILES: index.html + styles.css?v=5.53.0 + NEW icons/intelligrations-thinking.webp, no .gs round): THE "CLAUDE IS WORKING" ROW (§5.124). His ask: the firm's Intelligrations thinking animation (the 164x124 looping WebP from the Portfolio Dashboard, copied to icons/) shown wherever the tool waits on an AI call, with "Claude is working on it…" and the person's own words in italics when there are any, visible only while the request is in flight and hidden in a finally. Built as ONE fixed row (#aiWorking, bottom-right; bottom-centre above the nav on a phone, same spot as the toasts) rather than per-site markup: every AI request already passes _calPost (actions generateOutputs/generateImage, now a wrapper over _calPostRaw) or callAI (around callAIWithBudgetRetry), so aiWorkingBegin/aiWorkingEnd are REFERENCE-COUNTED there and no call site changed - except composerGenerate, which passes the typed ask as opts.question (payload.workingQuestion is the _calPost spelling, stripped before the body goes out). Text in var(--gray-800) at body size, not muted. THE ICON MUST SHIP WITH THE PAGE: without it the row shows a broken picture (the deploy is three files this time). Previously v5.52.0 (client-only, styles.css UNCHANGED, link stays ?v=5.49.0, no .gs round): THE RHYTHM STRIP NAMES WHAT WORDPRESS PUBLISHED (§5.123). His report: "I just posted a blog, and it wasn't the Diversification one, so I'm guessing you can't see when I've actually posted" - the tool HAD seen it (the strip read "Last one out Thu, Oct 1 (today)") but showed a bare date beside the next card's title, which read as blindness. Now _mktLastOutPhrase names + links the post; mktRhythmRefresh reads the 10 newest published posts (was 1) and mktRhythmFacts counts a SENT card as out when its title is among them (_mktTitleKey), so a post re-created or published by hand in WordPress needs no marking here; WordPress is asked every 10 minutes while a blog is sent-and-waiting (was always 3 hours); "Check WordPress now" on the strip (mktRhythmCheckNow). Probe blog-rhythm-probe 9/9. Previously v5.51.0 (styles.css UNCHANGED, link stays ?v=5.49.0): ANALYTICS INTO ACTIONS (§5.122), PAIRS WITH .gs v3.88.0 (Hans's backend only - it is the GA one). His ask with two GA screenshots: "bake in these Google Analytics into actionable items within marketing". His answers: an action lands as a Marketing card in Ideas; build the headline numbers vs the previous 28 days; nothing on Today. What's working now opens with four tiles (mktGaHeadlineHtml: visitors, new visitors, time on site = engagement seconds per active user, Facebook's share; each vs the 28 before) and a "Things to do" list from PLAIN RULES (mktGaActions, pure over insights + cards; the AI coach is untouched and never writes these): broken addresses (notFound rows, >= 5 visits), a page climbing (the existing trend test) with Quote->link + Follow-up blog, a well-read tool-published post with no Facebook post, the home page at >= 70% bounce on >= 100 views, Facebook under 5% of visits while a live blog has no FB post. mktGaAct makes the card (standalone with the numbers + next step in the Brainstorming box; 'followup' = a blog card with the page as its source) and OPENS an existing same-titled card instead of duplicating. A 3.87.0-or-older backend: tiles replaced by one sentence naming 3.88.0, actions still built from what the old report carries. PREVIOUSLY v5.50.0 (styles.css UNCHANGED, link stays ?v=5.49.0): HIS FOUR ASKS FROM THE DIVERSIFICATION POST, PAIRS WITH .gs v3.87.0 (both accounts). (1) TAGS: pickWordPressTags after the category step - GET getWordPressTags (100 most-used), the marketing AI picks 3-5 existing + up to 2 new, one chooser (use / type my own / none), sent as tagIds + newTags; the backend creates new names and reuses term_exists; the send window names the tags. Gated on 3.87.0 (skipped with a sentence before). (2) The centred picture is 600x600 (backend wpImageMarkup_). (3) A 32px div gap after the Schedule a Conversation button (an empty <p> would be thrown away by the classic editor). (4) The related-reading line moves OUT of the draft at send time (mktRelApply(body, []) + buildRelatedLine(mktRelParse(body))) to sit under the button, above the disclosure, with a gap each side; the draft text and the archive copy are unchanged. PREVIOUSLY v5.49.1 (styles.css UNCHANGED, link stays ?v=5.49.0): HIS DIVERSIFICATION BLOG WENT TO WORDPRESS WITHOUT ITS PICTURE. Cause, confirmed from the code: the Image step's "Use this one" found no Firm Context folder for Intelligent Investing on his PC (Settings box empty AND the ii brand row without contextFolderId), so the picture stayed in IndexedDB and card.imageFileId stayed '' - and postToWordPress only attaches a picture that is in Drive, silently. Two fixes: (1) the send chooser now SAYS whether a picture goes; when the device holds candidates for the card but none reached Drive it adds a recommended "Stop - fix the picture first" and names the two steps; (2) the folder warning names BOTH places it looked (device box / brand row, and whether the row was readable) instead of one generic sentence he could not "shake". No data change; the folder id itself is his to paste (EOS Intelligent Investing Firm Context, found in his Drive). PREVIOUSLY v5.49.0 (TWO-FILE, styles.css?v=5.49.0): THE BLOG RHYTHM + MARKETING CALENDAR (§5.119), designed with him first (mockup + four answers, all the recommended ones). mktBlogStep reads the step off the card (the step AFTER the furthest filled one; Finalize and Title give no signal - a card carries its title from birth); mktRhythmFacts is PURE over (cards, WP statuses, last published post, now): ii blogs only, current = furthest along not live/scheduled/done, behind = 14+ days since the last live post AND nothing scheduled ahead, unknown history never nags, aim = anchor + 7. Last published comes from listWordPressPosts perPage 1 (eos_mkt_last_published, device-local) so blogs made outside the tool count. Today: #dpBlogLine under the date - the line + a DRAWN catch-up task (never stored in dailyPlanData: rules 49/53/75), tick hides it for the day (eos_blog_nudge_done). Marketing: #mktRhythmStrip, 12-segment bar, ii only. Calendar: CAL_EOS_LAYERS 'marketing' -> _calMktItemsFor (WP go-live, facebook + facebookQuote `when`, due/overdue marker), agenda bubble + week chip (data-cal-mkt) open the card via mktRhythmGoCard. mktRhythmRefresh is throttled 3h (Today also pulls marketing cards from the cloud, 15 min). Probe blog-rhythm-probe 9/9. No backend change. PREVIOUSLY v5.48.0 (styles.css UNCHANGED, link stays ?v=5.47.2): HIS GREENVILLE PAGES (§5.118). Ten service pages /greenville-* (created 2024-03-28, reorganised May-Jul 2024; audience pages linked to them 2024-06-21); he asked whether they gained views. The 28-day report cannot see that far back, so What's working gains a 'Greenville pages' block: mktGaLocalLoad -> analyticsReport mode 'pathHistory' (pathContains 'greenville', startDate 2023-07-01) -> mktGaLocalFacts (pure; FULL months only, last 12 vs the 12 before, trailing-slash paths merged, service pages vs blog posts, site total for share) -> mktGaLocalRender (per-page line + inline SVG sparkline) + mktGaLocalCopy (text for a chat). REQUIRES Google_Tasks_Sync.gs 3.86.0 ON THE GA BACKEND (gaBackendInitials = Hans) - a 3.85.0 backend ignores the mode and answers the default report, which the client detects by the missing `history` and names. No new scope, no consent run. PREVIOUSLY v5.47.2 (TWO-FILE, styles.css?v=5.47.2): his screenshot - he clicked "Approve & schedule the quote post" twice, nothing happened, and he feared a double post. Nothing was sent: the button was DISABLED (v5.46.2's order rule - the blog's own Facebook post was not scheduled yet) and a disabled button fires no click; had it been live, every schedule still passes a confirm dialog, the single-flight flag and the backend's 3-minute duplicate refusal. The defect was visual: styles.css had NO :disabled rule anywhere, so a disabled .btn-primary was exactly as blue as a live one. Now .btn:disabled is dimmed with a not-allowed cursor (appended last, rule 10b), and the Facebook buttons carry the reason as a hover title.
         // v5.47.1: gs-auditor on 3.85.0 (backend cleared for Hans only, consent between push and redeploy). Client fixes: (1) a pre-3.85.0 backend answers analyticsReport with the secret-key refusal, which _calPost rewrites as "sign-in has expired" - a wrong cause (rule 63); mktGaErr now names the backend version first, and Save & test gates on the own backend's version. (2) GA rows are (path, title) pairs, so a retitled post split into two rows and could miss the trend test or list twice; _mktGaByPath sums last7/last28 by path. Backend (same 3.85.0, not yet deployed): authorizeAnalytics re-throws so a failure is red in the editor; a disabled Analytics Data API is named before the access-list message.
         // v5.47.0: WHAT'S WORKING - GOOGLE ANALYTICS, READ-ONLY. PAIRS WITH .gs v3.85.0 (new scope analytics.readonly + AnalyticsData advanced service; Hans runs authorizeAnalytics in the editor between push and redeploy; Amanda's backend deliberately stays 3.84.0 without the scope). His ask: "this page has been trending higher, or this blog or podcast was really clicked on recently, let's use that as a backlink for a related quote (and perhaps asking me for a quote)". He supplied GA4 property 370961938 (NOT hardcoded - public repo; it is entered in Settings > Social posting > Google Analytics and rides on the firm 'marketing' row as gaPropertyId + gaBackendInitials, the fbBackendInitials routing pattern; Save & test only saves after the backend reads it). Marketing page: a collapsed "What's working" panel (loads on open, cached device-local 6h in eos_mkt_ga_cache, Refresh): Trending this week (5+ views and >=1.5x the week before, home and WP plumbing excluded), Most read 28 days, sources + Facebook's share; each page has "Quote -> link here" = a Social / Quote card whose facebookQuote.link is that page, opened with a toast ASKING him for the quote (never invented); "AI: What should I do next?" turns only the listed numbers + his recent cards into three moves (told never to invent figures or write the quote). mktFqCta: a standalone quote pointing at a BLOG post (linkKind from the site list) reads "the full post is here". Podcast: Blubrry (his answer) - downloads need Blubrry API access, phase 2; episode pages on the site are already in GA.
         // v5.46.2: HIS ORDER, ENFORCED - blog live in WordPress -> its Facebook post -> then the quote. (1) He asked what stops a social post going out before the blog: the blog's Facebook post already waited for WordPress to report the post LIVE (mktFbLiveLink = status 'publish'), but the blog's QUOTE post only waited for that too - it could be scheduled with no social post at all, or timed before it (the rhythm only SUGGESTED after). Now mktFqSocialFirst(card): a blog quote needs the blog's own post scheduled/posted and a time strictly after it, in the paint (button disabled, line says why) and in _mktFbApprove (refusal sentences). Standalone quotes unaffected. Probe F6/F7. (2) His "Shouldn't the CTA for the blog be higher up like before Finalize draft?": v5.44-5.46 had pushed the closing CTA under Related reading + both Facebook boxes inside Package & Send. It is now its own STEP 6 "Closing Call to Action" (inside #mktBlogFields, so blog cards only), directly before Finalize Draft; later steps renumbered 7-12 (Quote is now step 10), and every live "Step N" string now names the step instead of its number so the next move cannot stale them. (3) Package & Send: the WordPress / package / Drive buttons now sit ABOVE the Facebook boxes, matching the order.
@@ -8641,7 +8641,20 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.54.0 &mdash; 2026-10-03 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.55.0 &mdash; 2026-10-06 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Your morning brief now says which opportunities need a touch today.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>The morning brief has a new &ldquo;Who to touch today&rdquo; section.</strong> It lists up to four opportunities that need attention, the most urgent first, each with its name, the people attached to it, why it is on the list, and how many touches you have logged. If more are waiting, a button takes you to the rest in Opportunities, and the sentence at the top of the brief now counts them too.</li>'
+                + '<li><strong>It is the same list the Opportunities page shows.</strong> Both read the same saved copy of your pipeline and run the same check, so the brief and the page cannot disagree about who is due. Click a name to open that opportunity.</li>'
+                + '<li><strong>Each row has two buttons.</strong> &ldquo;AI email&rdquo; opens the same draft window the Opportunities page uses, so there is still only one email drafter. &ldquo;Snooze a week&rdquo; takes it off the list for seven days.</li>'
+                + '<li><strong>Nothing in the brief writes to Redtail, and a snooze stays on this device.</strong> Snoozing is a note kept on the computer or phone you tapped it on; it never goes to Redtail and does not follow you to another device, though the Opportunities page on that same device shows it.</li>'
+                + '<li><strong>Opportunities now count your touches.</strong> The tool reads the dated lines you already write in the description (like 2026.09.30- what I did). A line saying the person replied, wrote back or called you back restarts the count, and the count is shown with the date it starts from so you can check it against the record. When the count reaches the limit for that kind of opportunity (six for a website lead, five for a prospect or after discovery, four for a podcast, three for a COI being introduced), it is flagged on both the brief and the Opportunities page: time for the closing-the-file note, or, for a COI, stop asking and keep a friendly quarterly touch.</li>'
+                + '<li><strong>If there is nothing to say, it says nothing.</strong> No section appears when nothing is due, and none at all on a setup without Redtail. If Redtail cannot be read, the section says so in a sentence with a Try again button instead of going blank.</li>'
+                + '</ul>'
+                + '</div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.54.0 &mdash; 2026-10-03</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">Opportunity descriptions read one line per line in Redtail.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>Prospect Prep now writes the description as proper paragraphs.</strong> Redtail&rsquo;s description box is a formatted-text editor, so plain line breaks used to vanish and everything ran together. Each line is its own line now, blank lines stay as gaps, and the folder is a clickable link.</li>'
@@ -22299,6 +22312,9 @@ Example:
             { key: 'starred', label: 'Starred' },
             { key: 'kanban',  label: 'Kanban backlog' },
             { key: 'events',  label: 'Birthdays & all-day' },
+            // v5.55.0 — the Opportunities track's "who to touch today": the pipeline's
+            // hygiene flags, read off the SAME cache the Opportunities page paints from.
+            { key: 'opps',    label: 'Who to touch today' },
             { key: 'links',   label: 'My links' },
             { key: 'quote',   label: 'Quote' }
         ];
@@ -22311,6 +22327,8 @@ Example:
         // Section keys that did not exist when the first `sections` arrays were written. See
         // the migration in briefPrefs(); this list is the only thing it needs to stay true.
         const BRIEF_SECTIONS_ADDED_IN_V2 = ['mail'];
+        // v5.55.0: the same forward migration, one version later, for the pipeline section.
+        const BRIEF_SECTIONS_ADDED_IN_V4 = ['opps'];
 
         const BRIEF_PREFS_DEFAULTS = {
             on: true,
@@ -22319,7 +22337,7 @@ Example:
             // for stored prefs (sectionsV 3 below); the sections themselves still exist, so
             // either can be switched back on in Settings without a release.
             sections: BRIEF_SECTIONS.map(function (s) { return s.key; }).filter(function (k) { return k !== 'links' && k !== 'quote'; }),
-            sectionsV: 3,
+            sectionsV: 4,
             quotes: 'all',          // 'off' | 'scripture' | 'all'
             quoteAllow: [],         // author allow-list; empty = everyone
             quoteDeny: [],          // author deny-list, applied after the allow-list
@@ -22360,6 +22378,14 @@ Example:
             if (Array.isArray(raw.sections) && Number(raw.sectionsV || 0) < 3) {
                 p.sections = p.sections.filter(function (k) { return k !== 'links' && k !== 'quote'; });
                 p.sectionsV = 3;
+            }
+            // v5.55.0 — 'opps' appended once to every stored array written before it existed
+            // (the v4.57.0 shape: an opt-in list cannot tell "new" from "switched off").
+            if (Array.isArray(raw.sections) && Number(raw.sectionsV || 0) < 4) {
+                BRIEF_SECTIONS_ADDED_IN_V4.forEach(function (k) {
+                    if (p.sections.indexOf(k) === -1) p.sections.push(k);
+                });
+                p.sectionsV = 4;
             }
             if (['off', 'scripture', 'all'].indexOf(p.quotes) === -1) p.quotes = 'all';
             if (!Array.isArray(p.links)) p.links = BRIEF_PREFS_DEFAULTS.links.slice();
@@ -22857,8 +22883,26 @@ Example:
                                               : facts.pending + ' tasks are overdue or undated');
             }
             if (facts.starred) bits.push(facts.starred + ' starred');
+            // v5.55.0: the pipeline's count, from the same ranker that draws the rows.
+            if (facts.opps) {
+                bits.push(facts.opps === 1 ? 'one opportunity needs a touch'
+                                           : facts.opps + ' opportunities need a touch');
+            }
             if (!bits.length) return 'Nothing is carried over and nothing is overdue. A clean start.';
             return bits.join(' · ') + '.';
+        }
+        // v5.55.0 — ONE place computes the headline's facts. Three sites repaint the sentence
+        // (the band render, the mail repaint, the pipeline repaint); each used to carry its own
+        // copy of the four reads, and a fifth fact would have had to be added to all of them.
+        function _briefHeadlineFacts(over) {
+            const f = {
+                mail: briefWants('mail') ? briefMailSurfacedCount() : 0,
+                carried: briefWants('rule3') ? briefCarriedRule3().length : 0,
+                pending: briefWants('pending') ? briefPendingTasks().length : 0,
+                starred: briefWants('starred') ? briefStarred().length : 0,
+                opps: briefWants('opps') ? briefOppsDueCount() : 0
+            };
+            return Object.assign(f, over || {});
         }
 
         function _briefGreeting() {
@@ -23010,10 +23054,10 @@ Example:
                 + '<button type="button" class="mb-collapse" onclick="briefCollapse()" '
                 + 'title="Collapse the brief" aria-label="Collapse the brief">Done</button></div>';
 
-            html += '<p class="mb-headline" data-mb-headline>' + esc(briefHeadline({
+            html += '<p class="mb-headline" data-mb-headline>' + esc(briefHeadline(_briefHeadlineFacts({
                 mail: mailCount,
                 carried: carried.length, pending: pending.length, starred: starred.length
-            })) + '</p>';
+            }))) + '</p>';
 
             // v4.57.0 — the mail section's HOST, full width and above the section grid. It is
             // rendered as an empty container the band always carries and filled by
@@ -23040,6 +23084,10 @@ Example:
             // v4.72.0: "All day today" grew into Today's calendar — his screenshot.
             // v5.2.0: birthdays for active clients within the week, drafted on one click.
             html += _briefSection('birthdays', 'Client birthdays', briefBirthdaysHtml(), briefUpcomingBirthdays().length);
+            // v5.55.0 — the pipeline's HOST, the mail section's shape (v4.57.0): painted from
+            // the device cache now, repainted on its own by _briefPaintOpps() when the Redtail
+            // read lands, so an answer arriving seconds later never re-lays-out the band.
+            if (briefWants('opps')) html += '<div class="mb-opphost" data-mb-opphost>' + briefOppsHtml() + '</div>';
             const agenda = briefWants('events') ? briefTodayAgenda() : { html: '', count: 0 };
             html += _briefSection('events', 'Today’s calendar', agenda.html, agenda.count);
             html += '</div>';
@@ -23084,6 +23132,9 @@ Example:
                     _briefPaintMail();
                 }).catch(function () { /* the section shows the error from the cache */ });
             }
+            // v5.55.0: same shape for the pipeline — the cache painted above, a fresh read
+            // asked for; oppFetch's own tail repaints the host when the answer lands.
+            if (briefWants('opps')) { try { briefOppsKick(); } catch (e) { } }
         }
 
         // The old banner and the brief must never both be on screen. This is the ONLY place
@@ -24000,12 +24051,7 @@ Example:
             const h = band.querySelector('[data-mb-headline]');
             if (h) {
                 try {
-                    h.textContent = briefHeadline({
-                        mail: briefMailSurfacedCount(),
-                        carried: briefWants('rule3') ? briefCarriedRule3().length : 0,
-                        pending: briefWants('pending') ? briefPendingTasks().length : 0,
-                        starred: briefWants('starred') ? briefStarred().length : 0
-                    });
+                    h.textContent = briefHeadline(_briefHeadlineFacts({ mail: briefMailSurfacedCount() }));
                 } catch (e) { /* leave the sentence that is already there */ }
             }
         }
@@ -27091,13 +27137,54 @@ Example:
                 }).filter(function (x) { return x.name; });
         }
         function oppSnoozes() { try { return JSON.parse(localStorage.getItem(OPP_SNOOZE_KEY) || '{}') || {}; } catch (e) { return {}; } }
+        // ---- v5.55.0: TOUCH COUNTING, read off HIS dated log lines ----------------------------
+        // Redtail keeps no touch counter (§5.97): `updated_at` moves on ANY edit, so it is the
+        // idle clock and not a count. The description's "YYYY.MM.DD- what I did" lines ARE the
+        // record of touches he keeps by hand, so those are counted. A line saying THEY came
+        // back (replied, wrote back, called me…) resets the count — the playbook's rule 1 —
+        // and the count is shown WITH the date it counts from, so a miscount is visible and
+        // checkable against the record rather than trusted. Order-independent: the newest
+        // inbound line's date is the floor, whatever order the lines sit in.
+        const OPP_LOG_LINE_RE = /^\s*(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})\s*-\s*(.+?)\s*$/;
+        const OPP_INBOUND_RE = /\b(replied|wrote back|called (?:me )?back|got back to me|responded|heard back|reached out to me|emailed me|texted me|called me|messaged me|their reply)\b/i;
+        function oppTouches(row, now) {
+            const today = now || new Date();
+            const out = { count: 0, total: 0, lastYmd: '', lastDays: null, replyYmd: '' };
+            const dated = [];
+            String((row && row.description) || '').split('\n').forEach(function (line) {
+                const m = OPP_LOG_LINE_RE.exec(line);
+                if (!m) return;
+                const ymd = m[1] + '-' + m[2].padStart(2, '0') + '-' + m[3].padStart(2, '0');
+                if (!oppDay(ymd)) return;
+                out.total++;
+                const inbound = OPP_INBOUND_RE.test(m[4]);
+                if (inbound && ymd > out.replyYmd) out.replyYmd = ymd;
+                dated.push({ ymd: ymd, inbound: inbound });
+            });
+            dated.forEach(function (d) {
+                if (d.inbound || d.ymd < out.replyYmd) return;
+                out.count++;
+                if (d.ymd > out.lastYmd) out.lastYmd = d.ymd;
+            });
+            const last = oppDay(out.lastYmd);
+            if (last) out.lastDays = oppDaysBetween(last, today);
+            return out;
+        }
         // The hygiene pass — no AI, no cost, always on. Each flag is a sentence he can act on.
         function oppFlags(row, now, snoozes) {
             const today = now || new Date();
-            const out = { flags: [], score: 0, idleDays: null, snoozedUntil: '' };
+            const out = { flags: [], score: 0, idleDays: null, snoozedUntil: '', touches: null };
             const sn = (snoozes || {})[row.id];
             if (sn && sn > oppYmd(today)) { out.snoozedUntil = sn; return out; }
             const kind = OPP_KINDS[oppKind(row)] || OPP_KINDS.prospect;
+            // v5.55.0: at the kind's ceiling, the next touch is the closing note, not another nudge.
+            const touches = oppTouches(row, today);
+            out.touches = touches;
+            if (kind.maxTouches > 0 && touches.count >= kind.maxTouches) {
+                out.flags.push({ k: 'touches', t: touches.count + ' touches logged' + (touches.replyYmd ? ' since their reply on ' + oppFmtDay(touches.replyYmd) : '')
+                    + ' — ' + (kind.breakUp ? 'time for the closing-the-file note' : 'stop asking; keep a friendly quarterly touch') + ' (' + kind.label + ': ' + kind.maxTouches + ')' });
+                out.score += 2;
+            }
             const last = oppDay(row.lastChange);
             if (last) out.idleDays = oppDaysBetween(last, today);
             const close = oppDay(row.closeDate);
@@ -27324,6 +27411,9 @@ Example:
             } finally {
                 oppState.fetching = false;
                 renderOpportunitiesPage();
+                // v5.55.0: the brief's "Who to touch today" paints from this same read — one
+                // data source, two surfaces, repainted from the one place the data changes.
+                try { _briefPaintOpps(); } catch (eB) { }
                 oppHydrate();   // linked contacts, in the background, after the paint
             }
         }
@@ -27627,6 +27717,118 @@ Example:
         }
         function oppSaveCache() {
             try { localStorage.setItem(OPP_CACHE_KEY, JSON.stringify({ rows: oppState.rows, lists: oppState.lists, fetchedAt: oppState.fetchedAt, links: oppState.links, people: oppState.people })); } catch (e) { }
+        }
+
+        // ---- v5.55.0: THE MORNING BRIEF'S "WHO TO TOUCH TODAY" -----------------------------------
+        // The Opportunities track's third phase (§5.97, his order). The brief reads the SAME
+        // device cache the Opportunities page paints from and runs the SAME hygiene pass
+        // (oppFlags), so the two surfaces cannot disagree about who needs a touch — one
+        // ranker, two renderers, wired to both on the day the second one shipped (the
+        // §5.87/§5.91/§5.93 lesson, applied before rather than after). Nothing here writes to
+        // Redtail: the name opens the record, "AI email" opens the composer on the
+        // Opportunities page, and Snooze is this device's own note (OPP_SNOOZE_KEY), said so.
+        const BRIEF_OPPS_MAX_ROWS = 4;
+        function briefOppsDue(now) {
+            oppLoadCache();
+            const today = now || new Date();
+            const sn = oppSnoozes();
+            return oppActiveRows()
+                .map(function (r) { return { r: r, f: oppFlags(r, today, sn), kind: oppKind(r) }; })
+                .filter(function (x) { return x.f.score > 0; })
+                .sort(function (a, b) {
+                    return (b.f.score - a.f.score) || ((b.f.idleDays || 0) - (a.f.idleDays || 0))
+                        || String(a.r.name || '').localeCompare(String(b.r.name || ''));
+                });
+        }
+        // Not connected is a STANDING condition on a deployment without Redtail (Amanda's) —
+        // that case renders nothing rather than the same sentence every morning for a year.
+        function _briefOppsHidden() { return capabilityDenied('redtail.crm'); }
+        function briefOppsDueCount() {
+            try {
+                if (_briefOppsHidden() || _calGsAtLeast(RT_OPP_GS_MIN) === false) return 0;
+                oppLoadCache();
+                return oppState.rows ? briefOppsDue().length : 0;
+            } catch (e) { return 0; }
+        }
+        function briefOppsHtml() {
+            const esc = escapeHtml;
+            const label = 'Who to touch today';
+            if (_briefOppsHidden()) return '';
+            if (_calGsAtLeast(RT_OPP_GS_MIN) === false) {
+                return _briefSection('opps', label, '<div class="mb-mail-note">' + esc(oppGate() || '') + '</div>', 0);
+            }
+            oppLoadCache();
+            if (!oppState.rows) {
+                if (oppState.err) {
+                    return _briefSection('opps', label, '<div class="mb-mail-note mb-mail-err">Couldn’t read the pipeline: '
+                        + esc(oppState.err) + ' <button type="button" class="mb-mail-link" onclick="briefOppsRefresh()">Try again</button></div>', 0);
+                }
+                if (oppState.fetching) return _briefSection('opps', label, '<div class="mb-mail-note">Reading your pipeline from Redtail…</div>', 0);
+                return '';   // nothing cached and nothing asked yet — briefOppsKick() asks
+            }
+            const due = briefOppsDue();
+            // The birthdays rule: an empty context section costs the fold and says nothing —
+            // the Opportunities page shows the clean state when he wants to see it.
+            if (!due.length) return '';
+            const shown = due.slice(0, BRIEF_OPPS_MAX_ROWS);
+            let body = '<div class="mb-opps">' + shown.map(function (x) {
+                const r = x.r, f = x.f, t = f.touches;
+                const why = f.flags.map(function (fl) { return fl.t; }).join(' · ');
+                const who = oppContactsText(r);
+                const touch = (t && t.total)
+                    ? (t.count + (t.count === 1 ? ' touch' : ' touches') + (t.replyYmd ? ' since their reply ' + oppFmtDay(t.replyYmd) : '')
+                        + (t.lastYmd ? ', last ' + oppFmtDay(t.lastYmd) : ''))
+                    : 'No touch logged';
+                return '<div class="mb-opp" data-mb-opp="' + esc(r.id) + '">'
+                    + '<button type="button" class="mb-opp-name" onclick="briefOppOpen(\'' + esc(r.id) + '\')">' + esc(r.name || '(no name)') + '</button>'
+                    + (who ? '<span class="mb-opp-who">' + esc(who) + '</span>' : '')
+                    + '<span class="mb-opp-why">' + esc(why) + '</span>'
+                    + '<span class="mb-opp-touch">' + esc(touch) + '</span>'
+                    + '<span class="mb-mail-links mb-opp-acts">'
+                    + '<button type="button" class="mb-mail-link" onclick="briefOppCompose(\'' + esc(r.id) + '\')">AI email</button>'
+                    + '<button type="button" class="mb-mail-link" title="A note on this device only — it never goes to Redtail" onclick="briefOppSnooze(\'' + esc(r.id) + '\', 7)">Snooze a week</button>'
+                    + '</span></div>';
+            }).join('') + '</div>';
+            if (due.length > shown.length) {
+                body += '<div class="mb-mail-links"><button type="button" class="mb-mail-link" onclick="showPage(\'opportunities\')">'
+                    + (due.length - shown.length) + ' more in Opportunities</button></div>';
+            }
+            return _briefSection('opps', label, body, due.length);
+        }
+        // Repaint JUST the pipeline section plus the headline that counts it — the mail
+        // host's rule (v4.57.0): never re-lay-out the band under him for an answer that
+        // arrived after he started reading.
+        function _briefPaintOpps() {
+            const band = document.getElementById('morningBrief');
+            if (!band || band.style.display === 'none') return;
+            const host = band.querySelector('[data-mb-opphost]');
+            if (!host) return;
+            const html = briefOppsHtml();
+            if (host._eosOppsHtml !== html) { host.innerHTML = html; host._eosOppsHtml = html; }
+            const h = band.querySelector('[data-mb-headline]');
+            if (h) { try { h.textContent = briefHeadline(_briefHeadlineFacts()); } catch (e) { /* keep the sentence */ } }
+        }
+        // Ask for a fresh read (oppFetch's 5-minute TTL decides whether one goes out); the
+        // read's own tail repaints the host. Rule 73: the AFFORDANCE reads capabilityDenied,
+        // the ACTION awaits capabilityReadyChecked, so a slow probe costs a retry, not the section.
+        async function briefOppsKick() {
+            if (_briefOppsHidden()) return;
+            try { await capabilityReadyChecked('redtail.crm'); } catch (e) { }
+            if (oppGate()) { _briefPaintOpps(); return; }
+            await oppFetch(false);
+            _briefPaintOpps();
+        }
+        function briefOppsRefresh() { oppState.err = ''; _briefPaintOpps(); oppFetch(true); }
+        function briefOppOpen(id) { showPage('opportunities'); oppOpen(String(id)); }
+        async function briefOppCompose(id) { showPage('opportunities'); await oppCompose(String(id)); }
+        function briefOppSnooze(id, days) {
+            const d = new Date(); d.setDate(d.getDate() + (Number(days) || 7));
+            const until = oppYmd(d);
+            const m = oppSnoozes(); m[String(id)] = until;
+            try { localStorage.setItem(OPP_SNOOZE_KEY, JSON.stringify(m)); } catch (e) { }
+            showToast('Snoozed on this device until ' + oppFmtDay(until) + ' — a note here, never in Redtail.');
+            _briefPaintOpps();
+            try { renderOpportunitiesPage(); } catch (e2) { }
         }
 
         // ---- bulk administration: every one is HIS click behind a confirm that names the rows ----

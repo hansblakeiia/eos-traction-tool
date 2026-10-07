@@ -5499,6 +5499,27 @@
 .wk-band:has(.wk-oneline) { padding: 8px 12px; margin-bottom: 10px; }
 .mb-bday { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font-size: 0.88rem; color: #374151; }
 
+/* v5.55.0: the brief's "Who to touch today" — one pipeline row per opportunity that the
+   hygiene pass flagged. The name is the record; the why and the touch count are one line
+   each; the two text controls sit on one row (the .mb-mail-links lesson: side by side they
+   cost one row and stay tappable). Rule 8/9 on creation: min-width 0 and anywhere-wrapping,
+   because an opportunity name can carry an unbroken address. */
+/* The host sits INSIDE the .mb-body auto-fit grid, and an empty element is still a grid
+   item — without this, the common empty state (nothing due, Redtail off) would hold a blank
+   column and push Today's calendar over. `contents` makes the section itself the grid child. */
+.mb-opphost { display: contents; }
+.mb-opps { display: flex; flex-direction: column; gap: 6px; }
+.mb-opp { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; font-size: 0.88rem; color: #374151;
+          padding-bottom: 6px; border-bottom: 1px solid #e5e7eb; }
+.mb-opp:last-child { border-bottom: none; padding-bottom: 0; }
+.mb-opp > * { min-width: 0; }
+.mb-opp-name { flex: 1 1 100%; background: none; border: none; padding: 0; font: inherit; font-weight: 600;
+               color: var(--primary); cursor: pointer; text-align: left; overflow-wrap: anywhere; }
+.mb-opp-who { font-size: 0.74rem; color: #4b5563; overflow-wrap: anywhere; }
+.mb-opp-why { flex: 1 1 100%; font-size: 0.74rem; color: #6b7280; overflow-wrap: anywhere; }
+.mb-opp-touch { font-size: 0.72rem; color: #6b7280; }
+.mb-opp-acts { margin-left: auto; gap: 12px; }
+
 @media (max-width: 768px) {
     .gm-agent { padding: 10px 12px; }
 }
