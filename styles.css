@@ -5232,9 +5232,13 @@
                space" complaint that produced BRIEF_MAX_ROWS in the first place. Turn the mail
                section off, or have a morning with no mail that needs you, and v4.56.1's band
                comes back exactly as it was. */
-            .mb-has-mail:not(.mb-ctx-open) .mb-body .mb-sec:not([data-mb-sec="mail"]) .mb-list,
-            .mb-has-mail:not(.mb-ctx-open) .mb-body .mb-opps,
-            .mb-has-mail:not(.mb-ctx-open) .mb-body .mb-opp-more {
+            /* v5.55.3 — REVERSAL of v5.55.2's addition of .mb-opps/.mb-opp-more here, from
+               Hans's phone screenshot 2026-10-07: "WHO TO TOUCH TODAY 19" sat over NOTHING
+               while the birthday row and the three calendar rows beside it were fully shown.
+               The v4.56.1 trade only ever folded .mb-list sections, and v4.72/v4.74 removed
+               every one of those from the brief — so today NO context section gives up its
+               rows, and a badge over hidden rows is the dead-affordance shape (rule 51). */
+            .mb-has-mail:not(.mb-ctx-open) .mb-body .mb-sec:not([data-mb-sec="mail"]) .mb-list {
                 display: none;
             }
             /* SCREENSHOT FINDING: hiding the note left "WHAT YOU LEFT YOURSELF" as a heading
