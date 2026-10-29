@@ -28244,7 +28244,7 @@ Example:
                         body += '<div class="mb-mtg-text">' + esc(prep.prep).replace(/\n/g, '<br>') + '</div>';
                         body += '<div class="mb-mtg-meta">Generated ' + new Date(prep.generatedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) + '</div>';
                     } else if (!aiReady) {
-                        body += '<div class="mb-mtg-noai">Configure an AI provider in Settings › AI to generate talking points.</div>';
+                        body += '<div class="mb-mtg-noai">Configure an AI provider in Settings &gt; AI to generate talking points.</div>';
                     } else {
                         body += '<button type="button" class="mb-mtg-btn" onclick="briefMeetingPrepGenerate(\'' + esc(eventId.replace(/'/g, "\\'")) + '\')">Generate talking points</button>';
                     }
