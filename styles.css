@@ -5614,6 +5614,11 @@
     color: #78350f;
 }
 .stale-bar > span { flex: 1 1 260px; min-width: 0; }
+/* v5.58.1: the "AI is out of credits" bar — the stale strip's look, but STICKY so it is on
+   screen wherever the failing button was (his phone: the Gmail page, scrolled). z-index sits
+   under every modal (1000+) and the composer, over page content. */
+.ai-credit-bar { position: sticky; top: 6px; z-index: 900; background: #fffbeb; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.ai-credit-bar .btn { font-size: 0.82rem; padding: 6px 12px; text-decoration: none; }
 
 /* ── Today-page toggles (v5.1.0) ──────────────────────────────────────────────
    Classes on #dailyPlanGrid; nothing is unmounted (rule 15). The desktop grid
