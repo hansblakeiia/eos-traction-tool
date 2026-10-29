@@ -22651,15 +22651,18 @@ Example:
         // leading token before a dash. Anything that yields nothing is treated as an
         // internal block, not a person — a wrong name on a prep card is worse than none.
         function _wkPersonOf(ev) {
-            const title = String((ev && (ev.summary || ev.title)) || '').trim();
-            if (!title) return '';
+            const title = String((ev && (ev.summary || ev.title)) || ‘’).trim();
+            if (!title) return ‘’;
             const br = title.match(/\[([^\]]+)\]/);
-            if (br) return br[1].split(',')[0].trim();
-            const w = title.match(/\bwith\s+([A-Z][A-Za-z'’.-]*(?:\s+[A-Z][A-Za-z'’.-]*){0,2})/);
+            if (br) return br[1].split(‘,’)[0].trim();
+            const w = title.match(/\bwith\s+([A-Z][A-Za-z’’.-]*(?:\s+[A-Z][A-Za-z’’.-]*){0,2})/);
             if (w) return w[1].trim();
-            const dash = title.match(/^([A-Z][A-Za-z'’.-]+)\s*[-–]/);
+            // "Hans and Rick Ezell Coffee" → "Rick Ezell"
+            const andName = title.match(/\band\s+([A-Z][A-Za-z’’.-]*(?:\s+[A-Z][A-Za-z’’.-]*){0,2})/);
+            if (andName) return andName[1].trim();
+            const dash = title.match(/^([A-Z][A-Za-z’’.-]+)\s*[-–]/);
             if (dash) return dash[1].trim();
-            return '';
+            return ‘’;
         }
 
         function _wkMinutes(ev) {
