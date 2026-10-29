@@ -5540,6 +5540,56 @@
    line above it. Let the text take the row beside the box and wrap inside itself. */
 .mb-bday > span { flex: 1 1 12rem; min-width: 0; }
 
+/* v5.56.0: Intelligent Day meeting prep — AI-generated talking points for external meetings.
+   Same host pattern as .mb-opphost; each card is a collapsible row with the meeting details
+   on top and the AI-generated prep in the expanded body. */
+.mb-prephost { display: contents; }
+.mb-meeting-prep-list { display: flex; flex-direction: column; gap: 8px; }
+.mb-mtg-card { background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;
+               overflow: hidden; transition: background 0.15s; }
+.mb-mtg-card:hover { background: #f3f4f6; }
+.mb-mtg-expanded { background: #fff; }
+.mb-mtg-head { display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+               cursor: pointer; user-select: none; }
+.mb-mtg-time { font-size: 0.8rem; font-weight: 600; color: var(--primary); min-width: 60px; }
+.mb-mtg-title { flex: 1; font-size: 0.9rem; color: #111827; overflow: hidden;
+                text-overflow: ellipsis; white-space: nowrap; }
+.mb-mtg-chevron { font-size: 0.7rem; color: #6b7280; transition: transform 0.15s; }
+.mb-mtg-expanded .mb-mtg-chevron { transform: rotate(0deg); }
+.mb-mtg-person { padding: 0 12px 10px; font-size: 0.85rem; color: #374151; }
+.mb-mtg-stage { font-size: 0.78rem; color: #6d28d9; background: #f5f3ff;
+                padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
+.mb-mtg-last { font-size: 0.72rem; color: #6b7280; margin-left: 6px; }
+.mb-mtg-prep { padding: 0 12px 12px; border-top: 1px solid #e5e7eb; margin-top: 0;
+               padding-top: 10px; font-size: 0.85rem; line-height: 1.5; color: #374151; }
+.mb-mtg-loading { color: #6b7280; font-style: italic; }
+.mb-mtg-err { color: #dc2626; font-size: 0.82rem; margin-bottom: 8px; }
+.mb-mtg-text { white-space: pre-wrap; }
+.mb-mtg-meta { font-size: 0.72rem; color: #9ca3af; margin-top: 8px; }
+.mb-mtg-noai { color: #6b7280; font-size: 0.82rem; }
+.mb-mtg-btn { background: var(--primary); color: white; border: none; border-radius: 6px;
+              padding: 6px 14px; font-size: 0.82rem; cursor: pointer; }
+.mb-mtg-btn:hover { background: var(--primary-dark, #0369a1); }
+/* Don't show the prep body when collapsed */
+.mb-mtg-card:not(.mb-mtg-expanded) .mb-mtg-prep { display: none; }
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .mb-mtg-card { background: #1f2937; border-color: #374151; }
+    :root:not([data-theme="light"]) .mb-mtg-card:hover { background: #374151; }
+    :root:not([data-theme="light"]) .mb-mtg-expanded { background: #111827; }
+    :root:not([data-theme="light"]) .mb-mtg-title { color: #f9fafb; }
+    :root:not([data-theme="light"]) .mb-mtg-person { color: #d1d5db; }
+    :root:not([data-theme="light"]) .mb-mtg-prep { border-color: #374151; color: #d1d5db; }
+    :root:not([data-theme="light"]) .mb-mtg-stage { background: #4c1d95; color: #c4b5fd; }
+}
+:root[data-theme="dark"] .mb-mtg-card { background: #1f2937; border-color: #374151; }
+:root[data-theme="dark"] .mb-mtg-card:hover { background: #374151; }
+:root[data-theme="dark"] .mb-mtg-expanded { background: #111827; }
+:root[data-theme="dark"] .mb-mtg-title { color: #f9fafb; }
+:root[data-theme="dark"] .mb-mtg-person { color: #d1d5db; }
+:root[data-theme="dark"] .mb-mtg-prep { border-color: #374151; color: #d1d5db; }
+:root[data-theme="dark"] .mb-mtg-stage { background: #4c1d95; color: #c4b5fd; }
+
 @media (max-width: 768px) {
     .gm-agent { padding: 10px 12px; }
 }
