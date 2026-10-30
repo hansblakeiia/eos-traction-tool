@@ -6157,6 +6157,10 @@
 .mkt-step-done > .mkt-step-head .mkt-step-num { background: #16a34a; }
 .nl-box { background: #fff; border: 1px solid var(--gray-200); border-radius: 8px; padding: 14px; font-size: 0.9rem; line-height: 1.5; overflow-wrap: anywhere; }
 .mkt-who { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 8px 10px; margin-bottom: 10px; font-size: 0.82rem; line-height: 1.5; }
+/* v5.62.1: a popup over everything, because the bar sat behind an open card's overlay. Later in the
+   sheet than .ai-credit-bar and .stale-bar, so these win. */
+.ai-credit-bar { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 10000; width: min(560px, calc(100vw - 24px)); box-sizing: border-box; display: flex; flex-direction: column; align-items: stretch; gap: 10px; padding: 14px 16px; border: 2px solid #f59e0b; border-radius: 10px; font-size: 0.9rem; box-shadow: 0 10px 40px rgba(0,0,0,0.35); }
+.ai-credit-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .nl-past { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; font-size: 0.82rem; overflow-wrap: anywhere; }
 .nl-past > input { margin-top: 3px; flex: 0 0 auto; }
 .nl-past > details, .nl-past > span { flex: 1 1 auto; min-width: 0; }
