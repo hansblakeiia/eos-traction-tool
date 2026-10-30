@@ -6156,6 +6156,7 @@
 .mkt-btn-done::before { content: "\2713\00a0"; }
 .mkt-step-done > .mkt-step-head .mkt-step-num { background: #16a34a; }
 .nl-box { background: #fff; border: 1px solid var(--gray-200); border-radius: 8px; padding: 14px; font-size: 0.9rem; line-height: 1.5; overflow-wrap: anywhere; }
+.mkt-who { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 8px 10px; margin-bottom: 10px; font-size: 0.82rem; line-height: 1.5; }
 .nl-past { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; font-size: 0.82rem; overflow-wrap: anywhere; }
 .nl-past > input { margin-top: 3px; flex: 0 0 auto; }
 .nl-past > details, .nl-past > span { flex: 1 1 auto; min-width: 0; }
