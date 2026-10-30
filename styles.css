@@ -6156,6 +6156,12 @@
 .mkt-btn-done::before { content: "\2713\00a0"; }
 .mkt-step-done > .mkt-step-head .mkt-step-num { background: #16a34a; }
 .nl-box { background: #fff; border: 1px solid var(--gray-200); border-radius: 8px; padding: 14px; font-size: 0.9rem; line-height: 1.5; overflow-wrap: anywhere; }
+.nl-past { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; font-size: 0.82rem; overflow-wrap: anywhere; }
+.nl-past > input { margin-top: 3px; flex: 0 0 auto; }
+.nl-past > details, .nl-past > span { flex: 1 1 auto; min-width: 0; }
+.nl-past summary { cursor: pointer; }
+.nl-past-body { margin-top: 6px; padding: 8px; max-height: 220px; overflow-y: auto; background: #f9fafb; border-radius: 6px; font-size: 0.78rem; }
+.nl-was-in { display: inline-block; padding: 0 5px; border-radius: 4px; background: #e0f2fe; color: #075985; font-size: 0.7rem; font-weight: 600; }
 .nl-rule { background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 8px 12px; font-size: 0.85rem; margin-bottom: 12px; }
 .nl-step { margin-bottom: 12px; }
 .nl-blog-list { max-height: 300px; overflow-y: auto; }
