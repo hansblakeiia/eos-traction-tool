@@ -13,7 +13,7 @@
          Marketing tab; the rest of the app is untouched by this. -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%231a365d' width='100' height='100' rx='15'/%3E%3Ctext x='50' y='50' font-family='Arial, sans-serif' font-size='45' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='central'%3EEOS%3C/text%3E%3Ccircle cx='85' cy='15' r='8' fill='%233182ce'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="styles.css?v=5.58.1">
+    <link rel="stylesheet" href="styles.css?v=5.59.0">
     <!-- v5.27.0: installable + notifications. The manifest makes "Add to Home screen" a
          real app icon; sw.js (registered from _pushInit) receives Web Push. The worker
          caches NOTHING — see the note at the top of sw.js. -->
@@ -2204,6 +2204,96 @@
         <!-- COMPARE/HISTORY PAGE -->
         <!-- ==================== MARKETING PIPELINE (v3.28.0) ==================== -->
         <div id="marketing" class="page">
+            <!-- v5.59.0: two tabs. Both panels stay mounted and only toggle display (rule 15). -->
+            <div class="mkt-tabs" role="tablist" aria-label="Marketing sections">
+                <button type="button" class="mkt-tab mkt-tab-active" id="mktTabPipeline" role="tab" aria-selected="true" onclick="mktSetTab('pipeline')">Pipeline</button>
+                <button type="button" class="mkt-tab" id="mktTabNewsletter" role="tab" aria-selected="false" onclick="mktSetTab('newsletter')">ActiveCampaign Newsletter</button>
+            </div>
+            <!-- v5.59.0: THE NEWSLETTER TAB. A home for the monthly send instructions, kept for
+                 the whole firm in the 'newsletter' row of Supabase brand_profiles (no new table).
+                 Nothing here talks to ActiveCampaign: it holds instructions and nothing else. -->
+            <div id="mktPanelNewsletter" style="display:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+                    <div>
+                        <h2 style="margin:0;">ActiveCampaign Newsletter</h2>
+                        <p style="margin:4px 0 0; font-size:0.85rem; color:var(--gray-500);">Put the monthly newsletter together here, then publish it yourself in ActiveCampaign.</p>
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <a class="btn btn-secondary" href="https://www.activecampaign.com/login/" target="_blank" rel="noopener">Open ActiveCampaign</a>
+                    </div>
+                </div>
+                <!-- v5.59.0: HIS FLOW, his words: read the recent blogs, ask which, write the opening
+                     letter, help with the title and pre-header, he reviews, a test comes to him, and
+                     HE publishes. 🚨 THE ACTIVECAMPAIGN INVARIANT: nothing in this app or the backend
+                     talks to ActiveCampaign. It prepares and copies. See apps-script rule 14c. -->
+                <div class="nl-rule"><strong>You publish this yourself.</strong> The tool can&rsquo;t send or schedule a newsletter. It prepares the words, and you press the button in ActiveCampaign.</div>
+                <div class="nl-box nl-step">
+                    <div class="mkt-step-head"><span class="mkt-step-num">1</span> Which blogs?
+                        <button type="button" class="btn btn-secondary" id="nlFindBtn" onclick="nlFindBlogs()" style="font-size:0.75rem; padding:4px 10px; margin-left:auto;">Check the website</button>
+                    </div>
+                    <div id="nlBlogList" class="nl-blog-list"><p style="margin:0; color:var(--gray-500); font-size:0.85rem;">Looking at your recent posts...</p></div>
+                </div>
+                <div class="nl-box nl-step">
+                    <div class="mkt-step-head"><span class="mkt-step-num">2</span> Opening letter
+                        <button type="button" class="btn btn-secondary" id="nlLetterBtn" onclick="nlWriteLetter()" style="font-size:0.75rem; padding:4px 10px; margin-left:auto; color:var(--primary);">AI: Write the letter</button>
+                    </div>
+                    <label class="mkt-wp-field">Anything you want to say this month? <span class="mkt-wp-hint">A story, a market note, family news. The AI won&rsquo;t invent any.</span>
+                        <textarea id="nlNote" rows="3" style="font-family:inherit; resize:vertical;"></textarea>
+                    </label>
+                    <details class="nl-samples" id="nlSamplesWrap">
+                        <summary>Past opening letters, so it sounds like you <span class="mkt-wp-hint" id="nlSamplesState"></span></summary>
+                        <textarea id="nlSamples" rows="6" placeholder="Paste one or two letters from past newsletters. Kept for next time." style="width:100%; padding:7px; margin-top:6px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; font-size:0.85rem; box-sizing:border-box; resize:vertical;"></textarea>
+                    </details>
+                    <label class="mkt-wp-field">The letter
+                        <textarea id="nlLetter" rows="10" style="font-family:inherit; resize:vertical;"></textarea>
+                    </label>
+                </div>
+                <div class="nl-box nl-step">
+                    <div class="mkt-step-head"><span class="mkt-step-num">3</span> Title, subject and pre-header
+                        <button type="button" class="btn btn-secondary" id="nlSubjectBtn" onclick="nlSuggestSubjects()" style="font-size:0.75rem; padding:4px 10px; margin-left:auto; color:var(--primary);">AI: Suggest</button>
+                    </div>
+                    <div id="nlSubjectOptions" style="display:none; margin-bottom:8px;"></div>
+                    <label class="mkt-wp-field">Campaign name in ActiveCampaign <input type="text" id="nlTitle"></label>
+                    <label class="mkt-wp-field">Subject line <input type="text" id="nlSubject"></label>
+                    <label class="mkt-wp-field">Pre-header <span class="mkt-wp-hint">may leave its thought unfinished, to draw people in</span> <input type="text" id="nlPreheader"></label>
+                </div>
+                <div class="nl-box nl-step">
+                    <div class="mkt-step-head"><span class="mkt-step-num">4</span> Blog blocks
+                        <button type="button" class="btn btn-secondary" id="nlTeaserBtn" onclick="nlPickTeasers()" style="font-size:0.75rem; padding:4px 10px; margin-left:auto; color:var(--primary);">AI: Pick the lines</button>
+                    </div>
+                    <p style="margin:0 0 8px; font-size:0.8rem; color:var(--gray-500);">Each block has three links: the picture, the title and &ldquo;Read more&rdquo;. All three must go to the same blog.</p>
+                    <div id="nlBlocks"></div>
+                </div>
+                <div class="nl-box nl-step">
+                    <div class="mkt-step-head"><span class="mkt-step-num">5</span> Review and test</div>
+                    <p style="margin:0 0 8px; font-size:0.8rem; color:var(--gray-500);">&ldquo;Email me a preview&rdquo; makes a Gmail draft to you, to check the words. The real test comes from the gear icon in ActiveCampaign: send it to yourself and click every link.</p>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                        <button type="button" class="btn btn-primary" id="nlPreviewBtn" onclick="nlPreview()">Email me a preview</button>
+                        <button type="button" class="btn btn-secondary" id="nlCopyAllBtn" onclick="nlCopyAll()">Copy everything</button>
+                        <button type="button" class="btn btn-secondary" id="nlDriveBtn" onclick="nlSaveToDrive()">Save to Drive</button>
+                        <button type="button" class="btn btn-secondary" onclick="nlStartNew()">Start a new newsletter</button>
+                    </div>
+                    <div id="nlBuildInfo" style="font-size:0.78rem; color:var(--gray-500); margin-top:8px;"></div>
+                </div>
+                <details class="nl-steps-details">
+                    <summary><strong>The steps in ActiveCampaign</strong></summary>
+                    <div style="margin:8px 0;"><button type="button" class="btn btn-secondary" id="nlEditBtn" onclick="nlEdit()" style="font-size:0.8rem; padding:5px 10px;">Edit instructions</button></div>
+                <div id="nlView" class="nl-box"></div>
+                <div id="nlEditor" class="nl-box" style="display:none;">
+                    <label for="nlText" style="font-size:0.8rem; font-weight:600; color:var(--gray-500);">Instructions</label>
+                    <textarea id="nlText" rows="14" placeholder="Paste the steps here, or upload a text file below. Lines starting with ## become headings, and lines starting with - become bullets." style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; font-family:inherit; box-sizing:border-box; resize:vertical; margin:4px 0 10px;"></textarea>
+                    <label for="nlLink" style="font-size:0.8rem; font-weight:600; color:var(--gray-500);">Link to the full document (optional)</label>
+                    <input type="url" id="nlLink" placeholder="https://docs.google.com/..." style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:6px; box-sizing:border-box; margin:4px 0 10px;">
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <button type="button" class="btn btn-primary" id="nlSaveBtn" onclick="nlSave()">Save for the team</button>
+                        <button type="button" class="btn btn-secondary" onclick="nlCancel()">Cancel</button>
+                        <label class="btn btn-secondary" style="cursor:pointer; margin:0;">Upload a text file<input type="file" id="nlFile" accept=".txt,.md,.markdown,text/plain,text/markdown" style="display:none;" onchange="nlFilePicked(this.files)"></label>
+                    </div>
+                </div>
+                <div id="nlInfo" style="font-size:0.78rem; color:var(--gray-500); margin-top:8px;"></div>
+                </details>
+            </div>
+            <div id="mktPanelPipeline">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:16px;">
                 <div>
                     <h2 style="margin:0;">Marketing Pipeline</h2>
@@ -2248,6 +2338,7 @@
             <!-- v3.69.0: mobile-only hint, because the pill row above scrolls and two of
                  the six columns start off-screen on a 412px phone. -->
             <div class="mkt-scroll-hint">Swipe the column names to reach the last columns, like <strong>Done</strong>.</div>
+            </div><!-- /mktPanelPipeline -->
         </div>
 
         <!-- Marketing Research Modal -->
@@ -2515,10 +2606,54 @@
                         </div>
                     </div>
 
-                    <!-- ============ STEP 12 — PACKAGE & SEND ============ -->
+                    <!-- ============ STEP 12 — WORDPRESS & YOAST (v5.59.0) ============
+                         From the WordPress Blog Publishing Guide. What the WordPress API accepts
+                         goes straight on the draft (slug, date). Yoast's fields cannot be set over
+                         the API, so they are written here and travel in the handoff email for the
+                         marketing person to paste. Stored in card.socialPosts.wp, so no new
+                         Supabase columns. Blog cards only. -->
+                    <div class="mkt-step" id="mktStepWp">
+                        <div class="mkt-step-head">
+                            <span class="mkt-step-num">12</span> WordPress &amp; Yoast
+                            <button type="button" class="btn btn-secondary" id="mktSeoBtn" onclick="mktSeoFill(false)" style="font-size:0.75rem; padding:4px 10px; margin-left:auto; color:var(--primary);">AI: Fill in SEO</button>
+                        </div>
+                        <p style="font-size:0.78rem; color:var(--gray-500); margin:0 0 8px;">Slug and date go onto the WordPress draft for you. The Yoast boxes go in the email, ready to paste.</p>
+                        <div class="mkt-wp-grid">
+                            <label>Post type
+                                <select id="mktWpType">
+                                    <option value="blog">Standard blog post</option>
+                                    <option value="podcast">Podcast post</option>
+                                </select>
+                            </label>
+                            <label>Publish date (optional)
+                                <input type="date" id="mktWpDate">
+                            </label>
+                        </div>
+                        <label class="mkt-wp-field">Slug <span class="mkt-wp-hint">keywords only, no &ldquo;the&rdquo; or &ldquo;your&rdquo;</span>
+                            <input type="text" id="mktWpSlug" placeholder="Filled in from the title when you send">
+                        </label>
+                        <label class="mkt-wp-field">Focus keyphrase <span class="mkt-wp-hint">1&ndash;3 words, in the title, first sentence and meta</span> <span class="mkt-wp-count" id="mktSeoFocusCount"></span>
+                            <input type="text" id="mktSeoFocus">
+                        </label>
+                        <label class="mkt-wp-field">SEO title <span class="mkt-wp-hint">the post title, shortened if it runs long</span> <span class="mkt-wp-count" id="mktSeoTitleCount"></span>
+                            <input type="text" id="mktSeoTitle">
+                        </label>
+                        <label class="mkt-wp-field">Meta description <span class="mkt-wp-count" id="mktSeoMetaCount"></span>
+                            <textarea id="mktSeoMeta" rows="3" style="font-family:inherit; resize:vertical;"></textarea>
+                        </label>
+                        <div id="mktThumbWrap" class="mkt-wp-thumb">
+                            <div style="font-size:0.8rem; font-weight:600; margin-bottom:6px;">Social sharing image <span class="mkt-wp-hint">1920 &times; 1080 JPG, for Yoast&rsquo;s Social tab</span></div>
+                            <canvas id="mktThumbCanvas" width="1920" height="1080"></canvas>
+                            <div id="mktThumbInfo" style="font-size:0.75rem; color:var(--gray-500); margin-top:6px;"></div>
+                        </div>
+                        <div style="font-size:0.8rem; font-weight:600; margin:12px 0 6px;">Final review</div>
+                        <div id="mktWpChecks" class="mkt-wp-checks"></div>
+                    </div>
+
+                    <!-- ============ STEP 13 — PACKAGE & SEND ============ -->
                     <div class="mkt-step" id="mktStepPackage">
                         <div class="mkt-step-head">
-                            <span class="mkt-step-num">12</span> Package &amp; Send
+                            <span class="mkt-step-num">13</span> Package &amp; Send
                         </div>
                         <!-- v5.44.0: RELATED READING. His ask: "If you found this blog interesting,
                              check out our other blog here" with a link. The list is the site's
@@ -4840,9 +4975,9 @@ Example:
         };
         
         // ==================== VERSION ====================
-        const EOS_VERSION = '5.58.1';
-        const EOS_BUILD_DATE = '2026-10-29';
-        const EOS_BUILD_TIME = '17:45'; // v5.58.1 (TWO-FILE deploy: index.html + styles.css, link ?v=5.58.1; NO .gs ROUND): "WHERE DO I GO TO FIX THIS… THIS SHOULD BE ABLE TO BE FIXED WITHIN THE EOS TOOL. THIS ISN'T USER FRIENDLY." — his phone, the Gmail page, a red paragraph quoting Anthropic's billing message. Adding credits CANNOT happen inside the tool: the provider takes payment only on its own site, signed in as him (and the tool must never handle card details). So the tool now does everything else. (1) ONE BAR for the whole app (#aiCreditBar, static markup, the stale-build strip's look, position:sticky so it is on screen wherever the failing button was): "Claude is out of AI credits. Every AI button in the tool … will refuse until credits are added…", with "Add credits" opening console.anthropic.com/settings/billing in a new tab (per-provider URLs for OpenAI / Gemini / Grok), "Use a different AI" opening Settings › Which AI handles what? (settingsJump('aiRouting') — the backend already accepts OpenAI/Gemini/Grok keys from Settings via setIntegrationKeys), the auto-reload tip, and Hide (until reload). Raised from the ONE place every AI error passes (aiHumanizeError), and CLEARED BY ITSELF by the first generateOutputs answer that succeeds (_calHumanize now sees the action). (2) The inline red text is one sentence: "Claude is out of AI credits, so it could not write this. Tap “Add credits” in the yellow bar at the top of the page — nothing in the tool is broken. (Anthropic HTTP 400)". Probe ai-error-text 5/5 (E1 rewritten to the new sentence per rule 78; new E5: the bar hidden at rest, shown by one failure, the billing URL in a new tab, in view and hit-testable at 375 scrolled down the Gmail page, "Use a different AI" present, cleared by a success, back on a new failure, Hide holds). ALSO — THE PUBLIC REPO RULE, BROKEN AND MENDED: the 375 shot showed a REAL client's name in the Gmail drafter's placeholder; a sweep found real client and prospect names across this file (comments, AI prompt examples, the in-app changelog) going back to v4.90.0 (2026-08-31) — and I had added more the same day (v5.57.1–v5.58.0's notes). All replaced with invented names (Sample / Demo / Example / Demoson / Sampleton / Sampleveen); the page still parses and every probe that reads these surfaces passes. NOT changed, his decision: first names inside his three real birthday greetings (BIRTHDAY_VOICE_SAMPLES — rewriting them changes the learned voice), and the git HISTORY of the public repo still holds the old text (scrubbing it means rewriting public history). Previous: v5.58.0 (index.html ONLY; styles.css unchanged and the link stays ?v=5.57.2; NO .gs ROUND — a comma-separated To is a valid header and createReplyDraft writes it as given): A COUPLE IS ONE EMAIL TO BOTH. His screenshot 2026-10-29, the Opportunities composer on "Close Sam and Val Demo": "For: Val Demo", seven emails with Valerie read, and his words "I was hoping that the tool would have searched for Sam Demo as well and seen that I emailed him about a month ago… craft an email follow up back to him and Valerie." Cause: oppNameFromTitle took the FIRST run of two or more capitalised words, so a lone "Sam" joined by "and" to "Val Demo" never counted; and with linked contacts oppResolvePerson only ever used linked[0]. Built: oppNamesFromTitle returns EVERY person — a lone first name beside "and"/"&" takes its partner's surname ("Sam and Val Demo" → Sam Demo + Val Demo), a team member's first or full name is never borrowed into a client ("Hans and Rob Sample Coffee" stays Rob Sample), up to three; oppNameFromTitle is now names[0] (O21's titles unchanged). oppResolvePerson keeps `person` as the first found (every reader unchanged) and carries the rest in person.others: up to three linked contacts, plus any title name no linked contact covers; each is resolved through the SAME single-name path (_oppResolveOneName, the old body), and linking is offered only when Redtail SAID the list was empty, decided once before any pick. oppGatherContext gives each extra person the same visible address lookup ("Also for Sam Demo — …"), fills To with every address comma-separated (a typed list is honoured position by position), reads the mail with EACH address through the shared gmReadCorrespondence and merges by message id newest-first (the thread only Sam's address finds is now in the prompt; a shared thread once), and takes the most recent meeting with any of them. The AI gets "WRITING TO: Sam Demo <…>; Val Demo <…>" as DATA and, in the SYSTEM prompt, the rule to write ONE email to all of them with one salutation ("Sam and Valerie,"). The "found nothing on file" question names everyone. Probe opportunities 23/23 — new O22 (a couple from the title, both searched, both in To, both threads read and merged, WRITING TO both, the greeting rule, zero Redtail writes; the team-name exclusions) FAILS on v5.57.2 (negative control: 22/23); O17's source window widened 6000→14000 because the function grew past the shared reader's call (same check); O21 unchanged. NOT DONE: the Gmail-page drafter and the meeting-prep "Draft a follow-up" hand-off still write to one person; the out-of-credits Anthropic account still blocks every draft until credits are added. Previous: v5.57.2 (pushed 17:25; its own line said 17:55, a guessed time — corrected here) (TWO-FILE deploy: index.html + styles.css, link ?v=5.57.2; NO .gs ROUND): THE MEETING PREP CARD, from his report minutes after v5.57.1 — "nothing happens when I click this" on "Hans and Rob Sample Coffee". FIVE defects in v5.56.0/v5.57.0's card, each proven in Playwright first. (1) THE CLICK: _meetingPrepResetIfStale ran on EVERY repaint and reset the whole state (expanded included) whenever the localStorage cache was absent — and the cache was only written after a SUCCESSFUL prep, so on a device with no prep (every device, with his AI failing) the click set expanded and the repaint wiped it in the same tick; a mouse click left expanded {}. The state now carries its own date and resets only when the DAY changes; the cache seeds today's preps once. (2) THE ROUTE: the card called callAI('dailyPlanning'), the BROWSER-key route, so on his deployment (key in Script Properties) it showed "Configure an AI provider" while the Opportunities composer on the same page worked; it now uses the backend seam (generateOutputs + mtgGetAI, aiActionGate, capabilityReadyChecked), instructions in the system prompt, maxTokens 2000 + effort low, and an empty answer names its stop reason. The affordance reads !capabilityDenied (rule 51/73). A FAILURE IS CACHED for the day, so the auto-run asks a failing AI once per meeting, not on every repaint; the ntfy "prep ready" fires only for preps actually written (it said "2 generated" when both had failed). (3) briefFindOppByName read raw Redtail field names the normalised rows never carry (linkedContacts, next_step, close_date, stage_name) — the contact match never ran and next step / close date were always blank; it now reads oppContactsOf / stage / nextStep / closeDate over ACTIVE rows, full name first, surname only as a whole word. (4) OTTER WAS NEVER CONNECTED: v5.57.0 called a backend action searchOtterByName that Google_Tasks_Sync.gs has never had (the .gs was not changed; its only Otter path is getOtterTasks over the Sheet's OtterTranscripts tab), swallowed "Unknown action", and sent the secret key in a URL query each time — while Settings claimed a direct Otter API via OTTER_ACCESS_TOKEN. The call is off (MEETING_PREP_OTTER_CONNECTED = false) and the Settings text says what is true; a real Otter read is a .gs round. (5) "Lunch with X" got NO card — the skip list matched any title starting "Lunch"; a title naming someone ("with X", [brackets]) is now a meeting whatever its first word. Also the "Nd ago" day count read new Date('YYYY-MM-DD') (UTC midnight, the evening before) — now oppDay. NEW, his ask in the same message ("I want to easily follow back up with Rob Sample after our coffee this morning"): once a meeting has started, its card carries "Draft a follow-up to <first name>", which hands the person and the meeting to the Gmail-page drafter (gmailAgentRun — reads his threads, the last meeting, the calendar, Calendly; saves a signed draft; nothing sends), the same hand-off the Redtail activity row uses. Verified at 1280 and 375 with a mouse click: opens, stays open across a full brief re-render, closes again, one AI call total with the out-of-credits answer shown as the humanized sentence, follow-up button only on the past meeting, no overflow, no page errors. Previous: v5.57.1 (TWO-FILE deploy: index.html + styles.css, link ?v=5.57.1; NO .gs ROUND): THE APP DID NOT LOAD AT ALL — his report 2026-10-29, "EOS tool isn't loading on my mobile" — and not only on mobile: the main <script> did not PARSE, so nothing ran on any device. Cause: commit ca7654b (14:06, a cloud Claude session, "Fix _wkPersonOf to recognize 'and Name' pattern") wrote every straight quote in _wkPersonOf as a CURLY quote (‘’) — string delimiters, the split(',') argument, and the name character class, where "'’" became "’’" and silently dropped the straight apostrophe. The same session had already broken the app twice that day: v5.56.0 (09:33) and v5.57.0 (09:43) both failed to parse ("missing ) after argument list", Unicode arrows) until 31f8c9d/8c75db1 at 11:46/11:48 — so the app was down 09:33-11:46 and again 14:06-17:15. Fixed FORWARD, keeping v5.56.0/v5.57.0's features: straight quotes restored, "'’" restored in all four name patterns, and _WK_NAME_TAIL_RE trims a trailing meeting word so "Hans and Rob Sample Coffee" gives "Rob Sample" as the function's own comment promised (the 'and' rule as pushed gave "Rob Sample Coffee"). ALSO rule 38: v5.56.0 added 50 lines to styles.css and nobody bumped the link, which still read ?v=5.55.3 — a phone holding the cached 5.55.3 sheet got new HTML with old CSS; the link is ?v=5.57.1 now. Verified: every inline script parses (new Function over each block), the live page boots at 375 in Playwright with zero page errors, and _wkPersonOf returns the right person for bracket / with / and / dash titles and for O'Brien with either apostrophe. 🚨 THE LESSON, for whoever edits this file from a phone or a web editor: SMART QUOTES ARE A SYNTAX ERROR IN CODE, and a push that has not been parsed is a push that can take the whole firm offline — run the parse check before every push (the .claude/hooks/check-js.js hook does it on this PC; a cloud session has no such hook). v5.56.0 and v5.57.0 shipped with NO changelog entry and no build-time line; their commit messages are the record: v5.56.0 = Intelligent Day meeting prep in the morning brief (AI talking points for external meetings from calendar history + Opportunities, expandable cards, auto-generates for the first two meetings, names a missing Web App URL / AI key); v5.57.0 = Otter.ai search feeds past meeting summaries + action items into that prep prompt, an ntfy notification when prep completes, Settings tidy (Zapier/Sheets text removed). Previous: v5.55.3 (TWO-FILE deploy: index.html + styles.css, link ?v=5.55.3; NO .gs ROUND): HIS FIRST MORNING WITH THE BRIEF SECTION, from his phone on the road, 2026-10-07 04:42 — "Several problems. I thought you were going to thoroughly review everything." Two things on his screen. (1) MINE, A REVERSAL of v5.55.2's review item: "WHO TO TOUCH TODAY 19" sat over NOTHING while the birthday row and three calendar rows beside it were fully shown — the reviewer had put .mb-opps into the v4.56.1 phone mail trade (.mb-has-mail hides context rows), but that trade only ever folded .mb-list sections and v4.72/v4.74 removed every one of those from the brief, so today no sibling section gives up its rows and a badge over hidden rows is rule 51's dead affordance. .mb-opps/.mb-opp-more are OUT of that selector again; probe B8c now asserts the rows STAY VISIBLE under mb-has-mail (rule 78: upgraded to the rule underneath, not deleted). (2) NOT A CODE FAULT, BUT A CODE FAULT IN HOW IT WAS SHOWN: his Anthropic account is out of API credits ("Your credit balance is too low to access the Anthropic API") — that blocks every AI feature until he adds credits at console.anthropic.com › Plans & Billing — and the toast dumped the provider's raw JSON body, braces and request id included. NEW aiHumanizeError(): "Anthropic HTTP 400 — Your credit balance is too low… The provider account is out of API credits — add credits on its billing page… Nothing in the tool is broken." (auth errors → check the key in Settings › AI Tools; rate limits → wait a minute). The backend forwards the body cut at 300 characters, so the JSON is often unparseable — the message is lifted by key when parsing fails (his screenshot's string is the fixture). Applied at ONE choke point for every backend answer, `_calHumanize` inside `_calPost` (the wrapper, NOT `_calPostRaw`: the first cut sat in the transport and the probe's E4, which stubs the transport, proved it blind — a correct lesson from a failing test), and in makeAIError for the thrown path. Probes: NEW ai-error-text-probe 4/4, brief-opps 13/13, opportunities 22/22, ai-gates 7/7, ai-working (see summary). NOT FIXED, named: the auto inbox review will keep failing on every scan until he adds credits — it writes its sentence into its own host, not a toast, so it does not nag. Previous: v5.55.2 (TWO-FILE deploy: index.html + styles.css, link ?v=5.55.2; NO .gs ROUND): THE FRESH-EYES CODE REVIEW OF v5.55.0, 17 findings, applied the same evening. THREE BUGS: (1) briefOppsRefresh cleared err, painted (nothing to paint: no cache, not yet fetching) and THEN fetched - and oppFetch's gate early-return sits BEFORE its try/finally, so on a too-old backend "Try again" blanked the section and the error never returned; now the read STARTS first (oppFetch flips `fetching` synchronously), the paint shows "Reading your pipeline...", and a paint follows however the read ends; the gate return repaints the host too. (2) OPP_INBOUND_RE counted "haven't heard back", "she hasn't responded", "I replied to her voicemail" and a bare "called back" as THEIR reply and RESET the count - the opposite of what those lines record; OPP_NOT_INBOUND_RE vetoes a negation or a first-person subject near the verb, the bare "called back" is gone (his call), and an inbound line that also records what he did ("She replied; sent three dates") counts as a touch via OPP_OUTBOUND_RE. (3) OPP_LOG_LINE_RE rejected a bulleted line, and oppDescToText writes "- " for every <li> - a log Redtail's editor had turned into a list read "No touch logged" forever; "- ", "• " and "* " prefixes are allowed now, and a month/day outside 1-12/1-31 is a typo, not a touch. RISKS CLOSED: oppHydrate's finally repaints the brief host (contact names landed after the paint and the brief showed no names until the next read); the phone's mail trade (.mb-has-mail) now hides .mb-opps/.mb-opp-more like every other context section's rows, heading + badge kept, "Show the rest of the brief" restores; briefOppsKick() carries a .catch; a <= v5.53.0 cache with raw HTML descriptions is re-read as lines in oppLoadCache. NITS: ONE comparator, oppAttentionOrder (score, then nearest close date, then name), for the page's "attention" sort AND the brief - they had differed; the error line no longer reads "Couldn't read the pipeline: Opportunities: ..."; a newest-line reply reads "No touch since their reply 09/22/26" instead of "0 touches since..."; aria-labels name the opportunity on "AI email" / "Snooze a week"; the dead `.mb-opp-why { margin-top: 0 }` (rule 10b, the unscoped .opp-flags rule sat later at equal specificity) is replaced by `.mb-opp .opp-flags { margin-top: 2px }`. LEFT AS DESIGN CALLS, named: Today now triggers the pipeline read + hydrate on a device that never opened Opportunities (intended - it is the brief's purpose; Apps Script quota is far off); the section sits between birthdays and Today's calendar in the band. Probe brief-opps 13/13 (B2 grew the negation/bullet/same-line/bad-date cases, B6c presses Try again on a failing AND a gated backend, new B8c asserts the mail trade), opportunities 22/22, shoot-brief 375/412/1280: four rows 591px at 375. Previous: v5.55.1 (TWO-FILE deploy: index.html + styles.css, link ?v=5.55.1; NO .gs ROUND): THE REVIEW PASS ON v5.55.0, same evening, before Hans saw it. Measured at 375/412/1280 with every brief section populated (scratchpad shoot-brief.js). (1) The "Who to touch today" why-line was one run-on grey sentence of concatenated flags — 632px for four rows at 375; it is now the Opportunities page's OWN chips (same markup, same classes), red = overdue/stale, amber = a gap, violet = the touch ceiling; styles.css UNSCOPED .opp-flags/.opp-flag from #opportunities so both surfaces share one definition (rule 9: a scoped class borrowed into the brief would have rendered as plain text, silently — the probe's B3 now asserts the chip is STYLED, by computed background). (2) The touches flag is chip-length: "5 of 5 touches — closing note next" / "3 of 3 touches — stop asking; quarterly touch" (+ "since their reply" when a reply reset it); the reply date and the kind name were already on the row's touch line and stage. (3) .mb-opp-name had inherited the coarse-pointer 44px button floor (rule 5) — ~20px of air under every name; min-height 0 with 3px padding, the button is the full row width so the target stays easy. Four rows at 375: 632 → 603px with the chips AND the tighter name. (4) "N more in Opportunities" gets 6px above it. (5) Seen beside it in the same shot and fixed: the Client birthdays row's text span had no flex basis, so at phone width it wrapped as a block and left the tick box alone on a line — .mb-bday > span { flex: 1 1 12rem; min-width: 0 }; the band at 412 lost 50px to that alone. Probes: brief-opps 12/12 (B2 asserts the new chip text, B3 the styled chips), opportunities 22/22, morning-brief 22/25 (its three stale fixtures, unchanged). brief-mail-probe could not be re-run in this session (the tool permission classifier refused the command on its seventh run of the evening; nothing in this patch touches a mail selector, and the only brief CSS it changes makes a row SHORTER). Previous: v5.55.0 (TWO-FILE deploy: index.html + styles.css, whose link becomes ?v=5.55.0; NO .gs ROUND - the backend stays .gs v3.88.0 and nothing is pasted or clasp-pushed; STYLES.CSS MUST SHIP WITH THIS FILE, because the new .mb-opp rows are unstyled without it and the empty host would hold a grid column): THE MORNING BRIEF'S "WHO TO TOUCH TODAY", AND TOUCH COUNTING (§5.126) - the Opportunities track's third phase, §5.97 "NEXT, his order" (the daily-brief section first, then touch counting). (1) THE SECTION: BRIEF_SECTIONS gains key 'opps' ("Who to touch today"), on by default, with a forward migration BRIEF_SECTIONS_ADDED_IN_V4 / sectionsV 4 in briefPrefs() - the v4.57.0 mail shape, because an opt-in list cannot tell "new" from "switched off", so a stored array written before the key existed gets it appended exactly once. It reads the SAME device cache the Opportunities page paints from (oppLoadCache / oppState.rows) and runs the SAME hygiene pass (oppFlags) - ONE RANKER, TWO RENDERERS, wired to both on the day the second surface shipped rather than after (the §5.87 / §5.91 / §5.93 lesson, applied before instead of after). briefOppsDue() = oppActiveRows() that oppFlags scores above 0, un-snoozed (a snoozed row returns score 0 from oppFlags), worst first by the page's own order (score, then idle days, then name). The brief shows the top 4 (BRIEF_OPPS_MAX_ROWS) with an "N more in Opportunities" button; the section badge and the headline count ALL due ("N opportunities need a touch", "one opportunity needs a touch"). Each row: the opportunity name (opens the record on the Opportunities page via briefOppOpen), linked contact names when known (oppContactsText), the flags as a why-line, a touch line, and two text controls - "AI email" (briefOppCompose: showPage('opportunities') then oppCompose, the SAME composer window the page's own AI email button opens - one drafter) and "Snooze a week" (briefOppSnooze: writes the device-local OPP_SNOOZE_KEY map, the same snooze the Opportunities page shows, and the toast says it never goes to Redtail). NOTHING IN THE BRIEF WRITES TO REDTAIL. (2) RENDERING STATES, rule 25 and rule 73: Redtail genuinely off on the deployment (capabilityDenied('redtail.crm')) renders NOTHING AT ALL, deliberately - that is a standing condition on Amanda's deployment and must not be re-announced every morning - and contributes 0 to the headline; a backend older than RT_OPP_GS_MIN (3.76.0) renders one sentence from oppGate() naming both versions and makes no call; a failed read with NO cache renders "Couldn't read the pipeline: <the backend's words>" plus Try again (briefOppsRefresh); a failed read WITH a cache keeps painting the cache; nothing due renders no section (the birthdays rule: an empty context section costs the fold and says nothing, and the Opportunities page shows the clean state). THE HOST: a <div data-mb-opphost> is painted from the cache at band render and repainted by _briefPaintOpps() when oppFetch lands - oppFetch's finally calls it, in a try - which is the mail host's shape (v4.57.0, addressed by data attribute, never a composed id, rule 47), so a late answer repaints one host and the headline and never re-lays-out the band. The host sits INSIDE the .mb-body auto-fit grid, and an empty element is still a grid item, so styles.css gives .mb-opphost `display: contents` - without it the common empty state held a blank column and pushed Today's calendar over (the doc-writer caught this from the diff; the probe's B6d asserts it). briefOppsKick() is called from the band render, awaits capabilityReadyChecked('redtail.crm') (the ACTION re-probes; the AFFORDANCE reads capabilityDenied), stands down painting if oppGate() names a reason, and otherwise calls oppFetch(false), whose own 5-minute TTL decides whether a request goes out. _briefHeadlineFacts(over) is NEW and is the single place that computes the headline's facts (mail, carried, pending, starred, opps); the three repaint sites - band render, mail repaint, opps repaint - all go through it, where before two of them each carried their own copy of the four reads and a fifth fact would have had to be added to each. (3) TOUCH COUNTING, oppTouches(row, now): Redtail keeps NO touch counter - updated_at moves on any edit, so it is the idle clock and not a count. The opportunity description's dated log lines in his own habit ("YYYY.MM.DD- what I did"; YYYY/MM/DD and YYYY-MM-DD also read, OPP_LOG_LINE_RE) are counted as touches, and a line that says THEY came back (OPP_INBOUND_RE: replied, wrote back, called me back, got back to me, responded, heard back, reached out to me, emailed / texted / called / messaged me, their reply) RESETS the count - the playbook's rule 1 (docs/plans/opportunities-sales-playbook.md section 2) is the source. Order-independent: the newest inbound line's date is the floor and every non-inbound line dated on or after it counts, wherever the lines sit in the text; a touch logged on the SAME DAY as the reply still counts. The count is shown WITH the date it counts from ("2 touches since their reply 09/22/26, last 09/30/26", or "No touch logged" when the description holds no dated line) so a miscount is VISIBLE AND CHECKABLE against the record rather than trusted. oppFlags gains a flag at the kind's ceiling (the existing OPP_KINDS.maxTouches: 6 website lead, 5 after discovery / prospect / no stage, 3 COI getting introduced, 4 podcast; COI relationship is 0 = never): "N touches logged [since their reply on mm/dd/yy] - time for the closing-the-file note" for the breakUp kinds, "stop asking; keep a friendly quarterly touch" for the COI intro, score +2. oppFlags is the page's pass too, so THIS FLAG ALSO APPEARS ON THE OPPORTUNITIES PAGE and can by itself put a row into the brief. oppFlags now also returns .touches (null for a snoozed row, which returns before counting). DEGRADES / DEPENDS ON: the Redtail proxy at .gs 3.76.0 or newer and the redtail.crm capability (both only gate the section, nothing else changes); the brief's rows are only as current as the Opportunities page's own cache (oppFetch, 5-minute TTL); the touch count is only as good as his dated lines and the phrase list - a reply he logs in words outside OPP_INBOUND_RE does not reset the count, which is why the date it counts from is on screen. NOT BUILT, named: a tick that writes a touch to Redtail from the brief (a touch is logged through the composer's existing "Write the follow-up to Redtail" or the record's log box); inbound-reply detection beyond the phrase list; snooze syncing across devices (it stays device-local, as on the page); a Settings toggle for brief sections (none exists for ANY section). styles.css: .mb-opphost (display: contents) + .mb-opps / .mb-opp / .mb-opp-name / .mb-opp-who / .mb-opp-why / .mb-opp-touch / .mb-opp-acts beside .mb-bday, rule 8/9 guards on creation (min-width 0 on the row's children, overflow-wrap anywhere on name, contacts and why, because an opportunity name can carry an unbroken address). PROBE: NEW .claude/probes/brief-opps-probe.js, 12 assertions B1-B8b (registration + migration; pure touch counting including the reply reset and the per-kind ceilings; the render against the page's own ranker; a snooze made from the brief seen on the page; AI email landing in the page's composer; the four degrade states incl. the empty host holding no grid column; ZERO Redtail writes; 375px overflow and a hit-test; 412px overflow), screenshots at 1280 and 375. NEGATIVE CONTROL: against the DEPLOYED v5.54.0 it scores 2/11 (only the two absence assertions pass), so it catches the feature's absence rather than describing it. TWO HARNESS FIXES, each proven on the deployed v5.54.0 too (rule 72): opportunities-probe's openApp now removes #eosSplash (O11 and O16 had "failed" on the splash's hit-test since v5.31.0 - 22/22 on both builds now, which closes the "fail identically on v5.53.0" note in the line below), and brief-mail-probe reveals the app, removes the splash and clears the sign-in gate before H-hit (measured: that gate was the probe's blocked Google script exhausting initGoogleSignIn's 10-second budget - PASS at t=3s, FAIL at t=12s, identical code; 94/94 on both builds). Previous: v5.54.0 (index.html ONLY, styles.css unchanged and stays ?v=5.53.0, no .gs round; pairs with a REDEPLOY of the opportunity-intake Edge Function, which Hans pastes in the Supabase dashboard): OPPORTUNITY DESCRIPTIONS AS HTML (§5.125). Redtail's opportunity Description is a rich-text (HTML) editor, so the intake function's plain "\n" lines arrived as one solid run. The function now writes one <p> per line (empty line = <p><br></p>, & < > escaped, "Folder: <url>" an <a>), and its finder (locateBlock) recognises the Prospect Prep markers in plain text, in its own HTML and in HTML Redtail's editor rewrote (<p>/<div>/<br> wrapping, attributes, &nbsp;, entities, inline <span>). THIS FILE: the opp-desc-html block (marked >>> / <<<, loaded by .claude/probes/opportunity-intake-test.js) holds oppDescToText (HTML -> lines; plain text passes through) and oppTextToDescHtml (lines -> the SAME HTML the function writes; the probe asserts byte equality, so a tool save keeps the markers findable). oppNormalise reads description as lines, so the list, search and AI review never see tags. oppDescForSave: box untouched + Redtail holds HTML -> Redtail's own HTML is sent back (his bold/lists/links survive) and a log line is ONE appended <p>; box edited, or an old plain record -> its lines as simple HTML (Redtail formatting is flattened only then — the box is plain text). Baseline (ed.descRaw / ed.descText) is set in oppRenderEditor from the full record. Probes: opportunity-intake-test 18/18 (11 of them fail against the old plain-text writer/finder); opportunities-probe O7 rewritten to the HTML rule + new O7b, 20/22 — O11 and O16 fail identically on the deployed v5.53.0 (#eosSplash on top of the hit-test), not this release. Previous: v5.53.0 (THREE FILES: index.html + styles.css?v=5.53.0 + NEW icons/intelligrations-thinking.webp, no .gs round): THE "CLAUDE IS WORKING" ROW (§5.124). His ask: the firm's Intelligrations thinking animation (the 164x124 looping WebP from the Portfolio Dashboard, copied to icons/) shown wherever the tool waits on an AI call, with "Claude is working on it…" and the person's own words in italics when there are any, visible only while the request is in flight and hidden in a finally. Built as ONE fixed row (#aiWorking, bottom-right; bottom-centre above the nav on a phone, same spot as the toasts) rather than per-site markup: every AI request already passes _calPost (actions generateOutputs/generateImage, now a wrapper over _calPostRaw) or callAI (around callAIWithBudgetRetry), so aiWorkingBegin/aiWorkingEnd are REFERENCE-COUNTED there and no call site changed - except composerGenerate, which passes the typed ask as opts.question (payload.workingQuestion is the _calPost spelling, stripped before the body goes out). Text in var(--gray-800) at body size, not muted. THE ICON MUST SHIP WITH THE PAGE: without it the row shows a broken picture (the deploy is three files this time). Previously v5.52.0 (client-only, styles.css UNCHANGED, link stays ?v=5.49.0, no .gs round): THE RHYTHM STRIP NAMES WHAT WORDPRESS PUBLISHED (§5.123). His report: "I just posted a blog, and it wasn't the Diversification one, so I'm guessing you can't see when I've actually posted" - the tool HAD seen it (the strip read "Last one out Thu, Oct 1 (today)") but showed a bare date beside the next card's title, which read as blindness. Now _mktLastOutPhrase names + links the post; mktRhythmRefresh reads the 10 newest published posts (was 1) and mktRhythmFacts counts a SENT card as out when its title is among them (_mktTitleKey), so a post re-created or published by hand in WordPress needs no marking here; WordPress is asked every 10 minutes while a blog is sent-and-waiting (was always 3 hours); "Check WordPress now" on the strip (mktRhythmCheckNow). Probe blog-rhythm-probe 9/9. Previously v5.51.0 (styles.css UNCHANGED, link stays ?v=5.49.0): ANALYTICS INTO ACTIONS (§5.122), PAIRS WITH .gs v3.88.0 (Hans's backend only - it is the GA one). His ask with two GA screenshots: "bake in these Google Analytics into actionable items within marketing". His answers: an action lands as a Marketing card in Ideas; build the headline numbers vs the previous 28 days; nothing on Today. What's working now opens with four tiles (mktGaHeadlineHtml: visitors, new visitors, time on site = engagement seconds per active user, Facebook's share; each vs the 28 before) and a "Things to do" list from PLAIN RULES (mktGaActions, pure over insights + cards; the AI coach is untouched and never writes these): broken addresses (notFound rows, >= 5 visits), a page climbing (the existing trend test) with Quote->link + Follow-up blog, a well-read tool-published post with no Facebook post, the home page at >= 70% bounce on >= 100 views, Facebook under 5% of visits while a live blog has no FB post. mktGaAct makes the card (standalone with the numbers + next step in the Brainstorming box; 'followup' = a blog card with the page as its source) and OPENS an existing same-titled card instead of duplicating. A 3.87.0-or-older backend: tiles replaced by one sentence naming 3.88.0, actions still built from what the old report carries. PREVIOUSLY v5.50.0 (styles.css UNCHANGED, link stays ?v=5.49.0): HIS FOUR ASKS FROM THE DIVERSIFICATION POST, PAIRS WITH .gs v3.87.0 (both accounts). (1) TAGS: pickWordPressTags after the category step - GET getWordPressTags (100 most-used), the marketing AI picks 3-5 existing + up to 2 new, one chooser (use / type my own / none), sent as tagIds + newTags; the backend creates new names and reuses term_exists; the send window names the tags. Gated on 3.87.0 (skipped with a sentence before). (2) The centred picture is 600x600 (backend wpImageMarkup_). (3) A 32px div gap after the Schedule a Conversation button (an empty <p> would be thrown away by the classic editor). (4) The related-reading line moves OUT of the draft at send time (mktRelApply(body, []) + buildRelatedLine(mktRelParse(body))) to sit under the button, above the disclosure, with a gap each side; the draft text and the archive copy are unchanged. PREVIOUSLY v5.49.1 (styles.css UNCHANGED, link stays ?v=5.49.0): HIS DIVERSIFICATION BLOG WENT TO WORDPRESS WITHOUT ITS PICTURE. Cause, confirmed from the code: the Image step's "Use this one" found no Firm Context folder for Intelligent Investing on his PC (Settings box empty AND the ii brand row without contextFolderId), so the picture stayed in IndexedDB and card.imageFileId stayed '' - and postToWordPress only attaches a picture that is in Drive, silently. Two fixes: (1) the send chooser now SAYS whether a picture goes; when the device holds candidates for the card but none reached Drive it adds a recommended "Stop - fix the picture first" and names the two steps; (2) the folder warning names BOTH places it looked (device box / brand row, and whether the row was readable) instead of one generic sentence he could not "shake". No data change; the folder id itself is his to paste (EOS Intelligent Investing Firm Context, found in his Drive). PREVIOUSLY v5.49.0 (TWO-FILE, styles.css?v=5.49.0): THE BLOG RHYTHM + MARKETING CALENDAR (§5.119), designed with him first (mockup + four answers, all the recommended ones). mktBlogStep reads the step off the card (the step AFTER the furthest filled one; Finalize and Title give no signal - a card carries its title from birth); mktRhythmFacts is PURE over (cards, WP statuses, last published post, now): ii blogs only, current = furthest along not live/scheduled/done, behind = 14+ days since the last live post AND nothing scheduled ahead, unknown history never nags, aim = anchor + 7. Last published comes from listWordPressPosts perPage 1 (eos_mkt_last_published, device-local) so blogs made outside the tool count. Today: #dpBlogLine under the date - the line + a DRAWN catch-up task (never stored in dailyPlanData: rules 49/53/75), tick hides it for the day (eos_blog_nudge_done). Marketing: #mktRhythmStrip, 12-segment bar, ii only. Calendar: CAL_EOS_LAYERS 'marketing' -> _calMktItemsFor (WP go-live, facebook + facebookQuote `when`, due/overdue marker), agenda bubble + week chip (data-cal-mkt) open the card via mktRhythmGoCard. mktRhythmRefresh is throttled 3h (Today also pulls marketing cards from the cloud, 15 min). Probe blog-rhythm-probe 9/9. No backend change. PREVIOUSLY v5.48.0 (styles.css UNCHANGED, link stays ?v=5.47.2): HIS GREENVILLE PAGES (§5.118). Ten service pages /greenville-* (created 2024-03-28, reorganised May-Jul 2024; audience pages linked to them 2024-06-21); he asked whether they gained views. The 28-day report cannot see that far back, so What's working gains a 'Greenville pages' block: mktGaLocalLoad -> analyticsReport mode 'pathHistory' (pathContains 'greenville', startDate 2023-07-01) -> mktGaLocalFacts (pure; FULL months only, last 12 vs the 12 before, trailing-slash paths merged, service pages vs blog posts, site total for share) -> mktGaLocalRender (per-page line + inline SVG sparkline) + mktGaLocalCopy (text for a chat). REQUIRES Google_Tasks_Sync.gs 3.86.0 ON THE GA BACKEND (gaBackendInitials = Hans) - a 3.85.0 backend ignores the mode and answers the default report, which the client detects by the missing `history` and names. No new scope, no consent run. PREVIOUSLY v5.47.2 (TWO-FILE, styles.css?v=5.47.2): his screenshot - he clicked "Approve & schedule the quote post" twice, nothing happened, and he feared a double post. Nothing was sent: the button was DISABLED (v5.46.2's order rule - the blog's own Facebook post was not scheduled yet) and a disabled button fires no click; had it been live, every schedule still passes a confirm dialog, the single-flight flag and the backend's 3-minute duplicate refusal. The defect was visual: styles.css had NO :disabled rule anywhere, so a disabled .btn-primary was exactly as blue as a live one. Now .btn:disabled is dimmed with a not-allowed cursor (appended last, rule 10b), and the Facebook buttons carry the reason as a hover title.
+        const EOS_VERSION = '5.59.0';
+        const EOS_BUILD_DATE = '2026-10-30';
+        const EOS_BUILD_TIME = '11:30'; // v5.59.0 (THREE-FILE deploy: index.html + styles.css + NEW icons/iia-blog-plate.jpg, link ?v=5.59.0; PAIRS WITH .gs 3.89.0, Hans's backend only, no consent run. Until 3.89.0 is live the send still works: slug and date are ignored and the email asks the person to set them): §5.130 THE WORDPRESS GUIDE ON THE BLOG CARD + THE NEWSLETTER TAB. New Step 12 (Package is 13): slug, date, Yoast fields, a Final Review, all kept in card.socialPosts.wp so no new Supabase column. Yoast's fields are not exposed by the WordPress API, so they travel in the email via mktWpHandoffSteps, the ONE builder used by both the send and Package. The social image is drawn from a plate exported from his Canva IIA Thumbnail with the words removed; the Canva connector belongs to Claude and the app cannot call it. mktWpHeadings fixes ## arriving as H3. _mktImageSquareJpeg makes the featured image a square JPG. The newsletter tab is the 'newsletter' row of brand_profiles. Probe blog-wordpress-probe 33/33. Previously, v5.58.1 (TWO-FILE deploy: index.html + styles.css, link ?v=5.58.1; NO .gs ROUND): "WHERE DO I GO TO FIX THIS… THIS SHOULD BE ABLE TO BE FIXED WITHIN THE EOS TOOL. THIS ISN'T USER FRIENDLY." — his phone, the Gmail page, a red paragraph quoting Anthropic's billing message. Adding credits CANNOT happen inside the tool: the provider takes payment only on its own site, signed in as him (and the tool must never handle card details). So the tool now does everything else. (1) ONE BAR for the whole app (#aiCreditBar, static markup, the stale-build strip's look, position:sticky so it is on screen wherever the failing button was): "Claude is out of AI credits. Every AI button in the tool … will refuse until credits are added…", with "Add credits" opening console.anthropic.com/settings/billing in a new tab (per-provider URLs for OpenAI / Gemini / Grok), "Use a different AI" opening Settings › Which AI handles what? (settingsJump('aiRouting') — the backend already accepts OpenAI/Gemini/Grok keys from Settings via setIntegrationKeys), the auto-reload tip, and Hide (until reload). Raised from the ONE place every AI error passes (aiHumanizeError), and CLEARED BY ITSELF by the first generateOutputs answer that succeeds (_calHumanize now sees the action). (2) The inline red text is one sentence: "Claude is out of AI credits, so it could not write this. Tap “Add credits” in the yellow bar at the top of the page — nothing in the tool is broken. (Anthropic HTTP 400)". Probe ai-error-text 5/5 (E1 rewritten to the new sentence per rule 78; new E5: the bar hidden at rest, shown by one failure, the billing URL in a new tab, in view and hit-testable at 375 scrolled down the Gmail page, "Use a different AI" present, cleared by a success, back on a new failure, Hide holds). ALSO — THE PUBLIC REPO RULE, BROKEN AND MENDED: the 375 shot showed a REAL client's name in the Gmail drafter's placeholder; a sweep found real client and prospect names across this file (comments, AI prompt examples, the in-app changelog) going back to v4.90.0 (2026-08-31) — and I had added more the same day (v5.57.1–v5.58.0's notes). All replaced with invented names (Sample / Demo / Example / Demoson / Sampleton / Sampleveen); the page still parses and every probe that reads these surfaces passes. NOT changed, his decision: first names inside his three real birthday greetings (BIRTHDAY_VOICE_SAMPLES — rewriting them changes the learned voice), and the git HISTORY of the public repo still holds the old text (scrubbing it means rewriting public history). Previous: v5.58.0 (index.html ONLY; styles.css unchanged and the link stays ?v=5.57.2; NO .gs ROUND — a comma-separated To is a valid header and createReplyDraft writes it as given): A COUPLE IS ONE EMAIL TO BOTH. His screenshot 2026-10-29, the Opportunities composer on "Close Sam and Val Demo": "For: Val Demo", seven emails with Valerie read, and his words "I was hoping that the tool would have searched for Sam Demo as well and seen that I emailed him about a month ago… craft an email follow up back to him and Valerie." Cause: oppNameFromTitle took the FIRST run of two or more capitalised words, so a lone "Sam" joined by "and" to "Val Demo" never counted; and with linked contacts oppResolvePerson only ever used linked[0]. Built: oppNamesFromTitle returns EVERY person — a lone first name beside "and"/"&" takes its partner's surname ("Sam and Val Demo" → Sam Demo + Val Demo), a team member's first or full name is never borrowed into a client ("Hans and Rob Sample Coffee" stays Rob Sample), up to three; oppNameFromTitle is now names[0] (O21's titles unchanged). oppResolvePerson keeps `person` as the first found (every reader unchanged) and carries the rest in person.others: up to three linked contacts, plus any title name no linked contact covers; each is resolved through the SAME single-name path (_oppResolveOneName, the old body), and linking is offered only when Redtail SAID the list was empty, decided once before any pick. oppGatherContext gives each extra person the same visible address lookup ("Also for Sam Demo — …"), fills To with every address comma-separated (a typed list is honoured position by position), reads the mail with EACH address through the shared gmReadCorrespondence and merges by message id newest-first (the thread only Sam's address finds is now in the prompt; a shared thread once), and takes the most recent meeting with any of them. The AI gets "WRITING TO: Sam Demo <…>; Val Demo <…>" as DATA and, in the SYSTEM prompt, the rule to write ONE email to all of them with one salutation ("Sam and Valerie,"). The "found nothing on file" question names everyone. Probe opportunities 23/23 — new O22 (a couple from the title, both searched, both in To, both threads read and merged, WRITING TO both, the greeting rule, zero Redtail writes; the team-name exclusions) FAILS on v5.57.2 (negative control: 22/23); O17's source window widened 6000→14000 because the function grew past the shared reader's call (same check); O21 unchanged. NOT DONE: the Gmail-page drafter and the meeting-prep "Draft a follow-up" hand-off still write to one person; the out-of-credits Anthropic account still blocks every draft until credits are added. Previous: v5.57.2 (pushed 17:25; its own line said 17:55, a guessed time — corrected here) (TWO-FILE deploy: index.html + styles.css, link ?v=5.57.2; NO .gs ROUND): THE MEETING PREP CARD, from his report minutes after v5.57.1 — "nothing happens when I click this" on "Hans and Rob Sample Coffee". FIVE defects in v5.56.0/v5.57.0's card, each proven in Playwright first. (1) THE CLICK: _meetingPrepResetIfStale ran on EVERY repaint and reset the whole state (expanded included) whenever the localStorage cache was absent — and the cache was only written after a SUCCESSFUL prep, so on a device with no prep (every device, with his AI failing) the click set expanded and the repaint wiped it in the same tick; a mouse click left expanded {}. The state now carries its own date and resets only when the DAY changes; the cache seeds today's preps once. (2) THE ROUTE: the card called callAI('dailyPlanning'), the BROWSER-key route, so on his deployment (key in Script Properties) it showed "Configure an AI provider" while the Opportunities composer on the same page worked; it now uses the backend seam (generateOutputs + mtgGetAI, aiActionGate, capabilityReadyChecked), instructions in the system prompt, maxTokens 2000 + effort low, and an empty answer names its stop reason. The affordance reads !capabilityDenied (rule 51/73). A FAILURE IS CACHED for the day, so the auto-run asks a failing AI once per meeting, not on every repaint; the ntfy "prep ready" fires only for preps actually written (it said "2 generated" when both had failed). (3) briefFindOppByName read raw Redtail field names the normalised rows never carry (linkedContacts, next_step, close_date, stage_name) — the contact match never ran and next step / close date were always blank; it now reads oppContactsOf / stage / nextStep / closeDate over ACTIVE rows, full name first, surname only as a whole word. (4) OTTER WAS NEVER CONNECTED: v5.57.0 called a backend action searchOtterByName that Google_Tasks_Sync.gs has never had (the .gs was not changed; its only Otter path is getOtterTasks over the Sheet's OtterTranscripts tab), swallowed "Unknown action", and sent the secret key in a URL query each time — while Settings claimed a direct Otter API via OTTER_ACCESS_TOKEN. The call is off (MEETING_PREP_OTTER_CONNECTED = false) and the Settings text says what is true; a real Otter read is a .gs round. (5) "Lunch with X" got NO card — the skip list matched any title starting "Lunch"; a title naming someone ("with X", [brackets]) is now a meeting whatever its first word. Also the "Nd ago" day count read new Date('YYYY-MM-DD') (UTC midnight, the evening before) — now oppDay. NEW, his ask in the same message ("I want to easily follow back up with Rob Sample after our coffee this morning"): once a meeting has started, its card carries "Draft a follow-up to <first name>", which hands the person and the meeting to the Gmail-page drafter (gmailAgentRun — reads his threads, the last meeting, the calendar, Calendly; saves a signed draft; nothing sends), the same hand-off the Redtail activity row uses. Verified at 1280 and 375 with a mouse click: opens, stays open across a full brief re-render, closes again, one AI call total with the out-of-credits answer shown as the humanized sentence, follow-up button only on the past meeting, no overflow, no page errors. Previous: v5.57.1 (TWO-FILE deploy: index.html + styles.css, link ?v=5.57.1; NO .gs ROUND): THE APP DID NOT LOAD AT ALL — his report 2026-10-29, "EOS tool isn't loading on my mobile" — and not only on mobile: the main <script> did not PARSE, so nothing ran on any device. Cause: commit ca7654b (14:06, a cloud Claude session, "Fix _wkPersonOf to recognize 'and Name' pattern") wrote every straight quote in _wkPersonOf as a CURLY quote (‘’) — string delimiters, the split(',') argument, and the name character class, where "'’" became "’’" and silently dropped the straight apostrophe. The same session had already broken the app twice that day: v5.56.0 (09:33) and v5.57.0 (09:43) both failed to parse ("missing ) after argument list", Unicode arrows) until 31f8c9d/8c75db1 at 11:46/11:48 — so the app was down 09:33-11:46 and again 14:06-17:15. Fixed FORWARD, keeping v5.56.0/v5.57.0's features: straight quotes restored, "'’" restored in all four name patterns, and _WK_NAME_TAIL_RE trims a trailing meeting word so "Hans and Rob Sample Coffee" gives "Rob Sample" as the function's own comment promised (the 'and' rule as pushed gave "Rob Sample Coffee"). ALSO rule 38: v5.56.0 added 50 lines to styles.css and nobody bumped the link, which still read ?v=5.55.3 — a phone holding the cached 5.55.3 sheet got new HTML with old CSS; the link is ?v=5.57.1 now. Verified: every inline script parses (new Function over each block), the live page boots at 375 in Playwright with zero page errors, and _wkPersonOf returns the right person for bracket / with / and / dash titles and for O'Brien with either apostrophe. 🚨 THE LESSON, for whoever edits this file from a phone or a web editor: SMART QUOTES ARE A SYNTAX ERROR IN CODE, and a push that has not been parsed is a push that can take the whole firm offline — run the parse check before every push (the .claude/hooks/check-js.js hook does it on this PC; a cloud session has no such hook). v5.56.0 and v5.57.0 shipped with NO changelog entry and no build-time line; their commit messages are the record: v5.56.0 = Intelligent Day meeting prep in the morning brief (AI talking points for external meetings from calendar history + Opportunities, expandable cards, auto-generates for the first two meetings, names a missing Web App URL / AI key); v5.57.0 = Otter.ai search feeds past meeting summaries + action items into that prep prompt, an ntfy notification when prep completes, Settings tidy (Zapier/Sheets text removed). Previous: v5.55.3 (TWO-FILE deploy: index.html + styles.css, link ?v=5.55.3; NO .gs ROUND): HIS FIRST MORNING WITH THE BRIEF SECTION, from his phone on the road, 2026-10-07 04:42 — "Several problems. I thought you were going to thoroughly review everything." Two things on his screen. (1) MINE, A REVERSAL of v5.55.2's review item: "WHO TO TOUCH TODAY 19" sat over NOTHING while the birthday row and three calendar rows beside it were fully shown — the reviewer had put .mb-opps into the v4.56.1 phone mail trade (.mb-has-mail hides context rows), but that trade only ever folded .mb-list sections and v4.72/v4.74 removed every one of those from the brief, so today no sibling section gives up its rows and a badge over hidden rows is rule 51's dead affordance. .mb-opps/.mb-opp-more are OUT of that selector again; probe B8c now asserts the rows STAY VISIBLE under mb-has-mail (rule 78: upgraded to the rule underneath, not deleted). (2) NOT A CODE FAULT, BUT A CODE FAULT IN HOW IT WAS SHOWN: his Anthropic account is out of API credits ("Your credit balance is too low to access the Anthropic API") — that blocks every AI feature until he adds credits at console.anthropic.com › Plans & Billing — and the toast dumped the provider's raw JSON body, braces and request id included. NEW aiHumanizeError(): "Anthropic HTTP 400 — Your credit balance is too low… The provider account is out of API credits — add credits on its billing page… Nothing in the tool is broken." (auth errors → check the key in Settings › AI Tools; rate limits → wait a minute). The backend forwards the body cut at 300 characters, so the JSON is often unparseable — the message is lifted by key when parsing fails (his screenshot's string is the fixture). Applied at ONE choke point for every backend answer, `_calHumanize` inside `_calPost` (the wrapper, NOT `_calPostRaw`: the first cut sat in the transport and the probe's E4, which stubs the transport, proved it blind — a correct lesson from a failing test), and in makeAIError for the thrown path. Probes: NEW ai-error-text-probe 4/4, brief-opps 13/13, opportunities 22/22, ai-gates 7/7, ai-working (see summary). NOT FIXED, named: the auto inbox review will keep failing on every scan until he adds credits — it writes its sentence into its own host, not a toast, so it does not nag. Previous: v5.55.2 (TWO-FILE deploy: index.html + styles.css, link ?v=5.55.2; NO .gs ROUND): THE FRESH-EYES CODE REVIEW OF v5.55.0, 17 findings, applied the same evening. THREE BUGS: (1) briefOppsRefresh cleared err, painted (nothing to paint: no cache, not yet fetching) and THEN fetched - and oppFetch's gate early-return sits BEFORE its try/finally, so on a too-old backend "Try again" blanked the section and the error never returned; now the read STARTS first (oppFetch flips `fetching` synchronously), the paint shows "Reading your pipeline...", and a paint follows however the read ends; the gate return repaints the host too. (2) OPP_INBOUND_RE counted "haven't heard back", "she hasn't responded", "I replied to her voicemail" and a bare "called back" as THEIR reply and RESET the count - the opposite of what those lines record; OPP_NOT_INBOUND_RE vetoes a negation or a first-person subject near the verb, the bare "called back" is gone (his call), and an inbound line that also records what he did ("She replied; sent three dates") counts as a touch via OPP_OUTBOUND_RE. (3) OPP_LOG_LINE_RE rejected a bulleted line, and oppDescToText writes "- " for every <li> - a log Redtail's editor had turned into a list read "No touch logged" forever; "- ", "• " and "* " prefixes are allowed now, and a month/day outside 1-12/1-31 is a typo, not a touch. RISKS CLOSED: oppHydrate's finally repaints the brief host (contact names landed after the paint and the brief showed no names until the next read); the phone's mail trade (.mb-has-mail) now hides .mb-opps/.mb-opp-more like every other context section's rows, heading + badge kept, "Show the rest of the brief" restores; briefOppsKick() carries a .catch; a <= v5.53.0 cache with raw HTML descriptions is re-read as lines in oppLoadCache. NITS: ONE comparator, oppAttentionOrder (score, then nearest close date, then name), for the page's "attention" sort AND the brief - they had differed; the error line no longer reads "Couldn't read the pipeline: Opportunities: ..."; a newest-line reply reads "No touch since their reply 09/22/26" instead of "0 touches since..."; aria-labels name the opportunity on "AI email" / "Snooze a week"; the dead `.mb-opp-why { margin-top: 0 }` (rule 10b, the unscoped .opp-flags rule sat later at equal specificity) is replaced by `.mb-opp .opp-flags { margin-top: 2px }`. LEFT AS DESIGN CALLS, named: Today now triggers the pipeline read + hydrate on a device that never opened Opportunities (intended - it is the brief's purpose; Apps Script quota is far off); the section sits between birthdays and Today's calendar in the band. Probe brief-opps 13/13 (B2 grew the negation/bullet/same-line/bad-date cases, B6c presses Try again on a failing AND a gated backend, new B8c asserts the mail trade), opportunities 22/22, shoot-brief 375/412/1280: four rows 591px at 375. Previous: v5.55.1 (TWO-FILE deploy: index.html + styles.css, link ?v=5.55.1; NO .gs ROUND): THE REVIEW PASS ON v5.55.0, same evening, before Hans saw it. Measured at 375/412/1280 with every brief section populated (scratchpad shoot-brief.js). (1) The "Who to touch today" why-line was one run-on grey sentence of concatenated flags — 632px for four rows at 375; it is now the Opportunities page's OWN chips (same markup, same classes), red = overdue/stale, amber = a gap, violet = the touch ceiling; styles.css UNSCOPED .opp-flags/.opp-flag from #opportunities so both surfaces share one definition (rule 9: a scoped class borrowed into the brief would have rendered as plain text, silently — the probe's B3 now asserts the chip is STYLED, by computed background). (2) The touches flag is chip-length: "5 of 5 touches — closing note next" / "3 of 3 touches — stop asking; quarterly touch" (+ "since their reply" when a reply reset it); the reply date and the kind name were already on the row's touch line and stage. (3) .mb-opp-name had inherited the coarse-pointer 44px button floor (rule 5) — ~20px of air under every name; min-height 0 with 3px padding, the button is the full row width so the target stays easy. Four rows at 375: 632 → 603px with the chips AND the tighter name. (4) "N more in Opportunities" gets 6px above it. (5) Seen beside it in the same shot and fixed: the Client birthdays row's text span had no flex basis, so at phone width it wrapped as a block and left the tick box alone on a line — .mb-bday > span { flex: 1 1 12rem; min-width: 0 }; the band at 412 lost 50px to that alone. Probes: brief-opps 12/12 (B2 asserts the new chip text, B3 the styled chips), opportunities 22/22, morning-brief 22/25 (its three stale fixtures, unchanged). brief-mail-probe could not be re-run in this session (the tool permission classifier refused the command on its seventh run of the evening; nothing in this patch touches a mail selector, and the only brief CSS it changes makes a row SHORTER). Previous: v5.55.0 (TWO-FILE deploy: index.html + styles.css, whose link becomes ?v=5.55.0; NO .gs ROUND - the backend stays .gs v3.88.0 and nothing is pasted or clasp-pushed; STYLES.CSS MUST SHIP WITH THIS FILE, because the new .mb-opp rows are unstyled without it and the empty host would hold a grid column): THE MORNING BRIEF'S "WHO TO TOUCH TODAY", AND TOUCH COUNTING (§5.126) - the Opportunities track's third phase, §5.97 "NEXT, his order" (the daily-brief section first, then touch counting). (1) THE SECTION: BRIEF_SECTIONS gains key 'opps' ("Who to touch today"), on by default, with a forward migration BRIEF_SECTIONS_ADDED_IN_V4 / sectionsV 4 in briefPrefs() - the v4.57.0 mail shape, because an opt-in list cannot tell "new" from "switched off", so a stored array written before the key existed gets it appended exactly once. It reads the SAME device cache the Opportunities page paints from (oppLoadCache / oppState.rows) and runs the SAME hygiene pass (oppFlags) - ONE RANKER, TWO RENDERERS, wired to both on the day the second surface shipped rather than after (the §5.87 / §5.91 / §5.93 lesson, applied before instead of after). briefOppsDue() = oppActiveRows() that oppFlags scores above 0, un-snoozed (a snoozed row returns score 0 from oppFlags), worst first by the page's own order (score, then idle days, then name). The brief shows the top 4 (BRIEF_OPPS_MAX_ROWS) with an "N more in Opportunities" button; the section badge and the headline count ALL due ("N opportunities need a touch", "one opportunity needs a touch"). Each row: the opportunity name (opens the record on the Opportunities page via briefOppOpen), linked contact names when known (oppContactsText), the flags as a why-line, a touch line, and two text controls - "AI email" (briefOppCompose: showPage('opportunities') then oppCompose, the SAME composer window the page's own AI email button opens - one drafter) and "Snooze a week" (briefOppSnooze: writes the device-local OPP_SNOOZE_KEY map, the same snooze the Opportunities page shows, and the toast says it never goes to Redtail). NOTHING IN THE BRIEF WRITES TO REDTAIL. (2) RENDERING STATES, rule 25 and rule 73: Redtail genuinely off on the deployment (capabilityDenied('redtail.crm')) renders NOTHING AT ALL, deliberately - that is a standing condition on Amanda's deployment and must not be re-announced every morning - and contributes 0 to the headline; a backend older than RT_OPP_GS_MIN (3.76.0) renders one sentence from oppGate() naming both versions and makes no call; a failed read with NO cache renders "Couldn't read the pipeline: <the backend's words>" plus Try again (briefOppsRefresh); a failed read WITH a cache keeps painting the cache; nothing due renders no section (the birthdays rule: an empty context section costs the fold and says nothing, and the Opportunities page shows the clean state). THE HOST: a <div data-mb-opphost> is painted from the cache at band render and repainted by _briefPaintOpps() when oppFetch lands - oppFetch's finally calls it, in a try - which is the mail host's shape (v4.57.0, addressed by data attribute, never a composed id, rule 47), so a late answer repaints one host and the headline and never re-lays-out the band. The host sits INSIDE the .mb-body auto-fit grid, and an empty element is still a grid item, so styles.css gives .mb-opphost `display: contents` - without it the common empty state held a blank column and pushed Today's calendar over (the doc-writer caught this from the diff; the probe's B6d asserts it). briefOppsKick() is called from the band render, awaits capabilityReadyChecked('redtail.crm') (the ACTION re-probes; the AFFORDANCE reads capabilityDenied), stands down painting if oppGate() names a reason, and otherwise calls oppFetch(false), whose own 5-minute TTL decides whether a request goes out. _briefHeadlineFacts(over) is NEW and is the single place that computes the headline's facts (mail, carried, pending, starred, opps); the three repaint sites - band render, mail repaint, opps repaint - all go through it, where before two of them each carried their own copy of the four reads and a fifth fact would have had to be added to each. (3) TOUCH COUNTING, oppTouches(row, now): Redtail keeps NO touch counter - updated_at moves on any edit, so it is the idle clock and not a count. The opportunity description's dated log lines in his own habit ("YYYY.MM.DD- what I did"; YYYY/MM/DD and YYYY-MM-DD also read, OPP_LOG_LINE_RE) are counted as touches, and a line that says THEY came back (OPP_INBOUND_RE: replied, wrote back, called me back, got back to me, responded, heard back, reached out to me, emailed / texted / called / messaged me, their reply) RESETS the count - the playbook's rule 1 (docs/plans/opportunities-sales-playbook.md section 2) is the source. Order-independent: the newest inbound line's date is the floor and every non-inbound line dated on or after it counts, wherever the lines sit in the text; a touch logged on the SAME DAY as the reply still counts. The count is shown WITH the date it counts from ("2 touches since their reply 09/22/26, last 09/30/26", or "No touch logged" when the description holds no dated line) so a miscount is VISIBLE AND CHECKABLE against the record rather than trusted. oppFlags gains a flag at the kind's ceiling (the existing OPP_KINDS.maxTouches: 6 website lead, 5 after discovery / prospect / no stage, 3 COI getting introduced, 4 podcast; COI relationship is 0 = never): "N touches logged [since their reply on mm/dd/yy] - time for the closing-the-file note" for the breakUp kinds, "stop asking; keep a friendly quarterly touch" for the COI intro, score +2. oppFlags is the page's pass too, so THIS FLAG ALSO APPEARS ON THE OPPORTUNITIES PAGE and can by itself put a row into the brief. oppFlags now also returns .touches (null for a snoozed row, which returns before counting). DEGRADES / DEPENDS ON: the Redtail proxy at .gs 3.76.0 or newer and the redtail.crm capability (both only gate the section, nothing else changes); the brief's rows are only as current as the Opportunities page's own cache (oppFetch, 5-minute TTL); the touch count is only as good as his dated lines and the phrase list - a reply he logs in words outside OPP_INBOUND_RE does not reset the count, which is why the date it counts from is on screen. NOT BUILT, named: a tick that writes a touch to Redtail from the brief (a touch is logged through the composer's existing "Write the follow-up to Redtail" or the record's log box); inbound-reply detection beyond the phrase list; snooze syncing across devices (it stays device-local, as on the page); a Settings toggle for brief sections (none exists for ANY section). styles.css: .mb-opphost (display: contents) + .mb-opps / .mb-opp / .mb-opp-name / .mb-opp-who / .mb-opp-why / .mb-opp-touch / .mb-opp-acts beside .mb-bday, rule 8/9 guards on creation (min-width 0 on the row's children, overflow-wrap anywhere on name, contacts and why, because an opportunity name can carry an unbroken address). PROBE: NEW .claude/probes/brief-opps-probe.js, 12 assertions B1-B8b (registration + migration; pure touch counting including the reply reset and the per-kind ceilings; the render against the page's own ranker; a snooze made from the brief seen on the page; AI email landing in the page's composer; the four degrade states incl. the empty host holding no grid column; ZERO Redtail writes; 375px overflow and a hit-test; 412px overflow), screenshots at 1280 and 375. NEGATIVE CONTROL: against the DEPLOYED v5.54.0 it scores 2/11 (only the two absence assertions pass), so it catches the feature's absence rather than describing it. TWO HARNESS FIXES, each proven on the deployed v5.54.0 too (rule 72): opportunities-probe's openApp now removes #eosSplash (O11 and O16 had "failed" on the splash's hit-test since v5.31.0 - 22/22 on both builds now, which closes the "fail identically on v5.53.0" note in the line below), and brief-mail-probe reveals the app, removes the splash and clears the sign-in gate before H-hit (measured: that gate was the probe's blocked Google script exhausting initGoogleSignIn's 10-second budget - PASS at t=3s, FAIL at t=12s, identical code; 94/94 on both builds). Previous: v5.54.0 (index.html ONLY, styles.css unchanged and stays ?v=5.53.0, no .gs round; pairs with a REDEPLOY of the opportunity-intake Edge Function, which Hans pastes in the Supabase dashboard): OPPORTUNITY DESCRIPTIONS AS HTML (§5.125). Redtail's opportunity Description is a rich-text (HTML) editor, so the intake function's plain "\n" lines arrived as one solid run. The function now writes one <p> per line (empty line = <p><br></p>, & < > escaped, "Folder: <url>" an <a>), and its finder (locateBlock) recognises the Prospect Prep markers in plain text, in its own HTML and in HTML Redtail's editor rewrote (<p>/<div>/<br> wrapping, attributes, &nbsp;, entities, inline <span>). THIS FILE: the opp-desc-html block (marked >>> / <<<, loaded by .claude/probes/opportunity-intake-test.js) holds oppDescToText (HTML -> lines; plain text passes through) and oppTextToDescHtml (lines -> the SAME HTML the function writes; the probe asserts byte equality, so a tool save keeps the markers findable). oppNormalise reads description as lines, so the list, search and AI review never see tags. oppDescForSave: box untouched + Redtail holds HTML -> Redtail's own HTML is sent back (his bold/lists/links survive) and a log line is ONE appended <p>; box edited, or an old plain record -> its lines as simple HTML (Redtail formatting is flattened only then — the box is plain text). Baseline (ed.descRaw / ed.descText) is set in oppRenderEditor from the full record. Probes: opportunity-intake-test 18/18 (11 of them fail against the old plain-text writer/finder); opportunities-probe O7 rewritten to the HTML rule + new O7b, 20/22 — O11 and O16 fail identically on the deployed v5.53.0 (#eosSplash on top of the hit-test), not this release. Previous: v5.53.0 (THREE FILES: index.html + styles.css?v=5.53.0 + NEW icons/intelligrations-thinking.webp, no .gs round): THE "CLAUDE IS WORKING" ROW (§5.124). His ask: the firm's Intelligrations thinking animation (the 164x124 looping WebP from the Portfolio Dashboard, copied to icons/) shown wherever the tool waits on an AI call, with "Claude is working on it…" and the person's own words in italics when there are any, visible only while the request is in flight and hidden in a finally. Built as ONE fixed row (#aiWorking, bottom-right; bottom-centre above the nav on a phone, same spot as the toasts) rather than per-site markup: every AI request already passes _calPost (actions generateOutputs/generateImage, now a wrapper over _calPostRaw) or callAI (around callAIWithBudgetRetry), so aiWorkingBegin/aiWorkingEnd are REFERENCE-COUNTED there and no call site changed - except composerGenerate, which passes the typed ask as opts.question (payload.workingQuestion is the _calPost spelling, stripped before the body goes out). Text in var(--gray-800) at body size, not muted. THE ICON MUST SHIP WITH THE PAGE: without it the row shows a broken picture (the deploy is three files this time). Previously v5.52.0 (client-only, styles.css UNCHANGED, link stays ?v=5.49.0, no .gs round): THE RHYTHM STRIP NAMES WHAT WORDPRESS PUBLISHED (§5.123). His report: "I just posted a blog, and it wasn't the Diversification one, so I'm guessing you can't see when I've actually posted" - the tool HAD seen it (the strip read "Last one out Thu, Oct 1 (today)") but showed a bare date beside the next card's title, which read as blindness. Now _mktLastOutPhrase names + links the post; mktRhythmRefresh reads the 10 newest published posts (was 1) and mktRhythmFacts counts a SENT card as out when its title is among them (_mktTitleKey), so a post re-created or published by hand in WordPress needs no marking here; WordPress is asked every 10 minutes while a blog is sent-and-waiting (was always 3 hours); "Check WordPress now" on the strip (mktRhythmCheckNow). Probe blog-rhythm-probe 9/9. Previously v5.51.0 (styles.css UNCHANGED, link stays ?v=5.49.0): ANALYTICS INTO ACTIONS (§5.122), PAIRS WITH .gs v3.88.0 (Hans's backend only - it is the GA one). His ask with two GA screenshots: "bake in these Google Analytics into actionable items within marketing". His answers: an action lands as a Marketing card in Ideas; build the headline numbers vs the previous 28 days; nothing on Today. What's working now opens with four tiles (mktGaHeadlineHtml: visitors, new visitors, time on site = engagement seconds per active user, Facebook's share; each vs the 28 before) and a "Things to do" list from PLAIN RULES (mktGaActions, pure over insights + cards; the AI coach is untouched and never writes these): broken addresses (notFound rows, >= 5 visits), a page climbing (the existing trend test) with Quote->link + Follow-up blog, a well-read tool-published post with no Facebook post, the home page at >= 70% bounce on >= 100 views, Facebook under 5% of visits while a live blog has no FB post. mktGaAct makes the card (standalone with the numbers + next step in the Brainstorming box; 'followup' = a blog card with the page as its source) and OPENS an existing same-titled card instead of duplicating. A 3.87.0-or-older backend: tiles replaced by one sentence naming 3.88.0, actions still built from what the old report carries. PREVIOUSLY v5.50.0 (styles.css UNCHANGED, link stays ?v=5.49.0): HIS FOUR ASKS FROM THE DIVERSIFICATION POST, PAIRS WITH .gs v3.87.0 (both accounts). (1) TAGS: pickWordPressTags after the category step - GET getWordPressTags (100 most-used), the marketing AI picks 3-5 existing + up to 2 new, one chooser (use / type my own / none), sent as tagIds + newTags; the backend creates new names and reuses term_exists; the send window names the tags. Gated on 3.87.0 (skipped with a sentence before). (2) The centred picture is 600x600 (backend wpImageMarkup_). (3) A 32px div gap after the Schedule a Conversation button (an empty <p> would be thrown away by the classic editor). (4) The related-reading line moves OUT of the draft at send time (mktRelApply(body, []) + buildRelatedLine(mktRelParse(body))) to sit under the button, above the disclosure, with a gap each side; the draft text and the archive copy are unchanged. PREVIOUSLY v5.49.1 (styles.css UNCHANGED, link stays ?v=5.49.0): HIS DIVERSIFICATION BLOG WENT TO WORDPRESS WITHOUT ITS PICTURE. Cause, confirmed from the code: the Image step's "Use this one" found no Firm Context folder for Intelligent Investing on his PC (Settings box empty AND the ii brand row without contextFolderId), so the picture stayed in IndexedDB and card.imageFileId stayed '' - and postToWordPress only attaches a picture that is in Drive, silently. Two fixes: (1) the send chooser now SAYS whether a picture goes; when the device holds candidates for the card but none reached Drive it adds a recommended "Stop - fix the picture first" and names the two steps; (2) the folder warning names BOTH places it looked (device box / brand row, and whether the row was readable) instead of one generic sentence he could not "shake". No data change; the folder id itself is his to paste (EOS Intelligent Investing Firm Context, found in his Drive). PREVIOUSLY v5.49.0 (TWO-FILE, styles.css?v=5.49.0): THE BLOG RHYTHM + MARKETING CALENDAR (§5.119), designed with him first (mockup + four answers, all the recommended ones). mktBlogStep reads the step off the card (the step AFTER the furthest filled one; Finalize and Title give no signal - a card carries its title from birth); mktRhythmFacts is PURE over (cards, WP statuses, last published post, now): ii blogs only, current = furthest along not live/scheduled/done, behind = 14+ days since the last live post AND nothing scheduled ahead, unknown history never nags, aim = anchor + 7. Last published comes from listWordPressPosts perPage 1 (eos_mkt_last_published, device-local) so blogs made outside the tool count. Today: #dpBlogLine under the date - the line + a DRAWN catch-up task (never stored in dailyPlanData: rules 49/53/75), tick hides it for the day (eos_blog_nudge_done). Marketing: #mktRhythmStrip, 12-segment bar, ii only. Calendar: CAL_EOS_LAYERS 'marketing' -> _calMktItemsFor (WP go-live, facebook + facebookQuote `when`, due/overdue marker), agenda bubble + week chip (data-cal-mkt) open the card via mktRhythmGoCard. mktRhythmRefresh is throttled 3h (Today also pulls marketing cards from the cloud, 15 min). Probe blog-rhythm-probe 9/9. No backend change. PREVIOUSLY v5.48.0 (styles.css UNCHANGED, link stays ?v=5.47.2): HIS GREENVILLE PAGES (§5.118). Ten service pages /greenville-* (created 2024-03-28, reorganised May-Jul 2024; audience pages linked to them 2024-06-21); he asked whether they gained views. The 28-day report cannot see that far back, so What's working gains a 'Greenville pages' block: mktGaLocalLoad -> analyticsReport mode 'pathHistory' (pathContains 'greenville', startDate 2023-07-01) -> mktGaLocalFacts (pure; FULL months only, last 12 vs the 12 before, trailing-slash paths merged, service pages vs blog posts, site total for share) -> mktGaLocalRender (per-page line + inline SVG sparkline) + mktGaLocalCopy (text for a chat). REQUIRES Google_Tasks_Sync.gs 3.86.0 ON THE GA BACKEND (gaBackendInitials = Hans) - a 3.85.0 backend ignores the mode and answers the default report, which the client detects by the missing `history` and names. No new scope, no consent run. PREVIOUSLY v5.47.2 (TWO-FILE, styles.css?v=5.47.2): his screenshot - he clicked "Approve & schedule the quote post" twice, nothing happened, and he feared a double post. Nothing was sent: the button was DISABLED (v5.46.2's order rule - the blog's own Facebook post was not scheduled yet) and a disabled button fires no click; had it been live, every schedule still passes a confirm dialog, the single-flight flag and the backend's 3-minute duplicate refusal. The defect was visual: styles.css had NO :disabled rule anywhere, so a disabled .btn-primary was exactly as blue as a live one. Now .btn:disabled is dimmed with a not-allowed cursor (appended last, rule 10b), and the Facebook buttons carry the reason as a hover title.
         // v5.47.1: gs-auditor on 3.85.0 (backend cleared for Hans only, consent between push and redeploy). Client fixes: (1) a pre-3.85.0 backend answers analyticsReport with the secret-key refusal, which _calPost rewrites as "sign-in has expired" - a wrong cause (rule 63); mktGaErr now names the backend version first, and Save & test gates on the own backend's version. (2) GA rows are (path, title) pairs, so a retitled post split into two rows and could miss the trend test or list twice; _mktGaByPath sums last7/last28 by path. Backend (same 3.85.0, not yet deployed): authorizeAnalytics re-throws so a failure is red in the editor; a disabled Analytics Data API is named before the access-list message.
         // v5.47.0: WHAT'S WORKING - GOOGLE ANALYTICS, READ-ONLY. PAIRS WITH .gs v3.85.0 (new scope analytics.readonly + AnalyticsData advanced service; Hans runs authorizeAnalytics in the editor between push and redeploy; Amanda's backend deliberately stays 3.84.0 without the scope). His ask: "this page has been trending higher, or this blog or podcast was really clicked on recently, let's use that as a backlink for a related quote (and perhaps asking me for a quote)". He supplied GA4 property 370961938 (NOT hardcoded - public repo; it is entered in Settings > Social posting > Google Analytics and rides on the firm 'marketing' row as gaPropertyId + gaBackendInitials, the fbBackendInitials routing pattern; Save & test only saves after the backend reads it). Marketing page: a collapsed "What's working" panel (loads on open, cached device-local 6h in eos_mkt_ga_cache, Refresh): Trending this week (5+ views and >=1.5x the week before, home and WP plumbing excluded), Most read 28 days, sources + Facebook's share; each page has "Quote -> link here" = a Social / Quote card whose facebookQuote.link is that page, opened with a toast ASKING him for the quote (never invented); "AI: What should I do next?" turns only the listed numbers + his recent cards into three moves (told never to invent figures or write the quote). mktFqCta: a standalone quote pointing at a BLOG post (linkKind from the site list) reads "the full post is here". Podcast: Blubrry (his answer) - downloads need Blubrry API access, phase 2; episode pages on the site are already in GA.
         // v5.46.2: HIS ORDER, ENFORCED - blog live in WordPress -> its Facebook post -> then the quote. (1) He asked what stops a social post going out before the blog: the blog's Facebook post already waited for WordPress to report the post LIVE (mktFbLiveLink = status 'publish'), but the blog's QUOTE post only waited for that too - it could be scheduled with no social post at all, or timed before it (the rhythm only SUGGESTED after). Now mktFqSocialFirst(card): a blog quote needs the blog's own post scheduled/posted and a time strictly after it, in the paint (button disabled, line says why) and in _mktFbApprove (refusal sentences). Standalone quotes unaffected. Probe F6/F7. (2) His "Shouldn't the CTA for the blog be higher up like before Finalize draft?": v5.44-5.46 had pushed the closing CTA under Related reading + both Facebook boxes inside Package & Send. It is now its own STEP 6 "Closing Call to Action" (inside #mktBlogFields, so blog cards only), directly before Finalize Draft; later steps renumbered 7-12 (Quote is now step 10), and every live "Step N" string now names the step instead of its number so the next move cannot stale them. (3) Package & Send: the WordPress / package / Drive buttons now sit ABOVE the Facebook boxes, matching the order.
@@ -8641,7 +8776,27 @@ Example:
                 + '<div style="overflow-y:auto;padding:20px 24px;flex:1;">'
 
                 + '<div style="margin-bottom:18px;">'
-                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.58.1 &mdash; 2026-10-29 (Current)</div>'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.59.0 &mdash; 2026-10-30 (Current)</div>'
+                + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">The blog card follows the WordPress guide and Trevor&rsquo;s tips, buttons show what&rsquo;s done, and the newsletter has a home.</div>'
+                + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
+                + '<li><strong>Buttons turn green when their step has really happened,</strong> and each step&rsquo;s number turns green with them. It reads what&rsquo;s saved on the card, so a failed AI call stays uncoloured and clearing a box turns it back.</li>'
+                + '<li><strong>Fixed: &ldquo;AI: Suggest Quotes&rdquo; failing with &ldquo;did not return the expected format&rdquo;.</strong> The AI now has much more room, whole quotes from a cut-off reply are still offered, and if it answers in a way the tool can&rsquo;t read, you see its reply. Titles and Social copy got more room too.</li>'
+                + '<li><strong>New step on the blog card: WordPress &amp; Yoast.</strong> Slug, publish date, focus keyphrase, SEO title and meta description. &ldquo;AI: Fill in SEO&rdquo; writes them, and any you leave blank are filled in when you send.</li>'
+                + '<li><strong>The slug and date go straight onto the WordPress draft.</strong> Once a post is live or scheduled, neither is touched, so its address and go-live time can&rsquo;t move by accident.</li>'
+                + '<li><strong>The email to your marketing person now lists exactly what&rsquo;s left to do,</strong> with the Yoast values ready to paste. Anything WordPress already confirmed isn&rsquo;t asked for.</li>'
+                + '<li><strong>The 1920 &times; 1080 social image makes itself.</strong> It&rsquo;s drawn in your Canva &ldquo;IIA Thumbnail&rdquo; layout from the title and attached to the email. A podcast post has a guest, so that one still gets made in Canva, and the email says so.</li>'
+                + '<li><strong>Featured images are now saved as square JPGs,</strong> 1024 &times; 1024, the way the guide asks. Wider pictures are cropped from the centre, so check the picture still works.</li>'
+                + '<li><strong>Section headings now reach WordPress as H2.</strong> AI drafts had been landing as H3.</li>'
+                + '<li><strong>A Final Review list on the card</strong> shows what&rsquo;s done, what to fix, and what your marketing person will do.</li>'
+                + '<li><strong>From Trevor&rsquo;s call:</strong> the keyphrase check now looks in the title, first paragraph and meta description, and the email warns to load the social image before publishing, with the tools to re-scrape a stale preview. It also asks for any missing links. The social image is saved to the Firm Context folder too.</li>'
+                + '<li><strong>New tab: ActiveCampaign Newsletter.</strong> Check which blogs are recent and tick the ones you want. The AI writes an opening letter in your voice from your note and past letters, and suggests a subject and pre-header. It lays out each blog block with its picture address, title, lines and link, ready to paste. &ldquo;Email me a preview&rdquo; makes a Gmail draft to you.</li>'
+                + '<li><strong>You always publish it yourself.</strong> Nothing in this tool can send or schedule a newsletter. The real test comes from the gear icon in ActiveCampaign, and you press Send there.</li>'
+                + '<li><strong>The steps Trevor walked through are in the same tab,</strong> including the three links in every blog block. When his full document arrives, paste or upload it over them.</li>'
+                + '</ul>'
+                + '</div>'
+
+                + '<div style="margin-bottom:18px;">'
+                + '<div style="font-weight:700;color:#047857;font-size:0.9rem;margin-bottom:6px;">v5.58.1 &mdash; 2026-10-29</div>'
                 + '<div style="font-size:0.8rem;color:#6b7280;margin:-2px 0 8px;">When the AI runs out of credits, one tap takes you to fix it.</div>'
                 + '<ul style="margin:0 0 14px 18px;padding:0;font-size:0.85rem;line-height:1.5;">'
                 + '<li><strong>A yellow bar across the top of every page</strong> says plainly that Claude is out of credits and that every AI button will refuse until they are added. It stays in view as you scroll.</li>'
@@ -12609,6 +12764,7 @@ Example:
                 pullKanbanFromCloud(false); // silent background refresh; re-renders only if cloud has newer data
             } else if (pageId === 'marketing') {
                 mktCheckAccess().then(function(ok) { if (ok) { mktRender(); mktPullFromCloud(); } });
+                mktSetTab(getUiPrefs().mktTab === 'newsletter' ? 'newsletter' : 'pipeline');   // v5.59.0
             } else if (pageId === 'calendar') {
                 // v4.23.0: renders from cache instantly, revalidates in the background.
                 // Reads state only — never calls another page's persisting render*() (rule 41).
@@ -14377,6 +14533,7 @@ Example:
                 const result = await response.json();
                 if (!result.success) { showToast('Save failed: ' + result.error); return; }
                 delete firmContextCache[driveCompany];   // force refresh so the new sample is picked up
+                mktStepMark(card, 'drive');   // v5.59.0
                 showToast('Saved to Drive as "' + result.fileName + '". It will inform future drafts.');
             } catch (error) {
                 showToast('Could not reach Apps Script: ' + error.message);
@@ -14707,6 +14864,7 @@ Example:
                 if (!Array.isArray(opts) || !opts.length) throw new Error('No titles came back.');
                 mktRenderOptionChips('mktTitleOptions', opts, function(choice) {
                     document.getElementById('mktTitle').value = choice;
+                    mktStepMark(card, 'title');
                 });
             } catch (error) {
                 showToast('Title suggestions failed: ' + error.message);
@@ -15590,9 +15748,13 @@ Example:
                 return;
             }
             _mktImageSetStatus('Saving the picture to Drive…');
+            // v5.59.0: the guide's featured image: a square JPG, 1024 x 1024.
+            const sq = await _mktImageSquareJpeg(base64, mime);
+            if (sq) { base64 = sq.base64; mime = sq.mime; }
             const r = await _calPost({ action: 'uploadBlogImage', folderId: folderId, title: title, mime: mime, imageBase64: base64 });
             if (!r || !r.success) { _mktImageSetStatus('Could not save the picture: ' + escapeHtml((r && r.error) || 'backend unreachable'), true); return; }
             card.imageFileId = r.fileId;
+            if (sq) mktWp(card).picture = { fileId: r.fileId, w: sq.w, h: sq.h, cropped: sq.cropped, fromW: sq.fromW, fromH: sq.fromH };
             card.imageThumb = await _mktImageThumbnail('data:' + mime + ';base64,' + base64);
             card.imageAlt = title;
             // v5.32.1: keep the full-size bytes on this device so "tap to view" never has
@@ -15602,7 +15764,9 @@ Example:
             _mktImageLocalSet(card.id, card.imageNote, card.imagePrompt, { fileId: card.imageFileId, thumb: card.imageThumb, alt: card.imageAlt });
             mktSave();
             mktPaintImage(card);
-            showToast((source === 'generated' ? 'Picture generated and saved to Drive.' : 'Picture saved to Drive.') + ' It goes to WordPress when you send.', 'success');
+            mktWpRefresh(card);
+            if (sq && sq.w < MKT_FEATURED_MIN) showToast('This picture is only ' + sq.w + ' px across, and the guide asks for at least ' + MKT_FEATURED_MIN + '. A larger one would be better.');
+            else showToast((source === 'generated' ? 'Picture generated and saved to Drive' : 'Picture saved to Drive') + (sq ? ' as a ' + sq.w + ' x ' + sq.h + ' JPG' + (sq.cropped ? ', cropped to a square' : '') : '') + '. It goes to WordPress when you send.', 'success');
         }
         // ==================== v5.32.0 — CANDIDATES BEFORE ANYTHING IS SAVED ====================
         // His change of mind on the first try: "I want to click on the image it generated
@@ -15867,13 +16031,20 @@ Example:
                     source + '\n\n' +
                     'Return ONLY a JSON array: [{"text":"...","author":"...","highlight":"..."}, ...]. No fences, no preamble.';
 
+                // v5.59.0: his Brewers blog: "did not return the expected format". 1,200 tokens had
+                // to cover the model's thinking as well as five quotes, and a reply cut short has
+                // no closing bracket. More room, less thinking, a retry if it is still cut, and
+                // whatever whole quotes did arrive are used. If none did, he sees the reply.
                 const raw = await callAI('marketing', prompt,
-                                         { featureLabel: 'Marketing AI', temperature: 0.8, maxTokens: 1200 });
-                const clean = String(raw).replace(/```json/gi, '').replace(/```/g, '').trim();
-                const s = clean.indexOf('['), e = clean.lastIndexOf(']');
-                if (s === -1 || e === -1) throw new Error('The model did not return the expected format.');
-                const quotes = JSON.parse(clean.slice(s, e + 1));
-                if (!Array.isArray(quotes) || !quotes.length) throw new Error('No quotes came back.');
+                                         { featureLabel: 'Marketing AI', temperature: 0.8, maxTokens: 4000, effort: 'low', retry: true, taskLabel: 'Quote suggestions' });
+                const quotes = mktParseAiObjects(raw, 'text');
+                if (!quotes.length) {
+                    const box = document.getElementById('mktQuoteOptions');
+                    box.style.display = '';
+                    box.innerHTML = '<div style="font-size:0.78rem;color:#b45309;margin-bottom:4px;">The AI answered, but not in a shape the tool could read. Its reply, so you can use it by hand:</div>'
+                        + '<pre style="white-space:pre-wrap;font-size:0.78rem;background:#fff;border:1px solid var(--gray-200);border-radius:6px;padding:8px;max-height:260px;overflow:auto;">' + escapeHtml(String(raw).slice(0, 4000)) + '</pre>';
+                    throw new Error('The model did not return the expected format. Its reply is shown in the Quote step.');
+                }
 
                 const chipData = quotes.map(function(q) {
                     const t = (q && q.text) ? String(q.text).replace(/[()]/g, '').trim() : '';
@@ -16518,6 +16689,7 @@ Example:
                 qbWordsRender();
                 document.getElementById('mktQbResult').style.display = 'block';
                 document.getElementById('mktQbFileName').textContent = 'Saves as: ' + _qbLast.fileName;
+                mktStepMark(card, 'quoteImg', ta.value.trim());   // v5.59.0: green only for these exact words
                 document.getElementById('mktQbSendBtn').textContent = 'Yes, send to ' + mktPersonName();
                 const notes = [];
                 if (!_qbLast.highlights.length) notes.push('No green words - tap some above and Make the image again.');
@@ -16614,6 +16786,7 @@ Example:
                     { quote: q.plain, author: q.author, highlights: q.highlights.join(', '), sentDate: ymd, subject: subject });
                 const r = await mktDraftToPerson(subject, text, { tailHtml: logHtml,
                     attachments: [{ name: q.fileName, mimeType: 'image/png', base64: await qbCanvasBase64() }] });
+                mktStepMark(mktGetCard(q.cardId), 'quoteSent', String(q.markup || '').trim());   // v5.59.0
                 const canAttach = r.full;
                 const link = mktDraftLink(r.url);
                 if (canAttach) {
@@ -16912,7 +17085,7 @@ Example:
             // v5.35.0: the (green) markup is for the image, not for Trevor to read.
             const _qp = qbSplit(document.getElementById('mktQuote').value);
             const quote = _qp.body ? qbJoin(qbPlain(_qp.body), _qp.author) : '';
-            if (!social && !quote) {
+            if (!social && !quote && !card.wordpressEditUrl) {
                 showToast('Nothing to package yet - write the Social copy or pick a Quote first.');
                 return;
             }
@@ -16934,6 +17107,15 @@ Example:
                 { key: 'blogPic', label: 'Blog picture (attached)', on: !!card.imageFileId, why: 'no picture chosen in the Image step', hint: card.imageAlt || '' },
                 { key: 'wp', label: 'WordPress draft link', on: !!card.wordpressEditUrl, why: 'not sent to WordPress yet', hint: '' }
             ];
+            // v5.59.0: the same steps Send to WordPress puts in its draft, for when that draft
+            // was skipped. Left unticked when it already went, so nobody gets them twice.
+            if (card.kind === 'blog') {
+                const already = !!mktWp(card).handoffAt;
+                items.push({ key: 'wpSteps', label: 'WordPress steps and Yoast values', on: !!card.wordpressEditUrl, unticked: already, why: 'not sent to WordPress yet',
+                    hint: already ? 'Already in the draft that went with the WordPress send' : 'What to do in WordPress, with the values to paste' });
+                items.push({ key: 'socialImg', label: 'Social sharing image (1920 x 1080 JPG, attached)', on: !!title && mktThumbAvailable(card), unticked: already, why: 'this one is made in Canva',
+                    hint: already ? 'Already attached to that draft' : 'For Yoast’s Social tab' });
+            }
             _mktPkg = { cardId: card.id, title: title, social: social, quote: quote };
             document.getElementById('mktPkgTitle').textContent = 'Package for ' + mktPersonName();
             document.getElementById('mktPkgWho').textContent = 'One Gmail draft to ' + (p.name || p.email) + ' (' + p.email + ')'
@@ -16941,7 +17123,7 @@ Example:
             document.getElementById('mktPkgList').innerHTML = items.map(function(it) {
                 return '<label style="display:flex; gap:8px; align-items:flex-start; padding:7px 9px; border:1px solid var(--gray-200); border-radius:6px;'
                     + (it.on ? '' : ' opacity:0.55;') + '">'
-                    + '<input type="checkbox" data-pkg="' + it.key + '"' + (it.on ? ' checked' : ' disabled') + ' style="margin-top:3px;">'
+                    + '<input type="checkbox" data-pkg="' + it.key + '"' + (it.on ? (it.unticked ? '' : ' checked') : ' disabled') + ' style="margin-top:3px;">'
                     + '<span style="min-width:0;"><strong>' + escapeHtml(it.label) + '</strong>'
                     + '<span style="display:block; font-size:0.74rem; color:var(--gray-500); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">'
                     + escapeHtml(it.on ? it.hint : 'Not available - ' + it.why) + '</span></span></label>';
@@ -17005,6 +17187,12 @@ Example:
                         atts.push({ name: nm, mimeType: bp.mime, base64: bp.base64 }); attached.push('the blog picture');
                     } catch (e) { problems.push('blog picture: ' + e.message); }
                 }
+                let thumbName = '', thumbProblem = '';
+                if (pick.socialImg) {
+                    info.textContent = 'Drawing the social image...';
+                    try { const a = await mktThumbAttachment(_mktPkg.title); atts.push(a); thumbName = a.name; attached.push('the social image'); }
+                    catch (e) { thumbProblem = e.message; problems.push('social image: ' + e.message); }
+                }
                 if (problems.length && !confirm('Could not attach ' + problems.join('; ') + '.\n\nMake the draft without it?')) { info.textContent = problems.join('; '); return; }
                 info.textContent = 'Creating the draft...';
                 const t = _mktPkg.title;
@@ -17012,12 +17200,14 @@ Example:
                     + (note ? note + '\n\n' : '')
                     + 'Assets for the post: ' + t + '\n\n'
                     + (pick.wp ? 'The blog draft is in WordPress:\n' + card.wordpressEditUrl + '\n\n' : '')
+                    + (pick.wpSteps ? mktWpHandoffSteps(card, { title: t, attachedName: thumbName, attachProblem: thumbProblem }) + '\n\n' : '')
                     + (pick.social ? 'SOCIAL POST COPY:\n' + _mktPkg.social + '\n\n' : '')
                     + (pick.quote ? 'QUOTE:\n' + _mktPkg.quote + '\n\n' : '')
                     + (attached.length ? 'Attached: ' + attached.join(' and ') + '.\n\n' : '')
                     + 'Thanks!';
                 const r = await mktDraftToPerson('Ready to post: ' + t, text, { attachments: atts });
 
+                if (pick.wpSteps) mktWp(card).handoffAt = new Date().toISOString();
                 card.packagedToTrevorAt = new Date().toISOString();   // field name kept: rollback-safe
                 if (card.columnId !== 'trevor') { card.columnId = 'trevor'; }
                 document.getElementById('mktColumn').value = 'trevor';
@@ -17039,6 +17229,909 @@ Example:
             } finally {
                 btn.disabled = false;
             }
+        }
+
+        // ==================== v5.59.0 — THE WORDPRESS GUIDE ON THE BLOG CARD ====================
+        // His ask, from the WordPress Blog Publishing Guide: everything the tool can do goes on
+        // the draft, and whatever a person still has to do goes in the email to the marketing
+        // person, values included. WordPress's API takes the slug and the date; Yoast's fields
+        // are not exposed to it, so those are written here and pasted by a person.
+        const MKT_SEO_TITLE_MAX = 60, MKT_SEO_META_MAX = 155;
+        const MKT_FEATURED_SIZE = 1024, MKT_FEATURED_MIN = 800;
+        const MKT_LONG_PARAGRAPH_WORDS = 100;
+        const MKT_THUMB_PLATE = 'icons/iia-blog-plate.jpg?v=5.59.0';   // his Canva "IIA Thumbnail" with the words taken off
+        const MKT_THUMB_CANVA_URL = 'https://www.canva.com/design/DAGdfyMQt-4/edit';
+        const MKT_THUMB_BYLINE = 'HANS BLAKE CFA, CPA';
+        // The whole JSON array when it is intact; otherwise every complete {...} that carries
+        // `key`, so a reply cut off at the fourth of five still gives three to choose from.
+        function mktParseAiObjects(raw, key) {
+            const clean = String(raw || '').replace(/```json/gi, '').replace(/```/g, '').trim();
+            const s = clean.indexOf('['), e = clean.lastIndexOf(']');
+            if (s !== -1 && e > s) {
+                try { const whole = JSON.parse(clean.slice(s, e + 1)); if (Array.isArray(whole) && whole.length) return whole; } catch (err) { }
+            }
+            const found = [];
+            const re = new RegExp('\\{[^{}]*"' + key + '"\\s*:\\s*"(?:[^"\\\\]|\\\\.)*"[^{}]*\\}', 'g');
+            let m;
+            while ((m = re.exec(clean))) { try { found.push(JSON.parse(m[0])); } catch (err) { } }
+            return found;
+        }
+        const MKT_SLUG_SKIP = ['a', 'an', 'the', 'and', 'or', 'but', 'of', 'to', 'in', 'on', 'at', 'for', 'with', 'from', 'by', 'as', 'is', 'are', 'was', 'be',
+            'i', 'me', 'my', 'we', 'us', 'our', 'you', 'your', 'he', 'she', 'they', 'them', 'their', 'it', 'its', 'this', 'that', 'these', 'those'];
+
+        function mktWp(card) {
+            card.socialPosts = card.socialPosts || {};
+            card.socialPosts.wp = card.socialPosts.wp || {};
+            return card.socialPosts.wp;
+        }
+        function mktSlugClean(s) {
+            return String(s || '').toLowerCase().replace(/['’]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 90).replace(/-+$/, '');
+        }
+        function mktSlugFromTitle(title) {
+            const words = mktSlugClean(title).split('-').filter(function(w) { return w && MKT_SLUG_SKIP.indexOf(w) === -1; });
+            return words.slice(0, 8).join('-');
+        }
+        // mdToHtml maps # to H2 and ## to H3, and the drafting prompt asks for ##, so every AI
+        // draft reached WordPress with H3 sections. The guide wants H2. Promoted only here, for
+        // WordPress, and only when the draft has no # of its own.
+        function mktWpHeadings(md) {
+            const t = String(md || '');
+            if (/^#\s+/m.test(t)) return t;
+            return t.replace(/^(#{2,4})(\s+)/gm, function(m, h, s) { return h.slice(1) + s; });
+        }
+        function mktBlogLinks(md) {
+            const urls = String(md || '').match(/https?:\/\/[^\s)"<>]+/g) || [];
+            const internal = urls.filter(function(u) { return /investedwithyou\.com/i.test(u); }).length;
+            return { internal: internal, external: urls.length - internal };
+        }
+        function mktWpReadForm(card) {
+            if (!card || card.kind !== 'blog') return;
+            const wp = mktWp(card);
+            wp.postType = document.getElementById('mktWpType').value;
+            wp.publishDate = document.getElementById('mktWpDate').value;
+            wp.slug = document.getElementById('mktWpSlug').value.trim();
+            wp.focus = document.getElementById('mktSeoFocus').value.trim();
+            wp.seoTitle = document.getElementById('mktSeoTitle').value.trim();
+            wp.meta = document.getElementById('mktSeoMeta').value.trim();
+        }
+        function mktWpPaint(card) {
+            const step = document.getElementById('mktStepWp');
+            if (!step) return;
+            const isBlog = !!card && card.kind === 'blog';
+            step.style.display = isBlog ? '' : 'none';
+            if (!isBlog) return;
+            const wp = mktWp(card);
+            document.getElementById('mktWpType').value = wp.postType === 'podcast' ? 'podcast' : 'blog';
+            document.getElementById('mktWpDate').value = wp.publishDate || '';
+            document.getElementById('mktWpSlug').value = wp.slug || '';
+            document.getElementById('mktSeoFocus').value = wp.focus || '';
+            document.getElementById('mktSeoTitle').value = wp.seoTitle || '';
+            document.getElementById('mktSeoMeta').value = wp.meta || '';
+            _mktThumbKey = '';
+            mktWpRefresh(card);
+        }
+        // Repaints what depends on the fields. Runs from the card's autosave, so it follows typing.
+        function mktWpRefresh(card) {
+            if (!card || card.kind !== 'blog' || !document.getElementById('mktWpChecks')) return;
+            const count = function(id, len, max) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.textContent = len ? len + (max ? ' / ' + max : '') : '';
+                el.classList.toggle('mkt-wp-over', !!max && len > max);
+            };
+            const wp = mktWp(card);
+            count('mktSeoFocusCount', (wp.focus || '').split(/\s+/).filter(Boolean).length, 0);
+            const fc = document.getElementById('mktSeoFocusCount');
+            if (fc && wp.focus) fc.textContent = fc.textContent + (fc.textContent === '1' ? ' word' : ' words');
+            count('mktSeoTitleCount', (wp.seoTitle || '').length, MKT_SEO_TITLE_MAX);
+            count('mktSeoMetaCount', (wp.meta || '').length, MKT_SEO_META_MAX);
+            const slugBox = document.getElementById('mktWpSlug');
+            if (slugBox) slugBox.placeholder = mktSlugFromTitle(document.getElementById('mktTitle').value) || 'Filled in from the title when you send';
+            mktWpPaintChecks(card);
+            mktThumbPaint(card);
+        }
+        // The guide's Final Review, read off the card. who: 'done' = settled, 'fix' = worth
+        // fixing before sending, 'person' = the marketing person does it in WordPress.
+        function mktWpChecks(card) {
+            const wp = mktWp(card);
+            const sent = wp.sent || {};
+            const title = document.getElementById('mktTitle').value.trim();
+            const body = document.getElementById('mktBlog').value;
+            const name = mktPersonName();
+            const rows = [];
+            const add = function(state, text) { rows.push({ state: state, text: text }); };
+
+            add(title ? 'done' : 'fix', title ? 'Title is set.' : 'No title yet.');
+            const slug = sent.slug || mktSlugClean(wp.slug) || mktSlugFromTitle(title);
+            add(slug ? 'done' : 'fix', slug ? 'Slug: ' + slug : 'No slug yet, because there is no title.');
+            add(wp.postType === 'podcast' ? 'person' : 'done', wp.postType === 'podcast'
+                ? name + ' adds the podcast player, since this is a podcast post.' : 'Standard blog post, so nothing needs cloning.');
+            if (sent.authorName && /hans\s+blake/i.test(sent.authorName)) add('done', 'Author in WordPress: ' + sent.authorName + '.');
+            else add('person', name + ' confirms the author is Hans Blake' + (sent.authorName ? ' (WordPress shows ' + sent.authorName + ')' : '') + '.');
+            add(card.wordpressPostId ? 'done' : 'person', card.wordpressPostId ? 'Categories and tags were chosen on send.' : 'You choose categories and tags when you press Send.');
+            if (wp.publishDate && wp.publishDate < _mktYmd(new Date()) && !sent.date) add('fix', 'The publish date has already passed, so it will not be sent to WordPress.');
+            else add(wp.publishDate ? 'done' : 'person', wp.publishDate ? 'Publish date: ' + wp.publishDate + '.' : name + ' sets the date.');
+
+            const blocks = String(body || '').replace(/\r\n/g, '\n').split(/\n\s*\n/).map(function(s) { return s.trim(); }).filter(Boolean);
+            const heads = blocks.join('\n').split('\n').filter(function(l) { return /^#{1,4}\s+\S/.test(l.trim()); }).length;
+            add(heads >= 2 ? 'done' : 'fix', heads >= 2 ? heads + ' section headings, which go to WordPress as H2.' : 'Fewer than two section headings. Use ## for each section.');
+            const long = blocks.filter(function(b) { return !/^(#|>|[-*]\s)/.test(b) && b.split(/\s+/).length > MKT_LONG_PARAGRAPH_WORDS; });
+            add(long.length ? 'fix' : 'done', long.length
+                ? long.length + ' long paragraph' + (long.length > 1 ? 's' : '') + ' to break up, starting: "' + long[0].split(/\s+/).slice(0, 8).join(' ') + '..."'
+                : 'Paragraphs are short.');
+            const links = mktBlogLinks(body);
+            add(links.internal ? 'done' : 'fix', links.internal ? links.internal + ' internal link' + (links.internal > 1 ? 's' : '') + '.' : 'No internal link. "AI: Suggest related posts" in the next step adds one.');
+            add(links.external ? 'done' : 'fix', links.external ? links.external + ' external link' + (links.external > 1 ? 's' : '') + '.' : 'No external link. One to a source such as Investopedia helps with SEO.');
+            add('done', 'Closing call to action and the Schedule a Conversation button are added automatically.');
+
+            const pic = wp.picture && wp.picture.fileId === card.imageFileId ? wp.picture : null;
+            if (!card.imageFileId) add('fix', 'No featured image yet. Choose one in the Image step (royalty-free, never a Google image).');
+            else if (!pic) add('person', name + ' checks the featured image is a square JPG. It was chosen before the tool started resizing pictures.');
+            else if (pic.w < MKT_FEATURED_MIN) add('fix', 'The featured image is ' + pic.w + ' px, under the ' + MKT_FEATURED_MIN + ' px minimum.');
+            else add('done', 'Featured image is a square JPG, ' + pic.w + ' &times; ' + pic.h + '.');
+
+            const seoGaps = [['focus keyphrase', wp.focus], ['SEO title', wp.seoTitle], ['meta description', wp.meta]].filter(function(p) { return !p[1]; }).map(function(p) { return p[0]; });
+            if (seoGaps.length) add('fix', 'Yoast still needs: ' + seoGaps.join(', ') + '. "AI: Fill in SEO" writes them.');
+            else add('person', name + ' pastes the Yoast values from the email.');
+            if ((wp.seoTitle || '').length > MKT_SEO_TITLE_MAX) add('fix', 'The SEO title runs over ' + MKT_SEO_TITLE_MAX + ' characters.');
+            if ((wp.meta || '').length > MKT_SEO_META_MAX) add('fix', 'The meta description runs over ' + MKT_SEO_META_MAX + ' characters.');
+            // Yoast's green light, as Trevor described it. Worth aiming for, not worth spoiling the post for.
+            if (wp.focus) {
+                const fk = wp.focus.toLowerCase();
+                const firstPara = blocks.find(function(b) { return !/^(#|>)/.test(b); }) || '';
+                const misses = [['the title', title], ['the first paragraph', firstPara], ['the meta description', wp.meta]]
+                    .filter(function(p) { return String(p[1] || '').toLowerCase().indexOf(fk) === -1; }).map(function(p) { return p[0]; });
+                if (misses.length) add('fix', 'The keyphrase is not in ' + misses.join(' or ') + '. Yoast wants it there, but leave it if forcing it spoils the writing.');
+                else add('done', 'The keyphrase is in the title, the first paragraph and the meta description.');
+                if (wp.focus.split(/\s+/).length > 3) add('fix', 'The focus keyphrase is over three words.');
+            }
+            add('person', mktThumbAvailable(card)
+                ? name + ' uploads the attached 1920 &times; 1080 JPG in Yoast&rsquo;s Social tab.'
+                : name + ' makes the 1920 &times; 1080 JPG in Canva and uploads it in Yoast&rsquo;s Social tab.');
+            return rows;
+        }
+        function mktWpPaintChecks(card) {
+            const host = document.getElementById('mktWpChecks');
+            if (!host) return;
+            const label = { done: 'Done', fix: 'Fix', person: escapeHtml(mktPersonName()) };
+            // Text is built above from card values, so everything except the two entities is escaped here.
+            host.innerHTML = mktWpChecks(card).map(function(r) {
+                const text = escapeHtml(r.text).replace(/&amp;times;/g, '&times;').replace(/&amp;rsquo;/g, '&rsquo;');
+                return '<div class="mkt-wp-check"><span class="mkt-wp-chip mkt-wp-chip-' + r.state + '">' + label[r.state] + '</span><span>' + text + '</span></div>';
+            }).join('');
+        }
+
+        // ---- AI: the SEO fields ---------------------------------------------------------
+        // quiet = the send filling blanks on its way out: fills only what is empty and never
+        // stops the send. The button replaces all four, and says when the AI could not.
+        async function mktSeoFill(quiet) {
+            const card = mktGetCard(mktEditingId);
+            if (!card) return false;
+            const body = document.getElementById('mktBlog').value.trim();
+            const title = document.getElementById('mktTitle').value.trim();
+            if (!body) { if (!quiet) showToast('Write the blog first, so the SEO fields have something to work from.'); return false; }
+            if (quiet ? !aiIsConfigured('marketing') : !requireAI('marketing', 'Marketing AI')) return false;
+            const companyKey = card.company || 'ii';
+            const ctx = await fetchFirmContext(companyKey, false);
+            const prompt = MKT_FIRM_CONTEXT + buildFirmContextBlock(ctx, companyKey) + '\n\n'
+                + 'Write the WordPress and Yoast SEO fields for the blog post below.\n\n'
+                + (title ? 'POST TITLE: ' + title + '\n\n' : '')
+                + 'BLOG:\n"""\n' + body + '\n"""\n\n'
+                + 'Rules:\n'
+                + '- focus: the main keyphrase a reader would search for, 1 to 3 words. Choose one that already appears word for word in the first sentence of the post and in the title, if the post has one.\n'
+                + '- seoTitle: the post title exactly, unless it is over ' + MKT_SEO_TITLE_MAX + ' characters. Then shorten it to fit, keeping the focus keyphrase.\n'
+                + '- slug: lowercase words joined by hyphens, built from the primary keywords. Leave out pronouns and articles.\n'
+                + '- meta: at most ' + MKT_SEO_META_MAX + ' characters, and it must contain the focus keyphrase. It need not repeat the opening of the post, and it may end on a hook that makes someone want to click, but stay honest: this is a regulated RIA, so no performance promises, no guarantees, no hype.\n\n'
+                + 'Return ONLY JSON, no fences, no preamble: {"focus":"...","seoTitle":"...","slug":"...","meta":"..."}';
+            const btn = document.getElementById('mktSeoBtn');
+            const orig = btn.textContent;
+            btn.disabled = true; btn.textContent = 'Thinking...';
+            try {
+                const raw = await callAI('marketing', prompt, { featureLabel: 'Marketing AI', temperature: 0.4, maxTokens: 3000, effort: 'low', quiet: !!quiet });
+                const clean = String(raw).replace(/```json/gi, '').replace(/```/g, '');
+                const s = clean.indexOf('{'), e = clean.lastIndexOf('}');
+                if (s === -1 || e === -1) throw new Error('The model did not return the expected format.');
+                const j = JSON.parse(clean.slice(s, e + 1));
+                const put = function(id, v) {
+                    const el = document.getElementById(id);
+                    if (el && v && (!quiet || !el.value.trim())) el.value = String(v).trim();
+                };
+                put('mktSeoFocus', j.focus); put('mktSeoTitle', j.seoTitle);
+                put('mktWpSlug', mktSlugClean(j.slug)); put('mktSeoMeta', j.meta);
+                mktWpReadForm(card);
+                card.updated = new Date().toISOString();
+                mktSave();
+                mktWpRefresh(card);
+                return true;
+            } catch (error) {
+                if (!quiet) showToast('SEO suggestions failed: ' + error.message);
+                console.warn('mktSeoFill', error);
+                return false;
+            } finally {
+                btn.disabled = false; btn.textContent = orig;
+            }
+        }
+
+        // ---- the featured image: square JPG, per the guide ------------------------------
+        // Centre-cropped to a square, shrunk to 1024 if larger, never enlarged. The candidate
+        // he picked stays as it was on this device; this is what goes to Drive and WordPress.
+        function _mktImageSquareJpeg(base64, mime) {
+            return new Promise(function(resolve) {
+                const img = new Image();
+                img.onload = function() {
+                    try {
+                        const m = Math.min(img.naturalWidth, img.naturalHeight);
+                        const size = Math.min(m, MKT_FEATURED_SIZE);
+                        const c = document.createElement('canvas');
+                        c.width = size; c.height = size;
+                        const ctx = c.getContext('2d');
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(0, 0, size, size);   // a transparent PNG has no background in a JPG
+                        ctx.drawImage(img, (img.naturalWidth - m) / 2, (img.naturalHeight - m) / 2, m, m, 0, 0, size, size);
+                        const url = c.toDataURL('image/jpeg', 0.9);
+                        resolve({ base64: url.slice(url.indexOf(',') + 1), mime: 'image/jpeg', w: size, h: size,
+                            cropped: img.naturalWidth !== img.naturalHeight, fromW: img.naturalWidth, fromH: img.naturalHeight });
+                    } catch (e) { resolve(null); }
+                };
+                img.onerror = function() { resolve(null); };
+                img.src = 'data:' + mime + ';base64,' + base64;
+            });
+        }
+
+        // ---- the social sharing image: his Canva layout, drawn here ---------------------
+        // Positions measured off the exported "IIA Thumbnail" page. The Canva connector belongs
+        // to Claude and the app cannot call it, so the plate ships with the site and the words
+        // are drawn in the browser, the same way as the quote image. Hans's photo is on the
+        // plate, so a guest's podcast post is made in Canva instead.
+        const MKT_THUMB = { W: 1920, H: 1080, x: 775, maxW: 1085, centerY: 532, titleStart: 94, titleMin: 52, titleLines: 4, lineH: 0.94, cap: 0.71, bylineSize: 54, bylineCap: 38, bylineGap: 58, bylineTrack: 4, green: '#A4C739' };
+        let _mktThumbFont = null, _mktThumbKey = '';
+        function mktThumbAvailable(card) {
+            return (card.company || 'ii') === 'ii' && mktWp(card).postType !== 'podcast';
+        }
+        function mktThumbFontReady() {
+            if (!_mktThumbFont) _mktThumbFont = (async function() {
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = 'https://fonts.googleapis.com/css2?family=Raleway:wght@600;700&display=block';
+                await new Promise(function(res) { link.onload = res; link.onerror = res; setTimeout(res, 9000); document.head.appendChild(link); });
+                try { await Promise.all([document.fonts.load('700 64px "Raleway"', 'Ag'), document.fonts.load('600 44px "Raleway"', 'AG')]); } catch (e) { }
+                const loaded = function(w) {
+                    let ok = false;
+                    document.fonts.forEach(function(f) { if (f.family.replace(/["']/g, '') === 'Raleway' && String(f.weight) === w && f.status === 'loaded') ok = true; });
+                    return ok;
+                };
+                if (!loaded('700') || !loaded('600')) {
+                    _mktThumbFont = null;
+                    throw new Error('The Raleway font did not download, so the image would come out in the wrong typeface. Check the connection and try again.');
+                }
+            })();
+            return _mktThumbFont;
+        }
+        async function mktThumbRender(canvas, title) {
+            const words = String(title || '').trim().split(/\s+/).filter(Boolean).map(function(t) { return [{ t: t, hl: false }]; });
+            if (!words.length) throw new Error('There is no title to draw.');
+            await mktThumbFontReady();
+            const img = await qbLoadImage(MKT_THUMB_PLATE);
+            const T = MKT_THUMB;
+            canvas.width = T.W; canvas.height = T.H;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, T.W, T.H);
+            ctx.letterSpacing = '0px';
+            const titleFont = function(s) { return '700 ' + s + 'px "Raleway"'; };
+            let fit = null;
+            for (let s = T.titleStart; s >= T.titleMin && !fit; s -= 2) {
+                const m = qbMeasurer(ctx, titleFont(s), titleFont(s));
+                const lines = qbWrap(words, m, T.maxW, true);
+                if (lines.length <= T.titleLines && lines.every(function(l) { return m.line(l) <= T.maxW; })) fit = { size: s, lines: lines, m: m };
+            }
+            if (!fit) throw new Error('This title is too long for the image. Shorten it, or make the image in Canva.');
+            const lh = fit.size * T.lineH, cap = fit.size * T.cap;
+            const total = T.bylineCap + T.bylineGap + cap + lh * (fit.lines.length - 1);
+            const top = T.centerY - total / 2;
+            ctx.textBaseline = 'alphabetic';
+            ctx.fillStyle = T.green;
+            ctx.font = '600 ' + T.bylineSize + 'px "Raleway"';
+            if ('letterSpacing' in ctx) ctx.letterSpacing = T.bylineTrack + 'px';
+            ctx.fillText(MKT_THUMB_BYLINE, T.x, top + T.bylineCap);
+            if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+            ctx.fillStyle = '#ffffff';
+            ctx.font = titleFont(fit.size);
+            let y = top + T.bylineCap + T.bylineGap + cap;
+            fit.lines.forEach(function(line) {
+                ctx.fillText(line.map(function(w) { return w[0].t; }).join(' '), T.x, y);
+                y += lh;
+            });
+            return fit;
+        }
+        function mktThumbPaint(card) {
+            const wrap = document.getElementById('mktThumbWrap'), canvas = document.getElementById('mktThumbCanvas'), info = document.getElementById('mktThumbInfo');
+            if (!wrap || !canvas || !info) return;
+            const can = mktThumbAvailable(card);
+            canvas.style.display = can ? '' : 'none';
+            const canvaLink = '<a href="' + MKT_THUMB_CANVA_URL + '" target="_blank" rel="noopener">IIA Thumbnail in Canva</a>';
+            if (!can) {
+                _mktThumbKey = '';
+                info.innerHTML = ((card.company || 'ii') === 'ii' ? 'The drawn image carries Hans&rsquo;s photo, so a podcast post is made in Canva, with the guest&rsquo;s photo: ' : 'The drawn image is the Intelligent Investing layout, so this one is made in Canva: ') + canvaLink + '.';
+                return;
+            }
+            const title = document.getElementById('mktTitle').value.trim();
+            if (!title) { _mktThumbKey = ''; canvas.style.display = 'none'; info.textContent = 'It appears here once the post has a title.'; return; }
+            if (_mktThumbKey === title) return;
+            _mktThumbKey = title;
+            mktThumbRender(canvas, title).then(function() {
+                if (_mktThumbKey === title) info.innerHTML = 'Drawn from your Canva layout and attached to the email automatically. Prefer to adjust it by hand? Open ' + canvaLink + '.';
+            }).catch(function(e) {
+                if (_mktThumbKey !== title) return;
+                _mktThumbKey = '';
+                canvas.style.display = 'none';
+                info.innerHTML = escapeHtml(e.message) + ' Or make it by hand: ' + canvaLink + '.';
+            });
+        }
+        async function mktThumbAttachment(title) {
+            const c = document.createElement('canvas');
+            await mktThumbRender(c, title);
+            const blob = await new Promise(function(res, rej) { c.toBlob(function(b) { b ? res(b) : rej(new Error('the social image could not be exported')); }, 'image/jpeg', 0.9); });
+            const b64 = await new Promise(function(res, rej) { const fr = new FileReader(); fr.onload = function() { res(String(fr.result).split(',')[1] || ''); }; fr.onerror = rej; fr.readAsDataURL(blob); });
+            return { name: String(title).replace(/[\\\/:*?"<>|]+/g, '').slice(0, 80) + ' - social image 1920x1080.jpg', mimeType: 'image/jpeg', base64: b64 };
+        }
+
+        // ---- the instructions in the email ----------------------------------------------
+        // One builder for both ways a handoff leaves the tool: Send to WordPress and Package.
+        // opts: { title, tags, attachedName, attachProblem }
+        function mktWpHandoffSteps(card, opts) {
+            opts = opts || {};
+            const wp = mktWp(card);
+            const sent = wp.sent || {};
+            const title = opts.title || card.title || '';
+            const podcast = wp.postType === 'podcast';
+            const done = [];
+            done.push('The post is already created, so there is nothing to clone.');
+            done.push('Title' + (sent.slug ? ' and slug (' + sent.slug + ')' : '') + (opts.tags ? ', categories and tags (' + opts.tags + ')' : ', categories and tags') + '.');
+            done.push('H2 headings, the closing call to action and the disclosure.');
+            const pic = wp.picture && wp.picture.fileId === card.imageFileId ? wp.picture : null;
+            if (card.imageFileId) done.push('Featured image' + (pic ? ', a square ' + pic.w + ' x ' + pic.h + ' JPG' : '') + ', plus the same picture at the top of the post.');
+            if (sent.date) done.push('Publish date (' + String(sent.date).slice(0, 10) + ').');
+
+            const todo = [];
+            todo.push((sent.authorName && /hans\s+blake/i.test(sent.authorName)) ? '' : 'Quick Edit: confirm the author is Hans Blake' + (sent.authorName ? ' (WordPress shows ' + sent.authorName + ')' : '') + '.');
+            if (!sent.date && !sent.live) todo.push('Quick Edit: set the date. It updates when the post is published.');
+            if (!sent.slug && !sent.live) todo.push('Quick Edit: set the slug to ' + (mktSlugClean(wp.slug) || mktSlugFromTitle(title) || 'the primary keywords, with no pronouns or articles') + '.');
+            if (podcast) todo.push('This is a podcast post: copy the player block from a recent podcast post into this draft.');
+            if (!card.imageFileId) todo.push('Featured Image: add a square, royalty-free JPG (1024 x 1024, at least 800 x 800). Please do not use a random Google image.');
+            else if (!pic) todo.push('Featured Image: check it is square and at least 800 x 800.');
+            const missing = '(not written yet: please write one from the post)';
+            todo.push('Yoast SEO tab, paste these:\n'
+                + '   Focus keyphrase: ' + (wp.focus || missing) + '\n'
+                + '   SEO title: ' + (wp.seoTitle || (title.length <= MKT_SEO_TITLE_MAX ? title : missing)) + '\n'
+                + '   Meta description: ' + (wp.meta || missing) + '\n'
+                + '   Aim for Yoast\'s green light. Orange is fine if forcing the keyphrase in would spoil the writing.');
+            const links = mktBlogLinks(card.blog || '');
+            if (!links.external) todo.push('Add an external link where it helps, such as Investopedia for a definition.');
+            if (!links.internal) todo.push('Add an internal link wherever the post mentions something on our site, such as Intelligrations or our core values.');
+            const scrape = '\n   Do this BEFORE publishing. If a Facebook or LinkedIn preview still shows the wrong picture afterwards, re-scrape the post\'s address:\n   https://developers.facebook.com/tools/debug/\n   https://www.linkedin.com/post-inspector/';
+            if (opts.attachedName) todo.push('Yoast Social tab: upload the attached image as the social image (' + opts.attachedName + ').' + scrape);
+            else todo.push('Yoast Social tab: upload a 1920 x 1080 JPG made from IIA Thumbnail in Canva' + (podcast ? ', with the guest\'s photo' : '') + ':\n   ' + MKT_THUMB_CANVA_URL
+                + (opts.attachProblem ? '\n   (The tool could not attach one: ' + opts.attachProblem + ')' : '') + scrape);
+            todo.push('Final review: readable sections, short paragraphs, links that work, the call to action at the end.');
+            todo.push(sent.live ? 'It is already live or scheduled, so its slug and date were left as they are.'
+                : 'Then ' + (sent.date ? 'schedule it for that date.' : 'publish or schedule it.'));
+
+            return 'ALREADY DONE, NO NEED TO REDO:\n' + done.map(function(s) { return '- ' + s; }).join('\n')
+                + '\n\nPLEASE DO IN WORDPRESS:\n' + todo.filter(Boolean).map(function(s, i) { return (i + 1) + '. ' + s; }).join('\n');
+        }
+
+        // ---- WHERE AM I IN THE STEPS: buttons that turn green ----------------------------
+        // His ask: "the buttons themselves changed color once we've 'done something' with them,
+        // but ensure the outcome is expected." So nothing here listens for a click. Every state
+        // is read off what the card actually holds, which means a failed AI call cannot turn a
+        // button green and clearing a box turns it back. Three things leave no trace of their
+        // own on the card, so they are marked only after they succeed: card.socialPosts.steps.
+        function mktStepMark(card, key, value) {
+            if (!card) return;
+            card.socialPosts = card.socialPosts || {};
+            card.socialPosts.steps = card.socialPosts.steps || {};
+            if (value === null) delete card.socialPosts.steps[key];
+            else card.socialPosts.steps[key] = value || new Date().toISOString();
+            card.updated = new Date().toISOString();
+            mktSave();
+            mktStepsPaint();
+        }
+        function mktStepFacts(card) {
+            const v = function(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+            const sp = card.socialPosts || {}, s = sp.steps || {}, wp = sp.wp || {};
+            const fb = function(k) { const f = sp[k]; return !!f && (f.status === 'scheduled' || f.status === 'posted'); };
+            const blog = v('mktBlog'), quote = v('mktQuote'), sent = !!card.wordpressPostId;
+            const ideas = !!(v('mktBrainstormIdeas') || (card.brainstormTopics || []).length);
+            const cta = !!(v('mktCtaHeading') || v('mktCtaBody'));
+            const title = !!(v('mktTitle') && (s.title || sent));
+            const seo = !!(v('mktSeoFocus') && v('mktSeoTitle') && v('mktSeoMeta'));
+            let greens = false, related = false;
+            try { greens = quote && qbHighlightList(qbSplit(quote).body).length > 0; } catch (e) { }
+            try { related = blog && mktRelParse(blog).length > 0; } catch (e) { }
+            return {
+                buttons: {
+                    mktBrainstormBtn: ideas, mktAnglesBtn: !!card.aiAngle, mktDraftBtn: !!blog, mktWorkInBtn: !!s.workIn,
+                    mktCtaBtn: cta, mktTightenBtn: !!s.tighten, mktTitlesBtn: title, mktSocialBtn: !!v('mktSocial'),
+                    mktQuotesBtn: !!quote, mktQbHlBtn: !!greens, mktQbMakeBtn: !!quote && s.quoteImg === quote, mktQbSendBtn: !!quote && s.quoteSent === quote,
+                    mktImageBtn: !!v('mktImagePrompt'), mktImageGenBtn: !!card.imageFileId, mktSeoBtn: seo, mktRelBtn: !!related,
+                    mktWpBtn: sent, mktTrevorBtn: !!card.packagedToTrevorAt, mktDriveBtn: !!s.drive, mktFbApproveBtn: fb('facebook'), mktFqApproveBtn: fb('facebookQuote')
+                },
+                steps: {
+                    mktStepBrainstorm: ideas, mktStepAngles: !!card.aiAngle, mktStepTake: !!v('mktTake'), mktStepBlog: !!blog,
+                    mktStepAdditionalTake: !!v('mktAdditionalTake'), mktStepCta: cta, mktStepFinalize: !!s.tighten || sent, mktStepTitle: title,
+                    mktStepSocial: !!v('mktSocial'), mktStepQuote: !!quote, mktStepImage: !!card.imageFileId, mktStepWp: seo,
+                    mktStepPackage: sent || !!card.packagedToTrevorAt
+                }
+            };
+        }
+        function mktStepsPaint() {
+            const card = typeof mktEditingId !== 'undefined' && mktEditingId ? mktGetCard(mktEditingId) : null;
+            if (!card) return;
+            const f = mktStepFacts(card);
+            Object.keys(f.buttons).forEach(function(id) { const el = document.getElementById(id); if (el) el.classList.toggle('mkt-btn-done', !!f.buttons[id]); });
+            Object.keys(f.steps).forEach(function(id) { const el = document.getElementById(id); if (el) el.classList.toggle('mkt-step-done', !!f.steps[id]); });
+        }
+        // Repainting from one place, around the actions, so a new exit from any of them cannot
+        // forget to. A function declaration here is a global, and onclick="" looks it up by name.
+        ['mktBrainstorm', 'mktSuggestAngles', 'mktDraftBlog', 'mktWorkInAdditionalTake', 'mktUndoWorkIn', 'mktSuggestCta', 'mktTightenBlog', 'mktSuggestTitles',
+         'mktSuggestSocial', 'mktSuggestQuotes', 'qbSuggestHighlights', 'qbMakeImage', 'qbApprove', 'qbWordsRender', 'mktSuggestImagePrompts', 'mktGenerateImage',
+         'mktImageUse', 'mktImageRemove', 'mktSeoFill', 'mktSuggestRelated', 'mktSendToWordPress', 'mktPkgSend', 'mktSaveBlogToDrive', 'mktFbApprove'].forEach(function(name) {
+            const orig = window[name];
+            if (typeof orig !== 'function') return;
+            window[name] = function() {
+                const r = orig.apply(this, arguments);
+                if (r && typeof r.then === 'function') return r.finally(mktStepsPaint);
+                mktStepsPaint();
+                return r;
+            };
+        });
+        // These two rewrite the blog. Done means the words really changed, which a failed or
+        // empty AI call does not do.
+        [['mktTightenBlog', 'tighten'], ['mktWorkInAdditionalTake', 'workIn']].forEach(function(pair) {
+            const orig = window[pair[0]];
+            if (typeof orig !== 'function') return;
+            window[pair[0]] = async function() {
+                const box = document.getElementById('mktBlog');
+                const before = box.value;
+                const id = mktEditingId;
+                const r = await orig.apply(this, arguments);
+                if (box.value !== before && id === mktEditingId) mktStepMark(mktGetCard(id), pair[1]);
+                return r;
+            };
+        });
+        const _mktUndoWorkInInner = window.mktUndoWorkIn;
+        if (typeof _mktUndoWorkInInner === 'function') window.mktUndoWorkIn = function() {
+            const r = _mktUndoWorkInInner.apply(this, arguments);
+            mktStepMark(mktGetCard(mktEditingId), 'workIn', null);
+            return r;
+        };
+        ['input', 'change'].forEach(function(evt) {
+            document.addEventListener(evt, function(e) {
+                if (!e.target.closest || !e.target.closest('#mktCardModal')) return;
+                if (e.target.id === 'mktTitle' && evt === 'change') {
+                    const c = mktGetCard(mktEditingId);
+                    if (c && e.target.value.trim()) { mktStepMark(c, 'title'); return; }
+                }
+                mktStepsPaint();
+            });
+        });
+
+        // ---- THE NEWSLETTER TAB ---------------------------------------------------------
+        const NL_ROW = 'newsletter';
+        const NL_MAX_CHARS = 200000;
+        // What Trevor walked through on the October 30 call. Shown until someone saves their
+        // own, then it is out of the way. His full document is due the following week.
+        const NL_STARTER = [
+            '## Before you start',
+            '**Be completely finished before you touch Send.** Clicking it may send to the whole list with no warning.',
+            '',
+            '## Set it up',
+            '- Go to Campaigns (the envelope icon), find last month\'s newsletter, and use the arrow at the far right to duplicate it.',
+            '- Rename the copy straight away, for example "November 2026 Newsletter".',
+            '- Hover over the square with the newsletter on it and click Edit Design.',
+            '- Keep the text large for readability, and keep the blog blocks as separate sections. They lay out better split apart.',
+            '- Less is more: simple layouts hold up across Gmail and Outlook. Never add a video, because it slows the email down.',
+            '',
+            '## Write the text',
+            '- Draft in Google Docs first, even if AI helped. Pasting straight from AI into ActiveCampaign causes odd spacing and line breaks.',
+            '- Paste into ActiveCampaign as plain text (Ctrl+Shift+V).',
+            '',
+            '## Each blog block has three links',
+            '**The picture, the title and "Read more" each have their own link, and all three must go to the same blog.**',
+            '- Picture: on the blog, right-click the image and copy its address. Paste it into the image path instead of uploading the file, so the email loads faster.',
+            '- Title: copy it from the blog and paste as plain text.',
+            '- Text: pick 1 to 3 interesting lines, about as tall as the image, and end on "..." so people want to read on. Paste as plain text.',
+            '- Links: copy the blog\'s address and paste it into the title link, the "Read more" link and the picture\'s site link.',
+            '- Save often. ActiveCampaign has crashed before and the work had to be redone.',
+            '',
+            '## Subject and pre-header',
+            '- Click the gear icon to update both. They are the easiest thing to forget.',
+            '- Ask Claude for options. A pre-header that does not quite finish its thought draws people in.',
+            '',
+            '## Test',
+            '- From the gear icon, send a test to your own Gmail and Outlook.',
+            '- Open it and click every link.',
+            '',
+            '## Send',
+            '- The scheduler has failed to send before, so send it by hand at the right time.',
+            '- The best times are about 9:00 AM or about 4:30 PM. Avoid late evening.',
+            '',
+            '## Afterwards',
+            '- Save the draft and the final newsletter to Google Drive, so future drafts know what went out last time.'
+        ].join('\n');
+        function mktSetTab(tab) {
+            const nl = tab === 'newsletter';
+            document.getElementById('mktPanelPipeline').style.display = nl ? 'none' : '';
+            document.getElementById('mktPanelNewsletter').style.display = nl ? '' : 'none';
+            [['mktTabPipeline', !nl], ['mktTabNewsletter', nl]].forEach(function(p) {
+                const b = document.getElementById(p[0]);
+                b.classList.toggle('mkt-tab-active', p[1]);
+                b.setAttribute('aria-selected', p[1] ? 'true' : 'false');
+            });
+            saveUiPrefs({ mktTab: nl ? 'newsletter' : 'pipeline' });
+            if (nl) nlLoad();
+        }
+        function nlProfile() { const r = qbLocalBrands()[NL_ROW]; return (r && r.profile) || {}; }
+        function nlPaint() {
+            const p = nlProfile();
+            const view = document.getElementById('nlView');
+            const editBtn = document.getElementById('nlEditBtn');
+            editBtn.textContent = 'Edit instructions';
+            let html = '';
+            if (!p.text && !p.link) html += '<p style="margin:0 0 12px; padding:8px 10px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; font-size:0.82rem;">Starter steps from the October 30 call with Trevor. When his full document arrives, press Edit instructions to paste or upload it over these.</p>';
+            html += '<div class="nl-text">' + mdToHtml(p.text || (p.link ? '' : NL_STARTER)) + '</div>';
+            if (p.link) html += '<p style="margin:10px 0 0;"><a href="' + escapeHtml(p.link) + '" target="_blank" rel="noopener">Open the full document</a></p>';
+            view.innerHTML = html;
+            const r = qbLocalBrands()[NL_ROW];
+            const info = document.getElementById('nlInfo');
+            info.textContent = (p.text || p.link) && p.savedBy ? 'Last saved by ' + p.savedBy + (r && r.savedAt ? ' on ' + new Date(r.savedAt).toLocaleDateString() : '') + '.' : '';
+        }
+        async function nlLoad() {
+            nlPaint();
+            nlBuildPaint();
+            if (!_nlPosts) nlFindBlogs();
+            const res = await qbPullBrand(NL_ROW);
+            const editing = document.getElementById('nlEditor').style.display !== 'none';
+            if (!editing) nlPaint();
+            if (!_nlSaveTimer && !document.activeElement.closest('#mktPanelNewsletter')) nlBuildPaint();
+            if (!res.ok && res.note) document.getElementById('nlInfo').textContent = res.note;
+        }
+
+        // ---- building this month's newsletter -----------------------------------------------
+        // 🚨 Prepares and copies only. There is no ActiveCampaign call anywhere in this app or
+        // its backend, and his standing rule (2026-10-30) is that there never is until HE lifts
+        // it: "even if I've given you an explicit instructions, I want to be the one that posts."
+        // The work is kept in the same firm-wide row as the instructions.
+        const NL_RECENT_POSTS = 15;
+        let _nlPosts = null, _nlSaveTimer = null;
+        function nlBuild() { return nlProfile().build || {}; }
+        function nlSaveBuild(patch) {
+            const p = Object.assign({}, nlProfile());
+            p.build = Object.assign({}, p.build || {}, patch);
+            return qbPushBrand(NL_ROW, p);
+        }
+        function nlDefaultTitle() {
+            return new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) + ' Newsletter';
+        }
+        function nlBuildPaint() {
+            const b = nlBuild();
+            const set = function(id, v) { const el = document.getElementById(id); if (el && document.activeElement !== el) el.value = v || ''; };
+            set('nlNote', b.note); set('nlSamples', b.samples); set('nlLetter', b.letter);
+            set('nlTitle', b.title || nlDefaultTitle()); set('nlSubject', b.subject); set('nlPreheader', b.preheader);
+            document.getElementById('nlSamplesState').textContent = b.samples ? '(saved)' : '(none yet)';
+            nlPaintBlogList();
+            nlPaintBlocks();
+            nlPaintDone();
+        }
+        function nlPaintDone() {
+            const b = nlBuild();
+            const mark = function(id, on) { const el = document.getElementById(id); if (el) el.classList.toggle('mkt-btn-done', !!on); };
+            mark('nlFindBtn', (b.blogs || []).length); mark('nlLetterBtn', document.getElementById('nlLetter').value.trim());
+            mark('nlSubjectBtn', document.getElementById('nlSubject').value.trim() && document.getElementById('nlPreheader').value.trim());
+            mark('nlTeaserBtn', (b.blogs || []).length && (b.blogs || []).every(function(x) { return x.teaser; }));
+            mark('nlPreviewBtn', b.previewFor && b.previewFor === nlFullText()); mark('nlDriveBtn', b.driveFor && b.driveFor === nlFullText());
+        }
+        function nlTeaserFrom(text) {
+            const t = String(text || '').replace(/\s+/g, ' ').trim();
+            const sentences = t.match(/[^.!?]+[.!?]+/g) || [t];
+            const out = sentences.slice(0, 2).join('').trim().slice(0, 240);
+            return out ? out.replace(/[.!?,;:\s]+$/, '') + '...' : '';
+        }
+        async function nlFindBlogs() {
+            const btn = document.getElementById('nlFindBtn');
+            const host = document.getElementById('nlBlogList');
+            btn.disabled = true;
+            try {
+                await _gsEnsureVersion();
+                const r = await _calPost({ action: 'listWordPressPosts', perPage: NL_RECENT_POSTS, withImages: true });
+                if (!r || !r.success) throw new Error((r && r.error) || 'WordPress did not answer');
+                _nlPosts = r.posts || [];
+                nlPaintBlogList();
+            } catch (e) {
+                host.innerHTML = '<p style="margin:0; color:#b91c1c; font-size:0.85rem;">Could not read the website: ' + escapeHtml(e.message || String(e)) + '</p>';
+            } finally { btn.disabled = false; }
+        }
+        function nlPaintBlogList() {
+            const host = document.getElementById('nlBlogList');
+            if (!_nlPosts) return;
+            if (!_nlPosts.length) { host.innerHTML = '<p style="margin:0; color:var(--gray-500); font-size:0.85rem;">WordPress shows no published posts.</p>'; return; }
+            const picked = (nlBuild().blogs || []).map(function(x) { return String(x.id); });
+            host.innerHTML = '<p style="margin:0 0 6px; font-size:0.85rem;">Which should go in this one?</p>' + _nlPosts.map(function(p) {
+                return '<label class="nl-blog"><input type="checkbox" data-nl-post="' + escapeHtml(String(p.id)) + '"' + (picked.indexOf(String(p.id)) !== -1 ? ' checked' : '') + '>'
+                    + '<span><strong>' + escapeHtml(p.title || '(untitled)') + '</strong> <span class="mkt-wp-hint">' + escapeHtml(String(p.date || '').slice(0, 10)) + '</span></span></label>';
+            }).join('');
+        }
+        function nlToggleBlog(id, on) {
+            const blogs = (nlBuild().blogs || []).slice();
+            const at = blogs.findIndex(function(x) { return String(x.id) === String(id); });
+            if (on && at === -1) {
+                const p = (_nlPosts || []).find(function(x) { return String(x.id) === String(id); });
+                if (p) blogs.push({ id: p.id, title: p.title, link: p.link, imageUrl: p.imageUrl || '', date: p.date, body: String(p.body || p.excerpt || '').slice(0, 4000), teaser: nlTeaserFrom(p.body || p.excerpt) });
+            } else if (!on && at !== -1) blogs.splice(at, 1);
+            // The order on the list, newest first, is the order in the newsletter.
+            const order = (_nlPosts || []).map(function(x) { return String(x.id); });
+            blogs.sort(function(a, b) { return order.indexOf(String(a.id)) - order.indexOf(String(b.id)); });
+            nlSaveBuild({ blogs: blogs }).then(function(res) { if (!res.ok) document.getElementById('nlBuildInfo').textContent = res.note; });
+            nlPaintBlocks();
+            nlPaintDone();
+        }
+        function nlPaintBlocks() {
+            const host = document.getElementById('nlBlocks');
+            const blogs = nlBuild().blogs || [];
+            if (!blogs.length) { host.innerHTML = '<p style="margin:0; color:var(--gray-500); font-size:0.85rem;">Tick some blogs in step 1.</p>'; return; }
+            const copyBtn = function(i, field, label) { return '<button type="button" class="btn btn-secondary nl-copy" onclick="nlCopyField(' + i + ',\'' + field + '\',this)">' + label + '</button>'; };
+            host.innerHTML = blogs.map(function(b, i) {
+                return '<div class="nl-block">'
+                    + (b.imageUrl ? '<img src="' + escapeHtml(b.imageUrl) + '" alt="" loading="lazy">' : '<div class="nl-noimg">No picture found. Copy its address from the blog.</div>')
+                    + '<div class="nl-block-main"><div style="font-weight:600;">' + escapeHtml(b.title) + '</div>'
+                    + '<label class="mkt-wp-field" style="margin:6px 0;">Lines for the block <textarea rows="3" data-nl-teaser="' + i + '" style="font-family:inherit; resize:vertical;">' + escapeHtml(b.teaser || '') + '</textarea></label>'
+                    + '<div class="nl-copyrow">' + (b.imageUrl ? copyBtn(i, 'imageUrl', 'Copy picture address') : '') + copyBtn(i, 'title', 'Copy title') + copyBtn(i, 'teaser', 'Copy lines') + copyBtn(i, 'link', 'Copy link') + '</div>'
+                    + '</div></div>';
+            }).join('');
+        }
+        async function nlCopyText(text, btn) {
+            try {
+                await navigator.clipboard.writeText(text);
+                if (btn) { const was = btn.textContent; btn.textContent = 'Copied'; setTimeout(function() { btn.textContent = was; }, 1500); }
+            } catch (e) { showToast('Could not copy on this device.'); }
+        }
+        function nlCopyField(i, field, btn) {
+            const b = (nlBuild().blogs || [])[i];
+            if (b) nlCopyText(String(b[field] || ''), btn);
+        }
+        function nlFullText() {
+            const v = function(id) { return document.getElementById(id).value.trim(); };
+            const lines = ['CAMPAIGN NAME: ' + v('nlTitle'), 'SUBJECT: ' + v('nlSubject'), 'PRE-HEADER: ' + v('nlPreheader'), '', v('nlLetter')];
+            (nlBuild().blogs || []).forEach(function(b) {
+                lines.push('', b.title, b.teaser || '', 'Read more: ' + b.link);
+                if (b.imageUrl) lines.push('Picture address: ' + b.imageUrl);
+            });
+            return lines.join('\n');
+        }
+        function nlCopyAll() { nlCopyText(nlFullText(), document.getElementById('nlCopyAllBtn')); }
+        function nlAiContextBlogs() {
+            return (nlBuild().blogs || []).map(function(b) { return '- ' + b.title + '\n  ' + String(b.teaser || '').slice(0, 300); }).join('\n');
+        }
+        async function nlWriteLetter() {
+            const blogs = nlBuild().blogs || [];
+            const note = document.getElementById('nlNote').value.trim();
+            const samples = document.getElementById('nlSamples').value.trim();
+            if (!blogs.length && !note) { showToast('Tick a blog in step 1, or say what you want to write about, first.'); return; }
+            if (!requireAI('marketing', 'Marketing AI')) return;
+            const box = document.getElementById('nlLetter');
+            if (box.value.trim() && !confirm('This will replace the letter that is there. Continue?')) return;
+            const btn = document.getElementById('nlLetterBtn');
+            const orig = btn.textContent;
+            btn.disabled = true; btn.textContent = 'Thinking...';
+            try {
+                const ctx = await fetchFirmContext('ii', false);
+                const prompt = MKT_FIRM_CONTEXT + buildFirmContextBlock(ctx, 'ii') + '\n\n'
+                    + 'Write the opening letter for his monthly client newsletter. It sits above the blog links, so it should warm people up and point at this month\'s reading, not summarise each post.\n\n'
+                    + (samples ? 'LETTERS HE HAS WRITTEN BEFORE. Match this voice, length and shape closely:\n"""\n' + samples.slice(0, 8000) + '\n"""\n\n' : '')
+                    + (note ? 'WHAT HE WANTS TO SAY THIS MONTH. Build the letter around this:\n"""\n' + note + '\n"""\n\n' : 'He gave no personal note. Do not make one up.\n\n')
+                    + (blogs.length ? 'THIS MONTH\'S BLOGS:\n' + nlAiContextBlogs() + '\n\n' : '')
+                    + 'Rules:\n'
+                    + '- Warm and plainspoken. About 120 to 220 words unless his past letters run differently.\n'
+                    + '- Never invent a family story, a client, an event, a market number or anything else he did not give you. If there is nothing personal to say, say less.\n'
+                    + '- Educational, not advice. This is a regulated RIA: no performance promises, no guarantees, no recommendations of a security.\n'
+                    + '- Plain text only. No markdown, no headings, no links, no subject line.\n\n'
+                    + 'Return ONLY the letter.';
+                const raw = await callAI('marketing', prompt, { featureLabel: 'Marketing AI', temperature: 0.7, maxTokens: 4000, effort: 'medium', retry: true, taskLabel: 'Opening letter' });
+                box.value = String(raw).replace(/^```\w*\s*/, '').replace(/```\s*$/, '').trim();
+                nlQueueSave();
+            } catch (e) {
+                showToast('The letter failed: ' + e.message);
+            } finally { btn.disabled = false; btn.textContent = orig; nlPaintDone(); }
+        }
+        async function nlSuggestSubjects() {
+            const letter = document.getElementById('nlLetter').value.trim();
+            const blogs = nlBuild().blogs || [];
+            if (!letter && !blogs.length) { showToast('Tick some blogs or write the letter first.'); return; }
+            if (!requireAI('marketing', 'Marketing AI')) return;
+            const btn = document.getElementById('nlSubjectBtn');
+            const orig = btn.textContent;
+            btn.disabled = true; btn.textContent = 'Thinking...';
+            try {
+                const prompt = MKT_FIRM_CONTEXT + '\n\nSuggest FIVE subject line and pre-header pairs for his monthly client newsletter. '
+                    + 'Subject: specific, under 60 characters, not clickbait. Pre-header: under 90 characters, and it may leave its thought unfinished so people want to open it. '
+                    + 'Each pair takes a different angle. Honest: no promises, no hype.\n\n'
+                    + (letter ? 'THE LETTER:\n"""\n' + letter + '\n"""\n\n' : '') + (blogs.length ? 'THE BLOGS:\n' + nlAiContextBlogs() + '\n\n' : '')
+                    + 'Return ONLY a JSON array: [{"subject":"...","preheader":"..."}, ...]. No fences, no preamble.';
+                const raw = await callAI('marketing', prompt, { featureLabel: 'Marketing AI', temperature: 0.85, maxTokens: 3000, effort: 'low', retry: true, taskLabel: 'Subject lines' });
+                const opts = mktParseAiObjects(raw, 'subject').filter(function(o) { return o && o.subject; });
+                if (!opts.length) throw new Error('The model did not return the expected format.');
+                mktRenderOptionChips('nlSubjectOptions', opts.map(function(o) { return { text: o.subject + '\n' + (o.preheader || ''), subject: o.subject, preheader: o.preheader || '' }; }), function(choice) {
+                    const parts = String(choice).split('\n');
+                    document.getElementById('nlSubject').value = parts[0] || '';
+                    document.getElementById('nlPreheader').value = parts[1] || '';
+                    nlQueueSave();
+                    nlPaintDone();
+                });
+            } catch (e) {
+                showToast('Suggestions failed: ' + e.message);
+            } finally { btn.disabled = false; btn.textContent = orig; }
+        }
+        // Lines lifted word for word from each post, ending on "...". A line the AI rewrote fails
+        // the check and the block keeps what it had, because these go out under his name.
+        async function nlPickTeasers() {
+            const blogs = (nlBuild().blogs || []).slice();
+            if (!blogs.length) { showToast('Tick some blogs in step 1 first.'); return; }
+            if (!requireAI('marketing', 'Marketing AI')) return;
+            const btn = document.getElementById('nlTeaserBtn');
+            const orig = btn.textContent;
+            btn.disabled = true; btn.textContent = 'Thinking...';
+            const norm = function(s) { return String(s || '').replace(/\.\.\.\s*$/, '').replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, ' ').trim().toLowerCase(); };
+            try {
+                const prompt = 'For each blog post below, pick 1 to 3 consecutive lines that would make a reader want to keep reading. COPY THEM WORD FOR WORD. Do not rewrite. About 25 to 50 words. They may stop mid-thought.\n\n'
+                    + blogs.map(function(b) { return 'POST id ' + b.id + ':\n"""\n' + b.body + '\n"""'; }).join('\n\n')
+                    + '\n\nReturn ONLY a JSON array: [{"id":123,"teaser":"..."}, ...]. No fences, no preamble.';
+                const raw = await callAI('marketing', prompt, { featureLabel: 'Marketing AI', temperature: 0.3, maxTokens: 3000, effort: 'low', retry: true, taskLabel: 'Newsletter lines' });
+                const picks = mktParseAiObjects(raw, 'teaser');
+                let used = 0;
+                picks.forEach(function(p) {
+                    const b = blogs.find(function(x) { return String(x.id) === String(p.id); });
+                    if (b && p.teaser && norm(b.body).indexOf(norm(p.teaser)) !== -1) {
+                        b.teaser = String(p.teaser).trim().replace(/[.!?,;:\s]+$/, '') + '...';
+                        used++;
+                    }
+                });
+                await nlSaveBuild({ blogs: blogs });
+                nlPaintBlocks();
+                document.getElementById('nlBuildInfo').textContent = used === blogs.length ? '' : (blogs.length - used) + ' block(s) kept the opening lines, because the AI did not copy from the post word for word.';
+            } catch (e) {
+                showToast('Picking lines failed: ' + e.message);
+            } finally { btn.disabled = false; btn.textContent = orig; nlPaintDone(); }
+        }
+        // A Gmail DRAFT to himself, the words and pictures laid out. It is not the ActiveCampaign test.
+        async function nlPreview() {
+            const info = document.getElementById('nlBuildInfo');
+            const to = (typeof mktSupabaseProfile !== 'undefined' && mktSupabaseProfile && mktSupabaseProfile.email) || '';
+            if (!to) { info.textContent = 'The tool could not tell which address is yours. Sign in again, then try once more.'; return; }
+            const subject = document.getElementById('nlSubject').value.trim() || document.getElementById('nlTitle').value.trim() || 'Newsletter';
+            const btn = document.getElementById('nlPreviewBtn');
+            btn.disabled = true;
+            try {
+                if (!(await capabilityReadyChecked('gmail.createDraft'))) throw new Error('Gmail drafts are not available for this sign-in (Settings › Google › Check Google access says why)');
+                const blocks = (nlBuild().blogs || []).map(function(b) {
+                    return '<hr style="border:none;border-top:1px solid #e5e7eb;margin:18px 0;">'
+                        + (b.imageUrl ? '<a href="' + escapeHtml(b.link) + '"><img src="' + escapeHtml(b.imageUrl) + '" alt="" style="max-width:220px;height:auto;display:block;margin-bottom:8px;"></a>' : '')
+                        + '<div style="font-family:Arial,sans-serif;font-size:16px;font-weight:700;"><a href="' + escapeHtml(b.link) + '">' + escapeHtml(b.title) + '</a></div>'
+                        + '<div style="font-family:Arial,sans-serif;font-size:14px;margin:6px 0;">' + escapeHtml(b.teaser || '') + '</div>'
+                        + '<a href="' + escapeHtml(b.link) + '" style="font-family:Arial,sans-serif;font-size:14px;">Read more</a>';
+                }).join('');
+                const text = 'PREVIEW ONLY. This is not the ActiveCampaign test, and nothing has gone to your list.\n\n'
+                    + 'Subject: ' + subject + '\nPre-header: ' + document.getElementById('nlPreheader').value.trim() + '\n\n'
+                    + document.getElementById('nlLetter').value.trim();
+                const data = await postGmailDraft(to, '[Preview] ' + subject, draftBodyHtml(text) + blocks, null);
+                const url = data.draftUrl || data.draftsUrl || '';
+                if (url) window.open(url, '_blank');
+                await nlSaveBuild({ previewFor: nlFullText() });
+                info.innerHTML = 'Preview draft made in your Gmail, to ' + escapeHtml(to) + '.' + mktDraftLink(url);
+            } catch (e) {
+                info.textContent = 'The preview failed: ' + e.message;
+            } finally { btn.disabled = false; nlPaintDone(); }
+        }
+        // Into the Firm Context folder, which the drafting prompts already read, so next month's
+        // letter knows what this one said.
+        async function nlSaveToDrive() {
+            const info = document.getElementById('nlBuildInfo');
+            const folderId = getCompanyFolderId('ii');
+            if (!folderId) { info.textContent = 'No Firm Context folder is set. Add one in Settings › Marketing › Firm Context Folder.'; return; }
+            const member = (getSettings().teamMembers || []).find(function(m) { return m.webAppUrl; });
+            if (!member) { info.textContent = 'No Apps Script address is set in Settings.'; return; }
+            const btn = document.getElementById('nlDriveBtn');
+            btn.disabled = true;
+            try {
+                const res = await fetch(member.webAppUrl, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'saveBlogToDrive', secretKey: member.webAppSecret || '', folderId: folderId, title: document.getElementById('nlTitle').value.trim() || nlDefaultTitle(), content: nlFullText() }) });
+                const j = await res.json();
+                if (!j.success) throw new Error(j.error || 'Drive did not save it');
+                delete firmContextCache.ii;
+                await nlSaveBuild({ driveFor: nlFullText() });
+                info.textContent = 'Saved to Drive as "' + j.fileName + '". Future letters can draw on it.';
+            } catch (e) {
+                info.textContent = 'Could not save to Drive: ' + e.message;
+            } finally { btn.disabled = false; nlPaintDone(); }
+        }
+        async function nlStartNew() {
+            if (!confirm('Clear this newsletter and start the next one? The past letters you saved stay.')) return;
+            clearTimeout(_nlSaveTimer); _nlSaveTimer = null;
+            const b = nlBuild();
+            await nlSaveBuild({ note: '', letter: '', title: '', subject: '', preheader: '', blogs: [], previewFor: '', driveFor: '', samples: b.samples || document.getElementById('nlSamples').value.trim() });
+            ['nlNote', 'nlLetter', 'nlSubject', 'nlPreheader'].forEach(function(id) { document.getElementById(id).value = ''; });
+            document.getElementById('nlTitle').value = nlDefaultTitle();
+            const o = document.getElementById('nlSubjectOptions'); o.innerHTML = ''; o.style.display = 'none';
+            document.getElementById('nlBuildInfo').textContent = '';
+            nlBuildPaint();
+        }
+        function nlQueueSave() {
+            clearTimeout(_nlSaveTimer);
+            _nlSaveTimer = setTimeout(function() {
+                _nlSaveTimer = null;
+                const blogs = (nlBuild().blogs || []).slice();
+                document.querySelectorAll('#nlBlocks textarea[data-nl-teaser]').forEach(function(t) {
+                    const i = parseInt(t.getAttribute('data-nl-teaser'), 10);
+                    if (blogs[i]) blogs[i] = Object.assign({}, blogs[i], { teaser: t.value });
+                });
+                const v = function(id) { return document.getElementById(id).value; };
+                nlSaveBuild({ note: v('nlNote'), samples: v('nlSamples'), letter: v('nlLetter'), title: v('nlTitle'), subject: v('nlSubject'), preheader: v('nlPreheader'), blogs: blogs })
+                    .then(function(res) { document.getElementById('nlBuildInfo').textContent = res.ok ? '' : res.note; nlPaintDone(); });
+            }, 1200);
+        }
+        document.addEventListener('input', function(e) {
+            if (e.target.closest && e.target.closest('#mktPanelNewsletter') && !e.target.closest('#nlEditor')) { nlQueueSave(); nlPaintDone(); }
+        });
+        document.addEventListener('change', function(e) {
+            const id = e.target.getAttribute && e.target.getAttribute('data-nl-post');
+            if (id) nlToggleBlog(id, e.target.checked);
+        });
+        function nlEdit() {
+            const p = nlProfile();
+            document.getElementById('nlText').value = p.text || (p.link ? '' : NL_STARTER);
+            document.getElementById('nlLink').value = p.link || '';
+            document.getElementById('nlView').style.display = 'none';
+            document.getElementById('nlEditor').style.display = '';
+            document.getElementById('nlEditBtn').style.display = 'none';
+            document.getElementById('nlInfo').textContent = '';
+        }
+        function nlCancel() {
+            document.getElementById('nlEditor').style.display = 'none';
+            document.getElementById('nlView').style.display = '';
+            document.getElementById('nlEditBtn').style.display = '';
+            nlPaint();
+        }
+        function nlFilePicked(files) {
+            const file = files && files[0];
+            const input = document.getElementById('nlFile');
+            const info = document.getElementById('nlInfo');
+            if (!file) return;
+            if (!/\.(txt|md|markdown)$/i.test(file.name)) {
+                input.value = '';
+                info.textContent = 'The tool can only read .txt and .md files. For a PDF or Word document, paste the text in, or put its Drive address in the link box.';
+                return;
+            }
+            const rd = new FileReader();
+            rd.onload = function() {
+                document.getElementById('nlText').value = String(rd.result || '');
+                info.textContent = 'Loaded ' + file.name + '. Check it, then press Save for the team.';
+            };
+            rd.onerror = function() { info.textContent = 'Could not read that file.'; };
+            rd.readAsText(file);
+            input.value = '';
+        }
+        async function nlSave() {
+            const text = document.getElementById('nlText').value.trim();
+            const link = document.getElementById('nlLink').value.trim();
+            const info = document.getElementById('nlInfo');
+            if (link && !/^https?:\/\/\S+$/i.test(link)) { info.textContent = 'That link does not look complete. It should start with https://'; return; }
+            if (text.length > NL_MAX_CHARS) { info.textContent = 'That is too long to keep here. Put it in a Drive document and add the link instead.'; return; }
+            const btn = document.getElementById('nlSaveBtn');
+            btn.disabled = true;
+            const savedBy = (typeof mktSupabaseProfile !== 'undefined' && mktSupabaseProfile && mktSupabaseProfile.email) || '';
+            const res = await qbPushBrand(NL_ROW, Object.assign({}, nlProfile(), { text: text, link: link, savedBy: savedBy }));   // keeps the newsletter being built
+            btn.disabled = false;
+            nlCancel();
+            info.textContent = res.note;
         }
 
         // ==================== v5.44.0 — IS IT LIVE? + RELATED READING ====================
@@ -18241,7 +19334,7 @@ Example:
         const MKT_LAST_PUB_KEY = 'eos_mkt_last_published';   // device-local: { date, title, link, at }
         const MKT_NUDGE_DONE_KEY = 'eos_blog_nudge_done';     // device-local: the YMD the task was ticked
         const MKT_STEP_NAMES = ['Brainstorming', 'Angles', 'My Initial Take', 'Blog Draft', 'My Additional Take', 'Closing Call to Action',
-            'Finalize Draft', 'Title / Headline', 'Social Post Copy', 'Quote', 'Image', 'Package & Send'];
+            'Finalize Draft', 'Title / Headline', 'Social Post Copy', 'Quote', 'Image', 'WordPress & Yoast', 'Package & Send'];
         let _mktRhythmAt = 0, _mktRhythmPullAt = 0, _mktRhythmMemo = null;
         // Which step a blog is on, read off what is filled in: the step AFTER the furthest one
         // with content (so a skipped optional step never holds a blog back). Finalize (7) and
@@ -18252,11 +19345,12 @@ Example:
                 !!(c.brainstormIdeas || c.brainstormSources || (c.brainstormTopics || []).length),
                 !!c.chosenTopic, !!c.take, !!c.blog, !!c.additionalTake, !!(c.ctaHeading || c.ctaBody), false,
                 false, !!c.social, !!c.quote, !!(c.imageFileId || c.imagePrompt || c.wpImageMediaId),
+                !!(c.socialPosts && c.socialPosts.wp && (c.socialPosts.wp.focus || c.socialPosts.wp.meta)),
                 !!(c.packagedToTrevorAt || c.wordpressSentAt || c.wordpressPostId)
             ];
             let hi = 0;
             has.forEach(function(v, i) { if (v) hi = i + 1; });
-            if (hi >= 12) return { n: 12, sent: true, name: MKT_STEP_NAMES[11] };
+            if (hi >= MKT_STEP_NAMES.length) return { n: MKT_STEP_NAMES.length, sent: true, name: MKT_STEP_NAMES[MKT_STEP_NAMES.length - 1] };
             const n = Math.max(1, hi + 1);
             return { n: n, sent: false, name: MKT_STEP_NAMES[n - 1] };
         }
@@ -18630,6 +19724,8 @@ Example:
             const _rel = document.getElementById('mktRelOptions');
             if (_rel) { _rel.innerHTML = ''; _rel.style.display = 'none'; }
             mktFbPaint(card);   // v5.45.0: the Facebook post box
+            mktWpPaint(card);   // v5.59.0: the WordPress & Yoast step
+            mktStepsPaint();    // v5.59.0: green buttons, read off this card
 
             const pkgInfo = document.getElementById('mktPackagedInfo');
             if (pkgInfo) {
@@ -18662,6 +19758,7 @@ Example:
             card.imageNote   = document.getElementById('mktImageNote').value;     // v5.28.0
             card.imagePrompt = document.getElementById('mktImagePrompt').value;
             _mktImageLocalSet(card.id, card.imageNote, card.imagePrompt);
+            mktWpReadForm(card);   // v5.59.0
             card.company     = document.getElementById('mktCompany').value;
             card.columnId    = document.getElementById('mktColumn').value;
             // v3.90.0: nothing to read back - the status selects are gone and status is derived.
@@ -18696,12 +19793,14 @@ Example:
             card.imageNote   = document.getElementById('mktImageNote').value;     // v5.28.0
             card.imagePrompt = document.getElementById('mktImagePrompt').value;
             _mktImageLocalSet(card.id, card.imageNote, card.imagePrompt);
+            mktWpReadForm(card);   // v5.59.0
             card.company     = document.getElementById('mktCompany').value;
             card.columnId    = document.getElementById('mktColumn').value;
             // v3.90.0: nothing to read back - the status selects are gone and status is derived.
             card.updated = new Date().toISOString();
 
             mktSave();
+            mktWpRefresh(card);
         }
 
         // Scoped to #mktCardModal only - the global autoSave listener already excludes
@@ -20184,6 +21283,25 @@ Example:
                 document.getElementById('mktTitle').value = title;   // reflect the choice in the field
             }
 
+            // v5.59.0: any blank SEO box is filled on the way out, in the boxes where he can see
+            // it. The AI being out must never stop a send: the email then asks for what is missing.
+            mktWpReadForm(card);
+            const wpInfoCard = mktWp(card);
+            if (!wpInfoCard.focus || !wpInfoCard.seoTitle || !wpInfoCard.meta) {
+                showToast('Writing the Yoast fields...');
+                await mktSeoFill(true);
+            }
+            if (!wpInfoCard.slug) {
+                wpInfoCard.slug = mktSlugFromTitle(title);
+                document.getElementById('mktWpSlug').value = wpInfoCard.slug;
+            }
+            if (!wpInfoCard.seoTitle && title.length <= MKT_SEO_TITLE_MAX) {
+                wpInfoCard.seoTitle = title;
+                document.getElementById('mktSeoTitle').value = title;
+            }
+            // A date already gone by is not a publish date; WordPress would backdate the post.
+            const wpPublishDate = (wpInfoCard.publishDate && wpInfoCard.publishDate >= _mktYmd(new Date())) ? wpInfoCard.publishDate + 'T09:00:00' : '';
+
             // ---- Category selection: fetch site categories, AI suggests, user confirms.
             let chosenCategoryIds = null;
             try {
@@ -20254,7 +21372,7 @@ Example:
             if (stranded) sendOptions.unshift({ label: 'Stop - fix the picture first', value: 'stop', recommended: true, hint: 'Nothing is sent' });
             const choice = await eosChoose({
                 title: updatePostId ? 'Update the existing WordPress post' : 'Send this WordPress draft',
-                message: picNote + '\n' + tagNote + '\n' + archiveNote,
+                message: picNote + '\n' + tagNote + '\n' + archiveNote + '\nThe Gmail draft lists what ' + who + ' still does in WordPress, with the Yoast values to paste' + (mktThumbAvailable(card) ? ' and the social image attached.' : '.'),
                 options: sendOptions
             });
             if (choice === null || choice === 'stop') { showToast(choice === 'stop' ? 'Not sent. Set the folder in Settings, then press "Use this one" in the Image step.' : 'Cancelled.'); return; }
@@ -20266,6 +21384,10 @@ Example:
             const original = btn.textContent;
             btn.textContent = 'Sending...';
             btn.disabled = true;
+
+            const wpAsked = wpInfoCard.asked || {};
+            const wpSendSlug = (updatePostId && wpAsked.slug === mktSlugClean(wpInfoCard.slug)) ? '' : mktSlugClean(wpInfoCard.slug);
+            const wpSendDate = (updatePostId && wpAsked.date === wpInfoCard.publishDate) ? '' : wpPublishDate;
 
             try {
                 const response = await fetch(member.webAppUrl, {
@@ -20280,7 +21402,12 @@ Example:
                         title: title,
                         // v5.50.0: the related-reading line leaves the draft and goes under
                         // the call to action (buildRelatedLine); the draft itself is unchanged.
-                        content: wrapBlogForWordPress(mdToHtml(mktRelApply(body, [])), card, buildRelatedLine(mktRelParse(body))),
+                        content: wrapBlogForWordPress(mdToHtml(mktWpHeadings(mktRelApply(body, []))), card, buildRelatedLine(mktRelParse(body))),
+                        // v5.59.0, .gs 3.89.0; an older backend ignores both. On an update, a value
+                        // he has not changed since the last send is not sent again, so a correction
+                        // the marketing person made in WordPress is not overwritten.
+                        slug: wpSendSlug,
+                        publishDate: wpSendDate,
                         categoryIds: chosenCategoryIds,
                         tagIds: chosenTags && !chosenTags.skipped ? (chosenTags.tagIds || []) : undefined,
                         newTags: chosenTags && !chosenTags.skipped ? (chosenTags.newTags || []) : undefined,
@@ -20330,6 +21457,7 @@ Example:
                                 })
                             });
                             const arcJson = await arcRes.json();
+                            if (arcJson.success) mktStepMark(card, 'drive');   // v5.59.0
                             archiveMsg = arcJson.success
                                 ? ' Archived to Drive.'
                                 : ' (archive failed: ' + (arcJson.error || 'unknown') + ')';
@@ -20353,6 +21481,26 @@ Example:
                 }
                 card.blogStatus = 'sent';
                 card.columnId = 'trevor';
+                // v5.59.0: what WordPress says it holds, read back and compared with what was
+                // asked, so the email only claims what happened. A backend older than 3.89.0
+                // returns none of this, and the email asks the person to set slug and date. A post
+                // past draft keeps both on purpose (.gs 3.89.0), and he is told. WordPress may add
+                // "-2" to a slug already in use, and that still counts as taken.
+                const wpPrevSent = wpInfoCard.sent || {};
+                const wpSlugTook = !!result.slug && !!wpSendSlug && (result.slug === wpSendSlug || result.slug.indexOf(wpSendSlug + '-') === 0);
+                const wpDateTook = !!result.date && !!wpSendDate && result.date.slice(0, 10) === wpSendDate.slice(0, 10);
+                const wpDateKept = !wpSendDate && !!wpPrevSent.date && !!result.date;
+                wpInfoCard.sent = { slug: result.slug || '', date: (wpDateTook || wpDateKept) ? result.date : '', authorName: result.authorName || '', live: !!result.status && result.status !== 'draft' };
+                let wpKeptNote = '';
+                if (result.slug && wpSendSlug && !wpSlugTook) wpKeptNote += ' WordPress kept the slug ' + result.slug + ', because this post is no longer a draft or its status could not be read.';
+                if (result.date && wpSendDate && !wpDateTook) wpKeptNote += ' WordPress kept its own date, for the same reason.';
+                wpInfoCard.slug = result.slug || mktSlugClean(wpInfoCard.slug);
+                document.getElementById('mktWpSlug').value = wpInfoCard.slug;
+                if (wpDateKept) {
+                    wpInfoCard.publishDate = result.date.slice(0, 10);
+                    document.getElementById('mktWpDate').value = wpInfoCard.publishDate;
+                }
+                if (result.slug) wpInfoCard.asked = { slug: wpInfoCard.slug, date: wpInfoCard.publishDate };
                 mktSave();
                 mktRender();
 
@@ -20362,15 +21510,35 @@ Example:
                 let msg = updatePostId
                     ? 'Existing WordPress post updated in place - same link, status unchanged. Card moved to ' + colName + '.'
                     : 'Draft created in WordPress. Card moved to ' + colName + '.';
+                msg += wpKeptNote;
                 if (notify) {
                     try {
+                        let thumb = null, thumbProblem = '';
+                        if (mktThumbAvailable(card)) {
+                            try { thumb = await mktThumbAttachment(title); } catch (tErr) { thumbProblem = tErr.message; }
+                        }
+                        const tagNames = (chosenTags && chosenTags.names && chosenTags.names.length) ? chosenTags.names.join(', ') : '';
                         const r = await mktDraftToPerson((updatePostId ? 'Updated draft in WordPress: ' : 'Draft ready in WordPress: ') + title,
                             'Hi ' + (mktPerson().name || 'there') + ',\n\n'
                             + (updatePostId
-                                ? 'A blog you already have in WordPress has been revised in place - same post, same link, updated wording. Nothing new was created, and its published/draft status is unchanged.'
-                                : 'A new blog draft is waiting in WordPress, ready for you to edit, add images, and publish. It is saved as a draft and is not live on the site.')
-                            + '\n\n' + title + '\n' + result.editUrl + '\n\nThanks!');
-                        msg += ' Gmail draft for ' + r.name + ' is ready to send.';
+                                ? 'A blog you already have in WordPress has been revised in place - same post, same link, updated wording. Nothing new was created, and its published/draft status is unchanged. Please check the Yoast values below still match.'
+                                : 'A new blog draft is waiting in WordPress. It is saved as a draft and is not live on the site.')
+                            + '\n\n' + title + '\n' + result.editUrl + '\n\n'
+                            + mktWpHandoffSteps(card, { title: title, tags: tagNames, attachedName: thumb ? thumb.name : '', attachProblem: thumbProblem })
+                            + '\n\nThanks!', { attachments: thumb ? [thumb] : [] });
+                        wpInfoCard.handoffAt = new Date().toISOString();
+                        mktSave();
+                        msg += ' Gmail draft for ' + r.name + ' is ready to send' + (thumb ? ', with the social image attached.' : '.');
+                        // Trevor: keep the social graphics in a shared folder. Beside the blog
+                        // picture, in the Firm Context folder. Never holds up the send.
+                        const thumbFolder = thumb && getCompanyFolderId(company);
+                        if (thumbFolder) {
+                            try {
+                                const kept = await _calPost({ action: 'uploadBlogImage', folderId: thumbFolder, title: title + ' - social image', mime: 'image/jpeg', imageBase64: thumb.base64 });
+                                msg += (kept && kept.success) ? ' Social image saved to Drive.' : ' (The social image did not save to Drive.)';
+                            } catch (kErr) { msg += ' (The social image did not save to Drive.)'; }
+                        }
+                        if (thumbProblem) msg += ' (The social image could not be drawn: ' + thumbProblem + ')';
                     } catch (dErr) {
                         msg += ' (Draft for ' + who + ' failed: ' + dErr.message + ')';
                     }
@@ -45739,7 +46907,7 @@ Make sure your suggestions directly address the specific root cause and discussi
         // budget if its output keeps getting cut off mid-sentence.
         const AI_TASK_TOKEN_DEFAULTS = {
             brainstorm: 2000, topics: 1600, angles: 1200, draft: 4000,
-            tighten: 4000, social: 500, titles: 500,
+            tighten: 4000, social: 2000, titles: 2000,   // v5.59.0: were 500, the same squeeze that broke the quote button
             // v3.63.0 - the per-task/per-card AI actions. Raised in v3.63.1: these are a
             // CAP, not a spend, so there is no cost to headroom, and the original 300/600/
             // 800 left none for a provider that reasons before it answers.
